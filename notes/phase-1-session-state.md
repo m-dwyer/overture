@@ -1,7 +1,7 @@
-# Phase 1 — Session Checkpoint (Bundles 1 + 1.5 + 1.6 + 2.0 + 2A + 2B complete)
+# Phase 1 — Session Checkpoint (Bundles 1 + 1.5 + 1.6 + 2.0 + 2A + 2B + 2C-Rpt1 + 2C-Rpt2 complete)
 
-**Saved:** 2026-05-15 → 2026-05-16 (Bundles 1.5, 1.6) → 2026-05-17 (Bundles 2.0 + 2A + 2A-fixup + 2B shipped, end of session).
-**Status:** **✓ Bundles 2.0 + 2A + 2A-fixup + 2B VERIFIED + COMMITTED on `phase-1-bundle-2`** (head = `c4bd0fc`). Branch sits on top of `phase-1-bundle-1` (Bundle 1 + 1.5 + 1.6, head = `2b319a2`, unchanged). User-verified: vel-zone presses audible + record at zone velocity (2A), Rpt1/Rpt2 first-hit fires once (2A + 2A-fixup), regular pads + TARP arp output respect VelIn (2B). Next: Sub-bundle 2C (Rpt1/Rpt2 classifier port to DSP — the last big sub-bundle before end-of-Phase-1 cleanup). See `notes/phase-1-bundle-2-plan.md` for the per-sub-bundle plan + ratified decisions.
+**Saved:** 2026-05-15 → 2026-05-16 (Bundles 1.5, 1.6) → 2026-05-17 (Bundles 2.0 + 2A + 2A-fixup + 2B shipped) → 2026-05-17 (Bundles 2C-Rpt1 + 2C-Rpt2 shipped, end of session).
+**Status:** **✓ Sub-bundle 2C COMPLETE + VERIFIED + PUSHED on `phase-1-bundle-2`** (head = `3336e2b`). Branch sits on top of `phase-1-bundle-1` (Bundle 1 + 1.5 + 1.6, head = `2b319a2`, unchanged). User-verified end-to-end: Rpt1 rate-pad classifier on audio thread (2C-Rpt1), Rpt2 lane-pad + rate-pad classifier on audio thread incl. multi-lane engage/release/latch, Loop+hold latching paths, re-tap-to-unlatch at fastest rate, Delete+pad properly gated (no audio-thread engagement) — 2C-Rpt2. The last big sub-bundle of Phase 1 is done. Next: end-of-Phase-1 coordinated drop (fork main merge, dAVEBOx main merge, patch regen, cleanup pass, release). See "What's NOT done yet" below.
 
 **Discipline locked-in for this refactor:** **NO main merges until the entire Phase 1 refactor is complete and verified end-to-end.** Bundle branches push to their own remote refs only; one coordinated mainline drop + patch regen + release at the very end. Stated 2026-05-16 — memory: `feedback_phase_1_no_main_until_done.md`.
 
@@ -20,11 +20,13 @@
 
 (Earlier Bundle 1 commits `78f9275`, `000e30e`, `ac3c3c2` are the scaffold/initial-dispatch trio that landed before the session-state file was first written; they sit underneath these on the branch.)
 
-## Commits on phase-1-bundle-2 (off phase-1-bundle-1, will be pushed to `origin/phase-1-bundle-2` at end of session)
+## Commits on phase-1-bundle-2 (off phase-1-bundle-1, pushed to `origin/phase-1-bundle-2`)
 
 - `ddd81da` **Bundle 2.0 + 2A** — pad-source scaffold + drum vel zones in on_midi. Adds `pad_source_t` enum + `inst->pad_source_scratch[NUM_TRACKS]` (2.0 publishes only NORMAL; 2B/2C add the bypass sources). Adds `drum_pad_event(track, padIdx, vel, isOn)` classifier wired into `on_midi` before the pitch lookup. NORMAL branch fires active-lane note at zone velocity + populates `on_midi_drum_press_*[t][active_lane]` slot for vel-pad recording (post-Bundle-1.5 preroll filter required slot=active). Rpt branches return "handled, don't dispatch" gated on a new `tr->drum_perform_mode` mirror (NOT on `drum_repeat_active`, which flips too late). Adds two volatile DSP per-track mirrors: `active_drum_lane` (8 JS sites → `setActiveDrumLane` helper) and `drum_perform_mode` (2 JS sites → `setDrumPerformMode` helper). Both helpers use array-ref alias (`const arr = S.x; arr[t] = v`) to avoid replace_all self-recursion — see memory `feedback_replace_all_self_referential_helper.md` for the bug we hit on first deploy.
 - `4b6fca9` **Bundle 2A fixup** — Rpt2 left-half lane pads also return "handled" from `drum_pad_event`. Rpt2 activation is left-half (JS pushes `tN_drum_repeat2_lane_on`; DSP's `drum_repeat2_tick` fires the first repeat); without skipping `on_midi` dispatch the first hit double-triggered. Rpt1's left-half pads still fall through to normal lane-note dispatch (no JS-side activation handler — single note is correct).
 - `c4bd0fc` **Bundle 2B** — VelIn in on_midi via the existing `effective_vel(tr, raw)` helper, gated on `PAD_SRC_NORMAL` so vel-zone presses pass through untouched. Incidental free fix: TARP arp output now respects VelIn (it reads held-pad state populated by `live_note_on`; no `tarp_fire_step` change). JS `liveSendNote` VelIn block marked PHASE-1 (still runs on stock Schwung).
+- `13ec307` **Bundle 2C-Rpt1** — Rpt1 rate-pad classifier moves to `drum_pad_event` on the audio thread. JS still owns the latch *decision* (Loop-held edge) but pushes an unconditional 0/1 edge on every rate-pad press; DSP `drum_repeat_latched` mirror lets `drum_pad_event` detect re-tap-to-unlatch synchronously. Drops the `pendingRepeatLane` JS-tick deferral hack. Two new internal helpers (`drum_repeat_start_internal`, `_stop_internal`, `_lane_internal`) extracted from set_param so both paths share code. PHASE-1 gates on JS pushes for `drum_repeat_start` / `drum_repeat_lane`.
+- `3336e2b` **Bundle 2C-Rpt2** — Rpt2 lane-pad + rate-pad classifier moves to `drum_pad_event`. New mirrors: `tr->drum_lane_page` (JS pushes via `setDrumLanePage` helper), `tr->drum_repeat2_latched_lanes` (uint32_t bitmask), `inst->delete_held` (GLOBAL — see fan-out lesson below). Atomic `drum_repeat2_latch_held` set_param ORs active|pending into latched in one push, avoiding multi-lane coalescing. Audio-thread release handling closes the multi-lane simultaneous-release stranding bug. Internal helpers extracted; defensive latched-clear in `_on_internal` REMOVED so JS-pushed edges aren't stomped by host drain order. Runtime invariant checks added in `drum_repeat_tick` / `drum_repeat2_tick` (rate-limited warning if latched lacks active|pending backing). Header comments document the JS-authoritative lifecycle contract.
 
 ## Commits on `legsmechanical/schwung:phase-1-inbound` (off main, v0.9.13 base, pushed to `fork/phase-1-inbound`)
 
@@ -64,22 +66,24 @@ Builds: dist/davebox-module.tar.gz current. `~/schwung/build/shadow/shadow_ui` d
 
 ### Open work
 
-1. **Bundle 2C — Rpt1 / Rpt2 classifier port to DSP.** Last big sub-bundle before end-of-Phase-1 cleanup. Estimated 2–3 days; **Rpt2 is the medium-high-risk piece** per audit + Bundle 2A experience. Decision ratified earlier: ship as TWO commits (`phase-1(bundle-2C-Rpt1)` then `phase-1(bundle-2C-Rpt2)`) for clean bisect. Plan section in `notes/phase-1-bundle-2-plan.md` — read that first when resuming. Key concept: `drum_pad_event` Rpt branches currently return "handled, don't dispatch" so JS-side `tN_drum_repeat_start` / `tN_drum_repeat2_lane_on` keep ownership; 2C moves the right-pad (Rpt1 rate/lane/vel) + left-pad (Rpt2 lane) classifier into DSP and migrates the `pendingRepeatLane` coalescing band-aid to a per-track DSP-internal queue. Cadence: per-sub-bundle verify (same as 2A/2B).
-
-2. **End-of-refactor coordinated drop** — when ALL phase-1 bundles (incl. 2C) are done:
+1. **End-of-refactor coordinated drop** — all Phase 1 bundles complete; ready to roll up.
    *(See also: "Parked — explicitly out of scope for this refactor" below for followups.)*
    - Merge `legsmechanical/schwung:phase-1-inbound` → `legsmechanical/schwung:main`, push fork.
-   - Merge `phase-1-bundle-1` → `phase-1-bundle-2` → … → `main` (on `legsmechanical/schwung-davebox`), push origin.
+   - Merge `phase-1-bundle-1` → `phase-1-bundle-2` → `main` (on `legsmechanical/schwung-davebox`), push origin.
    - Regenerate `patches/davebox-local.patch` via `git -C ~/schwung diff v0.9.13..main -- src/` and commit on dAVEBOx main.
-   - Cut release (probably `0.5.0`+).
    - End-of-Phase-1 cleanup pass: remove all `PHASE-1: remove when patches upstreamed` JS+DSP gate sites, delete dead `effectiveVelocity()` no-op at `ui.js:987`, etc. Per master plan §Cleanup.
-   - Do NOT do any of this mid-refactor — see `feedback_phase_1_no_main_until_done.md`.
+   - Cut release (probably `0.5.0`+).
+   - Do NOT skip steps or merge piecemeal — see `feedback_phase_1_no_main_until_done.md`.
 
 ### Parked — explicitly out of scope for this refactor (revisit post-Phase-1)
 
-- **Drum repeats (Rpt1 / Rpt2) and looper during count-in.** Bundle 1.6 deliberately left `looper_tick`, `drum_repeat_tick`, and `drum_repeat2_tick` dormant during count-in (only `tarp_tick` was wired in). The likely-real omission is **drum repeats** — same input-side parallel as TARP, so holding a drum pad with repeat armed through count-in is silent today even though it sounds correctly with transport stopped. Looper-during-count-in is more design-question than bug. **SEQ ARP (`arp_tick`) is correctly dormant** — it's playback-side and there's no clip playback during count-in. User flagged on 2026-05-16 to defer past Phase 1; do NOT pick this up inside the Phase 1 refactor. Pattern to follow when revisiting: copy the per-track `tarp_tick` loop inside the count-in inner-while at `seq8.c` ~L6414 and add the corresponding tick call(s); audit each engine's reset needs at count-in fire (mirroring the TARP runtime reset in the fire branch).
+- **Drum repeats (Rpt1 / Rpt2) and looper during count-in.** Bundle 1.6 deliberately left `looper_tick`, `drum_repeat_tick`, and `drum_repeat2_tick` dormant during count-in (only `tarp_tick` was wired in). The likely-real omission is **drum repeats** — same input-side parallel as TARP, so holding a drum pad with repeat armed through count-in is silent today even though it sounds correctly with transport stopped. Looper-during-count-in is more design-question than bug. **SEQ ARP (`arp_tick`) is correctly dormant** — it's playback-side and there's no clip playback during count-in. Memory: `project_drum_repeats_during_countin.md`. Folds with the InQ-while-stopped behavior change (next item) into one post-Phase-1 mini-pass.
 
-- **Modal pad-interception regression (class of bug).** Memory `project_modal_pad_interception_regression.md`. User flagged 2026-05-17 mid-Bundle-2B: tap-tempo pads play notes, AND ARP step-edit pads play notes — both because the modal handlers swallow pad events in JS but `on_midi` runs in parallel and fires the lane/vel-zone note regardless. Same class of bug as the session-view gate (which IS covered via `pad_note_map = 0xFF`). Fix-shape candidates in the memory; the pattern leans toward a `dsp_pad_dispatch_paused` flag pushed when ANY modal opens (more flexible than padmap=0xFF per modal). **DO NOT pick up mid-2C** — broader audit needed first. Likely other affected modals: bake confirm, inherit picker, scene-save, capture-held lane select, Loop+step-range gesture, global menu, any dialog that early-returns in `_onPadPress`/`_onPadRelease`.
+- **Drum repeat InQ behavior changes** (two items). Memory: `project_drum_repeat_inq_behavior.md`. Both are *desired* changes flagged during 2C-Rpt1 testing, NOT regressions. (1) InQ should sync repeats regardless of playback state — today the stopped-path bails to `drum_repeat_pending=0` and fires immediately; should use `arp_master_tick` as the InQ phase clock. (2) Repeats should record at the repeat rate's natural sub-step offsets, not snapped to InQ-rate step-0. Both need design pass + share the same investigation surface as the count-in dormancy item.
+
+- **Delete+Play universal unlatch.** Memory: `project_delete_play_universal_unlatch.md`. Hold Delete + tap Play → kill TARP latches + Rpt1 latches + every Rpt2 lane-latch bit across all 8 tracks. Pure JS handler iterating tracks, calling existing per-engine stop set_params. No architectural dependency on anything. ~30min when picked up.
+
+- **Modal pad-interception regression (class of bug).** Memory `project_modal_pad_interception_regression.md`. User flagged 2026-05-17 mid-Bundle-2B: tap-tempo pads play notes, AND ARP step-edit pads play notes — both because the modal handlers swallow pad events in JS but `on_midi` runs in parallel and fires the lane/vel-zone note regardless. **Delete-held is now covered** by Bundle 2C-Rpt2's `inst->delete_held` flag — DSP `drum_pad_event` returns 1 at top when set. Same fix-shape applies to Shift / Copy / Mute / Capture and to dialog modals (bake confirm, inherit picker, scene-save, capture-held lane select, Loop+step-range gesture, global menu). Generalize `inst->delete_held` into a `modal_pad_block` bitmask when picked up; JS pushes the bit on each modifier edge.
 
 ### Already done (confirmed)
 
@@ -164,6 +168,20 @@ Goal: ~1 hour of real-music playing on patched Schwung. Hit the things below. An
 
 11. **TARP-respects-VelIn was a latent bug pre-Phase-1, fixed incidentally by 2B.** `tarp_fire_step` doesn't call `effective_vel` (only `drum_repeat_tick`/`drum_repeat2_tick` did). But TARP reads held-pad state populated by `live_note_on`, so once VelIn is applied at the entry point (2B), TARP inherits it for free with no `tarp_fire_step` change. Open product question whether the pre-fix behavior (TARP raw vel) was intentional; treated as a bug for the user-facing fix.
 
+### Bundle 2C additions
+
+12. **Host drains `set_param` BEFORE `on_midi` within a buffer — defensive clears in `_on_internal` helpers stomp JS edges.** Initial 2C-Rpt2 attempt cleared `tr->drum_repeat2_latched_lanes &= ~bit` at the top of `_lane_on_internal`, mirroring a pattern from Rpt1. Bug: the host drains all set_params before dispatching `on_midi` for that same audio buffer. JS's `tN_drum_repeat2_lane_latched <lane> 1` push lands first; `drum_pad_event` then calls `_lane_on_internal`, which immediately stomps the bit back to 0. Latch never sticks. Fix: drop the defensive clear; JS is authoritative and pushes the explicit 0 OR 1 edge on every relevant press. Same lesson applied to Rpt1's `drum_repeat_start_internal`. Header comments on both helpers now document the contract.
+
+13. **Atomic compound `set_param` operations beat per-key edge fan-out for multi-target writes.** Loop-held + multi-pad press in Rpt2 needs to flip the latched bit for multiple lanes in one onMidiMessage callback. Per-lane edge pushes (`tN_drum_repeat2_lane_latched <lane> 1`) coalesce — same key, different args → only the last lane lands. Fix: a new atomic `tN_drum_repeat2_latch_held` handler that ORs `active | pending` into `latched` in one DSP-side operation. Single push from JS, deterministic outcome. Pattern is reusable for any compound state mutation that touches multiple slots from one event.
+
+14. **Same-shape `tN_*` rapid fan-out within one onMidiMessage callback can coalesce — even when keys are textually distinct.** Empirically observed during the Delete+pad probe: 8 calls in a tight for-loop `host_module_set_param('t' + _t + '_delete_held', _v)` resulted in ONLY `t7_delete_held` landing at DSP. `t0`..`t6` were silently dropped. Other sites that push two or three different `tN_*` keys in tight succession DO land all of them, so the limit isn't strict-1-per-callback — it's some host queue depth / coalescing heuristic on rapid same-suffix pushes. Workaround: if the value is global (same for all tracks), use ONE push to any tN carrier and read at instance scope. `inst->delete_held` is the shipped example. Memory worth saving.
+
+15. **Same-buffer race in `drum_pad_event`: write `active_drum_lane` synchronously to handle rapid lane→rate gestures.** A user pressing a lane pad and a rate pad in tight succession can land both events in the same audio buffer. `drum_pad_event` for the rate pad reads `tr->active_drum_lane`, which JS hadn't pushed yet (JS pushes are deferred to next tick). Fix: in the Rpt2 lane-pad press branch, write `tr->active_drum_lane = lane` synchronously on the audio thread before calling `_lane_on_internal`. JS's subsequent push of the same value is idempotent.
+
+16. **Multi-lane simultaneous release on one audio buffer needs DSP-side handling, not JS-side per-lane stops.** Releasing 2+ Rpt2 lane pads in one onMidiMessage callback: 2+ `tN_drum_repeat2_lane_off <lane>` pushes coalesce, only one lane stops, others keep firing as ghost-latched. Fix: handle the release directly in `drum_pad_event` — each lane processed synchronously on the audio thread, no JS coalescing surface.
+
+17. **Runtime invariant checks earn their keep for JS-authoritative-but-DSP-mirrored state.** When the latched-bit lifecycle was moved fully under JS control (no defensive clears in DSP helpers), a future regression could push a `latched=1` edge without engaging the engine — leaving a phantom latched bit that `drum_pad_event`'s unlatch-tap branch would dutifully try to stop a non-running engine for. Added rate-limited `seq8_ilog` checks in `drum_repeat_tick` / `drum_repeat2_tick` asserting `latched ⊆ active ∪ pending`. Costs ~3 lines of code per engine; catches the next bug before device testing.
+
 ---
 
 ## Bundle 2A — shipped (reference)
@@ -209,10 +227,10 @@ Bundle 1.6 (commit `eaa0af9`) closes the "TARP + count-in" gap surfaced during B
 
 ---
 
-## File state at end of session (2026-05-17)
+## File state at end of session (2026-05-17, late evening)
 
 ```
-On branch phase-1-bundle-2 (HEAD = c4bd0fc, pending push at session-close + this checkpoint)
+On branch phase-1-bundle-2 (HEAD = 3336e2b, pushed to origin/phase-1-bundle-2)
 Working tree clean apart from this docs commit + untracked notes below.
 Untracked (notes, intentionally not committed):
   notes/DISCORD_INTRO_POST.md
@@ -222,16 +240,18 @@ Untracked (notes, intentionally not committed):
 
 Branch stack:
 - `phase-1-bundle-1` (head `2b319a2`, on `origin/phase-1-bundle-1`) — Bundles 1 + 1.5 + 1.6.
-- `phase-1-bundle-2` (head `c4bd0fc` at code; this docs commit pushes to `origin/phase-1-bundle-2`) — Bundles 2.0 + 2A + 2A-fixup + 2B.
+- `phase-1-bundle-2` (head `3336e2b`, on `origin/phase-1-bundle-2`) — Bundles 2.0 + 2A + 2A-fixup + 2B + 2C-Rpt1 + 2C-Rpt2.
 
-Four code commits this session (in order on phase-1-bundle-2):
+Five code commits this session on phase-1-bundle-2 (in order):
 - `ddd81da` Bundle 2.0 + 2A.
 - `4b6fca9` Bundle 2A fixup (Rpt2 left-half).
 - `c4bd0fc` Bundle 2B.
+- `13ec307` Bundle 2C-Rpt1.
+- `3336e2b` Bundle 2C-Rpt2 (amended once post-advisor review to add invariant checks, doc comments, and the `inst->delete_held` fix after the 8-track fan-out diagnostic revealed coalescing).
 
-Plus a docs commit closing the session (this checkpoint refresh + bundle-2 plan doc status footer).
+Plus a docs commit closing the session (this checkpoint refresh).
 
-**Resume next session:** open `notes/phase-1-session-state.md` first (this file), then `notes/phase-1-bundle-2-plan.md` for the 2C plan. Start `phase-1-bundle-2C` (or continue on `phase-1-bundle-2` — TBD; the plan says split commits within one branch is fine since both 2C-Rpt1 and 2C-Rpt2 land before the end-of-Phase-1 drop anyway). Do NOT merge to main per discipline rule above.
+**Resume next session:** open `notes/phase-1-session-state.md` first (this file). Phase 1 implementation work is DONE. Next chapter is the end-of-refactor coordinated drop (see "Open work" above). Do NOT merge any bundle branch to main piecemeal — single coordinated drop per `feedback_phase_1_no_main_until_done.md`.
 
 ## Verification scenarios run this session
 
