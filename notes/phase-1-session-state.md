@@ -1,7 +1,7 @@
-# Phase 1 — Session Checkpoint (Bundles 1 + 1.5 + 1.6 complete)
+# Phase 1 — Session Checkpoint (Bundles 1 + 1.5 + 1.6 + 2.0 + 2A + 2B complete)
 
-**Saved:** 2026-05-15 → updated 2026-05-16 (Bundle 1.5 shipped) → updated 2026-05-16 (Bundle 1.6 shipped, end of session).
-**Status:** **✓ BUNDLE 1 + BUNDLE 1.5 + BUNDLE 1.6 VERIFIED + COMMITTED on `phase-1-bundle-1`** (Bundle 1.6 = commit `eaa0af9`, not yet pushed at time of this checkpoint write). All recording scenarios pass: loop_start=0 (count-in + normal, melodic + drum), loop_start>0 (count-in + normal, melodic + drum), window-wrap held notes, TARP overdub, ROUTE_MOVE + ROUTE_SCHWUNG. Vanilla-Schwung fallback also verified for Bundles 1/1.5 (deployed v0.9.13 binaries; user confirmed pre-Phase-1 behavior; patched restored after). Bundle 1.6 is dAVEBOx-only (no shim changes), so the stock-Schwung fallback path is unaffected by it.
+**Saved:** 2026-05-15 → 2026-05-16 (Bundles 1.5, 1.6) → 2026-05-17 (Bundles 2.0 + 2A + 2A-fixup + 2B shipped, end of session).
+**Status:** **✓ Bundles 2.0 + 2A + 2A-fixup + 2B VERIFIED + COMMITTED on `phase-1-bundle-2`** (head = `c4bd0fc`). Branch sits on top of `phase-1-bundle-1` (Bundle 1 + 1.5 + 1.6, head = `2b319a2`, unchanged). User-verified: vel-zone presses audible + record at zone velocity (2A), Rpt1/Rpt2 first-hit fires once (2A + 2A-fixup), regular pads + TARP arp output respect VelIn (2B). Next: Sub-bundle 2C (Rpt1/Rpt2 classifier port to DSP — the last big sub-bundle before end-of-Phase-1 cleanup). See `notes/phase-1-bundle-2-plan.md` for the per-sub-bundle plan + ratified decisions.
 
 **Discipline locked-in for this refactor:** **NO main merges until the entire Phase 1 refactor is complete and verified end-to-end.** Bundle branches push to their own remote refs only; one coordinated mainline drop + patch regen + release at the very end. Stated 2026-05-16 — memory: `feedback_phase_1_no_main_until_done.md`.
 
@@ -19,6 +19,12 @@
 - `eaa0af9` **Bundle 1.6** — ARP IN during count-in: tick `tarp_tick` inside the count-in loop; sync=off preroll capture in `tarp_fire_step` (gate `count_in_ticks <= PPQN/2 && count_in_track == t && !tarp_sync`, snap_tick = `loop_start * tps`); count-in fire primes `current_clip_tick = loop_start * tps`, resets every TARP-on track's runtime (`master_anchor=0`, `pending_first_note=(held_count>0)`, `sounding_active=0`), and reschedules in-flight pfx events to `fire_at=0` so queued note-offs release voices cleanly without a broadcast panic.
 
 (Earlier Bundle 1 commits `78f9275`, `000e30e`, `ac3c3c2` are the scaffold/initial-dispatch trio that landed before the session-state file was first written; they sit underneath these on the branch.)
+
+## Commits on phase-1-bundle-2 (off phase-1-bundle-1, will be pushed to `origin/phase-1-bundle-2` at end of session)
+
+- `ddd81da` **Bundle 2.0 + 2A** — pad-source scaffold + drum vel zones in on_midi. Adds `pad_source_t` enum + `inst->pad_source_scratch[NUM_TRACKS]` (2.0 publishes only NORMAL; 2B/2C add the bypass sources). Adds `drum_pad_event(track, padIdx, vel, isOn)` classifier wired into `on_midi` before the pitch lookup. NORMAL branch fires active-lane note at zone velocity + populates `on_midi_drum_press_*[t][active_lane]` slot for vel-pad recording (post-Bundle-1.5 preroll filter required slot=active). Rpt branches return "handled, don't dispatch" gated on a new `tr->drum_perform_mode` mirror (NOT on `drum_repeat_active`, which flips too late). Adds two volatile DSP per-track mirrors: `active_drum_lane` (8 JS sites → `setActiveDrumLane` helper) and `drum_perform_mode` (2 JS sites → `setDrumPerformMode` helper). Both helpers use array-ref alias (`const arr = S.x; arr[t] = v`) to avoid replace_all self-recursion — see memory `feedback_replace_all_self_referential_helper.md` for the bug we hit on first deploy.
+- `4b6fca9` **Bundle 2A fixup** — Rpt2 left-half lane pads also return "handled" from `drum_pad_event`. Rpt2 activation is left-half (JS pushes `tN_drum_repeat2_lane_on`; DSP's `drum_repeat2_tick` fires the first repeat); without skipping `on_midi` dispatch the first hit double-triggered. Rpt1's left-half pads still fall through to normal lane-note dispatch (no JS-side activation handler — single note is correct).
+- `c4bd0fc` **Bundle 2B** — VelIn in on_midi via the existing `effective_vel(tr, raw)` helper, gated on `PAD_SRC_NORMAL` so vel-zone presses pass through untouched. Incidental free fix: TARP arp output now respects VelIn (it reads held-pad state populated by `live_note_on`; no `tarp_fire_step` change). JS `liveSendNote` VelIn block marked PHASE-1 (still runs on stock Schwung).
 
 ## Commits on `legsmechanical/schwung:phase-1-inbound` (off main, v0.9.13 base, pushed to `fork/phase-1-inbound`)
 
@@ -58,19 +64,22 @@ Builds: dist/davebox-module.tar.gz current. `~/schwung/build/shadow/shadow_ui` d
 
 ### Open work
 
-1. **Bundle 2 — VelIn + drum velocity zones + Note Repeat audio-thread path.** Per the original Phase 1 plan. Currently these features live in the JS path which Bundle 1 suppresses for note events on patched Schwung. See `notes/phase-1-plan.md` for the bundle breakdown.
+1. **Bundle 2C — Rpt1 / Rpt2 classifier port to DSP.** Last big sub-bundle before end-of-Phase-1 cleanup. Estimated 2–3 days; **Rpt2 is the medium-high-risk piece** per audit + Bundle 2A experience. Decision ratified earlier: ship as TWO commits (`phase-1(bundle-2C-Rpt1)` then `phase-1(bundle-2C-Rpt2)`) for clean bisect. Plan section in `notes/phase-1-bundle-2-plan.md` — read that first when resuming. Key concept: `drum_pad_event` Rpt branches currently return "handled, don't dispatch" so JS-side `tN_drum_repeat_start` / `tN_drum_repeat2_lane_on` keep ownership; 2C moves the right-pad (Rpt1 rate/lane/vel) + left-pad (Rpt2 lane) classifier into DSP and migrates the `pendingRepeatLane` coalescing band-aid to a per-track DSP-internal queue. Cadence: per-sub-bundle verify (same as 2A/2B).
 
-2. **End-of-refactor coordinated drop** — when ALL phase-1 bundles are done:
-   *(See also: "Parked — explicitly out of scope for this refactor" below for the drum-repeats-during-count-in followup that came out of Bundle 1.6.)*
+2. **End-of-refactor coordinated drop** — when ALL phase-1 bundles (incl. 2C) are done:
+   *(See also: "Parked — explicitly out of scope for this refactor" below for followups.)*
    - Merge `legsmechanical/schwung:phase-1-inbound` → `legsmechanical/schwung:main`, push fork.
-   - Merge `phase-1-bundle-1` (+ later bundle branches) → `legsmechanical/schwung-davebox:main`, push origin.
+   - Merge `phase-1-bundle-1` → `phase-1-bundle-2` → … → `main` (on `legsmechanical/schwung-davebox`), push origin.
    - Regenerate `patches/davebox-local.patch` via `git -C ~/schwung diff v0.9.13..main -- src/` and commit on dAVEBOx main.
    - Cut release (probably `0.5.0`+).
+   - End-of-Phase-1 cleanup pass: remove all `PHASE-1: remove when patches upstreamed` JS+DSP gate sites, delete dead `effectiveVelocity()` no-op at `ui.js:987`, etc. Per master plan §Cleanup.
    - Do NOT do any of this mid-refactor — see `feedback_phase_1_no_main_until_done.md`.
 
-### Parked — explicitly out of scope for this refactor
+### Parked — explicitly out of scope for this refactor (revisit post-Phase-1)
 
 - **Drum repeats (Rpt1 / Rpt2) and looper during count-in.** Bundle 1.6 deliberately left `looper_tick`, `drum_repeat_tick`, and `drum_repeat2_tick` dormant during count-in (only `tarp_tick` was wired in). The likely-real omission is **drum repeats** — same input-side parallel as TARP, so holding a drum pad with repeat armed through count-in is silent today even though it sounds correctly with transport stopped. Looper-during-count-in is more design-question than bug. **SEQ ARP (`arp_tick`) is correctly dormant** — it's playback-side and there's no clip playback during count-in. User flagged on 2026-05-16 to defer past Phase 1; do NOT pick this up inside the Phase 1 refactor. Pattern to follow when revisiting: copy the per-track `tarp_tick` loop inside the count-in inner-while at `seq8.c` ~L6414 and add the corresponding tick call(s); audit each engine's reset needs at count-in fire (mirroring the TARP runtime reset in the fire branch).
+
+- **Modal pad-interception regression (class of bug).** Memory `project_modal_pad_interception_regression.md`. User flagged 2026-05-17 mid-Bundle-2B: tap-tempo pads play notes, AND ARP step-edit pads play notes — both because the modal handlers swallow pad events in JS but `on_midi` runs in parallel and fires the lane/vel-zone note regardless. Same class of bug as the session-view gate (which IS covered via `pad_note_map = 0xFF`). Fix-shape candidates in the memory; the pattern leans toward a `dsp_pad_dispatch_paused` flag pushed when ANY modal opens (more flexible than padmap=0xFF per modal). **DO NOT pick up mid-2C** — broader audit needed first. Likely other affected modals: bake confirm, inherit picker, scene-save, capture-held lane select, Loop+step-range gesture, global menu, any dialog that early-returns in `_onPadPress`/`_onPadRelease`.
 
 ### Already done (confirmed)
 
@@ -97,16 +106,18 @@ Bundle 1.5 (commit `a46bb3c`) folded two related fixes:
 
 Goal: ~1 hour of real-music playing on patched Schwung. Hit the things below. Anything weird that isn't on the "expected NOT to work" list is a real regression.
 
-### Expected NOT to work (Bundle 2/3 territory — DO NOT flag as bugs)
-
-These features still live in the JS path which Phase 1 suppresses for note events on patched Schwung. They'll be ported in later bundles.
+### Expected NOT to work (post-2B — remaining Bundle 2C territory)
 
 | Feature | What's missing | Bundle |
 |---|---|---|
-| **VelIn (per-track velocity override)** | JS applies `trackVelOverride` in `liveSendNote` — now skipped for notes. `on_midi` dispatches with raw pad velocity. VelIn knob no-op for pad presses. | 2 |
-| **Drum velocity zones** | Right-half pad presses still arm a zone in JS state, but the actual velocity hitting the lane is raw d2 from `on_midi`, not the zone-derived value. | 2 |
-| **Note Repeat (Rpt1 / Rpt2)** | JS pad-press handler fires the repeat pattern. With JS note dispatch suppressed, repeats don't fire on pad input. (Repeats DURING sequencer playback still work — those run from DSP step-fire.) | 2 |
-| **Count-in preroll chord capture** | JS captures notes during count-in via `pendingPrerollNotes`. With JS suppressed, preroll captures may not work correctly. | 3 |
+| **Note Repeat (Rpt1 / Rpt2) classifier on DSP audio thread** | JS still owns the rate / lane / vel-pad classifier. `drum_pad_event` returns "handled, don't dispatch" for Rpt activation pads (right-half rate pads in Rpt1, left-half lane pads in Rpt2) so the existing `tN_drum_repeat_start` / `tN_drum_repeat2_lane_on` flow keeps working. JS-tick wobble between physical press and JS handler is the symptom 2C closes. | 2C |
+| **Modal pad-interception** (tap tempo, ARP step-edit, others) | JS modal handlers swallow pad events in `_onPadPress`/`_onPadRelease` but `on_midi` runs in parallel and fires the lane/vel-zone note. See parked section above. | post-Phase-1 |
+
+### Shipped + verified — DO flag if it regresses
+
+- **VelIn (per-track velocity override)** — Bundle 2B (`c4bd0fc`). Applied in `on_midi` via `effective_vel`. Stock Schwung still uses JS-side application in `liveSendNote` (marked PHASE-1).
+- **Drum velocity zones** — Bundle 2A (`ddd81da`). Right-half pads classified by `drum_pad_event`, fires active lane note at zone velocity, records via JS-pushed `tN_drum_record_note_on` after slot population.
+- **TARP arp respects VelIn** — Bundle 2B incidental fix. Held-pad velocity is now scaled before `tarp_tick` reads it.
 
 ### Expected TO work — verify these
 
@@ -141,6 +152,44 @@ These features still live in the JS path which Phase 1 suppresses for note event
 5. **Recording double-monitor caveats are route-dependent.** ROUTE_MOVE: `record_note_on` inline-monitors (so on_midi must skip when armed). ROUTE_SCHWUNG: `record_note_on` does NOT monitor (so on_midi must dispatch even when armed). Different gates per route.
 6. **JS dispatch path applies `trackOctave * 12` at dispatch time, not in `computePadNoteMap`.** Phase 1 must bake the offset into the DSP push to preserve the behavior. Leave `S.padNoteMap` itself unshifted so stock fallback still works correctly.
 
+### Bundle 2 additions
+
+7. **`replace_all` on `X[t] = arg;` when migrating to a `setX` helper matches the helper's OWN internal write.** Burned on first Bundle 2A deploy — `setActiveDrumLane` recursed forever, stack overflow on init, dAVEBOx "Loading…" bounces back to tool menu. Memory: `feedback_replace_all_self_referential_helper.md`. Fix shape: write the helper's internal assignment in a syntactically-distinct form (`const arr = S.x; arr[t] = arg;`) FIRST, then do the migration. Or use per-site Edits instead of `replace_all`.
+
+8. **Recording-slot mandatory rule (Bundle 1.5) applies to vel-pad recording too.** `drum_record_note_on` on patched Schwung drops the record if `on_midi_drum_press_active[t][lane] == 0`. Vel-pad presses fire `live_note_on` for the ACTIVE lane's note, but the active lane's slot wasn't populated (only pitch-matching slots were). `drum_pad_event` now explicitly populates the slot for the active lane on vel-pad press when recording/preroll is active.
+
+9. **Rpt-mode gate must be on perform_mode mirror, NOT `drum_repeat_active`.** First Bundle 2A attempt gated on `drum_repeat_active` (the DSP flag for "Rpt fire loop running"). That flag flips AFTER the rate-pad set_param processes, so the FIRST rate-pad press still saw the flag as 0 and `drum_pad_event` fired a preview note in parallel with the first repeat. New `drum_perform_mode[NUM_TRACKS]` mirror is set by JS BEFORE the user can press any rate pad, so `on_midi` always sees the right state.
+
+10. **Rpt1 vs Rpt2 activation paths are asymmetric on the pad layout.** Rpt1 activates via right-half rate pads; Rpt2 activates via left-half lane pads. `drum_pad_event` must skip dispatch for BOTH (in Rpt1 mode for right-half, in Rpt2 mode for left-half) or one of them double-triggers. Missing the Rpt2 case was the 2A-fixup commit (`4b6fca9`).
+
+11. **TARP-respects-VelIn was a latent bug pre-Phase-1, fixed incidentally by 2B.** `tarp_fire_step` doesn't call `effective_vel` (only `drum_repeat_tick`/`drum_repeat2_tick` did). But TARP reads held-pad state populated by `live_note_on`, so once VelIn is applied at the entry point (2B), TARP inherits it for free with no `tarp_fire_step` change. Open product question whether the pre-fix behavior (TARP raw vel) was intentional; treated as a bug for the user-facing fix.
+
+---
+
+## Bundle 2A — shipped (reference)
+
+Bundle 2A (commit `ddd81da` + fixup `4b6fca9`) restores drum vel-zone behavior on patched Schwung that Bundle 1 silently broke. Four threads:
+
+1. **Pad-source scaffold (2.0).** `pad_source_t` enum (NORMAL / VEL_ZONE / RPT_RATE / RPT_LANE / RPT_VEL) + `inst->pad_source_scratch[NUM_TRACKS]` written before `live_note_on` and reset after. 2.0 alone publishes only NORMAL — 2B/2C add the bypass sources. Designed up-front per advisor #2 so the three sub-bundles share one classifier surface.
+
+2. **`drum_pad_event` classifier.** Single per-track helper called from `on_midi` before the pitch lookup early-return for `pad_mode == PAD_MODE_DRUM`. Returns 1 (handled) or 0 (fall through to normal pad dispatch). Branches:
+   - Right-half pad + perform_mode == 0 (NORMAL): arm `inst->drum_vel_zone_armed[t]` + cache `drum_last_vel_zone[t]`, fire `live_note_on` for active lane's note at zone velocity. Set `pad_source_scratch[t] = PAD_SRC_VEL_ZONE` around the call so 2B's VelIn application skips this preview.
+   - Right-half pad + perform_mode == 1 (Rpt1) OR 2 (Rpt2): return 1 (handled — don't dispatch). JS rate/lane/vel pad classifier keeps owning Rpt activation.
+   - Left-half pad + perform_mode == 2 (Rpt2): return 1. Rpt2 lane activation is left-half; JS pushes `tN_drum_repeat2_lane_on` and DSP's `drum_repeat2_tick` fires the first repeat. Without this skip the first hit double-triggered (2A-fixup commit).
+   - Left-half pad + perform_mode == 0 OR 1: return 0 (fall through to normal pad dispatch — Rpt1 lane play is just a single note).
+
+3. **Vel-pad recording slot population.** When `is_on && (recording || _is_preroll)` in NORMAL mode, populate `on_midi_drum_press_step/off/active[t][active_lane]` so the JS-pushed `tN_drum_record_note_on` finds the slot. Without this the post-Bundle-1.5 preroll filter at `seq8_set_param.c:4090` drops the record.
+
+4. **Two new DSP mirrors with JS helpers.** `active_drum_lane` and `drum_perform_mode`, both per-track, both pushed via new `tN_active_drum_lane` / `tN_drum_perform_mode` set_params at every JS mutation site. JS helpers `setActiveDrumLane` and `setDrumPerformMode` both use the array-ref-alias pattern to avoid `replace_all` self-recursion.
+
+---
+
+## Bundle 2B — shipped (reference)
+
+Bundle 2B (commit `c4bd0fc`) is tiny — one DSP edit at the `on_midi` live_note_on call site. Wraps the velocity in `effective_vel(tr, raw)` (the existing helper Rpt1/Rpt2 playback already uses for VelIn). `PAD_SRC_NORMAL` is implicitly the gate — drum_pad_event sets `pad_source_scratch[t] = PAD_SRC_VEL_ZONE` around its own `live_note_on` call (and resets to NORMAL afterward), so vel-zone presses don't pass through this VelIn application path. JS `liveSendNote` block at `ui.js:2317` marked PHASE-1 (still runs on stock Schwung).
+
+**Incidental fix: TARP arp output respects VelIn.** No code change in `tarp_fire_step`. TARP reads held-pad state populated by `live_note_on`; once VelIn is applied at the entry point, TARP inherits it. Verified on device with a chord held at low velocity + VelIn=100 → arp fires at 100.
+
 ---
 
 ## Bundle 1.6 — shipped (reference)
@@ -160,23 +209,29 @@ Bundle 1.6 (commit `eaa0af9`) closes the "TARP + count-in" gap surfaced during B
 
 ---
 
-## File state at end of session
+## File state at end of session (2026-05-17)
 
 ```
-On branch phase-1-bundle-1 (HEAD = 2b319a2, in sync with origin/phase-1-bundle-1)
-Working tree clean.
+On branch phase-1-bundle-2 (HEAD = c4bd0fc, pending push at session-close + this checkpoint)
+Working tree clean apart from this docs commit + untracked notes below.
 Untracked (notes, intentionally not committed):
   notes/DISCORD_INTRO_POST.md
   notes/RECORDING_LATENCY_EXPERIMENT.md
   notes/audit-davebox-arch.md
 ```
 
-Final three commits this session, in order:
-- `eaa0af9` Bundle 1.6 code + CHANGELOG `[Unreleased]` + MANUAL `Count-in pre-roll` update.
-- `0a82eaa` Session-state checkpoint reflecting Bundle 1.6 shipped.
-- `2b319a2` Park drum-repeats-during-count-in out of refactor scope.
+Branch stack:
+- `phase-1-bundle-1` (head `2b319a2`, on `origin/phase-1-bundle-1`) — Bundles 1 + 1.5 + 1.6.
+- `phase-1-bundle-2` (head `c4bd0fc` at code; this docs commit pushes to `origin/phase-1-bundle-2`) — Bundles 2.0 + 2A + 2A-fixup + 2B.
 
-All Bundle 1 + 1.5 + 1.6 work committed and pushed. Resume next session from this branch (Bundle 2 = VelIn + drum velocity zones + Note Repeat audio-thread path). Do NOT merge to main per discipline rule above.
+Four code commits this session (in order on phase-1-bundle-2):
+- `ddd81da` Bundle 2.0 + 2A.
+- `4b6fca9` Bundle 2A fixup (Rpt2 left-half).
+- `c4bd0fc` Bundle 2B.
+
+Plus a docs commit closing the session (this checkpoint refresh + bundle-2 plan doc status footer).
+
+**Resume next session:** open `notes/phase-1-session-state.md` first (this file), then `notes/phase-1-bundle-2-plan.md` for the 2C plan. Start `phase-1-bundle-2C` (or continue on `phase-1-bundle-2` — TBD; the plan says split commits within one branch is fine since both 2C-Rpt1 and 2C-Rpt2 land before the end-of-Phase-1 drop anyway). Do NOT merge to main per discipline rule above.
 
 ## Verification scenarios run this session
 

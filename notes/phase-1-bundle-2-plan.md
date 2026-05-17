@@ -2,6 +2,12 @@
 
 **Drafted:** 2026-05-16. Vibe-coder-readable. Walk through together before cutting `phase-1-bundle-2` off `main`.
 
+**Live status (updated 2026-05-17):**
+- ✅ **2.0** — pad-source scaffold. Shipped in `ddd81da`.
+- ✅ **2A** — drum vel zones. Shipped in `ddd81da` + Rpt2 left-half fixup `4b6fca9`.
+- ✅ **2B** — VelIn in on_midi (+ TARP incidental fix). Shipped in `c4bd0fc`.
+- ⏳ **2C** — Rpt1 / Rpt2 classifier port. Pending. Resume here next session.
+
 **Inherits from:** Bundle 1 + 1.5 + 1.6 (on `phase-1-bundle-1`). Audio-thread `on_midi` + `pad_note_map` + `dsp_inbound_enabled` capability gate already in place. Bundle 2 builds on top of that scaffolding — no new shim work (so `legsmechanical/schwung:phase-1-inbound` is untouched by Bundle 2).
 
 ---
