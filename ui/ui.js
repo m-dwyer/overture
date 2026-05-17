@@ -2345,6 +2345,11 @@ function liveSendNote(t, type, pitch, vel, rawVel) {
     const ch    = (S.trackChannel[t] - 1) & 0x0F;
     const route = S.trackRoute[t];
     const status = type | ch;
+    /* PHASE-1: dead on patched Schwung (Bundle 1 gate skips note dispatch
+     * for liveSendNote; Bundle 2B applies VelIn in DSP on_midi via
+     * effective_vel before live_note_on). Stock Schwung still needs this
+     * — runs when dspInboundEnabled is false. Remove with the final
+     * cleanup pass once shim patches land upstream. */
     if (!rawVel && type === 0x90 && vel > 0) {
         const tvo = S.trackVelOverride[t];
         if (tvo > 0) vel = tvo;
