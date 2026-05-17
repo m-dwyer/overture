@@ -4900,7 +4900,21 @@ static int drum_pad_event(seq8_instance_t *inst, seq8_track_t *tr,
                           int t, int padIdx, uint8_t vel, int is_on) {
     (void)vel;  /* zone velocity is computed from padIdx, not vel */
     int velZone = drum_pad_to_vel_zone(padIdx);
-    if (velZone < 0) return 0;  /* left half — caller handles as lane note */
+
+    /* Rpt2 lane activation is a LEFT-half pad press (JS pushes
+     * tN_drum_repeat2_lane_on; DSP's drum_repeat2_tick fires the first
+     * repeat). If on_midi also dispatches the lane note via the normal
+     * pad_note_map path, the first hit double-triggers. JS suppresses
+     * its own monitor for this gesture (padPitch[padIdx] = -1); we
+     * mirror by returning "handled" so on_midi skips dispatch and the
+     * record-tick slot snapshot (Rpt2 records via the repeat engine,
+     * not drum_record_note_on). Rpt1 left-half pads have no JS-side
+     * activation handler — they fall through to normal lane-note
+     * dispatch (return 0), which is the correct single-note behavior. */
+    if (velZone < 0) {
+        if (tr->drum_perform_mode == 2) return 1;
+        return 0;  /* left half — caller handles as lane note */
+    }
 
     /* Rpt mode → JS owns right-pad classification (Bundle 2C will replace).
      * Gating on perform_mode mirror (set by JS BEFORE rate pad press) avoids
