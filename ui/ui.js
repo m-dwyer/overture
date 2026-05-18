@@ -3061,14 +3061,15 @@ function drawUI() {
             const t = S.activeTrack;
             const qv = S.bankParams[t][7][2];
             const DIQ_LABELS = ['Off','1/64','1/32','1/16','1/16T','1/8','1/8T','1/4','1/4T'];
-            const allLabels = ['Stch', S.shiftHeld ? 'Nudg' : 'Shft', 'Qnt', 'VelIn', 'InQ', null, null, null];
+            const allLabels = ['Stch', S.shiftHeld ? 'Nudg' : 'Shft', 'Qnt', 'VelIn', 'InQ', 'SyncRpt', null, null];
             const allVals = [
                 fmtStretch(S.bankParams[t][7][0]),
                 fmtSign(S.bankParams[t][7][1]),
                 qv <= 0 ? '--' : fmtPct(qv),
                 fmtVelOverride(S.trackVelOverride[t]),
                 DIQ_LABELS[S.drumInpQuant[t]] || 'Off',
-                null, null, null,
+                fmtBool(S.bankParams[t][7][5]),
+                null, null,
             ];
             fill_rect(0, 0, 128, 9, 1);
             print(4, 1, (Math.floor(S.tickCount / 24) % 2 === 0 ? 'ALL' : '   ') + ' LANES', 0);
@@ -3078,7 +3079,11 @@ function drawUI() {
                 const rowY = k < 4 ? 12 : 36;
                 const hi   = (S.knobTouched === k);
                 if (hi) fill_rect(colX, rowY, 24, 24, 1);
-                print(colX, rowY,      col4(allLabels[k]), hi ? 0 : 1);
+                /* Labels longer than 4 chars (e.g. SyncRpt) render full-width
+                 * and spill into the adjacent (unused) column. Short labels
+                 * still get col4 padding for column alignment. */
+                const _lbl = allLabels[k];
+                print(colX, rowY,      _lbl.length > 4 ? _lbl : col4(_lbl), hi ? 0 : 1);
                 print(colX, rowY + 12, col4(allVals[k]),   hi ? 0 : 1);
             }
         } else if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 1) {
@@ -6344,7 +6349,7 @@ function _onCC_knobs(d1, d2) {
                 return;
             }
         }
-        /* ALL LANES bank (drum, bank 7): K1=Stch K2=Shft K3=Ndg K4=Qnt K5=VelIn K6=InQ */
+        /* ALL LANES bank (drum, bank 7): K1=Stch K2=Shft K3=Qnt K4=VelIn K5=InQ K6=SyncRpt */
         if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 7) {
             const t   = S.activeTrack;
             const dir = (d2 >= 1 && d2 <= 63) ? 1 : -1;
@@ -6419,6 +6424,21 @@ function _onCC_knobs(d1, d2) {
                         S.drumInpQuant[t] = nv;
                         S.bankParams[t][7][4] = nv;
                         host_module_set_param('t' + t + '_diq', String(nv));
+                    }
+                    S.screenDirty = true;
+                }
+                return;
+            }
+            if (knobIdx === 5) {
+                /* K6 = SyncRpt: per-track drum repeat sync toggle, bool, sens=8 */
+                S.knobAccum[knobIdx]++;
+                if (S.knobAccum[knobIdx] >= 8) {
+                    S.knobAccum[knobIdx] = 0;
+                    const cur6 = S.bankParams[t][7][5] | 0;
+                    const nv = Math.max(0, Math.min(1, cur6 + dir));
+                    if (nv !== cur6) {
+                        S.bankParams[t][7][5] = nv;
+                        host_module_set_param('t' + t + '_drum_repeat_sync', String(nv));
                     }
                     S.screenDirty = true;
                 }
