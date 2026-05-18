@@ -3542,6 +3542,13 @@ function restoreUiSidecar(applyDefaultsNow) {
                 }
             }
         }
+        if (us.v >= 7 && Array.isArray(us.to)) {
+            for (let _t = 0; _t < NUM_TRACKS; _t++) {
+                const _o = us.to[_t];
+                if (typeof _o === 'number')
+                    S.trackOctave[_t] = Math.max(-4, Math.min(4, _o | 0));
+            }
+        }
     } else {
         S.scaleAware   = 1;
         S.metronomeVol = 100;
