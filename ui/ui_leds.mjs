@@ -466,9 +466,15 @@ export function updateTrackLEDs() {
                             S.copySrc.track === t && S.copySrc.lane === lane) {
                         color = (Math.floor(S.tickCount / 24) % 2) ? White : LED_OFF;
                     }
-                    /* Rpt2: highlight active (held or latched) lanes in Cyan */
-                    if (S.drumPerformMode[t] === 2 &&
-                            (S.drumRepeat2HeldLanes[t].has(lane) || S.drumRepeat2LatchedLanes[t].has(lane))) {
+                    /* Persistent latch highlight: Rpt1 + Rpt2 latched lanes
+                     * stay Cyan regardless of current drumPerformMode (mirrors
+                     * TARP latched-chord visual). Held-but-not-latched Rpt2
+                     * lanes also Cyan, but only while in Rpt2 mode (transient
+                     * gesture feedback). */
+                    const _rpt1Lit = S.drumRepeatLatched[t] && lane === S.activeDrumLane[t];
+                    const _rpt2Lit = S.drumRepeat2LatchedLanes[t].has(lane) ||
+                        (S.drumPerformMode[t] === 2 && S.drumRepeat2HeldLanes[t].has(lane));
+                    if (_rpt1Lit || _rpt2Lit) {
                         color = Cyan;
                     }
                 } else if (S.drumPerformMode[t] === 1) {

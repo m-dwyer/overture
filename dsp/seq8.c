@@ -850,6 +850,12 @@ typedef struct {
      * shadow_overtake_send_external_async_active is present.
      * PHASE-2: remove when patches upstreamed. */
     uint8_t  ext_send_async_active;
+    /* JS-driven modal pad-dispatch mute. Set via the 34th tN_padmap token
+     * whenever JS's _padDispatchMutedNow() is true (Shift/Delete/Loop/Mute/
+     * Copy/Capture/TapTempo holds, session view, etc.). When set, on_midi
+     * skips drum_pad_event so modal gestures don't trigger Rpt1/Rpt2 on
+     * the prior active track. */
+    uint8_t  pad_dispatch_muted;
 
     /* Phase 1 / Bundle 2: pad-source intent scratch. Set by on_midi just
      * before calling live_note_on / drum_record_note_on / etc., reset at
@@ -1233,11 +1239,17 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
     { int l, s;
       for (t = 0; t < NUM_TRACKS; t++) {
           const seq8_track_t *tr_r = &inst->tracks[t];
+          /* Rpt1 last-selected rate (per-track, sparse; default 2 = 1/8) */
+          if (tr_r->drum_repeat_rate_idx != 2)
+              fprintf(fp, ",\"t%d_drrt\":%d", t, (int)tr_r->drum_repeat_rate_idx);
           for (l = 0; l < DRUM_LANES; l++) {
               if (tr_r->drum_repeat_gate[l] != 0xFF)
                   fprintf(fp, ",\"t%dl%drg\":%d", t, l, (int)tr_r->drum_repeat_gate[l]);
               if (tr_r->drum_repeat_gate_len[l] != 8)
                   fprintf(fp, ",\"t%dl%drgl\":%d", t, l, (int)tr_r->drum_repeat_gate_len[l]);
+              /* Rpt2 per-lane rate (sparse; default 2 = 1/8) */
+              if (tr_r->drum_repeat2_rate_idx[l] != 2)
+                  fprintf(fp, ",\"t%dl%dr2rt\":%d", t, l, (int)tr_r->drum_repeat2_rate_idx[l]);
               for (s = 0; s < 8; s++) {
                   if (tr_r->drum_repeat_vel_scale[l][s] != 100)
                       fprintf(fp, ",\"t%dl%drvs%d\":%d", t, l, s, (int)tr_r->drum_repeat_vel_scale[l][s]);
@@ -1449,15 +1461,19 @@ static void seq8_load_state(seq8_instance_t *inst) {
         snprintf(key, sizeof(key), "t%ddsy", t);
         inst->tracks[t].drum_repeat_sync = (uint8_t)clamp_i(json_get_int(buf, key, 1), 0, 1);
     }
-    /* Drum repeat gate/vel_scale/nudge (sparse; missing = defaults set by drum_repeat_init_defaults) */
+    /* Drum repeat gate/vel_scale/nudge + Rpt1/Rpt2 rates (sparse; missing = defaults set by drum_repeat_init_defaults) */
     { int l, s;
       for (t = 0; t < NUM_TRACKS; t++) {
           seq8_track_t *tr_r = &inst->tracks[t];
+          snprintf(key, sizeof(key), "t%d_drrt", t);
+          tr_r->drum_repeat_rate_idx = (uint8_t)clamp_i(json_get_int(buf, key, 2), 0, 7);
           for (l = 0; l < DRUM_LANES; l++) {
               snprintf(key, sizeof(key), "t%dl%drg", t, l);
               tr_r->drum_repeat_gate[l] = (uint8_t)(json_get_int(buf, key, 255) & 0xFF);
               snprintf(key, sizeof(key), "t%dl%drgl", t, l);
               tr_r->drum_repeat_gate_len[l] = (uint8_t)clamp_i(json_get_int(buf, key, 8), 1, 8);
+              snprintf(key, sizeof(key), "t%dl%dr2rt", t, l);
+              tr_r->drum_repeat2_rate_idx[l] = (uint8_t)clamp_i(json_get_int(buf, key, 2), 0, 7);
               for (s = 0; s < 8; s++) {
                   snprintf(key, sizeof(key), "t%dl%drvs%d", t, l, s);
                   tr_r->drum_repeat_vel_scale[l][s] = (uint8_t)clamp_i(json_get_int(buf, key, 100), 0, 200);
@@ -3717,8 +3733,9 @@ static void tarp_init_defaults(seq8_track_t *tr) {
 static void drum_repeat_init_defaults(seq8_track_t *tr) {
     int l, s;
     for (l = 0; l < DRUM_LANES; l++) {
-        tr->drum_repeat_gate[l]     = 0xFF;
-        tr->drum_repeat_gate_len[l] = 8;
+        tr->drum_repeat_gate[l]      = 0xFF;
+        tr->drum_repeat_gate_len[l]  = 8;
+        tr->drum_repeat2_rate_idx[l] = 2; /* 1/8 default */
         for (s = 0; s < 8; s++) {
             tr->drum_repeat_vel_scale[l][s] = 100;
             tr->drum_repeat_nudge[l][s]     = 0;
@@ -3963,6 +3980,8 @@ static void drum_repeat_tick(seq8_instance_t *inst, seq8_track_t *tr) {
         }
     }
     if (!tr->drum_repeat_active || tr->pad_mode != PAD_MODE_DRUM) return;
+    /* Mute gate: skip emission but keep state so unmute resumes phase. */
+    if (effective_mute(inst, (int)(tr - inst->tracks))) return;
     /* Repeat Sync pending: wait for next rate-grid boundary on arp_master_tick. */
     if (tr->drum_repeat_pending) {
         uint16_t rate_ticks = DRUM_REPEAT_RATE_TICKS[tr->drum_repeat_rate_idx];
@@ -4089,6 +4108,8 @@ static void drum_repeat2_tick(seq8_instance_t *inst, seq8_track_t *tr) {
         }
     }
     if (!(tr->drum_repeat2_active | tr->drum_repeat2_pending) || tr->pad_mode != PAD_MODE_DRUM) return;
+    /* Mute gate: skip per-lane emission, preserve latched_lanes/active/pending. */
+    if (effective_mute(inst, (int)(tr - inst->tracks))) return;
     /* Resolve any lanes pending repeat-rate boundary. Each lane has its own
      * rate; activate per-lane when its rate divides arp_master_tick. */
     if (tr->drum_repeat2_pending) {
@@ -4292,6 +4313,10 @@ static void tarp_fire_step(seq8_instance_t *inst, seq8_track_t *tr) {
     arp_engine_t *a = &tr->tarp;
     play_fx_t   *fx = &tr->pfx;
     if (a->held_count == 0) return;
+    /* Mute gate: silence latched/held TARP output without disturbing the
+     * held buffer. silence_muted_tracks kills any sustaining note via
+     * tarp_silence (latch-preserving). Unmute resumes mid-phrase. */
+    if (effective_mute(inst, (int)(tr - inst->tracks))) return;
 
     uint16_t rate = ARP_RATE_TICKS[a->rate_idx];
     if (rate == 0) rate = 24;
@@ -5339,8 +5364,13 @@ static void on_midi(void *instance, const uint8_t *msg, int len, int source) {
 
     /* Bundle 2A: classify right-half drum pads (vel zones + Rpt). If
      * handled (returns 1), don't fall through to normal lane-note dispatch.
-     * Left-half drum pads + all melodic pads → return 0, fall through. */
-    if (tr->pad_mode == PAD_MODE_DRUM) {
+     * Left-half drum pads + all melodic pads → return 0, fall through.
+     *
+     * Modal mute: when JS signals pad_dispatch_muted (Shift+bottom-row
+     * track shortcut, modal holds, etc.), skip the right-half drum
+     * classification too — otherwise Rpt1/Rpt2 latches on the prior
+     * active track when the user is just switching tracks. */
+    if (tr->pad_mode == PAD_MODE_DRUM && !inst->pad_dispatch_muted) {
         if (drum_pad_event(inst, tr, t, padIdx, d2, is_on)) {
             return;
         }
@@ -6311,6 +6341,24 @@ static int pfx_get(seq8_track_t *tr, const char *key, char *out, int out_len) {
             (int)tr->tarp.step_vel[2], (int)tr->tarp.step_vel[3],
             (int)tr->tarp.step_vel[4], (int)tr->tarp.step_vel[5],
             (int)tr->tarp.step_vel[6], (int)tr->tarp.step_vel[7]);
+
+    /* Rpt1 last-selected rate (single per-track) */
+    if (!strcmp(key, "drrt"))
+        return snprintf(out, out_len, "%d", (int)tr->drum_repeat_rate_idx);
+
+    /* Batch read: Rpt2 per-lane rate idx[0..31] — JS init pulls this once
+     * after state_load so S.drumRepeat2RatePerLane matches persisted DSP
+     * state for LED highlight + onscreen rate display. */
+    if (!strcmp(key, "drum_r2rt")) {
+        int wpos = 0, l;
+        for (l = 0; l < DRUM_LANES; l++) {
+            int w = snprintf(out + wpos, out_len - wpos, l ? " %d" : "%d",
+                             (int)tr->drum_repeat2_rate_idx[l]);
+            if (w < 0 || wpos + w >= out_len) break;
+            wpos += w;
+        }
+        return wpos;
+    }
 
     return -1;
 }

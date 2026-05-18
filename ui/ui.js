@@ -1428,6 +1428,11 @@ function computePadNoteMap() {
          * Stock Schwung: extSendAsyncEnabled=false, token is "0", DSP keeps
          * the ext_queue path. Remove when patches upstreamed. */
         payload += ' ' + (S.extSendAsyncEnabled ? 1 : 0);
+        /* 34th token = pad-dispatch-muted flag. While set, DSP on_midi skips
+         * drum_pad_event (Rpt1/Rpt2 rate-pad + vel-zone handling) on top of
+         * the existing pad_note_map=0xFF mute. Fixes Shift+bottom-row track
+         * shortcut leaking into Rpt1/Rpt2 latch on the prior active track. */
+        payload += ' ' + (padDispatchMuted ? 1 : 0);
         host_module_set_param('t' + t + '_padmap', payload);
         S.lastPushedMuted = padDispatchMuted;
     }
@@ -1745,6 +1750,19 @@ function readTarpStepVel(t) {
         S.tarpStepVel[t][s] = parseInt(v[s], 10) | 0;
 }
 
+/* Read Rpt2 per-lane rate idx[32] from DSP for track t. Called after state
+ * load so the rate-pad LED highlight matches the persisted DSP state.
+ * (Rpt1's per-track last-rate lives only in DSP — JS has no mirror for it.) */
+function readDrumRepeatRates(t) {
+    if (typeof host_module_get_param !== 'function') return;
+    const r2 = host_module_get_param('t' + t + '_drum_r2rt');
+    if (r2) {
+        const v = r2.split(' ');
+        for (let l = 0; l < 32 && l < v.length; l++)
+            S.drumRepeat2RatePerLane[t][l] = parseInt(v[l], 10) | 0;
+    }
+}
+
 /* Reset per-clip S.bankParams to defaults for track t (no DSP call needed —
  * DSP already reset them; this just keeps JS mirrors in sync). */
 function resetPerClipBankParamsToDefault(t) {
@@ -1973,17 +1991,11 @@ function pollDSP() {
     }
     if (S.playingPrev  && !S.playing) {
         disarmRecord();
-        /* Transport stop also unlatches TARP on every track so latched chords
-         * don't drone with transport dead. Per-track tarp_latch=0 invokes
-         * tarp_drop_latched() -> tarp_silence() DSP-side, which clears the
-         * held buffer and silences any sounding note. Queued one-per-tick
-         * via pendingDefaultSetParams to avoid same-buffer coalescing. */
-        for (let _stt = 0; _stt < NUM_TRACKS; _stt++) {
-            if (S.bankParams[_stt] && S.bankParams[_stt][5] && S.bankParams[_stt][5][7]) {
-                S.bankParams[_stt][5][7] = 0;
-                S.pendingDefaultSetParams.push({ key: 't' + _stt + '_tarp_latch', val: '0' });
-            }
-        }
+        /* Transport stop unlatches TARP + Rpt1 + Rpt2 on every track so
+         * latched chords/lanes don't drone with transport dead. Shared
+         * helper queues the per-track set_params one-per-tick via
+         * pendingDefaultSetParams to avoid same-buffer coalescing. */
+        unlatchAllTracks();
     }
     S.playingPrev = S.playing;
 
@@ -3608,6 +3620,7 @@ function syncClipsFromDsp() {
         readTrackConfig(t);
         for (let b = 0; b < 7; b++) readBankParams(t, b);
         readTarpStepVel(t);
+        readDrumRepeatRates(t);
         /* Drum track: sync clip content flags and active lane data */
         if (S.trackPadMode[t] === PAD_MODE_DRUM) {
             syncDrumClipContent(t);

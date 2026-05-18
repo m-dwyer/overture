@@ -3215,8 +3215,12 @@ static void set_param(void *instance, const char *key, const char *val) {
                  * write-once-across-passes semantic for Rpt1/Rpt2 recording). */
                 memset(tr->drum_last_rec_step, 0xFF, sizeof(tr->drum_last_rec_step));
                 /* Clear any tarp notes held before recording started — their note-offs
-                 * can't reach live_note_off once activelyRecording=true in JS. */
-                tarp_silence(inst, tr);
+                 * can't reach live_note_off once activelyRecording=true in JS.
+                 * Skip when transport is already running: TARP is already firing
+                 * in steady state, and silencing it resets master_anchor=0,
+                 * which jumps the step index and audibly drifts the latched
+                 * chord (fix g, 1.0-tweaks). */
+                if (!inst->playing) tarp_silence(inst, tr);
                 if (tr->clip_playing) {
                     tr->recording = 1;
                 } else if (tr->queued_clip >= 0) {
@@ -4364,6 +4368,16 @@ static void set_param(void *instance, const char *key, const char *val) {
                 int ea = 0;
                 while (*sp >= '0' && *sp <= '9') { ea = ea * 10 + (*sp++ - '0'); }
                 inst->ext_send_async_active = (ea != 0) ? 1 : 0;
+            }
+            /* 34th token = pad_dispatch_muted. When set, on_midi skips
+             * drum_pad_event so modal gestures (Shift+bottom-row track
+             * shortcut, Delete/Loop/Mute/Copy/Capture holds, etc.) don't
+             * trigger Rpt1/Rpt2 latch on the prior active track. */
+            while (*sp == ' ') sp++;
+            if (*sp) {
+                int pdm = 0;
+                while (*sp >= '0' && *sp <= '9') { pdm = pdm * 10 + (*sp++ - '0'); }
+                inst->pad_dispatch_muted = (pdm != 0) ? 1 : 0;
             }
             return;
         }

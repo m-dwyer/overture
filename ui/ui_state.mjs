@@ -107,7 +107,7 @@ export const S = {
     pendingRepeatLaneTrack: 0,
     drumRepeat2HeldLanes: Array.from({length: 8}, () => new Set()),
     drumRepeat2LatchedLanes: Array.from({length: 8}, () => new Set()),
-    drumRepeat2RatePerLane: Array.from({length: 8}, () => new Array(32).fill(0)),
+    drumRepeat2RatePerLane: Array.from({length: 8}, () => new Array(32).fill(2)),
     rpt2LoopPadUsed: false,
     drumRepeatGate: Array.from({length: 8}, () => new Array(32).fill(0xFF)),
     drumRepeatGateLen: Array.from({length: 8}, () => new Array(32).fill(8)),

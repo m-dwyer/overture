@@ -608,7 +608,7 @@ A *live* arpeggiator for pad input and external MIDI. **Per-track**, not per-cli
 
 **Latch shortcut.** While holding pads with ARP IN active, tap **Loop** to toggle latch on/off without entering the bank. **Delete + Loop** also unlatches. With `Ltch` already on and notes latched, tapping **Loop with no pads held** clears the latched chord without turning latch off — the next chord you play latches as usual.
 
-**Latch lifecycle.** The latch chip is per-track and persists across track / route / channel / MIDI-in changes — switching to a different track does *not* drop the latched buffer. The latch clears on: transport Stop (sweeps every track), Delete + Play (any transport state), and Session View entry (active track only).
+**Latch lifecycle.** The latch chip is per-track and persists across track / route / channel / MIDI-in changes — switching to a different track does *not* drop the latched buffer. The latch clears on: transport Stop (sweeps every track — clears TARP + Rpt1 + Rpt2 latches), Delete + Play (any transport state), and Session View entry (active track only). Muting a track silences the latched output but preserves the latch — unmute resumes mid-phrase; arming Record while transport is already playing leaves the latched pattern in sync.
 
 **Drop one latched note (accumulate mode).** With `Rtrg=Off` and `Ltch=On`, re-pressing a pad whose note is currently latched but not physically held removes that single note from the buffer. Useful for plucking individual voices out of a stacked chord without dropping everything.
 
@@ -789,6 +789,8 @@ Holding a repeat pad through the count-in click is audible and seamlessly fires 
 **Rpt1:** Loop + rate pad starts and latches. While holding a repeat, tap Loop to latch. Press the active rate pad again, or **Delete + Loop**, to stop.
 
 **Rpt2:** Loop + lane pad latches that lane. Hold a lane + Loop latches all currently-held lanes. Tap a latched lane to unlatch it. **Delete + Loop** stops all.
+
+**Visual feedback.** Latched Rpt1 / Rpt2 lane pads stay lit Cyan regardless of the current right-pad mode (Velocity / Rpt1 / Rpt2). Default Rpt2 rate is 1/8. Track mute silences latched output but preserves the latch — unmute resumes mid-phrase. Transport Stop clears all latches across every track. Rpt1's last-selected rate (per-track) and Rpt2's per-lane rates persist across save/load.
 
 ### Gate mask
 
