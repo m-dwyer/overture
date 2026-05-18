@@ -3287,8 +3287,14 @@ static void set_param(void *instance, const char *key, const char *val) {
                 } else {
                     abs_tick = fallback_tick;
                 }
-                if (inst->inp_quant)
-                    abs_tick = ((abs_tick + tps / 2) / tps) * tps;
+                /* Per-track InQ: 9 values (0=Off..8=1/4T) via DRUM_INQ_TICKS.
+                 * Shared per-track field with drum tracks (drum_inp_quant is
+                 * historical name; field is per-track-type-agnostic). Global
+                 * inp_quant removed in favor of per-track granularity. */
+                if (tr->drum_inp_quant > 0) {
+                    uint32_t qt = (uint32_t)DRUM_INQ_TICKS[tr->drum_inp_quant];
+                    abs_tick = ((abs_tick + qt / 2) / qt) * qt;
+                }
 
                 /* TRACK ARP active: arp output will be recorded in tarp_fire_step.
                  * Feed raw input only into the arp held buffer. PHASE-1: on
@@ -4159,20 +4165,24 @@ static void set_param(void *instance, const char *key, const char *val) {
                     }
 
                     if (diq > 0) {
-                        int qt  = (int)DRUM_INQ_TICKS[diq];
-                        int tis = (int)base_off;
-                        int sn  = (tis + qt / 2) / qt * qt;
-                        if (sn >= (int)TICKS_PER_STEP / 2) {
-                            uint16_t ns = (uint16_t)(base_step + 1);
-                            if (ns >= _we) ns = dlc->loop_start;
-                            step = ns;
-                            off = (int16_t)(sn - (int)TICKS_PER_STEP);
-                        } else {
-                            step = base_step;
-                            off = (int16_t)sn;
+                        /* Quantize global tick position so InQ values coarser
+                         * than 1/16 (qt > TICKS_PER_STEP) snap to multi-step
+                         * boundaries instead of collapsing to the current step
+                         * (the prior per-step-only math always produced sn=0
+                         * for qt > TICKS_PER_STEP). */
+                        int qt = (int)DRUM_INQ_TICKS[diq];
+                        int abs_tick = (int)base_step * (int)TICKS_PER_STEP + (int)base_off;
+                        int sn_abs = ((abs_tick + qt / 2) / qt) * qt;
+                        int sn_step = sn_abs / (int)TICKS_PER_STEP;
+                        int sn_off  = sn_abs - sn_step * (int)TICKS_PER_STEP;
+                        /* Window wrap: if quantize lands outside the loop
+                         * window, fall back to loop_start step boundary. */
+                        if (sn_step < (int)dlc->loop_start || sn_step >= (int)_we) {
+                            sn_step = (int)dlc->loop_start;
+                            sn_off  = 0;
                         }
-                    } else if (inst->inp_quant) {
-                        off = 0;
+                        step = (uint16_t)sn_step;
+                        off  = (int16_t)sn_off;
                     }
                     if (step < _we && dlc->step_note_count[step] == 0) {
                         dlc->step_notes[step][0]       = (uint8_t)pitch;

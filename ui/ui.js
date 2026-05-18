@@ -281,11 +281,6 @@ function buildGlobalMenuItems() {
             options: [0, 1],
             format: function(v) { return ['1/16','1/8'][v] || '1/16'; }
         }),
-        createToggle('Inp Quant', {
-            get: function() { return S.inpQuant; },
-            set: function(v) { S.inpQuant = v; host_module_set_param('inp_quant', v ? '1' : '0'); },
-            onLabel: 'On', offLabel: 'Off'
-        }),
         createEnum('MIDI In', {
             get: function() { return S.midiInChannel; },
             set: function(v) {
@@ -6596,6 +6591,29 @@ function _onCC_knobs(d1, d2) {
                 const cur = S.rndDialogMode >= 0 ? S.rndDialogMode
                     : (bank === 3 ? (S.midiDlyRandomMode[t] || 0) : (S.noteFXRandomMode[t] || 0));
                 S.rndDialogMode = ((cur + dir) % 3 + 3) % 3;
+                S.screenDirty = true;
+            }
+            return;
+        }
+        /* Melodic CLIP K6 = InQ — per-track input quantize, mirrors drum
+         * ALL LANES K5. Custom path keeps S.drumInpQuant (the shared JS
+         * mirror used by both bank-overview render paths) in sync with
+         * bankParams[t][0][5]. The DSP field is `tr->drum_inp_quant` —
+         * historical name; now per-track-type-agnostic. */
+        if (S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM && bank === 0 && knobIdx === 5) {
+            const t   = S.activeTrack;
+            const dir = (d2 >= 1 && d2 <= 63) ? 1 : -1;
+            if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
+            S.knobAccum[knobIdx]++;
+            if (S.knobAccum[knobIdx] >= 8) {
+                S.knobAccum[knobIdx] = 0;
+                const nv = Math.max(0, Math.min(8, S.drumInpQuant[t] + dir));
+                if (nv !== S.drumInpQuant[t]) {
+                    S.drumInpQuant[t] = nv;
+                    S.bankParams[t][0][5] = nv;
+                    if (typeof host_module_set_param === 'function')
+                        host_module_set_param('t' + t + '_diq', String(nv));
+                }
                 S.screenDirty = true;
             }
             return;

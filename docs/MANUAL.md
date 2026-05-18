@@ -530,9 +530,10 @@ Timing and playback settings for the active clip. **K1–K4 are destructive** �
 | K2 | Clock Shift / **Nudg** | Plain turn: rotates all notes forward/backward by whole steps (signed offset shown while held, resets on release). **Shift + turn**: nudges all notes at tick resolution (faster response than Clock Shift). The K2 label flips to `Nudg` while Shift is held. |
 | K3 | Resolution | Per-clip playback speed: 1/32, 1/16 (default), 1/8, 1/4, 1/2, 1-bar. Rescales note positions proportionally. **Shift + K3** = Zoom mode: keeps absolute note positions, adjusts the step grid around them. |
 | K4 | Length | Clip length in steps, 1–256. Immediate. |
+| K6 | InQ (Input Quantize) | Per-track recording snap: Off, 1/64, 1/32, 1/16, 1/16T, 1/8, 1/8T, 1/4, 1/4T. Snaps each recorded note to the nearest boundary on this grid. Off = capture raw timing. Replaces the previous global Input Quantize toggle — each track now sets its own value. On drum tracks the equivalent control lives at ALL LANES K5 (same underlying per-track field). |
 | K7 | SeqFollow | On (default): Track View auto-scrolls to follow the playhead. Off: view stays put. |
 
-K5, K6, and K8 are unassigned on the CLIP bank.
+K5 and K8 are unassigned on the CLIP bank.
 
 ## 5.2 NOTE FX bank
 
@@ -1360,7 +1361,6 @@ Below Track Config, a `── Global ──` separator divides Track Config from
 | **MIDI In** | All / 1–16. Channel filter for external MIDI input. |
 | **Swing Amt** | 50%–75%. 50% = no swing. 66% = perfect triplet swing. Applied globally at render time. |
 | **Swing Res** | 1/16 (default) · 1/8. Controls which note positions are affected by swing. |
-| **Input Quantize** | On / Off. When On, live recorded notes snap to the current step grid. Repeat (Rpt1 / Rpt2) fires record at their actual sub-step offsets regardless of InQ — first-fire timing is controlled by Repeat Sync (ALL LANES K6), not InQ. |
 | **Beat Markers** | On / Off. When On, step buttons 1, 5, 9, 13 show a dim track-color marker in Track View when not otherwise active. |
 | **Clear Session** | Resets the entire dAVEBOx instance. Presents a Yes/No dialog (defaults to No). Only the active set is affected. |
 | **Save** | Closes the menu and saves DSP state and UI sidecar immediately. Shows "STATE SAVED". |
