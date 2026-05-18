@@ -840,6 +840,16 @@ typedef struct {
     uint8_t  dsp_inbound_enabled;
     uint8_t  pad_note_map[NUM_TRACKS][32];
 
+    /* Phase 2: capability mirror for shim-side async ROUTE_EXTERNAL send.
+     * When 1, pfx_emit / drum_pfx_emit call g_host->midi_send_external
+     * directly (shim drains via ovext_worker thread, off the audio thread).
+     * When 0 (stock Schwung), they push to ext_queue and JS drains via
+     * get_param("ext_queue"). Set by the tN_padmap handler from an optional
+     * 33rd token in the payload — JS appends it whenever
+     * shadow_overtake_send_external_async_active is present.
+     * PHASE-2: remove when patches upstreamed. */
+    uint8_t  ext_send_async_active;
+
     /* Phase 1 / Bundle 2: pad-source intent scratch. Set by on_midi just
      * before calling live_note_on / drum_record_note_on / etc., reset at
      * end of dispatch. Holds a pad_source_t value (declared above on_midi).
@@ -1967,7 +1977,19 @@ static void pfx_emit(play_fx_t *fx, uint8_t status, uint8_t d1, uint8_t d2) {
         return;
     }
     if (fx->route == ROUTE_EXTERNAL) {
-        if (g_inst) ext_queue_push(g_inst, status, d1, d2);
+        /* PHASE-2: when patched-Schwung shim is present, push directly to
+         * the shim's SPSC ring (audio-thread drain into MIDI_OUT mailbox).
+         * Stock Schwung keeps the JS-drain path through ext_queue.
+         * Capability flag arrives via tN_padmap 33rd token. Packet byte 0
+         * is the USB-MIDI header: cable<<4 | CIN. USB-A out lives on
+         * cable-2 (per SPI_PROTOCOL.md), so the cable nibble is 0x20.
+         * Remove when patches upstreamed. */
+        if (g_inst && g_inst->ext_send_async_active && g_host->midi_send_external) {
+            const uint8_t pkt[4] = { (uint8_t)(0x20 | ((status >> 4) & 0x0F)), status, d1, d2 };
+            g_host->midi_send_external(pkt, 4);
+        } else if (g_inst) {
+            ext_queue_push(g_inst, status, d1, d2);
+        }
         return;
     }
     const uint8_t msg[4] = { (uint8_t)(status >> 4), status, d1, d2 };
@@ -2996,7 +3018,13 @@ static void drum_pfx_emit(drum_pfx_t *px, uint8_t status, uint8_t d1, uint8_t d2
         return;
     }
     if (px->route == ROUTE_EXTERNAL) {
-        if (g_inst) ext_queue_push(g_inst, status, d1, d2);
+        /* PHASE-2: see pfx_emit ROUTE_EXTERNAL branch. Cable-2 nibble for USB-A out. */
+        if (g_inst && g_inst->ext_send_async_active && g_host->midi_send_external) {
+            const uint8_t pkt[4] = { (uint8_t)(0x20 | ((status >> 4) & 0x0F)), status, d1, d2 };
+            g_host->midi_send_external(pkt, 4);
+        } else if (g_inst) {
+            ext_queue_push(g_inst, status, d1, d2);
+        }
         return;
     }
     const uint8_t msg[4] = { (uint8_t)(status >> 4), status, d1, d2 };

@@ -4337,6 +4337,17 @@ static void set_param(void *instance, const char *key, const char *val) {
              * PHASE-1: remove the enable line when patches upstreamed. */
             inst->active_track = (uint8_t)tidx;
             inst->dsp_inbound_enabled = 1;
+            /* PHASE-2: optional 33rd token = ext_send_async capability flag.
+             * Present when JS sees shadow_overtake_send_external_async_active.
+             * Absent token leaves the prior value alone (stock Schwung never
+             * sets it; flag stays at 0 → DSP keeps using ext_queue + JS
+             * drain). Remove when patches upstreamed. */
+            while (*sp == ' ') sp++;
+            if (*sp) {
+                int ea = 0;
+                while (*sp >= '0' && *sp <= '9') { ea = ea * 10 + (*sp++ - '0'); }
+                inst->ext_send_async_active = (ea != 0) ? 1 : 0;
+            }
             return;
         }
 

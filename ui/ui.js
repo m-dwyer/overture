@@ -1041,6 +1041,7 @@ function openTapTempo() {
     S.tapTempoBpm       = Math.max(40, Math.min(250, Math.round(parseFloat(host_module_get_param('bpm')) || 120)));
     S.tapTempoFlashTick = -1;
     S.tapTempoFlashPad  = -1;
+    computePadNoteMap();
     invalidateLEDCache();
     S.screenDirty = true;
 }
@@ -1049,6 +1050,7 @@ function closeTapTempo() {
     S.tapTempoOpen = false;
     if (typeof host_module_set_param === 'function')
         host_module_set_param('bpm', String(S.tapTempoBpm));
+    computePadNoteMap();
     invalidateLEDCache();
     S.screenDirty = true;
 }
@@ -1314,6 +1316,27 @@ function clipHasContent(t, c) {
 }
 
 
+/* PHASE-1: helper for the pad-dispatch mute condition. Modal sources:
+ * - sessionView                 — pads launch clips
+ * - button-helds (Shift/Delete/Copy/Mute/Capture/Loop) — pads are shortcuts
+ * - tapTempoOpen                — pads are tap input
+ * - ARP step-edit pad mode      — K5 held in SEQ ARP (bank 4) or TRACK ARP
+ *                                  (bank 5) with steps mode != Off; pads edit
+ *                                  step velocity, not play notes
+ * globalMenuOpen and rndDialogMode are NOT in this list — pads should still
+ * play notes in track view while those dialogs are open (user confirmed
+ * 2026-05-17). Remove when patches upstreamed. */
+function _padDispatchMutedNow() {
+    if (S.sessionView) return true;
+    if (S.shiftHeld || S.deleteHeld || S.muteHeld || S.copyHeld
+        || S.captureHeld || S.loopHeld || S.tapTempoOpen) return true;
+    if ((S.activeBank === 4 || S.activeBank === 5)
+        && S.knobTouched === 4
+        && S.bankParams[S.activeTrack]
+        && ((S.bankParams[S.activeTrack][S.activeBank] || [])[4] | 0) !== 0) return true;
+    return false;
+}
+
 function computePadNoteMap() {
     const t = S.activeTrack;
     if (S.trackPadMode[t] === PAD_MODE_DRUM) {
@@ -1376,13 +1399,21 @@ function computePadNoteMap() {
          * offset (lane midi_notes are fixed). Session View: pads launch
          * clips — emit all-0xFF so DSP on_midi skips dispatch. Track-view
          * re-entry triggers another computePadNoteMap() in tick(). */
-        const sessionView = !!S.sessionView;
+        /* PHASE-1: pad dispatch is muted while a modal gesture owns the pad
+         * surface. DSP on_midi skips 0xFF entries, so pushing all-0xFF
+         * suppresses note dispatch without changing on_midi code. State
+         * sources: button-held modifiers (covered by explicit hooks in
+         * _onCC_buttons for zero-latency), dialogs (covered by the
+         * tick()-time muted-edge detector below). Remove the modal-flag
+         * checks when patches upstreamed. See [[project-modal-pad-
+         * interception-regression]]. */
+        const padDispatchMuted = _padDispatchMutedNow();
         const isDrum = S.trackPadMode[t] === PAD_MODE_DRUM;
         const octShift = isDrum ? 0 : ((S.trackOctave[t] | 0) * 12);
         let payload = '';
         for (let i = 0; i < 32; i++) {
             let out;
-            if (sessionView) {
+            if (padDispatchMuted) {
                 out = 0xFF;
             } else {
                 const p = S.padNoteMap[i];
@@ -1393,8 +1424,17 @@ function computePadNoteMap() {
         /* The tN_padmap key encodes the active track index — DSP's
          * tN_padmap handler updates inst->active_track + dsp_inbound_enabled
          * from it. (Schwung host silently drops module-defined global keys,
-         * so we piggyback signals onto the per-track padmap push.) */
+         * so we piggyback signals onto the per-track padmap push.)
+         *
+         * PHASE-2: trailing 33rd token = ext_send_async capability flag.
+         * Tells DSP to call g_host->midi_send_external directly for
+         * ROUTE_EXTERNAL instead of pushing to ext_queue. Survives DSP
+         * recreate because computePadNoteMap re-runs after pendingDspSync.
+         * Stock Schwung: extSendAsyncEnabled=false, token is "0", DSP keeps
+         * the ext_queue path. Remove when patches upstreamed. */
+        payload += ' ' + (S.extSendAsyncEnabled ? 1 : 0);
         host_module_set_param('t' + t + '_padmap', payload);
+        S.lastPushedMuted = padDispatchMuted;
     }
 }
 
@@ -2368,9 +2408,18 @@ function liveSendNote(t, type, pitch, vel, rawVel) {
         if (tvo > 0) vel = tvo;
     }
     if (route === 2) {
-        const cin = (status >> 4) & 0x0F;
-        if (typeof move_midi_external_send === 'function')
-            move_midi_external_send([cin, status, pitch, vel]);
+        /* PHASE-1+2: when DSP owns inbound pad dispatch, on_midi → live_note_on
+         * → pfx_emit → g_host->midi_send_external is the sole path to USB-A.
+         * Firing the JS send too produces a duplicate (audible double-trigger).
+         * Mirrors the route=0/1 gates below. CC/AT/PB pass through for the
+         * external-MIDI-in forwarding path. Remove when patches upstreamed. */
+        if (S.dspInboundEnabled && (type === 0x90 || type === 0x80)) {
+            /* dead on patched Schwung */
+        } else {
+            const cin = (status >> 4) & 0x0F;
+            if (typeof move_midi_external_send === 'function')
+                move_midi_external_send([cin, status, pitch, vel]);
+        }
     } else if (route === 1) {
         /* ROUTE_MOVE. Queue note events for microtask-batched drain into one
          * tN_live_notes payload at end of the current JS turn. Recording
@@ -3760,6 +3809,19 @@ globalThis.init = function () {
      * existing JS path keeps working. Remove the gate when patches upstreamed. */
     S.dspInboundEnabled = (typeof shadow_inbound_pad_midi_active === 'function');
 
+    /* PHASE-2: capability gate for shim-side async ROUTE_EXTERNAL send.
+     * On patched Schwung (legsmechanical/schwung phase-2-ext-worker) the
+     * shim runs a low-priority worker thread that drains a 64-packet SPSC
+     * ring fed by g_host->midi_send_external — pulls the SPI ioctl off the
+     * audio thread, removing the JS-tick floor on ROUTE_EXTERNAL latency.
+     * When the sentinel is present we (a) skip the JS ext_queue drain in
+     * tick(), and (b) tell DSP to call midi_send_external directly via the
+     * 33rd token in the tN_padmap payload (see computePadNoteMap).
+     * Stock Schwung: function undefined, flag stays false, DSP keeps
+     * pushing to ext_queue and JS drains it as before.
+     * Remove when patches upstreamed. */
+    S.extSendAsyncEnabled = (typeof shadow_overtake_send_external_async_active === 'function');
+
     computePadNoteMap();
 
     /* Apply cable-2 channel remap for the current active track immediately
@@ -3783,6 +3845,15 @@ var _lastSessionView = false;
 
 globalThis.tick = function () {
     S.tickCount++;
+
+    /* PHASE-1: edge-detect modal pad-dispatch mute changes that aren't
+     * caught by explicit hooks (dialogs, ARP-step-edit, knob-touch state).
+     * Cheap check — boolean compare. Tick is ~10.6 ms, more than fast
+     * enough for non-button-CC modal transitions (dialog open / knob touch). */
+    if (S.dspInboundEnabled) {
+        const _muted = _padDispatchMutedNow();
+        if (_muted !== S.lastPushedMuted) computePadNoteMap();
+    }
 
     /* Drain live-note events queued by onMidiMessage handlers since the last
      * tick. One set_param per track per tick — survives same-buffer
@@ -3929,8 +4000,12 @@ globalThis.tick = function () {
         for (const pitch of offs) liveSendNote(_t, 0x80, pitch, 0);
     }
 
-    /* Drain ROUTE_EXTERNAL queue: DSP enqueues sequenced notes; JS sends via USB-A */
-    if (typeof host_module_get_param === 'function') {
+    /* Drain ROUTE_EXTERNAL queue: DSP enqueues sequenced notes; JS sends via USB-A.
+     * PHASE-2: skipped on patched Schwung — DSP calls g_host->midi_send_external
+     * directly and the shim's ovext_worker thread drains its own ring off the
+     * audio thread, so ext_queue stays empty. Remove the gate (and the whole
+     * block) when patches upstreamed. */
+    if (!S.extSendAsyncEnabled && typeof host_module_get_param === 'function') {
         const eq = host_module_get_param('ext_queue');
         if (eq && eq.length > 0) {
             const msgs = eq.split(';');
@@ -5125,6 +5200,10 @@ function _onCC_buttons(d1, d2) {
     if (d1 === MoveShift) {
         S.shiftHeld = d2 === 127;
         S.shiftTrackLEDActive = d2 === 127;
+        /* PHASE-1: re-push padmap on Shift transitions so DSP on_midi sees
+         * all-0xFF while Shift is held (suppress pad-shortcut notes) and
+         * the real map again on release. See computePadNoteMap mute logic. */
+        computePadNoteMap();
         if (!S.shiftHeld && S.jogTouched) S.jogTouched = false;
         if (!S.shiftHeld && S.rndDialogMode >= 0) { S.rndDialogMode = -1; S.screenDirty = true; }
         /* Deferred Shift+Step3 dispatch: fire on Shift release so the Shift
@@ -5162,6 +5241,7 @@ function _onCC_buttons(d1, d2) {
          * memory project_modal_pad_interception_regression. */
         if (typeof host_module_set_param === 'function')
             host_module_set_param('t0_delete_held', S.deleteHeld ? '1' : '0');
+        computePadNoteMap();
     }
 
     if (d1 === MoveCopy) {
@@ -5170,15 +5250,22 @@ function _onCC_buttons(d1, d2) {
             S.copySrc = null;
             invalidateLEDCache();
         }
+        computePadNoteMap();
     }
 
     if (d1 === MoveMute) {
         S.muteHeld = d2 === 127;
         if (d2 === 127) S.muteUsedAsModifier = false;
         if (S.sessionView) invalidateLEDCache();
+        computePadNoteMap();
     }
 
-    if (d1 === MoveCapture) { S.captureHeld = d2 === 127; forceRedraw(); return; }
+    if (d1 === MoveCapture) {
+        S.captureHeld = d2 === 127;
+        computePadNoteMap();
+        forceRedraw();
+        return;
+    }
 
     /* Note/Session view toggle: Shift+press = open global menu (Track View only);
      * tap = switch view; hold = session overview */
@@ -5306,6 +5393,7 @@ function _onCC_buttons(d1, d2) {
     /* Loop button (CC 58, Track View): hold + step buttons sets clip length */
     if (d1 === MoveLoop && !S.sessionView) {
         S.loopHeld = d2 === 127;
+        computePadNoteMap();
         if (S.loopHeld) {
             /* Latch or clear drum repeat on the active track */
             const _lrt = S.activeTrack;
