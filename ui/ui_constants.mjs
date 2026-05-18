@@ -311,7 +311,8 @@ export const BANKS = [
         _XQ,  /* K3: quantize all lanes — custom handling, def=-1 */
         _X,   /* K4: VelIn — custom handling via trackVelOverride */
         _X,   /* K5: InQ — per-track drum input quantize, custom handling */
-        _X, _X, _X,
+        p('SyncRpt', 'Repeat Sync', 'drum_repeat_sync', 'track', 0, 1, 1, fmtBool, 16),
+        _X, _X,
     ]},
 ];
 

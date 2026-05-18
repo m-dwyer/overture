@@ -3473,6 +3473,13 @@ static void set_param(void *instance, const char *key, const char *val) {
             return;
         }
 
+        if (!strcmp(sub, "drum_repeat_sync")) {
+            /* tN_drum_repeat_sync "value" — per-track drum repeat sync: 0=Off, 1=On */
+            tr->drum_repeat_sync = (uint8_t)clamp_i(my_atoi(val), 0, 1);
+            inst->state_dirty = 1;
+            return;
+        }
+
         if (!strcmp(sub, "drum_lanes_qnt")) {
             /* tN_drum_lanes_qnt "value" — set NoteFX quantize on all 32 lanes of active drum clip. */
             int v = clamp_i(my_atoi(val), 0, 100);

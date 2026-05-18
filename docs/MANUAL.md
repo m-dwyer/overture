@@ -742,8 +742,9 @@ Bank 7 on drum tracks. Applies parameters to all 32 lanes simultaneously. **K1�
 | K3 | Quantize | Playback quantize for all 32 lanes |
 | K4 | VelIn | Velocity input override for this track |
 | K5 | InQ | Recording input quantize (Off · 1/32 · 1/16 · 1/8 · 1/4 · 1/4T · 1/8T · 1/16T · 1/32T) |
+| K6 | SyncRpt (Repeat Sync) | Per-track toggle, default **On**. When On, the first fire of a held Rpt1/Rpt2 pad waits until the next rate-grid boundary on a free-running clock (resets at transport play / count-in fire) — works in stopped, playing, and count-in states. When Off, first fire is instant. Independent of InQ. Label spills into K7's column; truncates to "Sync" while K6 is touched. |
 
-K6, K7, and K8 are unassigned.
+K7 and K8 are unassigned.
 
 ## 6.7 Note Repeat
 
@@ -770,6 +771,15 @@ Note Repeat retriggers drum lanes at rhythmic intervals. Two modes are available
 - **Hold a lane pad** to repeat that lane at its assigned rate.
 - Hold multiple lane pads simultaneously — each repeats independently at its rate.
 - Velocity is pressure-sensitive per held pad.
+
+### First-fire timing (Repeat Sync)
+
+The first fire of a held Rpt1 / Rpt2 pad is gated by the **Repeat Sync** toggle (ALL LANES bank K6, per-track, default On). Independent of InQ.
+
+- **On (default):** first fire waits until the next boundary on the repeat-rate grid — e.g. holding a pad at 1/32 rate waits up to one 1/32 interval before the first hit. Subsequent fires roll at the repeat rate. The grid is anchored to a free-running clock that resets at transport play and count-in fire, so two Rpt presses at the same rate phase-lock to each other regardless of when each was pressed. Works in stopped, playing, and count-in states.
+- **Off:** first fire is instant. Subsequent fires still roll at the repeat rate but their phase is whatever the press timing produced.
+
+Holding a repeat pad through the count-in click is audible and seamlessly fires the first recorded hit at the start of the loop window.
 
 ### Latching
 
@@ -1350,7 +1360,7 @@ Below Track Config, a `── Global ──` separator divides Track Config from
 | **MIDI In** | All / 1–16. Channel filter for external MIDI input. |
 | **Swing Amt** | 50%–75%. 50% = no swing. 66% = perfect triplet swing. Applied globally at render time. |
 | **Swing Res** | 1/16 (default) · 1/8. Controls which note positions are affected by swing. |
-| **Input Quantize** | On / Off. When On, live recorded notes snap to the current step grid. |
+| **Input Quantize** | On / Off. When On, live recorded notes snap to the current step grid. Repeat (Rpt1 / Rpt2) fires record at their actual sub-step offsets regardless of InQ — first-fire timing is controlled by Repeat Sync (ALL LANES K6), not InQ. |
 | **Beat Markers** | On / Off. When On, step buttons 1, 5, 9, 13 show a dim track-color marker in Track View when not otherwise active. |
 | **Clear Session** | Resets the entire dAVEBOx instance. Presents a Yes/No dialog (defaults to No). Only the active set is affected. |
 | **Save** | Closes the menu and saves DSP state and UI sidecar immediately. Shows "STATE SAVED". |

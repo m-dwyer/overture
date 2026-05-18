@@ -578,6 +578,7 @@ typedef struct {
     uint32_t drum_repeat2_latched_lanes;
     /* Per-track drum input quantize (persisted) */
     uint8_t  drum_inp_quant;    /* 0=Off, 1-8 = index into DRUM_INQ_TICKS */
+    uint8_t  drum_repeat_sync;  /* 1=first fire snaps to rate grid via arp_master_tick; 0=instant. Per-track. */
     /* Pending sync flags (runtime, not persisted): repeat waits for InQ boundary */
     uint8_t  drum_repeat_pending;
     uint32_t drum_repeat2_pending;  /* bitmask: bit l = lane l pending InQ sync */
@@ -1032,7 +1033,7 @@ static void ensure_parent_dir(const char *path) {
 
 static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
     int t, c;
-    fprintf(fp, "{\"v\":27,\"playing\":%d", inst->playing);
+    fprintf(fp, "{\"v\":28,\"playing\":%d", inst->playing);
     for (t = 0; t < NUM_TRACKS; t++)
         fprintf(fp, ",\"t%d_ac\":%d", t, inst->tracks[t].active_clip);
     for (t = 0; t < NUM_TRACKS; t++)
@@ -1223,6 +1224,11 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
         if (inst->tracks[t].drum_inp_quant)
             fprintf(fp, ",\"t%ddiq\":%d", t, (int)inst->tracks[t].drum_inp_quant);
     }
+    /* Per-track: drum repeat sync. Non-sparse — must persist explicit OFF
+     * state, otherwise default (1) overrides the user's choice on reload. */
+    for (t = 0; t < NUM_TRACKS; t++) {
+        fprintf(fp, ",\"t%ddsy\":%d", t, (int)inst->tracks[t].drum_repeat_sync);
+    }
     /* Per-track: drum repeat gate/vel_scale/nudge (sparse — only non-default) */
     { int l, s;
       for (t = 0; t < NUM_TRACKS; t++) {
@@ -1300,10 +1306,10 @@ static void seq8_load_state(seq8_instance_t *inst) {
     if (!n) { free(buf); remove(inst->state_path); return; }
     buf[n] = '\0';
 
-    /* Version gate: only v=27 accepted (dev build; wipe on version mismatch). */
+    /* Version gate: only v=28 accepted (dev build; wipe on version mismatch). */
     {
         int sv = json_get_int(buf, "v", -1);
-        if (sv != 27) {
+        if (sv != 28) {
             free(buf);
             remove(inst->state_path);
             seq8_ilog(inst, "SEQ8 state: wrong version, deleted");
@@ -1437,6 +1443,11 @@ static void seq8_load_state(seq8_instance_t *inst) {
     for (t = 0; t < NUM_TRACKS; t++) {
         snprintf(key, sizeof(key), "t%ddiq", t);
         inst->tracks[t].drum_inp_quant = (uint8_t)clamp_i(json_get_int(buf, key, 0), 0, 8);
+    }
+    /* Per-track: drum repeat sync */
+    for (t = 0; t < NUM_TRACKS; t++) {
+        snprintf(key, sizeof(key), "t%ddsy", t);
+        inst->tracks[t].drum_repeat_sync = (uint8_t)clamp_i(json_get_int(buf, key, 1), 0, 1);
     }
     /* Drum repeat gate/vel_scale/nudge (sparse; missing = defaults set by drum_repeat_init_defaults) */
     { int l, s;
@@ -3825,14 +3836,20 @@ static void drum_repeat_start_internal(seq8_instance_t *inst, seq8_track_t *tr,
     /* Latched bit: do NOT touch here — see header comment on this
      * function for the full lifecycle contract. */
     tr->drum_repeat_active   = 1;
-    /* InQ sync: if playing and InQ set, arm pending if in second half of interval */
+    /* Repeat Sync: when on, first fire snaps to the next rate-grid boundary
+     * on arp_master_tick. arp_master_tick free-runs across playing/stopped/
+     * count-in (resets at transport play and count-in fire), so the snap
+     * works in every transport state. Strict-next, not round-to-nearest:
+     * a press at tick T where T % rate_ticks != 0 ALWAYS waits for the next
+     * T' where T' % rate_ticks == 0. */
     {
-        uint8_t diq = tr->drum_inp_quant;
-        if (diq > 0 && inst->playing) {
-            int qt = (int)DRUM_INQ_TICKS[diq];
-            uint32_t abs = inst->global_tick * (uint32_t)TICKS_PER_STEP + inst->master_tick_in_step;
-            int phase = (int)(abs % (uint32_t)qt);
-            tr->drum_repeat_pending = (phase >= qt / 2) ? 1 : 0;
+        if (tr->drum_repeat_sync) {
+            uint16_t rate_ticks = DRUM_REPEAT_RATE_TICKS[rate_idx];
+            if (inst->arp_master_tick % (uint32_t)rate_ticks == 0) {
+                tr->drum_repeat_pending = 0;  /* on boundary — fire on next tick */
+            } else {
+                tr->drum_repeat_pending = 1;  /* off boundary — wait */
+            }
         } else {
             tr->drum_repeat_pending = 0;
         }
@@ -3886,18 +3903,16 @@ static void drum_repeat2_lane_on_internal(seq8_instance_t *inst, seq8_track_t *t
     tr->drum_repeat2_step[lane]  = 0;
     /* Latched bit: do NOT touch here — see header comment on
      * drum_pad_to_lane for the full lifecycle contract. */
+    /* Repeat Sync: strict-next snap on per-lane rate. See drum_repeat_start_internal. */
     {
-        uint8_t diq = tr->drum_inp_quant;
-        if (diq > 0 && inst->playing) {
-            int qt = (int)DRUM_INQ_TICKS[diq];
-            uint32_t abs = inst->global_tick * (uint32_t)TICKS_PER_STEP + inst->master_tick_in_step;
-            int phase = (int)(abs % (uint32_t)qt);
-            if (phase >= qt / 2) {
-                tr->drum_repeat2_pending |=  (1u << (unsigned)lane);
-                tr->drum_repeat2_active  &= ~(1u << (unsigned)lane);
-            } else {
+        if (tr->drum_repeat_sync) {
+            uint16_t rate_ticks = DRUM_REPEAT_RATE_TICKS[tr->drum_repeat2_rate_idx[lane]];
+            if (inst->arp_master_tick % (uint32_t)rate_ticks == 0) {
                 tr->drum_repeat2_pending &= ~(1u << (unsigned)lane);
                 tr->drum_repeat2_active  |=  (1u << (unsigned)lane);
+            } else {
+                tr->drum_repeat2_pending |=  (1u << (unsigned)lane);
+                tr->drum_repeat2_active  &= ~(1u << (unsigned)lane);
             }
         } else {
             tr->drum_repeat2_pending &= ~(1u << (unsigned)lane);
@@ -3948,14 +3963,10 @@ static void drum_repeat_tick(seq8_instance_t *inst, seq8_track_t *tr) {
         }
     }
     if (!tr->drum_repeat_active || tr->pad_mode != PAD_MODE_DRUM) return;
-    /* InQ pending: wait for nearest quant boundary before first fire */
+    /* Repeat Sync pending: wait for next rate-grid boundary on arp_master_tick. */
     if (tr->drum_repeat_pending) {
-        uint8_t diq = tr->drum_inp_quant;
-        if (diq > 0) {
-            int qt = (int)DRUM_INQ_TICKS[diq];
-            uint32_t abs = inst->global_tick * (uint32_t)TICKS_PER_STEP + inst->master_tick_in_step;
-            if ((int)(abs % (uint32_t)qt) != 0) return;
-        }
+        uint16_t rate_ticks = DRUM_REPEAT_RATE_TICKS[tr->drum_repeat_rate_idx];
+        if (inst->arp_master_tick % (uint32_t)rate_ticks != 0) return;
         tr->drum_repeat_pending = 0;
         tr->drum_repeat_step    = 0;
         tr->drum_repeat_phase   = 0;
@@ -4003,19 +4014,20 @@ static void drum_repeat_tick(seq8_instance_t *inst, seq8_track_t *tr) {
                 clip_t *rlc = &tr->drum_clips[ac].lanes[lane].clip;
                 uint16_t rs = tr->drum_current_step[lane];
                 if (rs < rlc->length) {
-                    int inq_on = (inst->inp_quant || tr->drum_inp_quant) ? 1 : 0;
                     int16_t off = (int16_t)tr->drum_tick_in_step[lane];
                     if (off >= (int16_t)(TICKS_PER_STEP / 2)) {
                         rs = (rs + 1) % rlc->length;
                         off -= (int16_t)TICKS_PER_STEP;
                     }
-                    if (inq_on) off = 0;
+                    /* Sub-feature 3: preserve actual sub-step offset; stack regardless of InQ.
+                     * Reader (note_step, clip_build_steps_from_notes) handles sub-step notes
+                     * via midpoint rounding — symmetric write/read invariant per dsp/CLAUDE.md. */
                     int new_step_this_pass = (tr->drum_last_rec_step[lane] != (int16_t)rs);
                     int can_write = 0;
                     if (new_step_this_pass) {
                         can_write = (rlc->step_note_count[rs] == 0);
                         tr->drum_last_rec_step[lane] = (int16_t)rs;
-                    } else if (!inq_on) {
+                    } else {
                         can_write = (rlc->step_note_count[rs] < 8);
                     }
                     if (can_write) {
@@ -4077,26 +4089,18 @@ static void drum_repeat2_tick(seq8_instance_t *inst, seq8_track_t *tr) {
         }
     }
     if (!(tr->drum_repeat2_active | tr->drum_repeat2_pending) || tr->pad_mode != PAD_MODE_DRUM) return;
-    /* Resolve any lanes pending InQ boundary */
+    /* Resolve any lanes pending repeat-rate boundary. Each lane has its own
+     * rate; activate per-lane when its rate divides arp_master_tick. */
     if (tr->drum_repeat2_pending) {
-        uint8_t diq = tr->drum_inp_quant;
-        if (diq > 0) {
-            int qt = (int)DRUM_INQ_TICKS[diq];
-            uint32_t abs = inst->global_tick * (uint32_t)TICKS_PER_STEP + inst->master_tick_in_step;
-            if ((int)(abs % (uint32_t)qt) == 0) {
-                /* Activate all pending lanes at this boundary */
-                int pl; for (pl = 0; pl < DRUM_LANES; pl++) {
-                    if (tr->drum_repeat2_pending & (1u << (unsigned)pl)) {
-                        tr->drum_repeat2_phase[pl] = 0;
-                        tr->drum_repeat2_step[pl]  = 0;
-                        tr->drum_repeat2_active   |= (1u << (unsigned)pl);
-                    }
-                }
-                tr->drum_repeat2_pending = 0;
+        int pl; for (pl = 0; pl < DRUM_LANES; pl++) {
+            if (!(tr->drum_repeat2_pending & (1u << (unsigned)pl))) continue;
+            uint16_t rate_ticks = DRUM_REPEAT_RATE_TICKS[tr->drum_repeat2_rate_idx[pl]];
+            if (inst->arp_master_tick % (uint32_t)rate_ticks == 0) {
+                tr->drum_repeat2_phase[pl] = 0;
+                tr->drum_repeat2_step[pl]  = 0;
+                tr->drum_repeat2_active   |= (1u << (unsigned)pl);
+                tr->drum_repeat2_pending  &= ~(1u << (unsigned)pl);
             }
-        } else {
-            tr->drum_repeat2_active  |= tr->drum_repeat2_pending;
-            tr->drum_repeat2_pending  = 0;
         }
     }
     if (!tr->drum_repeat2_active) return;
@@ -4133,19 +4137,18 @@ static void drum_repeat2_tick(seq8_instance_t *inst, seq8_track_t *tr) {
                 clip_t *rlc = &tr->drum_clips[ac].lanes[l].clip;
                 uint16_t rs = tr->drum_current_step[l];
                 if (rs < rlc->length) {
-                    int inq_on = (inst->inp_quant || tr->drum_inp_quant) ? 1 : 0;
                     int16_t off = (int16_t)tr->drum_tick_in_step[l];
                     if (off >= (int16_t)(TICKS_PER_STEP / 2)) {
                         rs = (rs + 1) % rlc->length;
                         off -= (int16_t)TICKS_PER_STEP;
                     }
-                    if (inq_on) off = 0;
+                    /* Sub-feature 3: preserve actual sub-step offset; stack regardless of InQ. */
                     int new_step_this_pass = (tr->drum_last_rec_step[l] != (int16_t)rs);
                     int can_write = 0;
                     if (new_step_this_pass) {
                         can_write = (rlc->step_note_count[rs] == 0);
                         tr->drum_last_rec_step[l] = (int16_t)rs;
-                    } else if (!inq_on) {
+                    } else {
                         can_write = (rlc->step_note_count[rs] < 8);
                     }
                     if (can_write) {
@@ -5032,6 +5035,7 @@ static void *create_instance(const char *module_dir, const char *json_defaults) 
         pfx_init_defaults(&inst->tracks[t].pfx);
         tarp_init_defaults(&inst->tracks[t]);
         drum_repeat_init_defaults(&inst->tracks[t]);
+        inst->tracks[t].drum_repeat_sync = 1;
         { int _k; for (_k = 0; _k < 8; _k++) inst->tracks[t].cc_assign[_k] = CC_ASSIGN_DEFAULT[_k]; }
         memset(inst->tracks[t].cc_auto_last_sent, 0xFF, 8);
         inst->tracks[t].pfx.looper_on = 1;
@@ -6504,6 +6508,8 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
             return snprintf(out, out_len, "%u", tr->drum_lane_solo);
         if (!strcmp(sub, "diq"))
             return snprintf(out, out_len, "%d", (int)tr->drum_inp_quant);
+        if (!strcmp(sub, "drum_repeat_sync"))
+            return snprintf(out, out_len, "%u", (unsigned)tr->drum_repeat_sync);
         /* tarp_held: space-separated MIDI pitches currently in TARP input buffer
          * (held physical + latched). Empty when buffer is empty. Polled by JS to
          * light source pads while TARP is latched. */
@@ -6913,13 +6919,16 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                 } else {
                     inst->count_in_ticks--;
                 }
-                /* TARP: tick input-side arp during count-in so live chord presses
-                 * are audible (and, for sync=off, captured via tarp_fire_step's
-                 * preroll branch). Mirrors the stopped block — only TARP, not
-                 * looper/drum-repeats/SEQ-ARP (those are playback-side). */
+                /* TARP + drum repeats: input-side engines tick during count-in
+                 * so live presses are audible through the click. Looper and
+                 * SEQ ARP stay dormant (playback-side; no clip playback during
+                 * count-in). */
                 { int _tt;
-                  for (_tt = 0; _tt < NUM_TRACKS; _tt++)
+                  for (_tt = 0; _tt < NUM_TRACKS; _tt++) {
                       tarp_tick(inst, &inst->tracks[_tt]);
+                      drum_repeat_tick(inst, &inst->tracks[_tt]);
+                      drum_repeat2_tick(inst, &inst->tracks[_tt]);
+                  }
                 }
                 inst->arp_master_tick++;
             }
@@ -6967,6 +6976,40 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         _a->ticks_until_next    = 0;
                         _a->master_anchor       = 0;
                         _a->pending_first_note  = (_a->held_count > 0) ? 1 : 0;
+                    }
+                    /* Drum repeat fire reset — re-anchor phase to the new
+                     * arp_master_tick=0. Pending bits clear because Repeat
+                     * Sync will re-evaluate (arp_master_tick=0 is always on
+                     * the rate grid). Drain play_pending[] entries queued
+                     * by count-in repeats so note-offs land on the first
+                     * audio buffer post-fire instead of being stranded. */
+                    if (_tr->drum_repeat_active) {
+                        _tr->drum_repeat_phase   = 0;
+                        _tr->drum_repeat_step    = 0;
+                        _tr->drum_repeat_pending = 0;
+                    }
+                    if (_tr->drum_repeat2_active | _tr->drum_repeat2_pending) {
+                        int _l2;
+                        for (_l2 = 0; _l2 < DRUM_LANES; _l2++) {
+                            uint32_t _bit = 1u << (unsigned)_l2;
+                            if (_tr->drum_repeat2_pending & _bit) {
+                                _tr->drum_repeat2_active |= _bit;
+                                _tr->drum_repeat2_pending &= ~_bit;
+                            }
+                            if (_tr->drum_repeat2_active & _bit) {
+                                _tr->drum_repeat2_phase[_l2] = 0;
+                                _tr->drum_repeat2_step[_l2]  = 0;
+                            }
+                        }
+                    }
+                    /* Drain play_pending[] note-offs so they fire on the first
+                     * post-count-in tick rather than waiting for their original
+                     * gate countdown (those tick at count-in's high sample_counter,
+                     * which has been zeroed by the reset above). */
+                    {
+                        int _pp;
+                        for (_pp = 0; _pp < (int)_tr->play_pending_count; _pp++)
+                            _tr->play_pending[_pp].ticks_remaining = 0;
                     }
                     {
                         int _dl;
