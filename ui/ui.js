@@ -1796,6 +1796,10 @@ function pollDSP() {
             S.schwungCoRunSlot = -1;
             S.globalMenuOpen = false;
             S.lastSentMenuEditValue = null;
+            /* Same defensive modifier clear as exitSchwungCoRun. */
+            S.shiftHeld = false; S.deleteHeld = false; S.muteHeld = false;
+            S.copyHeld  = false; S.loopHeld  = false; S.loopJogActive = false;
+            S.captureHeld = false; S.shiftTrackLEDActive = false;
             S.screenDirty = true;
         }
     }
@@ -1808,6 +1812,10 @@ function pollDSP() {
         const _shm = shadow_get_corun_move_native();
         if (_shm < 0 && S.moveCoRunTrack >= 0) {
             S.moveCoRunTrack = -1;
+            /* Same defensive modifier clear as exitMoveNativeCoRun. */
+            S.shiftHeld = false; S.deleteHeld = false; S.muteHeld = false;
+            S.copyHeld  = false; S.loopHeld  = false; S.loopJogActive = false;
+            S.captureHeld = false; S.shiftTrackLEDActive = false;
             S.screenDirty = true;
             forceRedraw();
         }
@@ -3411,6 +3419,13 @@ function exitSchwungCoRun() {
     S.schwungCoRunSlot = -1;
     if (typeof shadow_set_corun_chain_edit === 'function')
         shadow_set_corun_chain_edit(-1);
+    /* Modifier-key release CCs the user pressed inside the co-run may have
+     * been routed to Schwung and never reached us — clear defensively so a
+     * stuck Shift/Mute/etc. can't silence pad dispatch on return. Mirrors
+     * the resume-from-suspend clear. */
+    S.shiftHeld = false; S.deleteHeld = false; S.muteHeld = false;
+    S.copyHeld  = false; S.loopHeld  = false; S.loopJogActive = false;
+    S.captureHeld = false; S.shiftTrackLEDActive = false;
     S.screenDirty = true;
 }
 
@@ -3451,6 +3466,12 @@ function exitMoveNativeCoRun() {
     S.moveCoRunTrack = -1;
     if (typeof shadow_set_corun_move_native === 'function')
         shadow_set_corun_move_native(-1);
+    /* Modifier-key release CCs the user pressed inside Move firmware never
+     * reach us during co-run — clear defensively so a stuck Shift/Mute/etc.
+     * can't silence pad dispatch on return. Mirrors resume-from-suspend. */
+    S.shiftHeld = false; S.deleteHeld = false; S.muteHeld = false;
+    S.copyHeld  = false; S.loopHeld  = false; S.loopJogActive = false;
+    S.captureHeld = false; S.shiftTrackLEDActive = false;
     forceRedraw();
 }
 
@@ -3886,6 +3907,23 @@ globalThis.tick = function () {
     if (S.dspInboundEnabled) {
         const _muted = _padDispatchMutedNow();
         if (_muted !== S.lastPushedMuted) computePadNoteMap();
+        /* Self-heal: every 5 ticks (~50ms), read back DSP's pad_dispatch_muted
+         * via get_param and re-push the padmap if it diverged from JS truth.
+         * Necessary because tN_padmap pushes can be dropped when set_param
+         * loses to shadow_send_midi_to_dsp in the same audio buffer (see
+         * feedback_set_param_coalescing). Without this, an un-mute push lost
+         * to MIDI contention leaves DSP stuck with pad_dispatch_muted=1 and
+         * all pads silent until the user happens to gesture a modifier
+         * (which retriggers computePadNoteMap). Worst-case stuck pad
+         * duration is now ~50ms instead of indefinite. */
+        if ((S.tickCount % 5) === 0 && typeof host_module_get_param === 'function') {
+            const _dspM = host_module_get_param('pad_dispatch_muted');
+            if (_dspM !== null && _dspM !== undefined) {
+                const _dspMi = parseInt(_dspM, 10);
+                const _jsM = _muted ? 1 : 0;
+                if (_dspMi !== _jsM) computePadNoteMap();
+            }
+        }
     }
 
     /* Drain live-note events queued by onMidiMessage handlers since the last

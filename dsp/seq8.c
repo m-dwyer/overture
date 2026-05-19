@@ -6397,6 +6397,8 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
     }
     if (!strcmp(key, "state_dirty"))
         return snprintf(out, out_len, "%d", (int)inst->state_dirty);
+    if (!strcmp(key, "pad_dispatch_muted"))
+        return snprintf(out, out_len, "%d", inst ? (int)inst->pad_dispatch_muted : 0);
     if (!strcmp(key, "last_restore"))
         return snprintf(out, out_len, "%s", inst->last_restore_info);
 
