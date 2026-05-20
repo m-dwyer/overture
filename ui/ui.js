@@ -83,6 +83,7 @@ import { saveState, writeSidecar, doClearSession, showActionPopup, uuidToStatePa
 import { drawGlobalMenu } from '/data/UserData/schwung/modules/tools/davebox/ui_dialogs.mjs';
 import { trackClipHasContent, sceneAllQueued, updateSceneMapLEDs } from '/data/UserData/schwung/modules/tools/davebox/ui_scene.mjs';
 import { effectiveClip, updateStepLEDs, updateSessionLEDs, updateTrackLEDs, flashAtRate, drawPositionBar, invalidateLEDCache } from '/data/UserData/schwung/modules/tools/davebox/ui_leds.mjs';
+import { SPLASH_BITS, SPLASH_W, SPLASH_H } from '/data/UserData/schwung/modules/tools/davebox/ui_splash.mjs';
 
 /* ------------------------------------------------------------------ */
 /* Parameter bank definitions                                           */
@@ -2931,10 +2932,26 @@ function drawUI() {
     if (S.globalMenuOpen || S.tapTempoOpen) { ensureGlobalMenuFresh(); drawGlobalMenu(); return; }
     /* Perf Mode OLED takeover (Session View + Loop held or locked) */
     if (S.sessionView && (S.loopHeld || S.perfViewLocked)) { drawPerfModeOled(); return; }
-    if (S.stateLoading) {
+    if (S.stateLoading || S.bootSplashTicks > 0) {
         clear_screen();
-        print(4, 22, 'SESSION', 1);
-        print(4, 34, 'LOADING...', 1);
+        /* 128x64 splash bitmap, MSB-first packed bytes (1024 bytes total).
+         * Render via fill_rect runs of lit pixels per row — fewer host calls
+         * than per-pixel set_pixel and the screen is only redrawn briefly. */
+        const rowBytes = SPLASH_W >> 3;
+        for (let y = 0; y < SPLASH_H; y++) {
+            let runStart = -1;
+            const rowOff = y * rowBytes;
+            for (let x = 0; x < SPLASH_W; x++) {
+                const bit = (SPLASH_BITS[rowOff + (x >> 3)] >> (7 - (x & 7))) & 1;
+                if (bit) {
+                    if (runStart < 0) runStart = x;
+                } else if (runStart >= 0) {
+                    fill_rect(runStart, y, x - runStart, 1, 1);
+                    runStart = -1;
+                }
+            }
+            if (runStart >= 0) fill_rect(runStart, y, SPLASH_W - runStart, 1, 1);
+        }
         return;
     }
 
@@ -4073,6 +4090,7 @@ var _lastSessionView = false;
 
 globalThis.tick = function () {
     S.tickCount++;
+    if (S.bootSplashTicks > 0) S.bootSplashTicks--;
 
     /* Deferred padmap recompute for leaving-DRUM (see applyTrackConfig
      * else branch). Fire ONLY when the pendingDefaultSetParams queue is

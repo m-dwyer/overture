@@ -292,6 +292,11 @@ export const S = {
     pendingSetLoad: false,
     pendingDspSync: 0,
     stateLoading: false,
+    /* Boot splash: shown for ~2s on every fresh JS load (Move reboot or
+     * full module re-launch via Shift+Back). Back-suspend → resume keeps the
+     * existing module process and JS state, so the counter stays at 0 and
+     * the splash does NOT re-show on resume. Decremented in tick(). */
+    bootSplashTicks: 188,
     pendingSuspendSave: false,
     pendingExitAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_exit_module */
     pendingHideAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_hide_module */
