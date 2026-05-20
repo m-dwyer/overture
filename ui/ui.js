@@ -324,13 +324,9 @@ function buildGlobalMenuItems() {
             showActionPopup('STATE', 'SAVED');
         }),
         createAction('Quit', function() {
-            saveState();
-            removeFlagsWrap();
-            S.ledInitComplete = false;
-            invalidateLEDCache();
-            clearAllLEDs();
-            for (let _i = 0; _i < 4; _i++) setButtonLED(40 + _i, LED_OFF);
-            if (typeof host_exit_module === 'function') host_exit_module();
+            saveState();                       /* sets pendingSuspendSave */
+            S.pendingExitAfterSave = true;     /* drained one tick after save fires */
+            S.globalMenuOpen = false;
         }),
         createAction('Clear Sess', function() {
             S.confirmClearSession = true;
@@ -4051,21 +4047,10 @@ globalThis.tick = function () {
      * Save state on the transition edge; let tick run normally (display is no-oped by host). */
     const isSuspended = S._origClearScreen && (clear_screen !== S._origClearScreen);
     if (isSuspended && !S._wasSuspended) {
-        /* Write UI sidecar immediately (host_write_file, no coalescing concern).
-         * Defer set_param('save') to end of tick() via flag so it is the last
-         * set_param and cannot be overwritten by other deferred sends. */
-        if (typeof host_write_file === 'function')
-            host_write_file(uuidToUiStatePath(S.currentSetUuid), JSON.stringify({
-                v: 6, at: S.activeTrack, ac: S.trackActiveClip.slice(), sv: S.sessionView ? 1 : 0,
-                dl: S.activeDrumLane.slice(),
-                pm: S.perfModsToggled, lm: S.perfLatchMode ? 1 : 0,
-                rs: S.perfRecalledSlot, us: S.perfSnapshots.slice(8),
-                bm: S.beatMarkersEnabled ? 1 : 0,
-                ss: S.trackSchwungSlot.slice(),
-                dva: S.drumVelZoneArmed.slice(),
-                dleu: S.drumLaneEuclidN.map(function(lane) { return lane.slice(); })
-            }));
-        S.pendingSuspendSave = true;
+        /* saveState() writes the sidecar synchronously and sets
+         * pendingSuspendSave — drained at end of this tick (block below).
+         * Keeps schema unified with the explicit save paths. */
+        saveState();
         removeFlagsWrap();
         if (typeof host_ext_midi_remap_enable === 'function') host_ext_midi_remap_enable(0);
     }
@@ -4892,11 +4877,30 @@ globalThis.tick = function () {
         }
     }
 
-    /* Suspend save: fires last so no subsequent set_param can overwrite it. */
+    /* Suspend save: fires last so no subsequent set_param can overwrite it.
+     * Quit/Shift+Back use the else-if branches below so the exit/hide call
+     * only runs on a tick AFTER the save set_param has reached DSP — same-tick
+     * exit would tear the module down before the buffer processes the save. */
     if (S.pendingSuspendSave && typeof host_module_set_param === 'function') {
         S.pendingSuspendSave = false;
         updateNameIndex();
         host_module_set_param('save', '1');
+    } else if (S.pendingExitAfterSave) {
+        S.pendingExitAfterSave = false;
+        removeFlagsWrap();
+        S.ledInitComplete = false;
+        invalidateLEDCache();
+        clearAllLEDs();
+        for (let _i = 0; _i < 4; _i++) setButtonLED(40 + _i, LED_OFF);
+        if (typeof host_exit_module === 'function') host_exit_module();
+    } else if (S.pendingHideAfterSave) {
+        S.pendingHideAfterSave = false;
+        removeFlagsWrap();
+        S.ledInitComplete = false;
+        invalidateLEDCache();
+        clearAllLEDs();
+        for (let _i = 0; _i < 4; _i++) setButtonLED(40 + _i, LED_OFF);
+        if (typeof host_hide_module === 'function') host_hide_module();
     }
 
     /* Orphan prune: clean up set_state/<uuid>/seq8-*.json for sets that no
@@ -5735,13 +5739,8 @@ function _onCC_transport(d1, d2) {
             forceRedraw();
         } else if (S.shiftHeld) {
             if (S.schwungCoRunSlot >= 0) exitSchwungCoRun();
-            saveState();
-            removeFlagsWrap();
-            S.ledInitComplete = false;
-            invalidateLEDCache();
-            clearAllLEDs();
-            for (let _i = 0; _i < 4; _i++) setButtonLED(40 + _i, LED_OFF);
-            if (typeof host_hide_module === 'function') host_hide_module();
+            saveState();                       /* sets pendingSuspendSave */
+            S.pendingHideAfterSave = true;     /* drained one tick after save fires */
         }
     }
 

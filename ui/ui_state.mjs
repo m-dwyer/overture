@@ -280,6 +280,8 @@ export const S = {
     pendingDspSync: 0,
     stateLoading: false,
     pendingSuspendSave: false,
+    pendingExitAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_exit_module */
+    pendingHideAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_hide_module */
     pendingPruneOrphans: false,
     nameIndexCache: null,    /* { name: uuid } map, lazy-loaded on first save */
     pendingInheritPicker: null,  /* { dstUuid, dstName, candidates: [{uuid,name}], selectedIndex } when picker is open */

@@ -127,7 +127,12 @@ export function showActionPopup(...lines) {
 }
 
 export function saveState() {
-    if (typeof host_module_set_param === 'function') host_module_set_param('save', '1');
+    /* Route the DSP save through the end-of-tick pendingSuspendSave drain so it
+     * cannot be coalesced by other set_params fired in the same audio buffer
+     * (Quit / Shift+Back / Save menu / co-run handoff all call this from
+     * MIDI-handler context). Sidecar write stays synchronous — host_write_file
+     * is on a separate channel. */
+    S.pendingSuspendSave = true;
     if (typeof host_write_file === 'function')
         host_write_file(uuidToUiStatePath(S.currentSetUuid), JSON.stringify({
             v: 7, at: S.activeTrack, ac: S.trackActiveClip.slice(), sv: S.sessionView ? 1 : 0,
