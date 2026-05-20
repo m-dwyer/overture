@@ -715,6 +715,17 @@ static void set_param(void *instance, const char *key, const char *val) {
                 tr2->next_early_mask     = 0;
                 tr2->drum_repeat_active  = 0;
                 tr2->drum_repeat2_active = 0;
+                /* Reset pad_mode to the create_instance default so Clear Session
+                 * (v=0 state file → seq8_load_state deletes file, leaves in-memory
+                 * track state untouched) doesn't leave previously-drum tracks
+                 * stuck in drum mode. JS re-pushes t0_pad_mode=DRUM after the
+                 * pendingDspSync drain via restoreUiSidecar's first-run defaults
+                 * branch, so t0 still ends up in DRUM as expected; t1-7 stay
+                 * MELODIC. For valid v=28 files, seq8_load_state below overwrites
+                 * this with the saved value. */
+                tr2->pad_mode            = PAD_MODE_MELODIC_SCALE;
+                tr2->active_drum_lane    = 0;
+                tr2->drum_perform_mode   = 0;
                 for (c2 = 0; c2 < NUM_CLIPS; c2++)
                     clip_init(&tr2->clips[c2]);
                 drum_track_init(tr2, t2);

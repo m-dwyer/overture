@@ -1,6 +1,21 @@
-# Parked: ~~drum→melodic Mode flip~~ + Clear Session pad_mode drift
+# RESOLVED: ~~drum→melodic Mode flip~~ + ~~Clear Session pad_mode drift~~
 
-**Status:** Mode-flip half **FIXED 2026-05-19** on `1.0-tweaks` (see CHANGELOG `[Unreleased]` and `applyTrackConfig` else branch + tick `pendingPadNoteMapRecompute` gate). Hang half + this fix shipped. **Clear Session pad_mode drift remains parked** — read on for that half only.
+**Status:** Both halves **FIXED 2026-05-19** on `1.0-tweaks`. See CHANGELOG `[Unreleased]`. Kept for the trail; close out next housekeeping pass.
+
+- Mode-flip half: `applyTrackConfig` else branch + tick `pendingPadNoteMapRecompute` gate.
+- Clear Session half: `state_load` set_param handler now resets `pad_mode` / `active_drum_lane` / `drum_perform_mode` to their `create_instance` defaults so v=0 (cleared) state files don't leave drum-mode tracks stuck in drum mode.
+
+## Known still-drifting fields after Clear Session (out of scope, not user-reported)
+
+Same mechanism as the pad_mode bug. The state_load handler resets *some* track fields but leaves these untouched, and JS's `restoreUiSidecar` first-run defaults branch only re-pushes `t0_pad_mode=DRUM` / `scale_aware=1` / `metro_vol=100`. So these all retain their pre-clear DSP values:
+
+- `tr->channel` (JS sets `S.trackChannel[_t] = 1` in doClearSession but never pushes; DSP keeps old channel)
+- `tr->pfx.route` (JS sets `S.trackRoute[_t] = 0` but never pushes)
+- `tr->pfx.looper_on` (JS sets `S.trackLooper[_t] = 1` but never pushes)
+- `tr->pad_octave` (no JS reset, no DSP reset)
+- Likely tarp state too
+
+User has not reported these as bugs — track config is mostly defaults in normal use, so the drift isn't visible. If the user does later report channel/route/looper drift after Clear Session, the fix shape is the same: add to the state_load reset loop. Filed in TODO.md.
 
 ## Mode-flip fix summary (for trail)
 
