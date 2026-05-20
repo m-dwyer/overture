@@ -2044,6 +2044,7 @@ static inline void looper_mark_active(seq8_instance_t *inst, uint8_t track,
  * Safe to call from any looper state. */
 static void looper_silence_active(seq8_instance_t *inst) {
     int t, p, si;
+    uint16_t ei;
     inst->looper_emitting = 1;
     for (t = 0; t < NUM_TRACKS; t++) {
         play_fx_t *fx = &inst->tracks[t].pfx;
@@ -2066,6 +2067,23 @@ static void looper_silence_active(seq8_instance_t *inst) {
         }
     }
     inst->perf_staccato_count = 0;
+    /* Safety net: any note-on captured into looper_events whose pass-through
+     * emit was NOT tracked in perf_emitted_pitch (happens during CAPTURING
+     * without perf_mods_active — see pfx_send line ~1886) won't be reached
+     * by the table sweep above. Send note-offs for every captured note-on
+     * directly. Duplicate offs are harmless: the table sweep already cleared
+     * the 0xFF sentinel for entries it found, and synths drop unmatched offs. */
+    for (ei = 0; ei < inst->looper_event_count; ei++) {
+        uint8_t st = inst->looper_events[ei].status & 0xF0;
+        uint8_t d2 = inst->looper_events[ei].d2;
+        if (st == 0x90 && d2 > 0) {
+            uint8_t tr = inst->looper_events[ei].track;
+            uint8_t d1 = inst->looper_events[ei].d1;
+            if (tr < NUM_TRACKS)
+                pfx_send(&inst->tracks[tr].pfx,
+                         (uint8_t)(0x80 | inst->tracks[tr].channel), d1, 0);
+        }
+    }
     inst->looper_emitting = 0;
 }
 
@@ -2467,9 +2485,13 @@ static void looper_tick(seq8_instance_t *inst) {
  * from any state. */
 static void looper_stop(seq8_instance_t *inst) {
     /* Defer note-offs to next render_block tick so midi_inject_to_move works
-     * (pfx_send from set_param context doesn't release Move synth voices). */
-    if (inst->looper_state == LOOPER_STATE_LOOPING)
-        inst->looper_pending_silence = 1;
+     * (pfx_send from set_param context doesn't release Move synth voices).
+     * Set unconditionally: a release during CAPTURING (first cycle, before
+     * the loop boundary) still needs to flush any live-played notes the user
+     * was holding when they let go of the loop pad. looper_silence_active is
+     * idempotent (0xFF sentinel + harmless duplicate offs from the
+     * looper_events sweep). */
+    inst->looper_pending_silence = 1;
     /* perf_emitted_pitch left intact; looper_silence_active clears it when it fires. */
     inst->looper_state              = LOOPER_STATE_IDLE;
     inst->looper_pos                = 0;
