@@ -197,7 +197,9 @@ typedef struct {
     uint8_t  steps_mode;   /* 0=Off, 1=Mute, 2=Skip */
     uint8_t  retrigger;    /* 0/1 — reset cycle/step on new note + clip wrap */
     uint8_t  step_vel[8];  /* level 0..4 (0=off, 1..4=row 0..3) */
-    uint32_t master_anchor; /* arp_master_tick at last retrigger; step_pos = ((master-anchor)/rate) & 7 */
+    int8_t   step_int[8];  /* per-step scale-degree offset -14..+14; default 0 */
+    uint8_t  step_loop_len; /* 1..8, default 8 — step pattern loop length */
+    uint32_t master_anchor; /* arp_master_tick at last retrigger; step_pos = ((master-anchor)/rate) % step_loop_len */
 
     /* Held input notes (insertion-ordered; index 0..held_count-1 valid) */
     uint8_t  held_pitch[ARP_MAX_HELD];
@@ -332,6 +334,8 @@ typedef struct {
     int seq_arp_retrigger;     /* 0/1; default 1 */
     int seq_arp_sync;          /* 0=free, 1=sync to global rate boundary */
     uint8_t seq_arp_step_vel[8]; /* level 0..4 (0=off, 1..4=row 0..3); default 4 */
+    int8_t  seq_arp_step_int[8]; /* per-step scale-degree offset -14..+14; default 0 */
+    uint8_t seq_arp_step_loop_len; /* 1..8, default 8 — step pattern loop length */
 } clip_pfx_params_t;
 
 /* ------------------------------------------------------------------ */
@@ -1057,7 +1061,7 @@ static void ensure_parent_dir(const char *path) {
 
 static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
     int t, c;
-    fprintf(fp, "{\"v\":30,\"playing\":%d", inst->playing);
+    fprintf(fp, "{\"v\":32,\"playing\":%d", inst->playing);
     for (t = 0; t < NUM_TRACKS; t++)
         fprintf(fp, ",\"t%d_ac\":%d", t, inst->tracks[t].active_clip);
     for (t = 0; t < NUM_TRACKS; t++)
@@ -1086,7 +1090,12 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
             for (_i = 0; _i < 8; _i++)
                 if (tr2->tarp.step_vel[_i] != 4)
                     fprintf(fp, ",\"t%d_tasv%d\":%d", t, _i, (int)tr2->tarp.step_vel[_i]);
+            for (_i = 0; _i < 8; _i++)
+                if (tr2->tarp.step_int[_i] != 0)
+                    fprintf(fp, ",\"t%d_tasi%d\":%d", t, _i, (int)tr2->tarp.step_int[_i]);
         }
+        if (tr2->tarp.step_loop_len != 8 && tr2->tarp.step_loop_len != 0)
+            fprintf(fp, ",\"t%d_tasll\":%d", t, (int)tr2->tarp.step_loop_len);
     }
     /* Vel Override — per-track, sparse */
     for (t = 0; t < NUM_TRACKS; t++)
@@ -1142,7 +1151,13 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
                         if (p2->seq_arp_step_vel[_i] != 4)
                             fprintf(fp, ",\"t%dc%d_arsv%d\":%d", t, c, _i, (int)p2->seq_arp_step_vel[_i]);
                     }
+                    for (_i = 0; _i < 8; _i++) {
+                        if (p2->seq_arp_step_int[_i] != 0)
+                            fprintf(fp, ",\"t%dc%d_arsi%d\":%d", t, c, _i, (int)p2->seq_arp_step_int[_i]);
+                    }
                 }
+                if (p2->seq_arp_step_loop_len != 8 && p2->seq_arp_step_loop_len != 0)
+                    fprintf(fp, ",\"t%dc%d_arsll\":%d", t, c, (int)p2->seq_arp_step_loop_len);
             }
             /* note list: "tick:pitch:vel:gate;" for each active note */
             if (cl->note_count > 0) {
@@ -1338,10 +1353,10 @@ static void seq8_load_state(seq8_instance_t *inst) {
     if (!n) { free(buf); remove(inst->state_path); return; }
     buf[n] = '\0';
 
-    /* Version gate: only v=28 accepted (dev build; wipe on version mismatch). */
+    /* Version gate: only v=32 accepted (dev build; wipe on version mismatch). */
     {
         int sv = json_get_int(buf, "v", -1);
-        if (sv != 30) {
+        if (sv != 32) {
             free(buf);
             remove(inst->state_path);
             seq8_ilog(inst, "SEQ8 state: wrong version, deleted");
@@ -1526,8 +1541,12 @@ static void seq8_load_state(seq8_instance_t *inst) {
             for (_i = 0; _i < 8; _i++) {
                 snprintf(key, sizeof(key), "t%d_tasv%d", t, _i);
                 tr2->tarp.step_vel[_i] = (uint8_t)clamp_i(json_get_int(buf, key, 4), 0, 4);
+                snprintf(key, sizeof(key), "t%d_tasi%d", t, _i);
+                tr2->tarp.step_int[_i] = (int8_t)clamp_i(json_get_int(buf, key, 0), -14, 14);
             }
         }
+        snprintf(key, sizeof(key), "t%d_tasll", t);
+        tr2->tarp.step_loop_len = (uint8_t)clamp_i(json_get_int(buf, key, 8), 1, 8);
     }
     /* Vel Override — per-track, sparse (missing = 0 = Global) */
     for (t = 0; t < NUM_TRACKS; t++) {
@@ -1642,8 +1661,12 @@ static void seq8_load_state(seq8_instance_t *inst) {
                 for (_i = 0; _i < 8; _i++) {
                     snprintf(key, sizeof(key), "t%dc%d_arsv%d", t, c, _i);
                     p2->seq_arp_step_vel[_i] = (uint8_t)clamp_i(json_get_int(buf, key, 4), 0, 4);
+                    snprintf(key, sizeof(key), "t%dc%d_arsi%d", t, c, _i);
+                    p2->seq_arp_step_int[_i] = (int8_t)clamp_i(json_get_int(buf, key, 0), -14, 14);
                 }
             }
+            snprintf(key, sizeof(key), "t%dc%d_arsll", t, c);
+            p2->seq_arp_step_loop_len = (uint8_t)clamp_i(json_get_int(buf, key, 8), 1, 8);
         }
     }
     /* Drum lane data (v=14 only; v=13 files have no drum keys, loops are no-ops) */
@@ -2969,6 +2992,9 @@ static void arp_init_defaults(arp_engine_t *a) {
     int i;
     /* step_vel level: 0=off, 1=row0(min), 4=row3(full incoming). Default 4. */
     for (i = 0; i < 8; i++) a->step_vel[i] = 4;
+    /* step_int: per-step scale-degree offset -14..+14. Default 0. */
+    for (i = 0; i < 8; i++) a->step_int[i] = 0;
+    a->step_loop_len = 8;
     arp_clear_runtime(a);
 }
 
@@ -3702,7 +3728,9 @@ static void arp_fire_step(seq8_instance_t *inst, seq8_track_t *tr) {
      * arpeggiates even when transport is off. master_anchor is the tick at
      * which retrigger was last fired (0 by default); column 0 sits at anchor. */
     uint32_t master_pos = inst->arp_master_tick - a->master_anchor;
-    int step_idx = (int)((master_pos / rate) & 7);
+    uint8_t loop_len = a->step_loop_len ? a->step_loop_len : 8;
+    if (loop_len > 8) loop_len = 8;
+    int step_idx = (int)((master_pos / rate) % loop_len);
     a->step_pos = (uint8_t)step_idx;
 
     uint8_t level = a->step_vel[step_idx];
@@ -3740,6 +3768,10 @@ static void arp_fire_step(seq8_instance_t *inst, seq8_track_t *tr) {
         a->ticks_until_next = (int32_t)rate;
         return;
     }
+
+    /* Per-step scale-degree offset (Arp Steps interval bank). */
+    if (a->step_int[step_idx])
+        pitch = (uint8_t)scale_transpose(inst, (int)pitch, (int)a->step_int[step_idx]);
 
     /* Velocity: in Off mode, use incoming directly; in Mute/Step modes, scale
      * via the level: level 1 → vel 10, level 4 → vel = base_vel, levels 2/3
@@ -4445,7 +4477,9 @@ static void tarp_fire_step(seq8_instance_t *inst, seq8_track_t *tr) {
     if (rate == 0) rate = 24;
 
     uint32_t master_pos = inst->arp_master_tick - a->master_anchor;
-    int step_idx = (int)((master_pos / rate) & 7);
+    uint8_t loop_len = a->step_loop_len ? a->step_loop_len : 8;
+    if (loop_len > 8) loop_len = 8;
+    int step_idx = (int)((master_pos / rate) % loop_len);
     a->step_pos = (uint8_t)step_idx;
 
     uint8_t level = a->step_vel[step_idx];
@@ -4475,6 +4509,10 @@ static void tarp_fire_step(seq8_instance_t *inst, seq8_track_t *tr) {
         a->ticks_until_next = (int32_t)rate;
         return;
     }
+
+    /* Per-step scale-degree offset (Arp Steps interval bank). */
+    if (a->step_int[step_idx])
+        pitch = (uint8_t)scale_transpose(inst, (int)pitch, (int)a->step_int[step_idx]);
 
     int v = (int)base_vel;
     if (a->steps_mode != 0 && level >= 1 && level <= 4) {
@@ -4660,6 +4698,8 @@ static void clip_pfx_params_init(clip_pfx_params_t *p) {
     p->seq_arp_sync      = 1;
     int i;
     for (i = 0; i < 8; i++) p->seq_arp_step_vel[i] = 4;
+    for (i = 0; i < 8; i++) p->seq_arp_step_int[i] = 0;
+    p->seq_arp_step_loop_len = 8;
 }
 
 static void drum_pfx_params_init(drum_pfx_params_t *p) {
@@ -4789,6 +4829,8 @@ static void pfx_apply_params(play_fx_t *fx, const clip_pfx_params_t *p) {
     fx->seq_arp_sync   = (uint8_t)(p->seq_arp_sync != 0);
     int i;
     for (i = 0; i < 8; i++) fx->arp.step_vel[i] = p->seq_arp_step_vel[i];
+    for (i = 0; i < 8; i++) fx->arp.step_int[i] = p->seq_arp_step_int[i];
+    fx->arp.step_loop_len = (uint8_t)clamp_i((int)p->seq_arp_step_loop_len, 1, 8);
 }
 
 static void pfx_sync_from_clip(seq8_track_t *tr) {
@@ -6480,6 +6522,16 @@ static int pfx_get(seq8_track_t *tr, const char *key, char *out, int out_len) {
             (int)tr->tarp.step_vel[2], (int)tr->tarp.step_vel[3],
             (int)tr->tarp.step_vel[4], (int)tr->tarp.step_vel[5],
             (int)tr->tarp.step_vel[6], (int)tr->tarp.step_vel[7]);
+    /* Batch read: TRACK ARP step_int[0..7] (scale-degree offsets) */
+    if (!strcmp(key, "tarp_si"))
+        return snprintf(out, out_len, "%d %d %d %d %d %d %d %d",
+            (int)tr->tarp.step_int[0], (int)tr->tarp.step_int[1],
+            (int)tr->tarp.step_int[2], (int)tr->tarp.step_int[3],
+            (int)tr->tarp.step_int[4], (int)tr->tarp.step_int[5],
+            (int)tr->tarp.step_int[6], (int)tr->tarp.step_int[7]);
+    /* Single read: TRACK ARP step_loop_len (1..8) */
+    if (!strcmp(key, "tarp_sll"))
+        return snprintf(out, out_len, "%d", (int)tr->tarp.step_loop_len);
 
     /* Rpt1 last-selected rate (single per-track) */
     if (!strcmp(key, "drrt"))
@@ -6925,10 +6977,20 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
                 clip_pfx_params_t *cp = &cl->pfx_params;
                 /* MIDI DLY slot 15 is K6 in the JS bank layout. K6 was
                  * fb_clock pre-rebind; it is delay_retrig now (clock_fb
-                 * folded onto Shift+K1, read via tN_delay_clock_fb). */
+                 * folded onto Shift+K1, read via tN_delay_clock_fb).
+                 * Slot layout (v[i]):
+                 *   0..16  NOTE FX / HARMZ / DELAY base
+                 *   17..22 SEQ ARP scalar params
+                 *   23..30 SEQ ARP step_vel[0..7]
+                 *   31..33 NOTE FX random + modes (filled in for JS parser)
+                 *   34..41 SEQ ARP step_int[0..7] (Arp Steps interval mode)
+                 *   42     SEQ ARP step_loop_len (1..8) */
                 return snprintf(out, out_len,
                     "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d "
-                    "%d %d %d %d %d %d %d %d",
+                    "%d %d %d %d %d %d %d %d "
+                    "%d %d %d "
+                    "%d %d %d %d %d %d %d %d "
+                    "%d",
                     cp->octave_shift, cp->note_offset, cp->gate_time,
                     cp->velocity_offset, cp->quantize,
                     cp->unison, cp->octaver, cp->harmonize_1, cp->harmonize_2,
@@ -6941,7 +7003,13 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
                     (int)cp->seq_arp_step_vel[0], (int)cp->seq_arp_step_vel[1],
                     (int)cp->seq_arp_step_vel[2], (int)cp->seq_arp_step_vel[3],
                     (int)cp->seq_arp_step_vel[4], (int)cp->seq_arp_step_vel[5],
-                    (int)cp->seq_arp_step_vel[6], (int)cp->seq_arp_step_vel[7]);
+                    (int)cp->seq_arp_step_vel[6], (int)cp->seq_arp_step_vel[7],
+                    cp->note_random, cp->note_random_mode, cp->fb_note_random_mode,
+                    (int)cp->seq_arp_step_int[0], (int)cp->seq_arp_step_int[1],
+                    (int)cp->seq_arp_step_int[2], (int)cp->seq_arp_step_int[3],
+                    (int)cp->seq_arp_step_int[4], (int)cp->seq_arp_step_int[5],
+                    (int)cp->seq_arp_step_int[6], (int)cp->seq_arp_step_int[7],
+                    (int)cp->seq_arp_step_loop_len);
             }
             return -1;
         }

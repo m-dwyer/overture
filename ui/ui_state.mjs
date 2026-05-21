@@ -122,6 +122,18 @@ export const S = {
     seqArpStepVel: Array.from({length: 8}, () =>
     Array.from({length: 16}, () => new Array(8).fill(4))),
     tarpStepVel: Array.from({length: 8}, () => new Array(8).fill(4)),
+    /* Per-step scale-degree offset (-14..+14) for SEQ ARP (per-clip) and TARP (per-track).
+     * Edited via the Arp Steps interval-mode overlay (jog click on bank 4 or 5). */
+    seqArpStepInt: Array.from({length: 8}, () =>
+    Array.from({length: 16}, () => new Array(8).fill(0))),
+    tarpStepInt: Array.from({length: 8}, () => new Array(8).fill(0)),
+    /* Per-pattern step-loop length (1..8, default 8). Governs both step_vel and
+     * step_int playback indexing — pattern wraps at this length. */
+    seqArpStepLoopLen: Array.from({length: 8}, () => new Array(16).fill(8)),
+    tarpStepLoopLen:   new Array(8).fill(8),
+    /* Arp Steps interval-mode overlay flag — true while the user has clicked
+     * jog on bank 4 (SEQ ARP) or 5 (TARP). Auto-clears on next jog turn. */
+    stepIntervalMode: false,
     /* TARP held-buffer mirror: pitches in DSP tarp.held_pitch[] for each track.
      * Polled from t{n}_tarp_held when tarp_latch is on; used to light source
      * pads in melodic Track View while the chord is latched. */

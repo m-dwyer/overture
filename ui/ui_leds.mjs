@@ -398,41 +398,48 @@ export function updateTrackLEDs() {
         return;
     }
 
-    /* SEQ ARP K5 (Steps Mode) touched + Steps Mode != Off: pad grid becomes vel-level editor */
-    if (!S.sessionView && S.activeBank === 4 && S.knobTouched === 4 &&
-            (S.bankParams[S.activeTrack][4][4] | 0) !== 0) {
+    /* Arp Steps interval-mode overlay: persistent vel-level pad editor on SEQ ARP (4)
+     * and TARP (5). Replaces the prior K5-touch transient gesture — now toggled via
+     * jog click on the bank. Renders even when Steps Mode = Off so the user can edit
+     * step intervals + levels in one dedicated mode. */
+    if (!S.sessionView && S.stepIntervalMode && S.activeBank === 4) {
         const t  = S.activeTrack;
         const ac = effectiveClip(t);
         const sv = S.seqArpStepVel[t][ac];
         const tc = TRACK_COLORS[t];
         const td = TRACK_DIM_COLORS[t];
+        const ll = S.seqArpStepLoopLen[t][ac] | 0;
+        const loopLen = (ll >= 1 && ll <= 8) ? ll : 8;
         for (let i = 0; i < 32; i++) {
             const col = i % 8;
             const row = Math.floor(i / 8);
-            const lvl = sv[col] | 0;
             let color = LED_OFF;
-            if (lvl > 0 && row < lvl) {
-                color = (row === lvl - 1) ? tc : td;
+            if (col < loopLen) {
+                const lvl = sv[col] | 0;
+                if (lvl > 0 && row < lvl) {
+                    color = (row === lvl - 1) ? tc : td;
+                }
             }
             cachedSetLED(TRACK_PAD_BASE + i, color);
         }
         return;
     }
-
-    /* TRACK ARP K5 (Steps Mode) touched + Steps Mode != Off: same vel-level editor */
-    if (!S.sessionView && S.activeBank === 5 && S.knobTouched === 4 &&
-            (S.bankParams[S.activeTrack][5][4] | 0) !== 0) {
+    if (!S.sessionView && S.stepIntervalMode && S.activeBank === 5) {
         const t  = S.activeTrack;
         const sv = S.tarpStepVel[t];
         const tc = TRACK_COLORS[t];
         const td = TRACK_DIM_COLORS[t];
+        const ll = S.tarpStepLoopLen[t] | 0;
+        const loopLen = (ll >= 1 && ll <= 8) ? ll : 8;
         for (let i = 0; i < 32; i++) {
             const col = i % 8;
             const row = Math.floor(i / 8);
-            const lvl = sv[col] | 0;
             let color = LED_OFF;
-            if (lvl > 0 && row < lvl) {
-                color = (row === lvl - 1) ? tc : td;
+            if (col < loopLen) {
+                const lvl = sv[col] | 0;
+                if (lvl > 0 && row < lvl) {
+                    color = (row === lvl - 1) ? tc : td;
+                }
             }
             cachedSetLED(TRACK_PAD_BASE + i, color);
         }

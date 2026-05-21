@@ -602,9 +602,13 @@ The **Steps** field (K5) gates or skips slots within the arp's cycle, but only w
 | K2 | Rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1-bar |
 | K3 | Oct | Bipolar. Positive = adds octaves above; negative = below. |
 | K4 | Gate | 1–200%. 100% = note ends as next begins. Below = staccato; above = legato overlap. |
-| K5 | Steps | Off · Mute · Skip. When Mute or Skip: **touch K5** to open the step velocity editor on the pads (8 columns × 4 rows: column = step, row = velocity level 10/52/94/127). |
+| K5 | Steps | Off · Mute · Skip. Gates per-step playback once the **Arp Steps overlay** (below) has assigned step-velocity levels. |
 | K6 | Rtrg | On (default): pattern resets to step 1 on each new note and at clip loop boundary. Off: arp runs free. |
 | K7 | Sync | On (default): the first arp step waits for the next global rate boundary, locking phase with transport. Off: fires from anchor. |
+
+**Arp Steps overlay.** **Click the jog wheel** while on the SEQUENCE ARP bank to enter the persistent Arp Steps editor (OLED reads `SEQ ARP Steps`). Knobs K1–K8 set a **scale-degree pitch offset** (±14) for each of the 8 arp steps — applied scale-aware on top of whatever pitch the arp engine picks. The pad grid is the step-velocity editor (8 columns × up to 4 rows). **Hold Loop + tap any pad** to set the step-loop length (1–8); pads in columns past the loop go dark. Click the jog, turn the jog, or press Note/Session to exit. While the overlay is active, pads do not fire notes and the Loop button is repurposed as a modifier (it does not toggle TARP latch or anything else). The overlay's state is **per-clip** for SEQUENCE ARP.
+
+**Bank reset.** **Delete + jog click** or **Shift + Delete + jog click** while on SEQUENCE ARP resets every SEQ ARP parameter — style, rate, oct, gate, steps mode, retrigger, sync, step velocities, step intervals, step-loop length — back to defaults. Shift+Delete+jog also resets NOTE FX / HARMONY / DELAY in the same gesture.
 
 ## 5.6 ARP IN bank
 
@@ -626,10 +630,14 @@ A *live* arpeggiator for pad input and external MIDI. **Per-track**, not per-cli
 | K2 | Rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1-bar |
 | K3 | Oct | −4 to +4. Negative = arpeggiate down; positive = up. 0 is skipped (−1 to +1). |
 | K4 | Gate | 1–200% |
-| K5 | Steps | Off · Mute · Skip. Touch K5 to open the step velocity editor. Mute: muted steps are rests, arp cycle continues underneath. Skip: muted steps removed from cycle entirely. |
+| K5 | Steps | Off · Mute · Skip. Gates per-step playback once the **Arp Steps overlay** (below) has assigned step-velocity levels. Mute: muted steps are rests, arp cycle continues underneath. Skip: muted steps removed from cycle entirely. |
 | K6 | Rtrg | On (default): pattern resets on each new note. Off: arp runs free. |
 | K7 | Sync | On (default): waits for the next rate boundary before firing. Off: fires immediately on pad press. |
 | K8 | Latch | Off · On. On: arp keeps running after release. First touch of a new gesture replaces the latched set; additional presses add notes. Latch resets on track switch or Session View entry. |
+
+**Arp Steps overlay.** Same gesture as SEQUENCE ARP — **click the jog** to enter (OLED reads `ARP IN Steps`); K1–K8 set per-step scale-degree offsets (±14); pads are the step-velocity editor; **Loop + pad column** sets the step-loop length (1–8). ARP IN's overlay state is **per-track** (one pattern per track, persisted with the track).
+
+**Bank reset.** **Delete + jog click** while on ARP IN resets every ARP IN parameter — style, rate, oct, gate, steps mode, retrigger, sync, latch, step velocities, step intervals, step-loop length, held buffer — back to defaults. **Shift + Delete + jog click does NOT reset ARP IN** (it's the broad melodic FX reset and intentionally preserves per-track ARP IN settings).
 
 Quick toggle: **Shift + Step 11** flips ARP IN on/off using the last-used style.
 

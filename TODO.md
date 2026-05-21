@@ -16,6 +16,7 @@
 - **Shift+clip = focus-without-activate.** Companion to the focused-clip-active default (shipped 2026-05-19). Needs a JS-side "focused vs DSP-active" split so edits target the focused clip even when DSP is still playing the prior one. Deferred — requires deeper refactor.
 - **Co-run step-button shortcut should only fire in Track View.** Shift+Step3 (Edit Slot / Edit Synth co-run entry) currently fires in Session View too. Restrict to Track View — Session View Shift+step should pass through to the existing menu shortcuts only.
 - **Knob position alignment** of similar params across banks/track types. Example: InQ value should sit at the same knob angle across all places it appears (ALL LANES, CLIP K6 melodic, etc.).
+- **HIGH PRIORITY: Delete+jog click on TARP bank doesn't reset to default.** Delete+jog should reset the active bank's params to defaults (matches SEQ ARP / other melodic banks). Same for Shift+Delete+jog (spec'd to reset ALL banks — TARP currently doesn't participate). Audit both reset paths in `_onCC_jog` to include TARP per-track defaults (style, rate, octaves, gate, steps_mode, retrigger, step_vel[8]=4, step_int[8]=0, step_loop_len=8).
 - **Native Move knob hang.** Turning a Move-native knob from within dAVEBOx (or in native co-run when controlling Move-native) hangs the dAVEBOx sequencer MIDI output. Suspect shared SPI path. Diagnose.
 
 ### Features

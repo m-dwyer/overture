@@ -124,6 +124,30 @@ static void pfx_set(seq8_instance_t *inst, seq8_track_t *tr,
         fx->arp.step_vel[s]     = (uint8_t)lv;
         return;
     }
+    if (!strcmp(key, "seq_arp_step_int")) {
+        /* Format: "S I" — step index 0..7, signed interval -14..+14 (scale degrees). */
+        const char *p = val;
+        int s = 0, iv = 0, sign = 1;
+        while (*p == ' ') p++;
+        while (*p >= '0' && *p <= '9') { s = s * 10 + (*p - '0'); p++; }
+        while (*p == ' ') p++;
+        if (*p == '-') { sign = -1; p++; }
+        else if (*p == '+') { p++; }
+        while (*p >= '0' && *p <= '9') { iv = iv * 10 + (*p - '0'); p++; }
+        if (s < 0 || s > 7) return;
+        iv = clamp_i(iv * sign, -14, 14);
+        cp->seq_arp_step_int[s] = (int8_t)iv;
+        fx->arp.step_int[s]     = (int8_t)iv;
+        inst->state_dirty = 1;
+        return;
+    }
+    if (!strcmp(key, "seq_arp_step_loop_len")) {
+        int _v = clamp_i(my_atoi(val), 1, 8);
+        cp->seq_arp_step_loop_len = (uint8_t)_v;
+        fx->arp.step_loop_len     = (uint8_t)_v;
+        inst->state_dirty = 1;
+        return;
+    }
 
 #undef PFX_SET_BOTH
 
@@ -2250,6 +2274,40 @@ static void set_param(void *instance, const char *key, const char *val) {
             lv = clamp_i(lv, 0, 4);
             tr->tarp.step_vel[s] = (uint8_t)lv;
             inst->state_dirty = 1;
+            return;
+        }
+        if (!strcmp(sub, "tarp_step_int")) {
+            /* Format: "S I" — step index 0..7, signed interval -14..+14 (scale degrees). */
+            const char *p = val;
+            int s = 0, iv = 0, sign = 1;
+            while (*p == ' ') p++;
+            while (*p >= '0' && *p <= '9') { s = s * 10 + (*p - '0'); p++; }
+            while (*p == ' ') p++;
+            if (*p == '-') { sign = -1; p++; }
+            else if (*p == '+') { p++; }
+            while (*p >= '0' && *p <= '9') { iv = iv * 10 + (*p - '0'); p++; }
+            if (s < 0 || s > 7) return;
+            iv = clamp_i(iv * sign, -14, 14);
+            tr->tarp.step_int[s] = (int8_t)iv;
+            inst->state_dirty = 1;
+            return;
+        }
+        if (!strcmp(sub, "tarp_step_loop_len")) {
+            tr->tarp.step_loop_len = (uint8_t)clamp_i(my_atoi(val), 1, 8);
+            inst->state_dirty = 1;
+            return;
+        }
+        if (!strcmp(sub, "tarp_reset")) {
+            (void)val;
+            arp_silence(inst, tr);
+            tarp_drop_latched(inst, tr);
+            arp_init_defaults(&tr->tarp);
+            tr->tarp.held_count = 0;
+            tr->tarp_on        = 0;
+            tr->tarp_latch     = 0;
+            tr->tarp_sync      = 1;
+            tr->tarp_physical  = 0;
+            inst->state_dirty  = 1;
             return;
         }
         if (!strcmp(sub, "tarp_latch")) {

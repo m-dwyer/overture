@@ -1386,6 +1386,8 @@ function _padDispatchMutedNow() {
         && S.knobTouched === 4
         && S.bankParams[S.activeTrack]
         && ((S.bankParams[S.activeTrack][S.activeBank] || [])[4] | 0) !== 0) return true;
+    /* Arp Steps overlay: pads are the persistent vel-level editor, not playable. */
+    if (S.stepIntervalMode && (S.activeBank === 4 || S.activeBank === 5)) return true;
     return false;
 }
 
@@ -1789,9 +1791,10 @@ function refreshPerClipBankParams(t) {
     /* NOTE FX bank (1): K0=oct K1=ofs K2=rnd K3=gate K4=vel K5=qnt */
     S.bankParams[t][1][0] = parseInt(v[0], 10) | 0;  /* oct */
     S.bankParams[t][1][1] = parseInt(v[1], 10) | 0;  /* ofs */
-    S.bankParams[t][1][2] = v.length >= 33 ? (parseInt(v[32], 10) | 0) : 0; /* rnd */
-    S.noteFXRandomMode[t]  = v.length >= 34 ? (parseInt(v[33], 10) | 0) : 2;
-    S.midiDlyRandomMode[t] = v.length >= 35 ? (parseInt(v[34], 10) | 0) : 2;
+    /* NOTE FX random + modes packed at v[31..33] (right after step_vel[0..7] = v[23..30]) */
+    S.bankParams[t][1][2] = v.length >= 32 ? (parseInt(v[31], 10) | 0) : 0; /* rnd */
+    S.noteFXRandomMode[t]  = v.length >= 33 ? (parseInt(v[32], 10) | 0) : 2;
+    S.midiDlyRandomMode[t] = v.length >= 34 ? (parseInt(v[33], 10) | 0) : 2;
     S.bankParams[t][1][3] = parseInt(v[2], 10) | 0;  /* gate */
     S.bankParams[t][1][4] = parseInt(v[3], 10) | 0;  /* vel */
     S.bankParams[t][1][5] = parseInt(v[4], 10) | 0;  /* qnt */
@@ -1807,6 +1810,15 @@ function refreshPerClipBankParams(t) {
     /* step_vel[0..7] when present (length-aware) */
     if (v.length >= 31) {
         for (let s = 0; s < 8; s++) S.seqArpStepVel[t][ac][s] = parseInt(v[23 + s], 10) | 0;
+    }
+    /* step_int[0..7] at v[34..41] (scale-degree offsets for Arp Steps interval mode) */
+    if (v.length >= 42) {
+        for (let s = 0; s < 8; s++) S.seqArpStepInt[t][ac][s] = parseInt(v[34 + s], 10) | 0;
+    }
+    /* step_loop_len at v[42] (1..8) */
+    if (v.length >= 43) {
+        const _ll = parseInt(v[42], 10) | 0;
+        S.seqArpStepLoopLen[t][ac] = (_ll >= 1 && _ll <= 8) ? _ll : 8;
     }
     /* CLIP bank (0): Res (K3=idx2), Len (K4=idx3), SqFl (K7=idx6) — all per-clip */
     const tps    = S.clipTPS[t][ac] || 24;
@@ -1825,6 +1837,19 @@ function readTarpStepVel(t) {
     const v = raw.split(' ');
     for (let s = 0; s < 8; s++)
         S.tarpStepVel[t][s] = parseInt(v[s], 10) | 0;
+    /* Also pull step_int[8] (Arp Steps interval mode). */
+    const rawI = host_module_get_param('t' + t + '_tarp_si');
+    if (rawI) {
+        const vi = rawI.split(' ');
+        for (let s = 0; s < 8; s++)
+            S.tarpStepInt[t][s] = parseInt(vi[s], 10) | 0;
+    }
+    /* Step pattern loop length (1..8). */
+    const rawL = host_module_get_param('t' + t + '_tarp_sll');
+    if (rawL !== null && rawL !== undefined) {
+        const _ll = parseInt(rawL, 10) | 0;
+        S.tarpStepLoopLen[t] = (_ll >= 1 && _ll <= 8) ? _ll : 8;
+    }
 }
 
 /* Read Rpt2 per-lane rate idx[32] from DSP for track t. Called after state
@@ -2249,6 +2274,27 @@ function resetFxBanks(t) {
             S.bankParams[t][b][k] = pm.def;
         }
     }
+    S.screenDirty = true;
+}
+
+/* Reset ARP IN (TARP, bank 5) for a melodic track to DSP defaults.
+ * Issues a single tN_tarp_reset which the DSP handler resolves via
+ * arp_init_defaults + held-buffer clear + silence. JS mirrors are
+ * zeroed in parallel so the bank overview reflects defaults immediately. */
+function resetTarp(t) {
+    if (typeof host_module_set_param !== 'function') return;
+    S.undoAvailable = true; S.redoAvailable = false;
+    S.pendingDefaultSetParams.push({ key: 't' + t + '_tarp_reset', val: '1' });
+    for (let k = 0; k < 8; k++) {
+        const pm = BANKS[5].knobs[k];
+        if (pm) S.bankParams[t][5][k] = pm.def;
+    }
+    for (let s = 0; s < 8; s++) {
+        S.tarpStepVel[t][s] = 4;
+        S.tarpStepInt[t][s] = 0;
+    }
+    S.tarpStepLoopLen[t] = 8;
+    S.tarpHeldNotes[t].clear();
     S.screenDirty = true;
 }
 
@@ -3236,6 +3282,29 @@ function drawUI() {
             print(_loopX2, 22, _loopL2, 1);
             print(_loopX3, 34, _loopL3, 1);
             _drawLoopSteps(steps_l);
+        }
+        return;
+    }
+
+    /* Arp Steps interval overlay: persistent bank overview while jog-clicked into
+     * step-interval mode on SEQ ARP (4) or TARP (5). K1-K8 = per-step scale-degree
+     * offsets (±14); pad grid is the persistent step-vel level editor handled in
+     * updateTrackLEDs. Renders REGARDLESS of knob-touch / inTimeout (persistent). */
+    if (bank >= 0 && S.stepIntervalMode && !S.sessionView && (bank === 4 || bank === 5)) {
+        const t      = S.activeTrack;
+        const isSeq  = (bank === 4);
+        const arr    = isSeq ? S.seqArpStepInt[t][effectiveClip(t)] : S.tarpStepInt[t];
+        drawBankHeading(isSeq ? 'SEQ ARP Steps' : 'ARP IN Steps');
+        for (let k = 0; k < 8; k++) {
+            const colX = 4 + (k % 4) * 30;
+            const rowY = k < 4 ? 12 : 36;
+            const hi   = (S.knobTouched === k);
+            if (hi) fill_rect(colX, rowY, 24, 24, 1);
+            const lbl = 'S' + (k + 1);
+            const v   = arr[k] | 0;
+            const val = (v === 0) ? ' 0' : (v > 0 ? '+' + v : String(v));
+            print(colX, rowY,      col4(lbl), hi ? 0 : 1);
+            print(colX, rowY + 12, col4(val), hi ? 0 : 1);
         }
         return;
     }
@@ -5398,11 +5467,31 @@ function _onCC_jog(d1, d2) {
                     showActionPopup('BANK RESET');
                 }
             }
+        } else if (S.activeBank === 5) {
+            /* ARP IN bank: dedicated reset that clears every TARP param
+             * (style/rate/oct/gate/steps_mode/retrigger/latch/sync + step arrays
+             * + loop length). Shift+Delete+jog (above) intentionally leaves
+             * ARP IN alone. */
+            resetTarp(S.activeTrack);
+            showActionPopup('ARP IN', 'RESET');
         } else {
             resetFxBanks(S.activeTrack);
             S.undoSeqArpSnapshot = null;
             showActionPopup('BANK RESET');
         }
+        return;
+    }
+    /* Plain jog click on SEQ ARP (bank 4) or TARP (bank 5) in Track View toggles
+     * the Arp Steps interval-edit overlay: knobs K1-K8 become per-step scale-degree
+     * offsets (±14), pad grid is the persistent step-vel level editor. Auto-clears
+     * on next jog turn (handled in the main-knob delta branch below). */
+    if (d1 === 3 && d2 === 127 && !S.shiftHeld && !S.deleteHeld && !S.copyHeld && !S.muteHeld &&
+            !S.sessionView && (S.activeBank === 4 || S.activeBank === 5)) {
+        S.stepIntervalMode = !S.stepIntervalMode;
+        /* Repush padmap so pads stop dispatching notes while the overlay is on. */
+        computePadNoteMap();
+        S.screenDirty = true;
+        forceRedraw();
         return;
     }
     /* Plain jog click on drum track: toggle Velocity / Repeat pad mode */
@@ -5428,6 +5517,19 @@ function _onCC_jog(d1, d2) {
     }
 
     if (d1 === MoveMainKnob) {
+
+        /* Arp Steps interval mode: jog turn exits the overlay and swallows
+         * the turn so the underlying bank knob param isn't nudged on exit. */
+        if (S.stepIntervalMode) {
+            const delta = decodeDelta(d2);
+            if (delta !== 0) {
+                S.stepIntervalMode = false;
+                computePadNoteMap();
+                S.screenDirty = true;
+                forceRedraw();
+            }
+            return;
+        }
 
         if (S.pendingInheritPicker) {
             const delta = decodeDelta(d2);
@@ -5772,6 +5874,11 @@ function _onCC_buttons(d1, d2) {
                 S.globalMenuOpen = false;
                 S.lastSentMenuEditValue = null;
                 forceRedraw();
+            } else if (S.stepIntervalMode && !S.sessionView) {
+                /* Arp Steps overlay: Note/Session exits the overlay without switching view. */
+                S.stepIntervalMode = false;
+                computePadNoteMap();
+                forceRedraw();
             } else {
                 /* Switch immediately (like Loop entering perf); tap vs hold resolved on release */
                 S.noteSessionPressedTick = S.tickCount;
@@ -5869,6 +5976,14 @@ function _onCC_buttons(d1, d2) {
     if (d1 === MoveLoop && !S.sessionView) {
         S.loopHeld = d2 === 127;
         computePadNoteMap();
+        /* Arp Steps overlay: Loop is repurposed as a modifier for the pad-column
+         * loop-length gesture. Skip every other Loop side-effect (TARP unlatch,
+         * drum repeat latch, loop-window gesture) while the overlay is active. */
+        if (S.stepIntervalMode) {
+            if (!S.loopHeld && S.loopGestureStart >= 0) S.loopGestureStart = -1;
+            forceRedraw();
+            return;
+        }
         if (S.loopHeld) {
             /* Latch or clear drum repeat on the active track */
             const _lrt = S.activeTrack;
@@ -6707,6 +6822,39 @@ function _onCC_knobs(d1, d2) {
         S.knobTurnedTick[knobIdx] = S.tickCount;
         S.screenDirty = true;
         const bank    = S.activeBank;
+        /* Arp Steps interval-mode overlay: K1-K8 set per-step scale-degree
+         * offset (±14) for SEQ ARP (bank 4, per-clip) or TARP (bank 5, per-track).
+         * Sens=2: ~ half-turn covers the full range. */
+        if (S.stepIntervalMode && (bank === 4 || bank === 5)) {
+            const t   = S.activeTrack;
+            const dir = (d2 >= 1 && d2 <= 63) ? 1 : -1;
+            if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
+            S.knobAccum[knobIdx]++;
+            if (S.knobAccum[knobIdx] >= 2) {
+                S.knobAccum[knobIdx] = 0;
+                if (bank === 4) {
+                    const ac = effectiveClip(t);
+                    const cur = S.seqArpStepInt[t][ac][knobIdx] | 0;
+                    const nxt = Math.max(-14, Math.min(14, cur + dir));
+                    if (nxt !== cur) {
+                        S.seqArpStepInt[t][ac][knobIdx] = nxt;
+                        /* Writes to active-clip pfx_params via pfx_set; matches the
+                         * tN_seq_arp_step_vel routing. */
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param('t' + t + '_seq_arp_step_int', knobIdx + ' ' + nxt);
+                    }
+                } else {
+                    const cur = S.tarpStepInt[t][knobIdx] | 0;
+                    const nxt = Math.max(-14, Math.min(14, cur + dir));
+                    if (nxt !== cur) {
+                        S.tarpStepInt[t][knobIdx] = nxt;
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param('t' + t + '_tarp_step_int', knobIdx + ' ' + nxt);
+                    }
+                }
+            }
+            return;
+        }
         if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 0) {
             const t    = S.activeTrack;
             const ac   = effectiveClip(t);
@@ -7878,17 +8026,27 @@ function _onPadPress(status, d1, d2) {
             registerTapTempo(d1);
             return;
         }
-        /* SEQ ARP K5 (Steps Mode) touched + Mute/Step mode: pad press = level edit.
+        /* Arp Steps interval mode (jog-clicked into bank 4): pad press = step vel level edit.
          * Column = step (0..7); row sets level (1=bottom..4=top). Bottom-row
-         * press when already at level 1 → level 0 (step off). Off mode: ignored. */
-        if (!S.sessionView && S.activeBank === 4 && S.knobTouched === 4 &&
-                (S.bankParams[S.activeTrack][4][4] | 0) !== 0 &&
+         * press when already at level 1 → level 0 (step off). Persistent (no Steps Mode gate).
+         * Loop-held: pad column sets step pattern loop length (1..8). */
+        if (!S.sessionView && S.stepIntervalMode && S.activeBank === 4 &&
                 d1 >= 68 && d1 <= 99) {
             const idx = d1 - 68;
             const col = idx % 8;
-            const row = Math.floor(idx / 8);
             const t   = S.activeTrack;
             const ac  = effectiveClip(t);
+            if (S.loopHeld) {
+                const newLen = col + 1;
+                if (S.seqArpStepLoopLen[t][ac] !== newLen) {
+                    S.seqArpStepLoopLen[t][ac] = newLen;
+                    if (typeof host_module_set_param === 'function')
+                        host_module_set_param('t' + t + '_seq_arp_step_loop_len', String(newLen));
+                    forceRedraw();
+                }
+                return;
+            }
+            const row = Math.floor(idx / 8);
             const cur = S.seqArpStepVel[t][ac][col] | 0;
             const newLvl = (row === 0 && cur === 1) ? 0 : (row + 1);
             if (newLvl !== cur) {
@@ -7899,14 +8057,24 @@ function _onPadPress(status, d1, d2) {
             }
             return;
         }
-        /* TRACK ARP K5 (Steps Mode) touched + Mute/Step mode: pad press = level edit. */
-        if (!S.sessionView && S.activeBank === 5 && S.knobTouched === 4 &&
-                (S.bankParams[S.activeTrack][5][4] | 0) !== 0 &&
+        /* Arp Steps interval mode (jog-clicked into bank 5 = TARP): pad press = step vel level edit.
+         * Loop-held: pad column sets step pattern loop length (1..8). */
+        if (!S.sessionView && S.stepIntervalMode && S.activeBank === 5 &&
                 d1 >= 68 && d1 <= 99) {
             const idx = d1 - 68;
             const col = idx % 8;
-            const row = Math.floor(idx / 8);
             const t   = S.activeTrack;
+            if (S.loopHeld) {
+                const newLen = col + 1;
+                if (S.tarpStepLoopLen[t] !== newLen) {
+                    S.tarpStepLoopLen[t] = newLen;
+                    if (typeof host_module_set_param === 'function')
+                        host_module_set_param('t' + t + '_tarp_step_loop_len', String(newLen));
+                    forceRedraw();
+                }
+                return;
+            }
+            const row = Math.floor(idx / 8);
             const cur = S.tarpStepVel[t][col] | 0;
             const newLvl = (row === 0 && cur === 1) ? 0 : (row + 1);
             if (newLvl !== cur) {
