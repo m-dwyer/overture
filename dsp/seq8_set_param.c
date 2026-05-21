@@ -58,6 +58,8 @@ static void pfx_set(seq8_instance_t *inst, seq8_track_t *tr,
         { PFX_SET_BOTH(fb_gate_time, fb_gate_time, 0, 10); return; }
     if (!strcmp(key, "delay_clock_fb"))
         { PFX_SET_BOTH(fb_clock, fb_clock, -100, 100); return; }
+    if (!strcmp(key, "delay_retrig"))
+        { PFX_SET_BOTH(delay_retrig, delay_retrig, 0, 1); return; }
 
     if (!strcmp(key, "quantize"))
         { PFX_SET_BOTH(quantize, quantize, 0, 100); return; }
@@ -929,6 +931,22 @@ static void set_param(void *instance, const char *key, const char *val) {
             }
         }
         seq8_ilog(inst, "SEQ8 launch_scene");
+        return;
+    }
+
+    if (!strcmp(key, "launch_scene_quant")) {
+        /* Shift+row gesture (JS): queue at next bar boundary regardless of
+         * global launch_quant. pending_page_stop=1 + queued_clip arms the
+         * bar-aligned transition handled in render_block at L7374. */
+        int cidx = clamp_i(my_atoi(val), 0, NUM_CLIPS - 1);
+        int t;
+        for (t = 0; t < NUM_TRACKS; t++) {
+            if (inst->tracks[t].clip_playing)
+                inst->tracks[t].pending_page_stop = 1;
+            inst->tracks[t].queued_clip   = (int8_t)cidx;
+            inst->tracks[t].will_relaunch = 0;
+        }
+        seq8_ilog(inst, "SEQ8 launch_scene_quant");
         return;
     }
 

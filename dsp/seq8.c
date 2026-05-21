@@ -253,6 +253,7 @@ typedef struct {
     int fb_note_random_mode; /* 0=Uniform, 1=Gaussian, 2=Walk */
     int fb_gate_time;        /* 0..10: 0=Off, 1..10=fixed gate (1/64..1bar) */
     int fb_clock;            /* -100..+100 */
+    int delay_retrig;        /* 0=tails overlap (legacy), 1=new note drops in-flight delay echoes */
     int note_random;         /* 0..24, random semitone offset applied after oct+offset */
     int note_random_mode;    /* 0=Uniform, 1=Gaussian, 2=Walk */
     int note_random_walk;    /* runtime walk accumulator (reset on clip switch) */
@@ -319,6 +320,7 @@ typedef struct {
     int fb_note_random_mode; /* 0=Uniform, 1=Gaussian, 2=Walk */
     int fb_gate_time;        /* 0..10: 0=Off, 1..10=fixed gate (1/64..1bar) */
     int fb_clock;            /* -100..+100 */
+    int delay_retrig;        /* 0/1: when 1, new note drops in-flight delay echoes */
     int note_random;         /* 0..24, random semitone offset applied after oct+offset */
     int note_random_mode;    /* 0=Uniform, 1=Gaussian, 2=Walk */
     /* SEQ ARP per-clip params */
@@ -347,6 +349,7 @@ typedef struct {
     int fb_velocity;        /* -127..+127 */
     int fb_gate_time;       /* 0..10: 0=Off, 1..10=fixed gate (1/64..1bar) */
     int fb_clock;           /* -100..+100 */
+    int delay_retrig;       /* 0/1: when 1, new note drops in-flight delay echoes */
 } drum_pfx_params_t;
 
 #define DRUM_PFX_MAX_EVENTS 64
@@ -363,6 +366,7 @@ typedef struct {
     int fb_velocity;
     int fb_gate_time;
     int fb_clock;
+    int delay_retrig;       /* 0/1: when 1, new note drops in-flight delay echoes */
     uint64_t     sample_counter;
     double       cached_bpm;
     uint32_t     rng;
@@ -1042,7 +1046,7 @@ static void ensure_parent_dir(const char *path) {
 
 static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
     int t, c;
-    fprintf(fp, "{\"v\":28,\"playing\":%d", inst->playing);
+    fprintf(fp, "{\"v\":30,\"playing\":%d", inst->playing);
     for (t = 0; t < NUM_TRACKS; t++)
         fprintf(fp, ",\"t%d_ac\":%d", t, inst->tracks[t].active_clip);
     for (t = 0; t < NUM_TRACKS; t++)
@@ -1110,6 +1114,7 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
                 if (p2->fb_note_random_mode != 2) fprintf(fp, ",\"t%dc%d_dpnm\":%d", t, c, p2->fb_note_random_mode);
                 if (p2->fb_gate_time    != 0)    fprintf(fp, ",\"t%dc%d_dgf\":%d",  t, c, p2->fb_gate_time);
                 if (p2->fb_clock        != 0)   fprintf(fp, ",\"t%dc%d_dcf\":%d",  t, c, p2->fb_clock);
+                if (p2->delay_retrig    != 1)   fprintf(fp, ",\"t%dc%d_drt\":%d",  t, c, p2->delay_retrig);
                 if (p2->note_random     != 0)   fprintf(fp, ",\"t%dc%d_nfrnd\":%d", t, c, p2->note_random);
                 if (p2->note_random_mode != 2)  fprintf(fp, ",\"t%dc%d_nfrnm\":%d", t, c, p2->note_random_mode);
                 /* SEQ ARP — sparse, only emit if non-default */
@@ -1190,6 +1195,7 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
                     if (dp->fb_velocity     != 0)   fprintf(fp, ",\"t%dc%dl%d_dpfbv\":%d", t, c, l, dp->fb_velocity);
                     if (dp->fb_gate_time    != 0)   fprintf(fp, ",\"t%dc%dl%d_dpfbg\":%d", t, c, l, dp->fb_gate_time);
                     if (dp->fb_clock        != 0)   fprintf(fp, ",\"t%dc%dl%d_dpfbc\":%d", t, c, l, dp->fb_clock);
+                    if (dp->delay_retrig    != 1)   fprintf(fp, ",\"t%dc%dl%d_dpdrt\":%d", t, c, l, dp->delay_retrig);
                 }
             }
         }
@@ -1324,7 +1330,7 @@ static void seq8_load_state(seq8_instance_t *inst) {
     /* Version gate: only v=28 accepted (dev build; wipe on version mismatch). */
     {
         int sv = json_get_int(buf, "v", -1);
-        if (sv != 28) {
+        if (sv != 30) {
             free(buf);
             remove(inst->state_path);
             seq8_ilog(inst, "SEQ8 state: wrong version, deleted");
@@ -1599,6 +1605,8 @@ static void seq8_load_state(seq8_instance_t *inst) {
             p2->fb_gate_time    = clamp_i(json_get_int(buf, key,   0),     0,  10);
             snprintf(key, sizeof(key), "t%dc%d_dcf",  t, c);
             p2->fb_clock        = clamp_i(json_get_int(buf, key,   0),  -100, 100);
+            snprintf(key, sizeof(key), "t%dc%d_drt",  t, c);
+            p2->delay_retrig    = clamp_i(json_get_int(buf, key,   1),     0,   1);
             snprintf(key, sizeof(key), "t%dc%d_nfrnd", t, c);
             p2->note_random     = clamp_i(json_get_int(buf, key,   0),     0,  24);
             snprintf(key, sizeof(key), "t%dc%d_nfrnm", t, c);
@@ -1709,6 +1717,8 @@ static void seq8_load_state(seq8_instance_t *inst) {
                     dp->fb_gate_time    = clamp_i(json_get_int(buf, key, 0), 0, 10);
                     snprintf(key, sizeof(key), "t%dc%dl%d_dpfbc", t, c, l);
                     dp->fb_clock        = clamp_i(json_get_int(buf, key, 0), -100, 100);
+                    snprintf(key, sizeof(key), "t%dc%dl%d_dpdrt", t, c, l);
+                    dp->delay_retrig    = clamp_i(json_get_int(buf, key, 1), 0, 1);
                     drum_pfx_apply_params(&inst->tracks[t].drum_lane_pfx[l], dp);
                 }
             }
@@ -2935,6 +2945,7 @@ static void pfx_reset(play_fx_t *fx) {
     fx->fb_note_random_mode = 0;
     fx->fb_gate_time    = 0;
     fx->fb_clock        = 0;
+    fx->delay_retrig    = 1;
     fx->quantize        = 0;
     arp_init_defaults(&fx->arp);
 }
@@ -2965,6 +2976,26 @@ static void pfx_note_on(seq8_instance_t *inst, seq8_track_t *tr,
         int i;
         for (i = 0; i < an->gen_count; i++)
             pfx_send(fx, off_s, an->gen_notes[i], 0);
+    }
+
+    /* Delay retrig: when enabled, a new note-on drops in-flight delay echoes.
+     * Send note-off for every queued event referencing a sounding pitch and
+     * drain the event ring so the prior tail doesn't pile on top of the new
+     * note's repeats. Synths drop unmatched offs, so duplicate offs from
+     * still-pending note-off events are harmless. Drain runs BEFORE the new
+     * note's immediate emission below so we don't silence what we're about
+     * to play. */
+    if (fx->delay_retrig && fx->event_count > 0) {
+        int qi;
+        for (qi = 0; qi < fx->event_count; qi++) {
+            pfx_event_t *ev = &fx->events[qi];
+            uint8_t st = ev->msg[0] & 0xF0;
+            if (st == 0x90 || st == 0x80) {
+                uint8_t off = (uint8_t)(0x80 | (ev->msg[0] & 0x0F));
+                pfx_send(fx, off, ev->msg[1], 0);
+            }
+        }
+        fx->event_count = 0;
     }
 
     /* Store active-note record. */
@@ -3327,6 +3358,21 @@ static void drum_pfx_note_on(seq8_instance_t *inst, seq8_track_t *tr,
 
     if (an->active)
         drum_pfx_send(px, (uint8_t)(0x80 | an->channel), an->gen_notes[0], 0);
+
+    /* Delay retrig (drum): drop in-flight echoes from prior hit, mirroring the
+     * melodic path in pfx_note_on. */
+    if (px->delay_retrig && px->event_count > 0) {
+        int qi;
+        for (qi = 0; qi < px->event_count; qi++) {
+            pfx_event_t *ev = &px->events[qi];
+            uint8_t st = ev->msg[0] & 0xF0;
+            if (st == 0x90 || st == 0x80) {
+                uint8_t off = (uint8_t)(0x80 | (ev->msg[0] & 0x0F));
+                drum_pfx_send(px, off, ev->msg[1], 0);
+            }
+        }
+        px->event_count = 0;
+    }
 
     memset(an, 0, sizeof(pfx_active_t));
     an->active        = 1;
@@ -4565,6 +4611,7 @@ static void clip_pfx_params_init(clip_pfx_params_t *p) {
     p->fb_note_random_mode = 2;  /* default Walk */
     p->fb_gate_time    = 0;
     p->fb_clock        = 0;
+    p->delay_retrig    = 1;
     p->note_random      = 0;
     p->note_random_mode = 2;     /* default Walk */
     p->seq_arp_style     = 0;
@@ -4588,6 +4635,7 @@ static void drum_pfx_params_init(drum_pfx_params_t *p) {
     p->fb_velocity     = 0;
     p->fb_gate_time    = 0;
     p->fb_clock        = 0;
+    p->delay_retrig    = 1;
 }
 
 static void drum_pfx_init_defaults(drum_pfx_t *px, uint8_t t_idx, uint8_t l_idx) {
@@ -4614,6 +4662,7 @@ static void drum_pfx_apply_params(drum_pfx_t *px, const drum_pfx_params_t *p) {
     px->fb_velocity     = p->fb_velocity;
     px->fb_gate_time    = p->fb_gate_time;
     px->fb_clock        = p->fb_clock;
+    px->delay_retrig    = p->delay_retrig;
 }
 
 /* Apply a single named param to a drum lane's pfx_params + runtime drum_pfx_t.
@@ -4655,6 +4704,8 @@ static void drum_pfx_set(seq8_instance_t *inst, seq8_track_t *tr,
         p->fb_gate_time    = clamp_i(my_atoi(val), 0, 10);
     if (!strcmp(key, "fb_clock")       || !strcmp(key, "delay_clock_fb"))
         p->fb_clock        = clamp_i(my_atoi(val), -100, 100);
+    if (!strcmp(key, "delay_retrig"))
+        p->delay_retrig    = clamp_i(my_atoi(val), 0, 1);
     /* Silence and sync note-offs when delay is cleared */
     if (!strcmp(key, "pfx_delay_reset") || !strcmp(key, "pfx_reset") ||
             !strcmp(key, "delay_level") || !strcmp(key, "repeat_times")) {
@@ -4687,6 +4738,7 @@ static void pfx_apply_params(play_fx_t *fx, const clip_pfx_params_t *p) {
     fx->fb_note_random_mode = p->fb_note_random_mode;
     fx->fb_gate_time    = p->fb_gate_time;
     fx->fb_clock        = p->fb_clock;
+    fx->delay_retrig    = p->delay_retrig;
     fx->note_random      = p->note_random;
     fx->note_random_mode = p->note_random_mode;
     fx->note_random_walk = 0;   /* reset walk accumulator on clip switch */
@@ -6371,6 +6423,7 @@ static int pfx_get(seq8_track_t *tr, const char *key, char *out, int out_len) {
     if (!strcmp(key, "delay_pitch_random_mode")) return snprintf(out, out_len, "%d", fx->fb_note_random_mode);
     if (!strcmp(key, "delay_gate_fb"))      return snprintf(out, out_len, "%d", fx->fb_gate_time);
     if (!strcmp(key, "delay_clock_fb"))     return snprintf(out, out_len, "%d", fx->fb_clock);
+    if (!strcmp(key, "delay_retrig"))       return snprintf(out, out_len, "%d", fx->delay_retrig);
 
     /* TRACK ARP — per-track params read individually by readBankParams(t, 6) */
     if (!strcmp(key, "tarp_on"))         return snprintf(out, out_len, "%d", (int)tr->tarp_on);

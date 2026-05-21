@@ -269,7 +269,8 @@ export const BANKS = [
         p('Hrm2', 'Harmony 2',  'harm_interval2', 'track', -24, 24, 0, fmtSign, 8),
         _X, _X, _X, _X,
     ]},
-    /* 3 — MIDI DLY (pad 95) */
+    /* 3 — MIDI DLY (pad 95). K7 = Retrg (delay_retrig); Clock Feedback folded
+     * onto Shift+K1 with dynamic label flip "Rate"↔"ClkF". */
     { name: 'DELAY', knobs: [
         p('Rate', 'Delay Time',     'delay_time',         'track', 0,    16, 10, fmtDly,   10),
         p('Lvl',  'Delay Level',    'delay_level',        'track', 0,    127, 127, fmtPlain),
@@ -277,7 +278,7 @@ export const BANKS = [
         p('Vfb',  'Vel Feedback',   'delay_vel_fb',       'track', -127, 127, 0, fmtSign ),
         p('Pfb',  'Pitch Feedback', 'delay_pitch_fb',     'track', -24,  24,  0, fmtSign,  16),
         p('Gate', 'Gate',           'delay_gate_fb',      'track', 0,    10,   0, fmtGateMod, 2),
-        p('Clk',  'Clock Feedback', 'delay_clock_fb',     'track', -100, 100, 0, fmtSign ),
+        p('Rtrg', 'Retrig',         'delay_retrig',       'track', 0,    1,   1, fmtBool, 4),
         p('Rnd',  'Pitch Random',   'delay_pitch_random', 'track', 0,   24,   0, fmtPitchRnd, 4),
     ]},
     /* 4 — ARP OUT (pad 96) */

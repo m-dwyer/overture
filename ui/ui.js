@@ -2355,6 +2355,16 @@ function readBankParams(t, bankIdx) {
     /* Drum NOTE/NOTEFX bank: quantize slot is managed via drumLaneQnt mirror, not get_param */
     if (bankIdx === 1 && S.trackPadMode[t] === PAD_MODE_DRUM)
         S.bankParams[t][1][2] = S.drumLaneQnt[t];
+    /* DELAY bank (melodic): K7 is delay_retrig in the bank def now, so the
+     * standard loop already reads it into bankParams[t][3][6]. delay_clock_fb
+     * is no longer in the bank def — it lives on Shift+K1 with its own mirror
+     * S.delayClockFb[t]. Read it explicitly here so the OLED value cell shows
+     * the live value when Shift+K1 is touched. */
+    if (bankIdx === 3 && S.trackPadMode[t] !== PAD_MODE_DRUM) {
+        const _cf = host_module_get_param('t' + t + '_delay_clock_fb');
+        if (_cf !== null && _cf !== undefined)
+            S.delayClockFb[t] = Math.max(-100, Math.min(100, parseInt(_cf, 10) | 0));
+    }
 }
 
 function readTrackConfig(t) {
@@ -2471,10 +2481,12 @@ function applyBankParam(t, bankIdx, knobIdx, val) {
             const lane = S.activeDrumLane[t];
             let dKey = pm.dspKey;
             if (bankIdx === 3) {
-                /* Drum MIDI DLY: remap K5→delay_gate_fb, K6→delay_clock_fb; block K7+ */
+                /* Drum MIDI DLY: remap K5→delay_gate_fb, K6→delay_clock_fb. K7
+                 * now hosts delay_retrig (was blocked) — pass through. K8
+                 * (delay_pitch_random) stays blocked for drum. */
                 if (knobIdx === 4) dKey = 'delay_gate_fb';
                 else if (knobIdx === 5) dKey = 'delay_clock_fb';
-                else if (knobIdx >= 6) return;
+                else if (knobIdx === 7) return;
             }
             host_module_set_param('t' + t + '_l' + lane + '_pfx_set', dKey + ' ' + strVal);
             return;
@@ -3349,16 +3361,22 @@ function drawUI() {
             const hi   = (S.knobTouched === k);
             if (hi) fill_rect(colX, rowY, 24, 24, 1);
             let _lbl = knobs[k].abbrev || '-';
+            /* Shift+K1 on DELAY bank (melodic): label + value flip to
+             * delay_clock_fb. Drum: K6 already holds clock_fb directly via
+             * remap; no flip needed. */
+            const _delayShiftClkF = S.shiftHeld && !_isDrum && bank === 3 && k === 0;
             if (S.shiftHeld) {
                 if      (knobs[k].dspKey === 'clock_shift')    _lbl = 'Nudg';
                 else if (knobs[k].dspKey === 'clip_resolution') _lbl = 'Zoom';
+                else if (_delayShiftClkF)                       _lbl = 'ClkF';
             }
             print(colX, rowY,      _lbl, hi ? 0 : 1);
             /* Arp Rate (Rate knob in SEQ ARP / ARP IN) uses 5-char labels for
              * triplets ('1/16t','1/32t'). Skip the 4-char padding so the 't'
              * isn't truncated — the cell has ~24px and the raw string fits. */
-            const _rawVal = knobs[k].abbrev ? knobs[k].fmt(vals[k]) : null;
-            const _txt    = (knobs[k].fmt === fmtArpRate) ? (_rawVal || '-') : col4(_rawVal);
+            const _rawVal = _delayShiftClkF ? fmtSign(S.delayClockFb[S.activeTrack])
+                                            : (knobs[k].abbrev ? knobs[k].fmt(vals[k]) : null);
+            const _txt    = (knobs[k].fmt === fmtArpRate && !_delayShiftClkF) ? (_rawVal || '-') : col4(_rawVal);
             print(colX, rowY + 12, _txt, hi ? 0 : 1);
         }
         }
@@ -4692,7 +4710,25 @@ globalThis.tick = function () {
                 S.stepEditNudge = rn2 !== null ? parseInt(rn2, 10) : 0;
                 S.screenDirty = true;
             } else if (S.stepWasEmpty && S.heldStepNotes.length === 0) {
-                /* Empty step held past threshold: wait for pad input, no auto-assign */
+                /* Empty melodic step held past threshold: auto-activate with
+                 * lastPlayedNote so step edit knobs work in one gesture (mirrors
+                 * the drum-mode auto-assign above and the tap-empty path at
+                 * ~L8589). If no lastPlayedNote, fall back to no-note flash. */
+                if (S.lastPlayedNote >= 0 && typeof host_module_set_param === 'function') {
+                    const ac_he       = effectiveClip(S.activeTrack);
+                    const assignNote  = S.lastPlayedNote;
+                    const assignVel   = stepEntryVelocity(S.activeTrack, -1, false);
+                    host_module_set_param('t' + S.activeTrack + '_c' + ac_he + '_step_' + S.heldStep + '_toggle',
+                                          assignNote + ' ' + assignVel);
+                    S.clipSteps[S.activeTrack][ac_he][S.heldStep] = 1;
+                    S.clipNonEmpty[S.activeTrack][ac_he] = true;
+                    S.heldStepNotes = [assignNote];
+                    S.stepEditVel   = assignVel;
+                    S.stepWasEmpty  = false;
+                    refreshSeqNotesIfCurrent(S.activeTrack, ac_he, S.heldStep);
+                } else {
+                    S.noNoteFlashEndTick = S.tickCount + NO_NOTE_FLASH_TICKS;
+                }
                 S.screenDirty = true;
             }
         }
@@ -6332,7 +6368,10 @@ function _onCC_side(d1, d2) {
             else             showActionPopup('NOTHING', 'TO CAPTURE');
         } else if (S.sessionView) {
             S.sceneBtnFlashTick[idx] = S.tickCount;
-            S.pendingDefaultSetParams.push({ key: 'launch_scene', val: String(clipIdx) });
+            /* Shift+side-button forces next-bar boundary launch regardless of
+             * global launch_quant. Plain press honors launch_quant as before. */
+            const _scKey = S.shiftHeld ? 'launch_scene_quant' : 'launch_scene';
+            S.pendingDefaultSetParams.push({ key: _scKey, val: String(clipIdx) });
         } else {
             const t            = S.activeTrack;
             const isActiveClip = S.trackActiveClip[t] === clipIdx;
@@ -6938,6 +6977,29 @@ function _onCC_knobs(d1, d2) {
                 const cur = S.rndDialogMode >= 0 ? S.rndDialogMode
                     : (bank === 3 ? (S.midiDlyRandomMode[t] || 0) : (S.noteFXRandomMode[t] || 0));
                 S.rndDialogMode = ((cur + dir) % 3 + 3) % 3;
+                S.screenDirty = true;
+            }
+            return;
+        }
+        /* Shift+K1 on DELAY bank (melodic): clock feedback. K7 now hosts
+         * delay_retrig (replaces the prior standalone Clk knob); clock_fb
+         * folds onto the unused Shift modifier on K1 with a label flip
+         * "Rate"↔"ClkF" in the OLED render. Mirror stored in S.delayClockFb
+         * since bankParams[t][3][6] now stores retrig. */
+        if (S.shiftHeld && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM &&
+                bank === 3 && knobIdx === 0) {
+            const t   = S.activeTrack;
+            const dir = (d2 >= 1 && d2 <= 63) ? 1 : -1;
+            if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
+            S.knobAccum[knobIdx]++;
+            if (S.knobAccum[knobIdx] >= 1) {
+                S.knobAccum[knobIdx] = 0;
+                const nv = Math.max(-100, Math.min(100, (S.delayClockFb[t] | 0) + dir));
+                if (nv !== S.delayClockFb[t]) {
+                    S.delayClockFb[t] = nv;
+                    if (typeof host_module_set_param === 'function')
+                        host_module_set_param('t' + t + '_delay_clock_fb', String(nv));
+                }
                 S.screenDirty = true;
             }
             return;

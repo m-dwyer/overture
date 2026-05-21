@@ -323,6 +323,8 @@ export const S = {
     lastTarpStyle: new Array(8).fill(1),
     padLayoutChromatic: new Array(8).fill(false),
     drumInpQuant: new Array(8).fill(0),   /* per-track drum input quantize index 0-8 */
+    delayClockFb: new Array(8).fill(0),   /* per-track delay clock feedback -100..100, accessed via Shift+K1 on DELAY bank (K7 now hosts delay_retrig) */
+    delayRetrig:  new Array(8).fill(0),   /* per-track delay retrig 0/1; K7 on DELAY bank */
     clipAdaptiveMode: Array.from({length: 8}, () => new Array(16).fill(false)),
     clipLengthManuallySet: Array.from({length: 8}, () => new Array(16).fill(false)),
     drumLaneLengthManuallySet: new Array(8).fill(false),

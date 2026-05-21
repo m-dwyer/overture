@@ -393,7 +393,8 @@ The 16 step buttons represent the current page of the active clip. Steps are eit
 |---|---|
 | Quick tap (<200ms) on empty step | Activates the step with the **last note played** on the pads, at velocity 100 (or **VelIn** if set on this track) |
 | Quick tap on active step | Clears it (notes deleted immediately) |
-| Hold (≥200ms) | Opens step edit overlay (see [§4.2](#42-step-edit)) |
+| Hold (≥200ms) on active step | Opens step edit overlay (see [§4.2](#42-step-edit)) |
+| Hold (≥200ms) on empty step | Activates the step with the **last note played** (same default as quick-tap) AND opens step edit in the same gesture, so the edit knobs work immediately. If no note has been played yet, the OLED shows a "no note" flash and the step stays empty. |
 | Tap multiple steps together | Toggles each one |
 
 Steps beyond the clip's length light dark grey (out of bounds).
@@ -578,13 +579,13 @@ A MIDI delay that generates rhythmic echoes of every note.
 
 | Knob | Parameter | Notes |
 |---|---|---|
-| K1 | Delay Time | 1/64 through 1-bar with dotted variants and triplets for 1/16, 1/8, 1/4. Default: 1/8 dotted. Use Rep = 0 to bypass. |
+| K1 | Rate | Delay time: 1/64 through 1-bar with dotted variants and triplets for 1/16, 1/8, 1/4. Default: 1/8 dotted. Use Rep = 0 to bypass. **Shift + turn** = Clock Feedback (timing shift per repeat, ±100); OLED label flips Rate ↔ ClkF and the value cell shows the live clock-feedback value while Shift is held. |
 | K2 | Lvl | Echo velocity level |
 | K3 | Rep | Number of echoes. Default 0 (bypass). |
 | K4 | Vfb | Velocity change per repeat |
 | K5 | Pfb | Pitch shift per repeat — semitones or scale degrees |
 | K6 | Gate | 0 = natural note length. 1–10 = fixed gate length applied to all echoes. |
-| K7 | Clk | Timing shift per repeat |
+| K7 | Rtrg | On (default): a new note-on drops any in-flight delay echoes for this track so the new note's repeats start fresh. Off: tails overlap (legacy behavior — useful for cascading textures). |
 | K8 | Rnd | Same range and algorithm options as NOTE FX K3 (**Shift + turn** for algorithm). Applies to echo pitches. |
 
 > **Try this.** Time 1/16, Rep 4, low Vfb. Tap a chord on the pads — it cascades off in time, perfect for one-finger rhythmic textures.
@@ -866,8 +867,9 @@ A **scene** is a row of clips across all 8 tracks. Launching a scene fires every
 
 | Control | Behavior |
 |---|---|
-| Scene launcher (left of each Session row) | Launches the scene. Playing clips on each track stop at end of current bar; new clips start at the next bar boundary. |
-| Step buttons 1–16 (Session View) | Also launch the corresponding scene row. |
+| Scene launcher (left of each Session row) | Launches the scene per the global Launch Quantize setting (immediate by default — see Global menu). Playing clips on each track stop and the new clips start per the quantize. |
+| **Shift + scene launcher** | Always launches the row at the next bar boundary, regardless of the global Launch Quantize setting — for the "queue this row to land on the downbeat" gesture without changing the global setting. |
+| Step buttons 1–16 (Session View) | Also launch the corresponding scene row. Shift + step button is reserved for menu shortcuts (Tap Tempo, Metronome, Swing, Scale, Global, Edit Synth) — for the next-bar gesture, use Shift + scene launcher instead. |
 
 Empty cells in the scene don't affect their column — that track keeps doing whatever it was doing.
 
