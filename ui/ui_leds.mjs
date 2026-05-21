@@ -358,9 +358,10 @@ export function updateTrackLEDs() {
         for (let i = 0; i < 16; i++) {
             let on = false;
             if (S.shiftHeld && !_knobShiftMode && !_compoundHeld) {
-                if (i === 1 || i === 2 || (i >= 4 && i <= 6) || i === 8) on = true; /* shared shortcuts */
+                if (i === 1 || (i >= 4 && i <= 6) || i === 8) on = true; /* shared shortcuts */
                 if (!S.sessionView) {
-                    if (i === 7)                            on = true;
+                    if (i === 2)                            on = true; /* Step3 = Edit Slot/Synth — Track View only */
+                    else if (i === 7)                       on = true;
                     else if (i === 9)                       on = true;
                     else if (i === 10 && !isDrum)           on = true;
                     else if (i === 14 || i === 15)          on = true;
@@ -382,7 +383,7 @@ export function updateTrackLEDs() {
     if (S.sessionView && S.shiftHeld &&
         !(S.muteHeld || S.deleteHeld || S.copyHeld || S.loopHeld)) {
         for (let i = 0; i < 16; i++) {
-            const on = i === 1 || i === 2 || (i >= 4 && i <= 6) || i === 8; /* shared shortcuts only */
+            const on = i === 1 || (i >= 4 && i <= 6) || i === 8; /* shared shortcuts only — Step3 (Edit Slot/Synth) is Track View only */
             setLED(16 + i, on ? LightGrey : LED_OFF);
         }
     }

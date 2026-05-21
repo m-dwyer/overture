@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com). Add entries to
 the section into a versioned heading at release time.
 
 ## [Unreleased]
+### Fixes
+- **Shift+Step3 (Edit Slot / Edit Synth co-run) is now Track View only.** Previously also fired in Session View, where it isn't a documented shortcut. The Session-View shift-shortcut LEDs (icons CC 16-31 and step pads 16-31) no longer light step 3 — only the shared menu shortcuts (Global, Tap Tempo, Metronome, Swing, Scale) are surfaced there.
+
 ### Features
 - **Bank header now shows a `Tr[n]` track indicator** on the right side of every parameter bank's heading. Updates live as the active track changes. Patched in both `drawBankHeading` / `drawBankHeadingInverted` and the ALL LANES inline header.
 - **Bake moved to Capture button; Sample button is now Multi-Track Live Merge.** Bare-tap rebinding (held-as-modifier gestures unchanged). Track View: tap **Capture** opens the clip-bake confirm dialog; tap Sample is a no-op. Session View: tap **Capture** opens a **scene-bake picker** ("Tap row or scene step to pick destination") — picking a row routes to the scene-bake confirm dialog; any other input cancels. Tap **Sample** arms/stops a new multi-track live merge that captures all 8 tracks simultaneously into a deferred-placement buffer. On stop, a "PLACE MERGED CLIPS" prompt asks the user to tap a scene row; the captured clips land on that row. **Placement is selective per-track**: tracks that captured zero notes during the window leave their existing clip at the destination row untouched; tracks with captured data overwrite their column. Held-modifier gestures (Sample-held + scene row = scene bake; Capture-held + scene row = scene capture; Capture-held + drum pad = lane select) all work as before.

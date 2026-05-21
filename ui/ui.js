@@ -8163,11 +8163,12 @@ function _jumpToMenuLabel(label) {
 
 function _doShiftStepCommon(idx) {
     if      (idx === 1) _jumpToMenuLabel('Global');
-    else if (idx === 2) {
-        /* Defer co-run entry until Shift releases — otherwise the held Shift CC
-         * leaks into Move firmware / Schwung chain editor (the shim starts
-         * forwarding Shift on co-run entry). Dispatch happens in _onCC_buttons
-         * Shift-release branch. */
+    else if (idx === 2 && !S.sessionView) {
+        /* Track View only — Session View Shift+Step3 is reserved for the
+         * existing menu-shortcut set. Defer co-run entry until Shift releases
+         * — otherwise the held Shift CC leaks into Move firmware / Schwung
+         * chain editor (the shim starts forwarding Shift on co-run entry).
+         * Dispatch happens in _onCC_buttons Shift-release branch. */
         S.pendingEditEntryTrack = S.activeTrack;
     }
     else if (idx === 4) openTapTempo();
