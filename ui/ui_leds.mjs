@@ -456,6 +456,13 @@ export function updateTrackLEDs() {
             const velZone  = S.drumLastVelZone[t];
             const tc       = _inCoRunPad ? White     : TRACK_COLORS[t];
             const td       = _inCoRunPad ? LightGrey : TRACK_DIM_COLORS[t];
+            /* True track colors for the co-run lane inversion: in co-run the
+             * SELECTED lane takes the track color (bright = has data, dim =
+             * empty) while every other lane goes white — the inverse of the
+             * regular scheme (selected lane White, data lanes track-colored).
+             * tc/td stay White/LightGrey so the right-col gate mask is unchanged. */
+            const tcReal   = TRACK_COLORS[t];
+            const tdReal   = TRACK_DIM_COLORS[t];
             const flashDur = 2 * POLL_INTERVAL;
             for (let i = 0; i < 32; i++) {
                 const col = i % 8;
@@ -476,10 +483,17 @@ export function updateTrackLEDs() {
                     } else if (isMuted) {
                         color = LED_OFF;
                     } else if (isActive) {
-                        color = hasHits ? White : DarkGrey;
+                        /* Selected lane: co-run shows it in track color (the
+                         * inversion); regular shows White. */
+                        color = _inCoRunPad ? (hasHits ? tcReal : tdReal)
+                                            : (hasHits ? White  : DarkGrey);
                     } else if (hasHits) {
-                        color = S.playing ? td : tc;
+                        /* Non-selected lane with data: bright white in co-run;
+                         * track color (dimmed while playing) in regular. */
+                        color = _inCoRunPad ? White : (S.playing ? td : tc);
                     } else {
+                        /* Non-selected empty lane: dim white (LightGrey) in
+                         * co-run via td; dim track color in regular. */
                         color = td;
                     }
                     /* Copy source blink */
@@ -668,10 +682,17 @@ export function updateTrackLEDs() {
         }
     }
 
-    /* Shift overlay: bottom row shows track-switch color hints (all track types) */
+    /* Shift overlay: bottom row shows track-switch color hints (all track types).
+     * The active track's pad is solid bright track color; every other pad blinks
+     * dim grey (DarkGrey, dimmest available) ↔ dim track color (~2 Hz, 24-tick
+     * rate) so the current track stands out from the switch targets. */
     if (!S.sessionView && S.shiftHeld && S.shiftTrackLEDActive) {
+        const _ttPhase = (Math.floor(S.tickCount / 24) % 2) === 1;
         for (let i = 0; i < NUM_TRACKS; i++) {
-            cachedSetLED(TRACK_PAD_BASE + i, TRACK_DIM_COLORS[i]);
+            const color = (i === S.activeTrack)
+                ? TRACK_COLORS[i]
+                : (_ttPhase ? DarkGrey : TRACK_DIM_COLORS[i]);
+            cachedSetLED(TRACK_PAD_BASE + i, color);
         }
     }
 
