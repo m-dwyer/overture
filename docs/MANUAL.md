@@ -1366,10 +1366,11 @@ Both `Edit Slot...` and `Edit Synth...` require the patched Schwung shim from [`
 
 ### Edit Slot... — Schwung chain editor
 
-Available on **Schwung-routed** tracks. Selecting this entry hands the **OLED, jog wheel, and track buttons** over to Schwung's native chain-slot editor while dAVEBOx keeps the pads, step buttons, knobs, and transport. The sequencer keeps playing throughout, so you can audition changes against the running pattern.
+Available on **Schwung-routed** tracks. Selecting this entry hands the **OLED, jog wheel, track buttons, and knob row** over to Schwung's native chain-slot editor while dAVEBOx keeps the pads, step buttons, and transport. The sequencer keeps playing throughout, so you can audition changes against the running pattern.
 
 - **First use** prompts a slot picker (1–4). Your choice is remembered per track.
 - **Track buttons** inside the editor switch which slot you're editing.
+- **Knobs (K1–K8)** drive the focused chain component's parameters — turn to adjust, touch a knob to peek its current value (slot-global knob macros at the chain top level), exactly like the native editor. The value popup follows Schwung's native ~4-second timeout (or clears when you navigate).
 - **Back** navigates up within the editor.
 - **Menu** exits and returns to dAVEBOx.
 - **Shift + Edit Slot...** (selecting the menu item with Shift held) reopens the slot picker so you can reassign this track to a different slot.
