@@ -2,7 +2,7 @@
 
 Local patches applied to `~/schwung/` that must be re-applied after any Schwung upgrade.
 
-Current base: **v0.9.13** (`ef51938b`), branch `main` on the `legsmechanical/schwung` fork. Rebased onto v0.9.13 on 2026-05-14 — inject-race, `EXT_MIDI_REMAP_BLOCK`, and cable-2 routing patches all dropped from the local patch set (now upstream in v0.9.13 via PRs #76 / #77 / #78 + maintainer follow-up `62a04135`). Only the co-run features remain local.
+Current base: **`15b14164`** (upstream `main` at PR #92, just past tag `v0.9.14`; 2026-05-17), branch `main` on the `legsmechanical/schwung` fork. The local patch set is the **co-run features** (chain-edit + Move-native, incl. the 2026-05-22 selective LED filter + track-button strip). The patch (`patches/davebox-local.patch`, regenerated 2026-05-22 as `git diff 15b14164..main -- src/`) also carries the May-22 LED snapshot/restore commits + PR #93's `midi_send_external` — these are upstream on later `origin/main` but ride along until the fork is rebased onto current `origin/main` (which would resolve the `shadow_control_t` reserved-byte divergence vs `midi_indicator`/ChordDex and slim the patch to co-run-only). Earlier inject-race, `EXT_MIDI_REMAP_BLOCK`, and cable-2 routing patches were upstreamed in v0.9.13 (PRs #76 / #77 / #78 + `62a04135`) and are no longer carried.
 
 ## Why this is split into two repos
 
