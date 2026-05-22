@@ -3082,7 +3082,19 @@ function drawUI() {
      * stay out of the way. Pad/step LEDs freeze at entry-time state —
      * verified harmless in real use (nothing the user does during co-run
      * depends on live LED feedback). */
-    if (S.moveCoRunTrack >= 0) return;
+    if (S.moveCoRunTrack >= 0) {
+        /* Co-run owns the 4 track buttons (Move's track LED writes are stripped
+         * shim-side). dAVEBOx blinks them off/dark-grey as a subtle "press to switch
+         * Move track" affordance. Send only on blink toggle to avoid flooding MIDI;
+         * force=true to bypass the LED cache (Move may have left stale buttonCache). */
+        const _coBlinkOn = (Math.floor(S.tickCount / 24) % 2) === 0;
+        if (_coBlinkOn !== S._coRunBtnBlinkOn) {
+            S._coRunBtnBlinkOn = _coBlinkOn;
+            const _c = _coBlinkOn ? DarkGrey : LED_OFF;
+            for (let _i = 0; _i < 4; _i++) setButtonLED(40 + _i, _c, true);
+        }
+        return;
+    }
     if (S.sessionOverlayHeld) { drawSessionOverview(); return; }
     if (S.pendingInheritPicker) { drawInheritPicker(); return; }
     if (S.pendingSceneBakePicker) {
@@ -3861,6 +3873,7 @@ function enterMoveNativeCoRun(t) {
      * stripped and the LEDs don't show until a manual press. Fire it from tick() a
      * few ticks later, once co-run is fully active. */
     S.pendingMoveCoRunInject = 12;
+    S._coRunBtnBlinkOn = null;  /* force first track-button blink paint on entry */
     S.globalMenuOpen = false;
     S.lastSentMenuEditValue = null;
     S.screenDirty = true;
@@ -3894,6 +3907,13 @@ function exitMoveNativeCoRun() {
      * right colors, not stale ones left by Move firmware. */
     reapplyPalette();
     invalidateLEDCache();
+    /* Force the knob-ring LEDs (CC 71-78) to repaint over Move's native colors on
+     * the next draw. invalidateLEDCache clears the JS LED cache, but reapplyPalette
+     * leaves the hardware buttonCache stale so the normal (non-forced)
+     * cachedSetButtonLED knob writes get dropped — Move's knob colors then persist
+     * until the user happens to change a knob value. One-shot force in updateTrackLEDs
+     * (mirrors the force=true the track-button reclaim already uses). */
+    S._forceKnobReemit = true;
     forceRedraw();
 }
 

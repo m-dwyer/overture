@@ -1378,7 +1378,8 @@ Available on **Schwung-routed** tracks. Selecting this entry hands the **OLED, j
 
 Available on **Move-routed** tracks. Selecting this entry hands the **OLED, jog wheel, track buttons, Shift, Back, the 8 device-edit knobs, and the master knob** over to Move firmware's native preset browser and device-edit pages. dAVEBOx keeps the pads, step buttons, transport, and Menu — the sequencer keeps firing audibly, so you can audition presets and parameter tweaks against the playing pattern.
 
-- **On entry**, dAVEBOx auto-selects the Move track that matches this track's **Channel** (channel 1 → Move Track 1, …, channel 4 → Move Track 4). On channels outside 1–4, no auto-selection happens — pick a Move track manually with Move's own track buttons.
+- **On entry**, dAVEBOx reliably lands Move on the track that matches this track's **Channel** (channel 1 → Move Track 1, …, channel 4 → Move Track 4) — Move opens straight to the routed track's device page, and the knob-ring LEDs light to show that device's parameters. On channels outside 1–4, no auto-selection happens — pick a Move track manually with Move's own track buttons.
+- **Track-button LEDs** blink dim/dark-grey during co-run as a "you can press these to switch Move tracks" affordance; Move's knob rings + master knob show live, while the pads / step buttons / transport stay dAVEBOx's. On exit, dAVEBOx reclaims the knob-ring LEDs immediately.
 - **Menu** exits and returns to dAVEBOx.
 - **Drum-mode tracks:** tapping a pad in the left 4 columns silently selects the matching cell in Move's drum-instrument editor (mirroring Move's native Shift + drum-pad gesture). dAVEBOx still fires the drum from its sequencer, so there's no double-trigger.
 

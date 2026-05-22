@@ -646,8 +646,10 @@ export function updateTrackLEDs() {
                 ledVal = (S.bankParams[S.activeTrack][S.activeBank][k] !== pm.def) ? White : LED_OFF;
             }
         }
-        cachedSetButtonLED(71 + k, ledVal);
+        if (S._forceKnobReemit) setButtonLED(71 + k, ledVal, true);
+        else cachedSetButtonLED(71 + k, ledVal);
     }
+    if (S._forceKnobReemit) S._forceKnobReemit = false;  /* one-shot: consumed on the post-co-run-exit repaint */
     /* Shift-flash: knobs with a Shift-modified function blink DarkGrey/OFF while Shift is held. */
     if (S.shiftHeld && !S.sessionView && !S.perfViewLocked) {
         const _sf = (Math.floor(S.tickCount / 24) % 2) ? 16 : LED_OFF;
