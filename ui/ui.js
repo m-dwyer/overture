@@ -4231,6 +4231,33 @@ function syncMuteSoloFromDsp() {
     S.screenDirty = true;
 }
 
+/* --- DIAGNOSTIC (2026-05-23 crash investigation) ---------------------------
+ * QuickJS swallows unhandled exceptions thrown inside entry-point callbacks:
+ * the module silently stops (presents as a hang/freeze; orphaned audio thread
+ * then spins → RT throttle). Wrap the top-level entry points so the NEXT
+ * failure writes its error to a file we can pull over ssh instead of vanishing.
+ * Deduped by (where|message) → a persistent error writes once (no I/O storm).
+ * Errors are swallowed so the module survives. REMOVE once the crash is pinned. */
+let _jsErrSeen = {};
+let _jsErrBuf = '';
+function captureError(where, e) {
+    try {
+        const msg = (e && e.message) ? e.message : String(e);
+        const key = where + '|' + msg;
+        if (_jsErrSeen[key]) return;
+        _jsErrSeen[key] = 1;
+        const stack = (e && e.stack) ? ('\n' + e.stack) : '';
+        _jsErrBuf += '[tick=' + (S.tickCount | 0)
+                   + ' sv=' + (S.sessionView ? 1 : 0)
+                   + ' loop=' + (S.loopHeld ? 1 : 0)
+                   + ' lock=' + (S.perfViewLocked ? 1 : 0)
+                   + ' susp=' + (S.pendingSuspendSave ? 1 : 0)
+                   + '] ' + where + ': ' + msg + stack + '\n\n';
+        if (typeof host_write_file === 'function')
+            host_write_file('/data/UserData/schwung/seq8-jserr.log', _jsErrBuf);
+    } catch (_e) { /* the logger must never throw */ }
+}
+
 globalThis.init = function () {
     installConsoleOverride('SEQ8');
     /* Clear any lingering co-run flag from a prior session — shim's SHM
@@ -4360,7 +4387,8 @@ globalThis.init = function () {
 var _lastRemapTrack = -1, _lastRemapRoute = -1, _lastRemapChannel = -1, _lastRemapMidiIn = -2;
 var _lastSessionView = false;
 
-globalThis.tick = function () {
+globalThis.tick = function () { try { _tickImpl(); } catch (e) { captureError('tick', e); } };
+function _tickImpl() {
     S.tickCount++;
     if (S.bootSplashTicks > 0) S.bootSplashTicks--;
 
@@ -9281,7 +9309,8 @@ function _onPadRelease(status, d1, d2) {
     }
 }
 
-globalThis.onMidiMessageInternal = function (data) {
+globalThis.onMidiMessageInternal = function (data) { try { _onMidiInternalImpl(data); } catch (e) { captureError('onMidiInternal', e); } };
+function _onMidiInternalImpl(data) {
     if (isNoiseMessage(data)) return;
     const status = data[0] | 0;
     const d1     = (data[1] ?? 0) | 0;
@@ -9488,7 +9517,8 @@ globalThis.onMidiMessageInternal = function (data) {
     }
 };
 
-globalThis.onMidiMessageExternal = function (data) {
+globalThis.onMidiMessageExternal = function (data) { try { _onMidiExternalImpl(data); } catch (e) { captureError('onMidiExternal', e); } };
+function _onMidiExternalImpl(data) {
     const status  = data[0] | 0;
     const d1      = (data[1] ?? 0) | 0;
     const d2      = (data[2] ?? 0) | 0;
