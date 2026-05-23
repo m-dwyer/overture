@@ -1,8 +1,111 @@
 # Move-native state readback via Sentry breadcrumbs
 
-**Status:** investigation parked 2026-05-20. Promising but needs format work + live capture before committing to a design.
+**Status:** investigated end-to-end 2026-05-23 (free-form + narrated co-run captures) —
+**PARK. The channel exists and is readable, but it does not solve the problem it was
+investigated for.** The motivating use-case (#1 auto-exit detection) is a confirmed
+negative: co-run **exit emits zero breadcrumbs**, and the only spec'd exit (Note button)
+is already an input dAVEBOx's shim path handles — so Sentry adds nothing there. The
+consolation signals either have a cleaner non-Sentry channel (#4 set-load → `Settings.json`)
+or are low-value on their own (#2 shift, #3 preset-browser-only) and don't justify building
+the parser + ring-rotation handling. **Recommendation: don't build the consumer.** Revisit
+only if a future need maps specifically onto MainMode/Dialog/Shift transitions that have no
+other source.
 
-**Target: post-1.0 release.** Not in scope for 1.0.
+**Target: post-1.0 (now: parked, not recommended).** Not in scope for 1.0.
+
+---
+
+## 2026-05-23 live capture results (decisive)
+
+Captured with an on-device watcher (`/tmp/sentry-cap.sh`: polls every 0.3s, dumps
+`strings` of each `*.run/__sentry-breadcrumb{1,2}`, deduped by md5, USB-MIDI spam dir
+filtered out). Two passes: native-Move baseline, then a real Edit Synth co-run window.
+
+### Make-or-break question (does MoveOriginal emit live during co-run?) — YES
+The 2026-05-20 note worried MoveOriginal is *killed* while the Schwung stack runs, so
+no live MainMode breadcrumbs during co-run. **That assumption is wrong in the current
+Move-native co-run architecture.** Observed: `MoveOriginal` (pid 911) ran continuously
+*alongside* `shadow_ui` (dAVEBOx) the entire session — it never restarted, and no new
+`.run` dir appeared on Edit Synth. Its breadcrumbs flow live into its existing run dir
+the whole time. (The old assumption likely predates the Move-native co-run feature, which
+requires MoveOriginal alive to render the device-edit/preset pages.)
+
+**Access confirmed:** the `.run` dir is `0700 ableton`, breadcrumb files are `0644`, and
+`su ableton -c 'cat …breadcrumb1'` read a 12 KB live file with exit 0, no error. So the
+consumer can run in the normal ableton/shim context — **no root helper needed.**
+
+### Full vocabulary captured live during co-run (one continuous stream)
+- **MainMode** (the gold): `Set MainMode (new state: note | session | songOverview)` — all three.
+- **ShiftMode** full state machine: `Set / Reset / Lock / Unlock ShiftMode (shift: <bool>, lock: <bool>)` — incl. double-tap lock.
+- **DialogMode** (modal-screen awareness — richer than the note's "MomentaryMode" guess):
+  `Push DialogMode (new state: BrowserDialog)` ⭐ = co-run **preset browser**; `WorkflowSettingsDialog`;
+  (native baseline also showed `SettingsDialog`, `PowerStateDialog`, `WifiNetworkListDialog`);
+  `Clear DialogMode (new state: empty)` on close.
+- **MomentaryMode**: `Push/Pop MomentaryMode (new state: SongVolumeMomentaryMode)` = volume-knob overlay.
+- **Song opened (UUID ...)** ⭐ = set load — captured multiple distinct UUIDs as sets were loaded.
+- **Notification**: `Set Notification` / `Disable Notification`.
+
+### Format finding — strings is enough, no msgpack lib needed (for `mode`/`navigation`/`transaction`)
+Each record serializes as separate length-prefixed strings: `timestamp`, `type`,
+`message`, `category`, `level` (+ ISO-8601 value lines), in chronological order. **The
+full human-readable payload — incl. `(new state: note)` — is one contiguous `message`
+string**, contradicting the 2026-05-20 worry about payload-at-offsets. `strings` + a tiny
+record splitter handles the whole `mode` family. The leading byte (`(`=0x28, `+`=0x2b, etc.)
+is just the msgpack str length prefix, glued onto the value — strip the first char.
+
+### Ring rotation — CONFIRMED REAL (b1 → b2); a consumer must follow both halves
+Initially looked like a non-issue (in a 44s window `breadcrumb2` stayed 0 bytes while
+`breadcrumb1` grew to ~12 KB in-place). **Longer session disproved that:** `breadcrumb1`
+froze at 18:42:33 (~12 KB) and all later events (18:48+) appeared in **`breadcrumb2`**. So
+the two files ARE a rotating pair — `breadcrumb1` fills to a cap, then the active half flips
+to `breadcrumb2`. To tail correctly a consumer must read BOTH and pick the active half (e.g.
+by newest record timestamp / which file is currently growing). The 2026-05-20 note's
+rotation caveat was right; the mid-investigation "non-issue" call was premature.
+
+### PRIMARY question — #1 auto-exit detection — CONFIRMED NEGATIVE
+Narrated capture (markers A/B/C, then D/E round 2). **Entering** Edit Synth emitted
+`Set MainMode (new state: note)` + `Change selected track` ×4 (device-edit picking the
+synth track) + later `Saving Song <UUID>`; MainMode stays `note`, no special device-edit
+mode. **Exiting** the co-run back to dAVEBOx emitted **NOTHING** — a full 20s window
+(marker B 18:48:45 → C 18:49:05) with zero breadcrumbs, verified by reading the live active
+breadcrumb file directly (not just the watcher, so not a poll miss). The user confirmed the
+**Note button is the only spec'd co-run exit**, so there is no alternate exit path to test.
+Conclusion: the firmware does not emit a breadcrumb on co-run exit, so Sentry cannot drive
+auto-exit. (And it wouldn't help anyway: the Note-button exit is handled by dAVEBOx's own
+shim input path — dAVEBOx already has that signal internally.)
+
+### Additional vocabulary seen in the narrated capture
+- `Change selected track` (category `transaction`) — device-edit track/synth selection.
+- `Saving Song <UUID>` (category `save`).
+- `Push/Pop ModifierMode (new state: [duplicate] | [])` — Duplicate-button modifier held.
+
+### Tooling note
+The watcher self-matches `pkill -f sentry-cap.sh` (the remote shell's own cmdline contains
+the string) → kills its own ssh shell → exit 255. Use the bracket trick: `pkill -f "[s]entry-cap.sh"`.
+Run exactly ONE instance (two caused load spikes that left the device needing a reboot).
+
+---
+
+## Companion clean channel: `Settings.json` + xattrs (from `szydek/move-over`)
+
+The [`szydek/move-over`](https://github.com/szydek/move-over) repo (Flask dashboard that
+co-runs on Move, port 808) reads Move state from **plain, official files — no Sentry**:
+- `/data/UserData/settings/Settings.json` → `currentSongIndex` (0–31, which set/pad is loaded),
+  plus `globalVolume`, `midiClockMode`, `quantizeAmount`, `melodicLayout`, `isLinkEnabled`,
+  `isUsingCountIn`, `isFullVelocityOn`, etc. (verified on device 2026-05-23).
+- Per-set dir **xattrs** `user.song-index`, `user.song-color` (via `os.getxattr`) → pad grid + colors.
+- `Song.abl` (JSON, schema `tech.ableton.com/schema/song/1.8.1`) inside each set → BPM/key/scale.
+
+**This bifurcates the problem cleanly:**
+
+| Signal | Best channel | Use-case |
+|---|---|---|
+| Set/song loaded, BPM, key, prefs (volume, clock, count-in…) | **`Settings.json` + xattrs** (plain JSON, no consent gate, no ring) | #4 set-load sync — use this, drop Sentry `Song opened` for it |
+| MainMode (note/session/songOverview), Shift, Dialog/Momentary modals | **Sentry breadcrumbs** (only known channel) | #1 auto-exit, #2 shift mirror, #3 modal awareness |
+
+`Settings.json` does **not** carry transient UI mode (no MainMode/Shift/Dialog) — those
+remain Sentry-only. So a full integration uses both channels: `Settings.json` poll for the
+persistent set/prefs half, breadcrumb1 diff for the transient-mode half.
 
 ## Origin
 
@@ -42,7 +145,7 @@ Resolved via `readlink /proc/<pid>/fd/* | grep .run.lock`:
 | MoveLauncher + display-server + schwung-manager | share `fb54a0ad...run.lock` (forked from one Sentry init) |
 | MoveWebService | `aef3496c...run.lock` (stale — older boot's UUID) |
 | USB MIDI subsystem (PID unidentified) | `08c3771e...run.lock` — fills `breadcrumb1` with **every USB MIDI packet** (`Received USB MIDI packet 0x04 0xf0 0x7e 0x01`). Useless volume. |
-| MoveOriginal | gets its own `.run` when alive — **but it's killed while Schwung/dAVEBOx is running**, so no live MainMode breadcrumbs at all today. |
+| MoveOriginal | ~~gets its own `.run` when alive — but it's killed while Schwung/dAVEBOx is running~~ **SUPERSEDED by 2026-05-23 capture: MoveOriginal stays alive *alongside* dAVEBOx during Move-native co-run and emits breadcrumbs live. See top section.** |
 
 The MainMode breadcrumbs in the screenshot exist because charlesv/Dom captured them
 while Move firmware was running natively. In our actual co-run scenario, MoveOriginal
