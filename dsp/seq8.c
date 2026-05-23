@@ -987,6 +987,16 @@ static void seq8_ilog(seq8_instance_t *inst, const char *msg) {
     fflush(inst->log_fp);
 }
 
+/* Debug probes call seq8_ilog (synchronous fprintf + fflush). On hot paths
+ * (per-note inserts, per-block playhead checks, per-tick repeat invariants) the
+ * forced writes can starve the audio thread → RT throttling → device freeze.
+ * They MUST NOT ship enabled. Guard every hot-path probe with
+ * `#if SEQ8_DEBUG_PROBES`; default OFF strips them entirely from release builds.
+ * Flip to 1 and rebuild to re-enable for debugging. */
+#ifndef SEQ8_DEBUG_PROBES
+#define SEQ8_DEBUG_PROBES 0
+#endif
+
 /* --- State persistence (Option C: cold-boot recovery) ------------------- */
 
 static int json_get_int(const char *buf, const char *key, int def) {
@@ -4109,6 +4119,7 @@ static void drum_repeat_tick(seq8_instance_t *inst, seq8_track_t *tr) {
      * drum_pad_event's unlatch-tap branch fire stop() against a stopped
      * engine — harmless but signals a JS/DSP lifecycle bug. Logged once
      * per ~200-block burst across all tracks to avoid log spam. */
+#if SEQ8_DEBUG_PROBES
     if (tr->drum_repeat_latched && !tr->drum_repeat_active && !tr->drum_repeat_pending) {
         static uint32_t s_last_warn_block = 0;
         if (inst->block_count - s_last_warn_block > 200) {
@@ -4120,6 +4131,7 @@ static void drum_repeat_tick(seq8_instance_t *inst, seq8_track_t *tr) {
             s_last_warn_block = inst->block_count;
         }
     }
+#endif
     if (!tr->drum_repeat_active || tr->pad_mode != PAD_MODE_DRUM) return;
     /* Mute gate: skip emission for *latched* (no current pad hold) repeats.
      * Currently-held pad repeats bypass mute to match live-monitor semantics
@@ -4236,6 +4248,7 @@ static void drum_repeat2_tick(seq8_instance_t *inst, seq8_track_t *tr) {
     /* Phase 1 / Bundle 2C-Rpt2 invariant: every bit in latched_lanes
      * must also be in (active | pending). Phantom latches signal a
      * JS/DSP lifecycle bug. Rate-limited to one warn per ~200 blocks. */
+#if SEQ8_DEBUG_PROBES
     {
         uint32_t phantom = tr->drum_repeat2_latched_lanes &
                           ~(tr->drum_repeat2_active | tr->drum_repeat2_pending);
@@ -4252,6 +4265,7 @@ static void drum_repeat2_tick(seq8_instance_t *inst, seq8_track_t *tr) {
             }
         }
     }
+#endif
     if (!(tr->drum_repeat2_active | tr->drum_repeat2_pending) || tr->pad_mode != PAD_MODE_DRUM) return;
     /* Mute gate is now per-lane below: latched lanes respect mute, currently-held
      * lanes (active without the latched bit) bypass mute to match live-monitor
@@ -5007,7 +5021,9 @@ static int clip_insert_note(clip_t *cl, uint32_t tick, uint16_t gate,
     cl->notes[idx].active            = 1;   /* activate last */
     cl->note_count++;
     cl->occ_dirty = 1;
-    /* Z4 probe: log every insertion into t1/c0 with caller-trace stub */
+#if SEQ8_DEBUG_PROBES
+    /* Z4 probe: log every insertion into t1/c0 with caller-trace stub.
+     * HOT PATH — fires on every clip note insert (e.g. step-edit rebuilds). */
     if (g_inst && cl == &g_inst->tracks[1].clips[0]) {
         char _zb[160]; snprintf(_zb, sizeof(_zb),
             "Z4 INSERT t1/c0 tick=%u pitch=%u vel=%u gate=%u nc_after=%u rec=%d cit=%d",
@@ -5016,6 +5032,7 @@ static int clip_insert_note(clip_t *cl, uint32_t tick, uint16_t gate,
             (int)g_inst->count_in_ticks);
         seq8_ilog(g_inst, _zb);
     }
+#endif
     return idx;
 }
 
@@ -7649,6 +7666,7 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         uint16_t _dle = (uint16_t)(_dlc->loop_start + _dlc->length);
                         if (tr->drum_current_step[_dl] < _dlc->loop_start
                                 || tr->drum_current_step[_dl] >= _dle) {
+#if SEQ8_DEBUG_PROBES
                             char _msg[160];
                             snprintf(_msg, sizeof(_msg),
                                 "WINDOW SNAP: t%d lane%d playhead %u -> %u (window [%u,%u))",
@@ -7656,12 +7674,14 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                                 (unsigned)_dlc->loop_start,
                                 (unsigned)_dlc->loop_start, (unsigned)_dle);
                             seq8_ilog(inst, _msg);
+#endif
                             tr->drum_current_step[_dl] = _dlc->loop_start;
                         }
                     }
                 } else {
                     uint16_t _le = (uint16_t)(cl->loop_start + cl->length);
                     if (tr->current_step < cl->loop_start || tr->current_step >= _le) {
+#if SEQ8_DEBUG_PROBES
                         char _msg[160];
                         snprintf(_msg, sizeof(_msg),
                             "WINDOW SNAP: t%d melodic playhead %u -> %u (window [%u,%u))",
@@ -7669,6 +7689,7 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                             (unsigned)cl->loop_start,
                             (unsigned)cl->loop_start, (unsigned)_le);
                         seq8_ilog(inst, _msg);
+#endif
                         tr->current_step = cl->loop_start;
                     }
                 }
