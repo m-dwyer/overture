@@ -1109,6 +1109,24 @@ So you can overlay a merged drum + bass onto a row that already has piano and gu
 
 ---
 
+## 9.3 Export to Ableton Live
+
+**Global Menu → Export to Ableton.** Writes the current set as an Ableton `.ablbundle` that desktop Live opens directly (then *Save As* `.als`).
+
+| Step | What happens |
+|---|---|
+| Transport check | Must be **stopped**. If it's running you'll see **STOP TRANSPORT / FOR EXPORT** and nothing is written. |
+| Confirm | A Yes/No dialog (No default) appears — jog to choose, click to confirm, **Back** to cancel. |
+| Export | The OLED shows **EXPORTING…**, then **EXPORTED &lt;name&gt;** when the bundle is written. |
+
+The bundle lands at `/data/UserData/schwung/davebox-exports/<set name>-<date>.ablbundle` (a same-day repeat gets `-2`, `-3`, …). Retrieve it over SFTP. It opens in Live as **8 MIDI tracks × 16 scene slots**, carrying your set's tempo and key.
+
+> Move Drum Racks need **Live 12.1+** (older versions substitute Simpler and sound different). Export is **one-way** — a saved `.als` can't be loaded back onto Move.
+
+*(Per-track instruments, samples, and baked clip notes are carried over as this feature completes.)*
+
+---
+
 # Part IV — Studio
 
 # 10. Editing — Copy, Cut, Paste, Undo

@@ -291,6 +291,8 @@ export const S = {
     tapTempoFlashTick: -1,
     tapTempoFlashPad: -1,
     confirmClearSel: 1,
+    confirmExport: false,          /* Ableton export Yes/No dialog open */
+    confirmExportSel: 1,           /* 0 = Yes, 1 = No (default) */
     noteSessionPressedTick: -1,
     sessionOverlayHeld: false,
     overviewCache: null,
@@ -327,6 +329,7 @@ export const S = {
     pendingSuspendSave: false,
     pendingExitAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_exit_module */
     pendingHideAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_hide_module */
+    pendingExport: false,          /* Ableton .ablbundle export — set by menu action, drained in tick() (get_param-safe) */
     pendingPruneOrphans: false,
     nameIndexCache: null,    /* { name: uuid } map, lazy-loaded on first save */
     pendingInheritPicker: null,  /* { dstUuid, dstName, candidates: [{uuid,name}], selectedIndex } when picker is open */

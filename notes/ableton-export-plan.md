@@ -78,6 +78,40 @@ both layered, drums same w/ L=LCM cycle) · grid clip N→scene N, clips land st
   Phases 5–6 accordingly.
 - [ ] **If not** (expected) → proceed with the Python-helper packager (Phase 5). Remove the probe.
 
+### Phase 0 RESULT — 2026-05-23 (resolved by source + device tooling probe, no byte-blob deploy needed)
+**host FS is NOT byte-safe** (settled from `~/schwung/src/shadow/shadow_ui.c` source — authoritative):
+- `host_write_file` (shadow_ui.c:1969): `len = strlen(JS_ToCString(content))` + `fwrite`. JS string →
+  UTF-8: embedded `0x00` truncates the write; bytes `0x80–0xFF` get UTF-8-expanded. Binary write unsafe.
+- `host_read_file` (shadow_ui.c:1923): `fread` then `JS_NewString` (NUL-terminated UTF-8) → truncates
+  at first `0x00`, mangles invalid UTF-8. Binary read unsafe.
+
+**BUT a third, better architecture exists — neither "JS-only zip" nor "Python-helper daemon":**
+- `host_system_cmd(cmd)` (shadow_ui.c:1779, **stock Schwung** — upstream `fb44ccbf`, not in our patch):
+  prefix-allowlisted (`tar/cp/mv/mkdir/rm/ls/test/chmod/`**`sh`**); `sh ` prefix ⇒ effectively
+  arbitrary commands via `sh -c '...'`. fork+execl `/bin/sh` at SCHED_OTHER. **Returns exit code only**
+  (no stdout → redirect to a file + `host_read_file` to capture output).
+- `host_read_file_base64` (shadow_ui.c:3080, **stock** — upstream PR #61): byte-safe READ fallback if
+  ever needed (we won't — samples go through the OS, not JS).
+- **Device tooling (ssh probe):** NO `zip` binary (busybox has only `unzip`/`gzip`/`tar`); **`python3`
+  3.10.18 at `/usr/bin/python3` WITH `zipfile`** ✅. Verified end-to-end on device: python3 `zipfile`
+  (`ZIP_STORED`) produced a `.ablbundle` with `Song.abl` at root + `Samples/test.wav` (2048 binary
+  bytes intact), `unzip -l` confirms structure.
+
+**DECIDED architecture (supersedes the JS-zip-vs-Python-helper fork above):**
+- **JS** (`ui_export.mjs`): orchestration + build `Song.abl` JSON (text → `host_write_file`, safe since
+  JSON is UTF-8 text) + emit a text **manifest** (sample `src_abs → Samples/<dest>`).
+- **DSP**: non-destructive render-to-buffer for baked MIDI (`get_param` text). Unchanged.
+- **Packager** = a `pack.py` (shipped in the module dir) invoked **once** via
+  `host_system_cmd("sh -c '/usr/bin/python3 <pack.py> <staging> <out.ablbundle>'")` — copies binary
+  samples into staging `Samples/` (OS-level, never through JS) + builds the `ZIP_STORED` bundle.
+  Fully on-device, offline, **no daemon, no network, no JS byte-writer**. Ships from `main` to stock
+  Schwung (host_system_cmd + python3 both stock) → **no capability gate needed**.
+- Byte-safety of `host_write_file` is now **irrelevant** to the design (binary never touches JS).
+
+**One thing still to confirm on first real build (Phase 1):** that `host_system_cmd` actually executes
+from inside the shadow_ui process context (allowlist + fork/exec + PATH) — ssh login shell ≠ shadow_ui
+child env; use absolute `/usr/bin/python3` to be PATH-independent. Verify during Phase 1 deploy.
+
 ## Phase 1 — Skeleton: menu + empty 8×16 bundle (no instruments/samples/MIDI yet)
 Proves the pipeline produces a Live-openable bundle from dAVEBOx.
 - [ ] `ui/ui_export.mjs`: `exportSession()` stub; add **"Export to Ableton"** to
@@ -90,6 +124,29 @@ Proves the pipeline produces a Live-openable bundle from dAVEBOx.
 - [ ] Write `Song.abl` to staging; package via chosen packager into
   `davebox-exports/<set>-YYYYMMDD.ablbundle` (dup-suffix logic).
 - [ ] **Verify:** bundle into Live → opens, 8 tracks × 16 scenes, all named, Drift on each.
+
+### Phase 1 RESULT — 2026-05-23 (device + desktop-Live verified ✅; on branch `ableton-export`, UNCOMMITTED)
+Done as designed, with these specifics:
+- `ui/ui_export.mjs` (new): `requestExport()` (menu action) → confirm dialog → `confirmExportStart()`
+  → `pollPendingExport()` (tick drain — get_param('bpm') needs tick context). Menu action runs in
+  on_midi where get_param is null, so all work is deferred to tick (codebase idiom).
+- **Confirm/cancel dialog** added (user request) — modeled on Clear Session: `S.confirmExport` /
+  `S.confirmExportSel` (0=Yes,1=No default); `drawExportConfirm()` in `ui_dialogs.mjs`; jog toggles,
+  jog-click commits, Back cancels; wired into the 2 commit/jog/cancel handler blocks + pad guard.
+- **Transport guard = stop-transport notice** (`showStopTransportNotice()`), held 2× normal popup
+  duration (`ACTION_POPUP_TICKS*2`, user request). Checked at both menu-select and Yes-commit.
+- `Song.abl` built from scratch in JS (8 `kind:midi` tracks, each a cloned Drift dummy named `dB N`,
+  16 empty clipSlots `{hasStop:true,clip:null}`, real captured master subtree, `$schema` 1.8.2).
+  Carries **tempo + rootNote(key)**; **scale hard-coded "Major"** (Phase 3 maps it); no notes.
+- **Packager shipped as module files**: `export/pack.py` + `export/ableton-master.json` +
+  `notes/ableton-export-drift-dummy.json` → copied to `dist/davebox/` by `build.sh`; read at runtime
+  from the module dir. JS-only deploys ship them too (install.sh scp's all of dist/davebox).
+- `pack.py` invoked via `host_system_cmd("sh -c '/usr/bin/python3 .../pack.py .../pack-args.json'")`;
+  args (incl. space-containing set name + out path) passed via `pack-args.json`, status read back from
+  `pack-status.json`. Output `/data/UserData/schwung/davebox-exports/<set>-YYYYMMDD[-N].ablbundle`.
+- **Confirmed on device:** host_system_cmd fires python3 from shadow_ui; dup-suffix `-2` works; bundle
+  opens in desktop Live with 8 named tracks × 16 empty scenes + Drift on each, correct tempo.
+- Bundler `ORDER` + `S.pendingExport`/`S.confirmExport*` state added.
 
 ## Phase 2 — Instruments + names (route-aware mapping)
 - [ ] Read loaded Move `Song.abl`; build channel→Move-track map from `midiInputMode`.

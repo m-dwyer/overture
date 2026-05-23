@@ -35,6 +35,12 @@ cp module.json           "dist/${MODULE_ID}/"
 # clobbers the bundled output and ships ES-module imports that QuickJS can't
 # resolve — manifests on device as "failed to load tool".
 python3 scripts/bundle_ui.py
+# Ship the Ableton-export packager + JSON templates alongside the module (read at
+# export time; pack.py is invoked on-device via host_system_cmd). These are plain
+# files in the module dir, so install.sh's `scp dist/davebox/*` carries them too.
+cp export/pack.py                          "dist/${MODULE_ID}/pack.py"
+cp export/ableton-master.json             "dist/${MODULE_ID}/ableton-master.json"
+cp notes/ableton-export-drift-dummy.json  "dist/${MODULE_ID}/drift-dummy.json"
 # Convert source (24-bit stereo 44100Hz) → normalized 16-bit mono 48000Hz for DSP render_block
 python3 - <<'PYEOF'
 import wave, struct, audioop, warnings

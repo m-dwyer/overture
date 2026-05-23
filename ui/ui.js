@@ -84,6 +84,7 @@ import { drawGlobalMenu } from '/data/UserData/schwung/modules/tools/davebox/ui_
 import { trackClipHasContent, sceneAllQueued, updateSceneMapLEDs } from '/data/UserData/schwung/modules/tools/davebox/ui_scene.mjs';
 import { effectiveClip, updateStepLEDs, updateSessionLEDs, updateTrackLEDs, flashAtRate, drawPositionBar, invalidateLEDCache } from '/data/UserData/schwung/modules/tools/davebox/ui_leds.mjs';
 import { SPLASH_FRAMES, SPLASH_COUNT, SPLASH_W, SPLASH_H, pickSplashIdx } from '/data/UserData/schwung/modules/tools/davebox/ui_splash.mjs';
+import { requestExport, confirmExportStart, pollPendingExport } from '/data/UserData/schwung/modules/tools/davebox/ui_export.mjs';
 
 /* ------------------------------------------------------------------ */
 /* Parameter bank definitions                                           */
@@ -346,6 +347,9 @@ function buildGlobalMenuItems() {
             get: function() { return S.beatMarkersEnabled; },
             set: function(v) { S.beatMarkersEnabled = v; forceRedraw(); },
             onLabel: 'On', offLabel: 'Off'
+        }),
+        createAction('Export to Ableton', function() {
+            requestExport();
         }),
         createAction('Save', function() {
             saveState();
@@ -4392,6 +4396,12 @@ function _tickImpl() {
     S.tickCount++;
     if (S.bootSplashTicks > 0) S.bootSplashTicks--;
 
+    /* Ableton .ablbundle export runs here (tick context) so get_param('bpm')
+     * resolves — it returns null on the on_midi path where the menu action
+     * fires. host_system_cmd blocks for the python packager; transport is
+     * stopped (guarded in exportSession) so the brief tick stall is benign. */
+    pollPendingExport();
+
     /* Deferred padmap recompute for leaving-DRUM (see applyTrackConfig
      * else branch). Fire ONLY when the pendingDefaultSetParams queue is
      * empty — otherwise the tN_padmap push would land in the same tick
@@ -5578,6 +5588,12 @@ function _onCC_jog(d1, d2) {
             S.screenDirty = true;
             return;
         }
+        if (S.confirmExport) {
+            if (S.confirmExportSel === 0) confirmExportStart();   /* arms pendingExport, drained in tick() */
+            else S.confirmExport = false;
+            S.screenDirty = true;
+            return;
+        }
         handleMenuInput({
             cc: 3, value: d2,
             items: S.globalMenuItems, state: S.globalMenuState, stack: S.globalMenuStack,
@@ -5794,6 +5810,9 @@ function _onCC_jog(d1, d2) {
             } else if (S.confirmConvertToDrum) {
                 const delta = decodeDelta(d2);
                 if (delta !== 0) { S.confirmConvertToDrumSel = S.confirmConvertToDrumSel === 0 ? 1 : 0; S.screenDirty = true; }
+            } else if (S.confirmExport) {
+                const delta = decodeDelta(d2);
+                if (delta !== 0) { S.confirmExportSel = S.confirmExportSel === 0 ? 1 : 0; S.screenDirty = true; }
             } else if (S.globalMenuState.editing) {
                 const delta = decodeDelta(d2);
                 if (delta !== 0) {
@@ -6060,6 +6079,9 @@ function _onCC_buttons(d1, d2) {
                 forceRedraw();
             } else if (S.globalMenuOpen && S.confirmConvertToDrum) {
                 closeConvertConfirm();
+                forceRedraw();
+            } else if (S.globalMenuOpen && S.confirmExport) {
+                S.confirmExport = false;
                 forceRedraw();
             } else if (S.globalMenuOpen) {
                 S.globalMenuOpen = false;
@@ -6346,6 +6368,9 @@ function _onCC_transport(d1, d2) {
             forceRedraw();
         } else if (S.globalMenuOpen && S.confirmConvertToDrum) {
             closeConvertConfirm();
+            forceRedraw();
+        } else if (S.globalMenuOpen && S.confirmExport) {
+            S.confirmExport = false;
             forceRedraw();
         } else if (S.globalMenuOpen) {
             S.globalMenuOpen = false;
@@ -7010,7 +7035,7 @@ function _onCC_knobs(d1, d2) {
     if (d1 >= 71 && d1 <= 78) {
         /* Exclusive overlays — knob turns have no visible effect and should be swallowed. */
         if (S.heldStep >= 0) return;
-        if (S.globalMenuOpen || S.tapTempoOpen || S.confirmBake || S.confirmClearSession || S.confirmConvertToDrum) return;
+        if (S.globalMenuOpen || S.tapTempoOpen || S.confirmBake || S.confirmClearSession || S.confirmConvertToDrum || S.confirmExport) return;
         const knobIdx = d1 - 71;
         S.knobTouched          = knobIdx;
         S.knobTurnedTick[knobIdx] = S.tickCount;

@@ -21,6 +21,7 @@ ORDER = [
     'ui/ui_dialogs.mjs',
     'ui/ui_leds.mjs',
     'ui/ui_splash.mjs',
+    'ui/ui_export.mjs',
     'ui/ui.js',
 ]
 
