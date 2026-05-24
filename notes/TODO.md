@@ -10,7 +10,7 @@
 
 ### Bugs
 
-- **Power button doesn't work within dAVEBOx.** Native Move power gesture is swallowed; need to either pass through or implement.
+- **Power button doesn't work within dAVEBOx.** Native Move power gesture is swallowed; need to either pass through or implement. **Root-caused 2026-05-24 (not worth the effort — parked):** the power button is *not* MIDI (no `MovePower` constant; firmware owns it). Schwung detects the shutdown prompt through exactly one channel — Move's `com.ableton.move.ScreenReader.text` D-Bus signal matching `"Press wheel to shut down"` (`shadow_dbus.c:200-210`, clears `overtake_mode` so jog reaches Move). That signal is **silent when the screen reader is off** (the default), so the handler never fires and dAVEBOx keeps owning input + OLED → gesture does nothing. The handler + shim release path are otherwise correct and already deployed (`527a3c90` in fork base). Fix would need a screen-reader-independent shutdown signal (likely `login1 PrepareForShutdown` or a kernel input event — needs on-device `dbus-monitor`/`busctl` capture) wired into the fork shim, plus possibly a JS-side display handback on the `SAVE_STATE` (0x08) ui_flag since dAVEBOx's `render_block` paints every frame. Full notes: `~/.claude/plans/investigate-the-power-button-snug-clover.md`.
 - ~~**Volume knob (master) inconsistent speed + pauses sequencer.**~~ FIXED 2026-05-21 (main `7398983`). Root cause was *not* host acceleration — `claims_master_knob:true` forwards the full CC 79 detent stream to dAVEBOx, which spent cycles dispatching it against the sequencer/MIDI path. Fix: drop CC 79 + volume-touch note 8 at the top of `onMidiMessageInternal`; volume stays Move-native via `button_passthrough[79]`.
 - **Shift+clip = focus-without-activate.** Companion to the focused-clip-active default (shipped 2026-05-19). Needs a JS-side "focused vs DSP-active" split so edits target the focused clip even when DSP is still playing the prior one. Deferred — requires deeper refactor.
 - **Knob position alignment** of similar params across banks/track types. Example: InQ value should sit at the same knob angle across all places it appears (ALL LANES, CLIP K6 melodic, etc.).
@@ -22,13 +22,13 @@
 - **Reclaim Back button** from Schwung suspend — currently Back triggers suspend; offer a different gesture for suspend so dAVEBOx can use Back.
 - **Drum lane repeats respond to pad pressure** — pad pressure continuously sets velocity of incoming repeats.
 - **Enable pad pressure broadly** beyond drum repeats — investigate which features should be pressure-aware.
-- **Ableton Live set export** — MIDI data + clip structure. All clips with pfx baked down (4x loop bake for random pfx, wrap-around for delay). **Format feasibility CONFIRMED 2026-05-23** (`notes/ableton-export-bundle.md`): emit a Move-style `.ablbundle` (Song.abl at zip root + `Samples/`), which desktop Live opens (8×16 verified) and converts instruments natively → user saves as `.als`. Can carry over the mapped Move track presets/samples/colors/names. Every track MUST have an instrument (empty `devices` → "Document invariant violation"). Remaining: on-device zip, sample-ref mechanics, default instrument for unmapped tracks, MIDI/clip authoring + pfx bake.
+- ~~**Ableton Live set export** — MIDI data + clip structure. All clips with pfx baked down (4x loop bake for random pfx, wrap-around for delay).~~ **SHIPPED 2026-05-24** (main, Phases 1–6, `3626d4e`…`6a7580e`). Global Menu → **Export to Ableton** writes a Move-style `.ablbundle` (Song.abl at zip root + `Samples/`) to `davebox-exports/`; desktop Live opens it → *Save As* `.als`. Route-aware instruments/names/colors, baked melodic + drum (polymeter LCM) clips, multi-cycle bake for randomized/delayed clips, self-contained sample bundling, on-device zip via bundled `pack.py`. No patched-Schwung dependency.
 - **Mono param on CLIP param bank.** New on/off param in the clip parameter bank. When ON, every note-on triggers a note-off on any previously-playing note(s) on that track — monophonic voicing (last-note priority). When OFF, polyphonic (current behavior). Per-clip.
 
 ### LED polish
 
-- **Shift+pad track-select shortcuts should blink the dim/bright color of their corresponding track.** The Shift+pad track-select shortcut LEDs should blink between dim and bright of that track's color (instead of a static/generic color).
-- **Co-run drum pad LED colors.** While in Move co-run on a drum track: an active pad = **dim** track color; an active pad that has data on its lane = **bright** track color.
+- ~~**Shift+pad track-select shortcuts should blink the dim/bright color of their corresponding track.**~~ **SHIPPED 2026-05-24** (main `6ddd9c8`). Holding Shift in Track View: active-track pad = solid bright track color; the other seven blink dim grey ↔ dim track color.
+- ~~**Co-run drum pad LED colors.**~~ **SHIPPED 2026-05-24** (main `6ddd9c8`). Move co-run on a drum track inverts the lane pads: selected lane glows track color (bright if it has notes, dim if empty); other lanes show white (bright if data, dim grey if empty).
 
 ### Schwung-side (fork) features
 
