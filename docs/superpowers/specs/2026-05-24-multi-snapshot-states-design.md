@@ -23,26 +23,25 @@ This supersedes the old plain `Save` (which force-committed live state to the au
 - **JS-only.** No DSP changes. Deployable via `python3 scripts/bundle_ui.py` (+ `./scripts/install.sh` + reboot when user returns).
 - **No `host_list_dir`** dependency — enumeration is manifest-driven.
 - **Coalescing-safe** — save reuses the existing deferred `pendingSuspendSave` drain; the snapshot copy is pure file I/O (no `set_param`); load reuses the single `pendingSetLoad` trigger.
-- **File-delete** done via `host_remove_dir` on per-snapshot subfolders (no file-delete host API exists).
+- **No JS file-delete.** There is no host file-unlink, and `host_remove_dir` (shadow_ui.c:1860) is restricted to `MODULES_DIR`/staging/backup/tmp — **not** `set_state/`. So snapshots are flat files (no subfolders to remove), overwrite rewrites in place, and the version-bump wipe drops manifest entries + best-effort stubs the orphaned files to `{}`.
 
 ## Storage layout
 
-Per-set, under the set's UUID folder:
+Per-set, flat files under the set's UUID folder (`host_write_file`/`host_ensure_dir` are permitted there — `copyStateFiles` already writes there):
 
 ```
 set_state/<uuid>/
-  seq8-state.json            # live auto-save (unchanged)
-  seq8-ui-state.json         # live sidecar (unchanged)
-  snap/
-    index.json               # manifest
-    <id>/seq8-state.json     # snapshot DSP state
-    <id>/seq8-ui-state.json  # snapshot sidecar
+  seq8-state.json                 # live auto-save (unchanged)
+  seq8-ui-state.json              # live sidecar (unchanged)
+  seq8-snap-index.json            # manifest (authoritative list)
+  seq8-snap-<id>-state.json       # snapshot DSP state
+  seq8-snap-<id>-ui-state.json    # snapshot sidecar
 ```
 
 - `id` = save-time epoch ms as a string (monotonic, collision-free).
-- Each snapshot in its own `<id>/` subfolder so it can be removed via `host_remove_dir`.
+- The manifest is the source of truth — there is no `host_list_dir`, so the list is never derived from the directory.
 
-### Manifest schema (`snap/index.json`)
+### Manifest schema (`seq8-snap-index.json`)
 
 ```json
 {
@@ -62,11 +61,10 @@ set_state/<uuid>/
 2. **Under 16 snapshots:** allocate new `id`/`label`; set `S.pendingSnapshotCopy = { id, label, overwrite:false }`; call `saveState()` (sets `pendingSuspendSave` + writes sidecar synchronously); close menu; popup `STATE SAVED`.
 3. **At 16:** open the snapshot list as an **overwrite picker** (jog to choose which to replace) → on press, confirm `Overwrite <label>?` → on Yes, reuse that entry's `id` (rewrite, new `ts`/`label`), set `pendingSnapshotCopy` with `overwrite:true`, then run the saveState path.
 4. **End of tick N:** `pendingSuspendSave` drains → `host_module_set_param('save','1')` → DSP `seq8_save_state` writes live state files **synchronously** (confirmed `seq8_set_param.c:654`).
-5. **Tick N+1:** `pendingSnapshotCopy` branch (mirrors `pendingExitAfterSave` at `ui.js:5386`):
-   - `host_ensure_dir(snap/<id>)`
-   - copy `seq8-state.json` → `snap/<id>/seq8-state.json`
-   - copy `seq8-ui-state.json` → `snap/<id>/seq8-ui-state.json` (if it exists)
-   - update + write manifest (prepend new entry, or update existing entry on overwrite)
+5. **Tick N+1:** `pendingSnapshotCopy` branch (mirrors `pendingExitAfterSave` at `ui.js`):
+   - copy `seq8-state.json` → `seq8-snap-<id>-state.json`
+   - copy `seq8-ui-state.json` → `seq8-snap-<id>-ui-state.json` (if it exists)
+   - update + write manifest (prepend new entry, or replace existing entry on overwrite)
 
 ## Load flow ("Load state")
 
@@ -74,8 +72,8 @@ set_state/<uuid>/
 2. Incompatible entries (`sv !== STATE_VERSION`) shown greyed; pressing one is a no-op.
 3. On press of a compatible entry → confirm `Load <label>? Unsaved changes lost.` (No default).
 4. On Yes:
-   - copy `snap/<id>/seq8-state.json` → `seq8-state.json`
-   - copy `snap/<id>/seq8-ui-state.json` → `seq8-ui-state.json`
+   - copy `seq8-snap-<id>-state.json` → `seq8-state.json`
+   - copy `seq8-snap-<id>-ui-state.json` → `seq8-ui-state.json`
    - set `S.pendingSetLoad = true`
    - The existing reload path (`state_load=UUID` → `pendingDspSync=5` → `syncClipsFromDsp` → `restoreUiSidecar`) restores everything.
    - popup `STATE LOADED`.
@@ -83,7 +81,15 @@ set_state/<uuid>/
 ## Version-bump incompatibility guard
 
 - Add `STATE_VERSION = 32` to `ui_constants.mjs` with a comment tying it to `dsp/seq8.c` (`v=32`). Future DSP state bumps must touch both.
-- On opening the Load list, if any snapshot has `sv !== STATE_VERSION`: show confirm `dAVEBOx updated — N incompatible snapshots will be deleted. Proceed? [Yes/No]` (No default). Yes → `host_remove_dir` each stale `<id>` + drop from manifest. No → keep but greyed/unloadable.
+- On opening the Load list, if any snapshot has `sv !== STATE_VERSION`: show confirm (No default). Yes → drop stale entries from the manifest + stub their files to `{}` (can't unlink). No → keep them, shown `(old)` and unloadable.
+
+## Clear Session
+
+Clear Session leaves snapshots **intact** — they are independent saved states, and clearing live work should not destroy the user's recovery points. *(Decision made autonomously; flagged for veto.)*
+
+## Known limitation (follow-up)
+
+Snapshot files for a **deleted Move set** are not auto-cleaned: the DSP `prune_orphan_states` handler only `unlink`s `seq8-state.json` + `seq8-ui-state.json` (then `rmdir`, which now fails because `seq8-snap-*` files remain). Live sets are unaffected (prune skips them). Follow-up: extend the prune handler to also remove `seq8-snap-*` for orphaned sets (small DSP change).
 
 ## UI reuse
 
@@ -107,6 +113,12 @@ New `S` fields (ui_state.mjs):
 - `ui/ui_dialogs.mjs` — draw snapshot list + confirm dialogs.
 - `MANUAL.md` — document the two menu items + snapshot model.
 - `notes/CHANGELOG.md` — `[Unreleased] ### Features` entry.
+
+## Implementation notes (as built)
+
+- **Input gating.** While the picker is open it's a modal: `_onMidiInternalImpl` swallows all device input except the jog (CC 3 click + CC 14 rotate) and Note/Session (CC 50, closes it). Without this, a stray pad/step press would edit the underlying clip mid-session. (The inherit picker doesn't gate because it only appears at first launch.)
+- **pollDSP race (accepted).** If `state_dirty` gets re-set between the `save` (tick N) and the snapshot copy (tick N+1) — e.g. an arp tick dirties state — `pollDSP` may flush a slightly newer state to the live file, so the snapshot captures that newer state. Fresher, harmless; just means the snapshot isn't a guaranteed byte-match of the disk at the exact Save instant.
+- **External MIDI is not gated** — live monitoring/recording from a USB controller keeps working while the picker is open (the picker is a quick modal; gating it could surprise a player).
 
 ## Device test matrix (deferred — needs ssh + install + reboot when user returns)
 
