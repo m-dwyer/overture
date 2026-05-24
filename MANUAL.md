@@ -151,7 +151,7 @@ Every parameter you turned is **per-clip**. Switch to a different clip on this t
 
 ## 1.6 Save your work
 
-**Shift + Note/Session** opens the menu. Jog rotate to **Save**, then jog click. dAVEBOx confirms with "STATE SAVED" on the OLED.
+**Shift + Note/Session** opens the menu. Jog rotate to **Save state**, then jog click. dAVEBOx confirms with "STATE SAVED" on the OLED. **Load state** brings any saved snapshot back (see [§3.5](#35-save-states-snapshots)).
 
 dAVEBOx also auto-saves when you press **Back** to suspend, or when you fully exit (Shift + Back, or **Quit** from the menu).
 
@@ -394,6 +394,19 @@ The Metro toggle here is intentionally narrow (Cnt-In ↔ Always): use the Globa
 | Session View | Tap: go to Track View · Hold: peek Track View |
 | Global Menu | Close the menu (also closes Tap Tempo, BPM menu, confirm dialogs) |
 | Performance Mode (locked) | Closes Performance Mode, returns to Track View |
+
+## 3.5 Save states (snapshots)
+
+Beyond the automatic save, you can keep up to **16 named save states** per set — full snapshots of everything (clips, notes, track config, tempo, scale). Use them to bookmark a version before a big change, or to keep alternate takes.
+
+- **Save state** (Global Menu) writes a new snapshot, stamped with the date and time (e.g. `05-24 14:32`). The OLED confirms "STATE SAVED".
+- **Load state** (Global Menu) opens a list of your snapshots, newest first. **Jog** to highlight one, **jog click** to pick it, then confirm **Yes** — dAVEBOx replaces the current state with the snapshot. (Loading discards unsaved changes, so it asks first.)
+- When you already have 16 snapshots, **Save state** opens a picker instead: choose which existing snapshot to overwrite, and confirm.
+- **Note/Session** backs out of the list (or out of a confirm prompt).
+
+Snapshots belong to the set they were saved in — each set has its own list. **Clear Session does not delete your snapshots**, so they remain available to load even after you clear the live project.
+
+After a dAVEBOx update that changes the save format, older snapshots can't be loaded; the Load list marks them `(old)` and offers to remove them the first time you open it.
 
 ---
 

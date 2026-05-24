@@ -337,6 +337,15 @@ export const S = {
     pendingPruneOrphans: false,
     nameIndexCache: null,    /* { name: uuid } map, lazy-loaded on first save */
     pendingInheritPicker: null,  /* { dstUuid, dstName, candidates: [{uuid,name}], selectedIndex } when picker is open */
+    /* Snapshot picker (Save state / Load state). Self-contained modal like the
+     * inherit picker. { mode:'load'|'overwrite', snaps:[{id,ts,label,sv}], sel,
+     * confirm } where confirm is null or { kind:'load'|'overwrite'|'wipe',
+     * sel:1(=No default), targetId, wipeIds }. */
+    snapshotPicker: null,
+    /* Set one tick after a snapshot Save fires the DSP 'save'; the live state
+     * file is on disk by then, so the copy-into-snapshot runs in tick().
+     * { id, label } (id reused = overwrite). */
+    pendingSnapshotCopy: null,
     pendingSchwungSlotPicker: null,  /* { track, selectedIndex } when slot-pick dialog is open before co-run entry; index 0-3 = slot, 4 = Cancel */
     pendingEditEntryTrack: -1,  /* Shift+Step3: deferred co-run entry. -1 = none; track idx = fire on Shift release so Shift state doesn't leak into Move/Schwung */
     pendingUndoSync: 0,

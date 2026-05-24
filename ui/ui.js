@@ -75,11 +75,12 @@ import {
     col4, parseActionRaw, MCUFONT, pixelPrint, pixelPrintC,
     BANKS, ACTION_POPUP_TICKS, PAD_MODE_DRUM, PAD_MODE_MELODIC_SCALE,
     POLL_INTERVAL, CC_SCRATCH_PALETTE_BASE, TAP_TEMPO_FLASH_TICKS, TAP_TEMPO_RESET_MS,
-    PARAM_LED_BANKS
+    PARAM_LED_BANKS, STATE_VERSION
 } from '/data/UserData/schwung/modules/tools/davebox/ui_constants.mjs';
 
 import { S, CC_ASSIGN_DEFAULTS, PERF_FACTORY_PRESETS } from '/data/UserData/schwung/modules/tools/davebox/ui_state.mjs';
-import { saveState, writeSidecar, doClearSession, showActionPopup, uuidToStatePath, uuidToUiStatePath, readActiveSet, loadNameIndex, saveNameIndex, copyStateFiles, findInheritCandidates } from '/data/UserData/schwung/modules/tools/davebox/ui_persistence.mjs';
+import { saveState, writeSidecar, doClearSession, showActionPopup, uuidToStatePath, uuidToUiStatePath, readActiveSet, loadNameIndex, saveNameIndex, copyStateFiles, findInheritCandidates,
+    SNAPSHOT_CAP, snapshotLabel, loadSnapshotManifest, commitSnapshot, applySnapshotToLive, dropSnapshots } from '/data/UserData/schwung/modules/tools/davebox/ui_persistence.mjs';
 import { drawGlobalMenu } from '/data/UserData/schwung/modules/tools/davebox/ui_dialogs.mjs';
 import { trackClipHasContent, sceneAllQueued, updateSceneMapLEDs } from '/data/UserData/schwung/modules/tools/davebox/ui_scene.mjs';
 import { effectiveClip, updateStepLEDs, updateSessionLEDs, updateTrackLEDs, flashAtRate, drawPositionBar, invalidateLEDCache } from '/data/UserData/schwung/modules/tools/davebox/ui_leds.mjs';
@@ -351,10 +352,11 @@ function buildGlobalMenuItems() {
         createAction('Export to Ableton', function() {
             requestExport();
         }),
-        createAction('Save', function() {
-            saveState();
-            S.globalMenuOpen = false;
-            showActionPopup('STATE', 'SAVED');
+        createAction('Save state', function() {
+            openSaveSnapshot();
+        }),
+        createAction('Load state', function() {
+            openLoadSnapshot();
         }),
         createAction('Quit', function() {
             saveState();                       /* sets pendingSuspendSave */
@@ -1355,6 +1357,80 @@ function drawInheritPicker() {
         }
     }
     /* Scroll indicators */
+    if (top > 0)               print(120, listTopY, '^', 1);
+    if (top + visible < total) print(120, listTopY + (visible - 1) * lineH, 'v', 1);
+}
+
+function snapById(p, id) {
+    for (let i = 0; i < p.snaps.length; i++) if (p.snaps[i].id === id) return p.snaps[i];
+    return null;
+}
+
+/* Yes/No buttons matching the other confirm dialogs (No left, Yes right). */
+function drawSnapYesNo(sel) {
+    const noX = 6, yesX = 74, btnY = 46, btnW = 46, btnH = 13;
+    function btn(x, on, label, off) {
+        if (on) { fill_rect(x, btnY, btnW, btnH, 1); print(x + off, btnY + 3, label, 0); }
+        else {
+            fill_rect(x, btnY, btnW, 1, 1); fill_rect(x, btnY + btnH - 1, btnW, 1, 1);
+            fill_rect(x, btnY, 1, btnH, 1); fill_rect(x + btnW - 1, btnY, 1, btnH, 1);
+            print(x + off, btnY + 3, label, 1);
+        }
+    }
+    btn(noX, sel === 1, 'No', 17);
+    btn(yesX, sel === 0, 'Yes', 14);
+}
+
+function drawSnapshotPicker() {
+    clear_screen();
+    const p = S.snapshotPicker;
+    if (!p) return;
+
+    if (p.confirm) {
+        const c = p.confirm;
+        if (c.kind === 'wipe') {
+            drawMenuHeader('STATES UPDATED');
+            print(4, 18, 'Delete ' + c.wipeIds.length + ' snapshot(s)', 1);
+            print(4, 27, 'from an older', 1);
+            print(4, 36, 'version?', 1);
+        } else if (c.kind === 'load') {
+            const s = snapById(p, c.targetId);
+            drawMenuHeader('LOAD STATE');
+            print(4, 18, 'Load ' + (s ? s.label : ''), 1);
+            print(4, 27, 'Unsaved changes', 1);
+            print(4, 36, 'will be lost.', 1);
+        } else {
+            const s = snapById(p, c.targetId);
+            drawMenuHeader('OVERWRITE');
+            print(4, 18, 'Replace', 1);
+            print(4, 27, (s ? s.label : '') + '?', 1);
+        }
+        drawSnapYesNo(c.sel);
+        return;
+    }
+
+    drawMenuHeader(p.mode === 'overwrite' ? 'OVERWRITE WHICH?' : 'LOAD STATE');
+    const total = p.snaps.length;
+    const visible = 4;
+    const sel = p.sel;
+    let top = Math.max(0, Math.min(sel - 1, total - visible));
+    if (total <= visible) top = 0;
+    const lineH = 9;
+    const listTopY = 20;
+    for (let i = 0; i < visible && (top + i) < total; i++) {
+        const idx = top + i;
+        const y = listTopY + i * lineH;
+        const s = p.snaps[idx];
+        let label = s.label || '';
+        if (p.mode === 'load' && s.sv !== STATE_VERSION) label += ' (old)';
+        const truncated = label.length > 20 ? label.substring(0, 19) + '…' : label;
+        if (idx === sel) {
+            fill_rect(2, y - 1, 124, lineH - 1, 1);
+            print(5, y, truncated, 0);
+        } else {
+            print(5, y, truncated, 1);
+        }
+    }
     if (top > 0)               print(120, listTopY, '^', 1);
     if (top + visible < total) print(120, listTopY + (visible - 1) * lineH, 'v', 1);
 }
@@ -3102,6 +3178,7 @@ function drawUI() {
     }
     if (S.sessionOverlayHeld) { drawSessionOverview(); return; }
     if (S.pendingInheritPicker) { drawInheritPicker(); return; }
+    if (S.snapshotPicker) { drawSnapshotPicker(); return; }
     if (S.pendingSceneBakePicker) {
         clear_screen();
         print(4, 8,  'BAKE SCENE',         1);
@@ -3785,6 +3862,114 @@ function resolveInheritPicker(action) {
     }
     S.pendingSetLoad = true;
     S.pendingInheritPicker = null;
+    S.screenDirty = true;
+}
+
+/* ------------------------------------------------------------------ */
+/* Snapshots — Save state / Load state                                 */
+/* Self-contained modal (S.snapshotPicker), modeled on the inherit     */
+/* picker. Confirm dialogs are folded into the picker object so the     */
+/* only integration points are draw, jog-rotate, jog-click and close.  */
+/* ------------------------------------------------------------------ */
+
+/* Flush live state to disk (deferred 'save') then copy it into snapshot
+ * `id` next tick — pendingSnapshotCopy is drained one tick after the save,
+ * by which point seq8_save_state has written the file synchronously.
+ * Reusing an existing id overwrites that snapshot in place. */
+function beginSnapshotSave(id) {
+    S.pendingSnapshotCopy = { id: id, label: snapshotLabel() };
+    saveState();
+}
+
+/* Save state action. Under the cap → new timestamped snapshot. At the cap →
+ * open the overwrite picker to choose which existing one to replace. */
+function openSaveSnapshot() {
+    if (S.pendingSuspendSave || S.pendingSnapshotCopy) return;  /* save already in flight */
+    const snaps = loadSnapshotManifest(S.currentSetUuid);
+    if (snaps.length >= SNAPSHOT_CAP) {
+        S.snapshotPicker = { mode: 'overwrite', snaps: snaps, sel: 0, confirm: null };
+        S.globalMenuOpen = false;
+        S.screenDirty = true;
+        return;
+    }
+    beginSnapshotSave(String(Date.now()));
+    S.globalMenuOpen = false;
+    showActionPopup('STATE', 'SAVED');
+}
+
+/* Load state action. Empty → popup. If any snapshots predate the current
+ * state version, offer to wipe them before showing the list. */
+function openLoadSnapshot() {
+    const snaps = loadSnapshotManifest(S.currentSetUuid);
+    if (snaps.length === 0) {
+        S.globalMenuOpen = false;
+        showActionPopup('NO', 'SNAPSHOTS');
+        return;
+    }
+    const stale = [];
+    for (let i = 0; i < snaps.length; i++)
+        if (snaps[i].sv !== STATE_VERSION) stale.push(snaps[i].id);
+    S.snapshotPicker = { mode: 'load', snaps: snaps, sel: 0, confirm: null };
+    if (stale.length > 0)
+        S.snapshotPicker.confirm = { kind: 'wipe', sel: 1, wipeIds: stale };
+    S.globalMenuOpen = false;
+    S.screenDirty = true;
+}
+
+function closeSnapshotPicker() {
+    S.snapshotPicker = null;
+    S.screenDirty = true;
+}
+
+/* Jog rotation inside the picker: toggle a confirm's Yes/No, else move
+ * the list selection. */
+function snapshotPickerRotate(delta) {
+    const p = S.snapshotPicker;
+    if (!p || delta === 0) return;
+    if (p.confirm) {
+        p.confirm.sel = p.confirm.sel === 0 ? 1 : 0;
+    } else {
+        const n = p.snaps.length;
+        if (n > 0) p.sel = (p.sel + (delta > 0 ? 1 : n - 1)) % n;
+    }
+    S.screenDirty = true;
+}
+
+/* Jog click inside the picker: resolve a confirm, or arm one for the
+ * selected entry. */
+function snapshotPickerClick() {
+    const p = S.snapshotPicker;
+    if (!p) return;
+    if (p.confirm) {
+        const yes = p.confirm.sel === 0;
+        const kind = p.confirm.kind;
+        if (kind === 'wipe') {
+            if (yes) { p.snaps = dropSnapshots(S.currentSetUuid, p.confirm.wipeIds); p.sel = 0; }
+            p.confirm = null;
+            if (p.snaps.length === 0) closeSnapshotPicker();
+            else S.screenDirty = true;
+            return;
+        }
+        const id = p.confirm.targetId;
+        closeSnapshotPicker();
+        if (kind === 'load' && yes) {
+            applySnapshotToLive(S.currentSetUuid, id);
+            S.pendingSetLoad = true;          /* reuse the normal state_load reload path */
+            showActionPopup('STATE', 'LOADED');
+        } else if (kind === 'overwrite' && yes) {
+            beginSnapshotSave(id);            /* reuse id → overwrite in place */
+            showActionPopup('STATE', 'SAVED');
+        }
+        return;
+    }
+    const snap = p.snaps[p.sel];
+    if (!snap) return;
+    if (p.mode === 'load') {
+        if (snap.sv !== STATE_VERSION) return;   /* incompatible: ignore press */
+        p.confirm = { kind: 'load', sel: 1, targetId: snap.id };
+    } else {
+        p.confirm = { kind: 'overwrite', sel: 1, targetId: snap.id };
+    }
     S.screenDirty = true;
 }
 
@@ -5399,6 +5584,12 @@ function _tickImpl() {
         clearAllLEDs();
         for (let _i = 0; _i < 4; _i++) setButtonLED(40 + _i, LED_OFF);
         if (typeof host_hide_module === 'function') host_hide_module();
+    } else if (S.pendingSnapshotCopy) {
+        /* One tick after the 'save' above flushed live state to disk
+         * synchronously — copy it into the snapshot + update manifest. */
+        const _sc = S.pendingSnapshotCopy;
+        S.pendingSnapshotCopy = null;
+        commitSnapshot(S.currentSetUuid, _sc.id, _sc.label);
     }
 
     /* Orphan prune: clean up set_state/<uuid>/seq8-*.json for sets that no
@@ -5438,6 +5629,11 @@ function _onCC_jog(d1, d2) {
         const p = S.pendingInheritPicker;
         const action = (p.selectedIndex === p.candidates.length) ? -1 : p.selectedIndex;
         resolveInheritPicker(action);
+        return;
+    }
+    /* Snapshot picker: jog click resolves a confirm or arms one. */
+    if (d1 === 3 && d2 === 127 && S.snapshotPicker) {
+        snapshotPickerClick();
         return;
     }
     /* Schwung-slot picker: jog click confirms slot (0-3) or Cancel (4 -> -1). */
@@ -5747,6 +5943,10 @@ function _onCC_jog(d1, d2) {
                 p.selectedIndex = (p.selectedIndex + (delta > 0 ? 1 : total - 1)) % total;
                 S.screenDirty = true;
             }
+            return;
+        }
+        if (S.snapshotPicker) {
+            snapshotPickerRotate(decodeDelta(d2));
             return;
         }
         if (S.pendingSchwungSlotPicker) {
@@ -6071,6 +6271,13 @@ function _onCC_buttons(d1, d2) {
              * the regular branches can't be trusted. */
             if (S.moveCoRunTrack >= 0) {
                 exitMoveNativeCoRun();
+                return;
+            }
+            if (S.snapshotPicker) {
+                /* Back out of a confirm to the list, else close the picker. */
+                if (S.snapshotPicker.confirm) S.snapshotPicker.confirm = null;
+                else closeSnapshotPicker();
+                forceRedraw();
                 return;
             }
             if (S.shiftHeld) {
@@ -9366,6 +9573,16 @@ function _onMidiInternalImpl(data) {
      * immediately so volume adjustment stays entirely Move-native. */
     if ((status & 0xF0) === 0xB0 && d1 === 79) return;
     if (((status & 0xF0) === 0x90 || (status & 0xF0) === 0x80) && d1 === 8) return;
+
+    /* Snapshot picker is a mid-session modal: swallow all input except the jog
+     * (CC 3 click + CC 14 rotate, → _onCC_jog) and Note/Session (CC 50, closes
+     * it), so pads/steps/transport/knobs can't edit the underlying clip while
+     * the picker is on screen. */
+    if (S.snapshotPicker) {
+        const _ccPick = (status & 0xF0) === 0xB0 &&
+            (d1 === 3 || d1 === MoveMainKnob || d1 === MoveNoteSession);
+        if (!_ccPick) return;
+    }
 
     /* While session overview is held, swallow everything except CC 50 release and Up/Down scroll. */
     if (S.sessionOverlayHeld) {
