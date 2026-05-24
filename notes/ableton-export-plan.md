@@ -306,10 +306,12 @@ improved too):
   by construction). Phase 6 could revert missing refs in pack.py.
 
 ## Phase 6 — Polish
-- [ ] **Track colors should match the dAVEBOx track color for ALL tracks** (user note 2026-05-24).
-  Currently Move-routed tracks use the matched Move track color (happens to match dB) but
-  Schwung/Ext/fallback tracks use an arbitrary `DB_TRACK_COLORS` palette → mismatch. Fix: source the
-  actual dAVEBOx per-track color for every exported track's `color`.
+- [x] **Track colors match the dAVEBOx track color for ALL tracks** (done 2026-05-24, device-verified).
+  `DB_TRACK_COLORS` = `[1,17,7,10,25,15,6,12]` (Ableton palette indices the user picked via a generated
+  color-chart bundle to match the device); applied to every exported track by index (Move/Schwung/Ext),
+  overriding the Move track's own color. **Ableton clip/track color palette = indices 0–25** (real
+  Move/Note sets never exceed 25; out-of-range indices → "Document invariant violation" — learned by
+  the chart's first 0–69 attempt failing).
 - [ ] Progress/most-recent-export feedback; error handling (missing sample, oversized clip, no clips).
 - [ ] MANUAL.md + CHANGELOG entries; capability-gate if any patched-Schwung dependency.
 - [ ] **Verify:** full 8×16 session with drums, melodic, Schwung + external tracks, randomized +

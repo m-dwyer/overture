@@ -38,9 +38,10 @@ const ROUTE_SCHWUNG = 0;
 const ROUTE_MOVE    = 1;
 const ROUTE_EXT     = 2;
 
-/* Default per-track colors (Move palette indices) for the 8 dAVEBOx tracks.
- * Cosmetic only; real per-track color mapping arrives with instruments (Phase 2). */
-const DB_TRACK_COLORS = [15, 13, 11, 9, 7, 5, 3, 1];
+/* dAVEBOx per-track colors → Ableton clip-color palette index, picked by the
+ * user (2026-05-24) to match the device track colors. Applied to EVERY exported
+ * track by index (Move/Schwung/Ext alike) so the grid always matches the device. */
+const DB_TRACK_COLORS = [1, 17, 7, 10, 25, 15, 6, 12];
 
 /* ---- asset loading ------------------------------------------------------- */
 
@@ -192,7 +193,7 @@ function resolveTrack(t, ctx) {
             return {
                 devices: movDevices,
                 name: preset,
-                color: (typeof mt.color === 'number') ? mt.color : defaultColor,
+                color: defaultColor,   /* dB track color (not the Move track's own color) */
                 mixer: mixer
             };
         }
