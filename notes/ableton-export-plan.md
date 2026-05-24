@@ -155,6 +155,27 @@ Done as designed, with these specifics:
   Dummy + `Ext ch [n]`; none → Dummy + `dB [tr]`. Track colors from mapped Move track / dB defaults.
 - [ ] **Verify:** instruments load in Live; names correct; re-channel a Move track → still maps right.
 
+### Phase 2 RESULT — 2026-05-24 (device + desktop-Live verified ✅; on branch `ableton-export`)
+Mapping pinned + empirically confirmed against the live set (4 Move + 4 Schwung tracks):
+- **Routes** (`fmtRoute`): 0=Schwung, 1=Move, 2=Ext. `S.trackChannel` is **1-based** (sends on
+  `trackChannel-1`); `S.trackRoute` per track. Both read live in tick (pollPendingExport).
+- **Loaded Move Song.abl** located at `Sets/<currentSetUuid>/<currentSetName>/Song.abl` (inner folder
+  name == active_set.txt line 2 == `S.currentSetName`, verified). Read via `host_read_file` (largest
+  real Song.abl ~217KB ≪ 4MB cap). `loadMoveSong()` + `buildMoveChannelMap()` (key = `midiInputMode[0]`,
+  the 0-based listen channel; defensive `Array.isArray && typeof===number`).
+- **ROUTE_MOVE**: match Move track `midiInputMode[0] === trackChannel-1` → clone its `devices` subtree
+  (carries fx + drumRack/instrumentRack) + name=preset (`devices[0].name`) + color + mixer (sends
+  cleared). Fallback Dummy `dB N`.
+- **ROUTE_SCHWUNG**: `shadow_chain_config.json` `patches[i].channel === trackChannel` → name
+  `SCH-<patches[i].name>`; Dummy Drift instrument. Missing config → `dB N`.
+- **ROUTE_EXT**: name `Ext ch <trackChannel>`; Dummy. All sources degrade gracefully to Dummy `dB N`.
+- **Verified table** (set "Set 1 Copy 7"): dB1=Cheetah Kit(drumRack,c1), dB2=BA Analog Bass 3(c17),
+  dB3=BA Biggest One(c7), dB4=PL Hawkins(c10), dB5=SCH-NUS, dB6/7=SCH-Untitled, dB8=SCH-NS + JC + DFH.
+  Matched exactly in the exported bundle; opens + plays in Live. Samples still by-reference (`ableton:`
+  URIs; portability = Phase 5).
+- Name collision fix: renamed export `SETS_BASE_DIR` → `EXPORT_SETS_BASE_DIR` (ui_persistence already
+  declares `SETS_BASE_DIR`; bundler flattens all modules into one scope).
+
 ## Phase 3 — Baked MIDI (melodic)
 - [ ] DSP: add non-destructive render-to-buffer (melodic) — copy `bake_clip` compute (`seq8.c:6077–6159`),
   emit notes via a `tN_cC_*` `get_param` as `tick:gate:pitch:vel;`. Trigger via per-track key.

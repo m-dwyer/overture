@@ -26,6 +26,15 @@ const EXPORT_OUT_DIR    = '/data/UserData/schwung/davebox-exports';
 const EXPORT_STAGING    = '/data/UserData/schwung/davebox-export-staging';
 const EXPORT_SCENES     = NUM_CLIPS;   /* dAVEBOx clip N -> scene N */
 
+/* Source-side reads for route-aware instrument mapping (Phase 2). */
+const EXPORT_SETS_BASE_DIR    = '/data/UserData/UserLibrary/Sets';
+const CHAIN_CONFIG_PATH = '/data/UserData/schwung/shadow_chain_config.json';
+
+/* Track route values (see fmtRoute in ui_constants). */
+const ROUTE_SCHWUNG = 0;
+const ROUTE_MOVE    = 1;
+const ROUTE_EXT     = 2;
+
 /* Default per-track colors (Move palette indices) for the 8 dAVEBOx tracks.
  * Cosmetic only; real per-track color mapping arrives with instruments (Phase 2). */
 const DB_TRACK_COLORS = [15, 13, 11, 9, 7, 5, 3, 1];
@@ -41,6 +50,99 @@ function readJsonAsset(name) {
 
 function deepClone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
+/* ---- source-side reads (loaded Move set + Schwung chain config) ----------- */
+
+/* The loaded Move set's Song.abl. The inner folder name equals the active set
+ * name (active_set.txt line 2 == S.currentSetName, verified on device). Returns
+ * the parsed object, or null if absent/unreadable/too large (4MB host cap;
+ * largest real Song.abl observed ~217KB, so plain host_read_file is safe). */
+function loadMoveSong() {
+    if (typeof host_read_file !== 'function' || !S.currentSetUuid || !S.currentSetName)
+        return null;
+    const path = EXPORT_SETS_BASE_DIR + '/' + S.currentSetUuid + '/' + S.currentSetName + '/Song.abl';
+    if (typeof host_file_exists === 'function' && !host_file_exists(path)) return null;
+    const raw = host_read_file(path);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+function loadChainConfig() {
+    if (typeof host_read_file !== 'function') return null;
+    if (typeof host_file_exists === 'function' && !host_file_exists(CHAIN_CONFIG_PATH)) return null;
+    const raw = host_read_file(CHAIN_CONFIG_PATH);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+}
+
+/* Map 0-based MIDI listen-channel -> Move track, from each track's
+ * midiInputMode. Move sets store [N]; Note sets store "auto" (skipped). */
+function buildMoveChannelMap(moveSong) {
+    const map = {};
+    if (!moveSong || !Array.isArray(moveSong.tracks)) return map;
+    for (const mt of moveSong.tracks) {
+        const mim = mt && mt.midiInputMode;
+        if (Array.isArray(mim) && mim.length >= 1 && typeof mim[0] === 'number')
+            map[mim[0]] = mt;
+    }
+    return map;
+}
+
+/* ---- per-track instrument + name + color resolution ---------------------- */
+
+/* Resolve a dAVEBOx track to an export instrument subtree, display name, color,
+ * and mixer, by its route + channel. Falls back to the Dummy Drift (name
+ * "dB N") whenever no concrete source is found. trackChannel is 1-based; Move
+ * tracks listen on the 0-based channel (channel-1). */
+function resolveTrack(t, ctx) {
+    const route = (S.trackRoute && S.trackRoute[t] !== undefined) ? S.trackRoute[t] : ROUTE_SCHWUNG;
+    const ch    = (S.trackChannel && S.trackChannel[t]) ? S.trackChannel[t] : (t + 1);  /* 1-based */
+    const dbName       = 'dB ' + (t + 1);
+    const defaultColor = DB_TRACK_COLORS[t % DB_TRACK_COLORS.length];
+
+    function dummy(name, color) {
+        const dev = deepClone(ctx.drift);
+        dev.name = name;
+        return {
+            devices: [dev],
+            name: name,
+            color: (typeof color === 'number') ? color : defaultColor,
+            mixer: null   /* use default track mixer */
+        };
+    }
+
+    if (route === ROUTE_MOVE) {
+        const mt = ctx.moveMap[ch - 1];
+        if (mt && Array.isArray(mt.devices) && mt.devices.length >= 1 && mt.devices[0] && mt.devices[0].kind) {
+            const preset = mt.devices[0].name || dbName;
+            let mixer = null;
+            if (mt.mixer) { mixer = deepClone(mt.mixer); mixer.sends = []; }  /* returnTracks is [] */
+            return {
+                devices: deepClone(mt.devices),
+                name: preset,
+                color: (typeof mt.color === 'number') ? mt.color : defaultColor,
+                mixer: mixer
+            };
+        }
+        return dummy(dbName, defaultColor);   /* Move-routed but no matching Move track */
+    }
+
+    if (route === ROUTE_SCHWUNG) {
+        let name = dbName;
+        if (ctx.chainCfg && Array.isArray(ctx.chainCfg.patches)) {
+            for (const p of ctx.chainCfg.patches) {
+                if (p && p.channel === ch) { name = 'SCH-' + (p.name || ''); break; }
+            }
+        }
+        return dummy(name, defaultColor);
+    }
+
+    if (route === ROUTE_EXT) {
+        return dummy('Ext ch ' + ch, defaultColor);
+    }
+
+    return dummy(dbName, defaultColor);
+}
+
 /* Stop-transport notice — held for 2x the normal popup duration so it's easy to
  * read (it's the one popup users hit by accident mid-jam). */
 function showStopTransportNotice() {
@@ -50,17 +152,19 @@ function showStopTransportNotice() {
 
 /* ---- Song.abl authoring -------------------------------------------------- */
 
-function buildTrack(t, driftTemplate) {
-    const dev = deepClone(driftTemplate);
-    const name = 'dB ' + (t + 1);
-    dev.name = name;
+function defaultMixer() {
+    return { pan: 0.0, 'solo-cue': false, speakerOn: true, volume: 0.6137250661849976, sends: [] };
+}
+
+function buildTrack(t, ctx) {
+    const r = resolveTrack(t, ctx);
     const clipSlots = [];
     for (let i = 0; i < EXPORT_SCENES; i++)
         clipSlots.push({ hasStop: true, clip: null });
     return {
         kind: 'midi',
-        name: name,
-        color: DB_TRACK_COLORS[t % DB_TRACK_COLORS.length],
+        name: r.name,
+        color: r.color,
         isSelected: t === 0,
         clipSlots: clipSlots,
         isNoteRepeatOn: false,
@@ -69,14 +173,14 @@ function buildTrack(t, driftTemplate) {
         uiOctaveIndex: 4,
         midiInputMode: 'auto',
         midiOutputEndpoint: null,
-        devices: [dev],
-        mixer: { pan: 0.0, 'solo-cue': false, speakerOn: true, volume: 0.6137250661849976, sends: [] }
+        devices: r.devices,
+        mixer: r.mixer || defaultMixer()
     };
 }
 
-function buildSong(bpm, driftTemplate, masterTrack) {
+function buildSong(bpm, ctx) {
     const tracks = [];
-    for (let t = 0; t < NUM_TRACKS; t++) tracks.push(buildTrack(t, driftTemplate));
+    for (let t = 0; t < NUM_TRACKS; t++) tracks.push(buildTrack(t, ctx));
     const scenes = [];
     for (let i = 0; i < EXPORT_SCENES; i++) scenes.push({ name: '', color: null });
     return {
@@ -89,7 +193,7 @@ function buildSong(bpm, driftTemplate, masterTrack) {
         melodicLayout: 'inKey',
         tracks: tracks,
         returnTracks: [],
-        masterTrack: masterTrack,
+        masterTrack: ctx.master,
         scenes: scenes,
         grooves: [],
         metadata: { usedFeatures: [] }
@@ -178,9 +282,18 @@ function pollPendingExport() {
         return;
     }
 
+    /* Route-aware instrument/name/color sources (Phase 2). Missing sources
+     * degrade gracefully — every track still gets the Dummy Drift + dB N. */
+    const ctx = {
+        drift: drift,
+        master: master,
+        moveMap: buildMoveChannelMap(loadMoveSong()),
+        chainCfg: loadChainConfig()
+    };
+
     let songJson;
     try {
-        songJson = JSON.stringify(buildSong(bpm, drift, master));
+        songJson = JSON.stringify(buildSong(bpm, ctx));
     } catch (e) {
         showActionPopup('EXPORT FAIL', 'BUILD');
         return;

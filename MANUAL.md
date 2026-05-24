@@ -1121,9 +1121,17 @@ So you can overlay a merged drum + bass onto a row that already has piano and gu
 
 The bundle lands at `/data/UserData/schwung/davebox-exports/<set name>-<date>.ablbundle` (a same-day repeat gets `-2`, `-3`, …). Retrieve it over SFTP. It opens in Live as **8 MIDI tracks × 16 scene slots**, carrying your set's tempo and key.
 
+**Track instruments and names follow each track's route:**
+
+| Track route | In Live |
+|---|---|
+| **Move** | The actual Move instrument for that channel (drum kit or melodic), named after the Move preset, with its color. |
+| **Schwung** | A placeholder Drift instrument, named `SCH-<chain name>`. |
+| **External** | A placeholder Drift instrument, named `Ext ch <n>`. |
+
 > Move Drum Racks need **Live 12.1+** (older versions substitute Simpler and sound different). Export is **one-way** — a saved `.als` can't be loaded back onto Move.
 
-*(Per-track instruments, samples, and baked clip notes are carried over as this feature completes.)*
+*(Move instruments are referenced from your installed Ableton packs for now; self-contained sample bundling and baked clip notes are carried over as this feature completes.)*
 
 ---
 
