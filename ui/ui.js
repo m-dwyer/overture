@@ -222,6 +222,20 @@ function buildGlobalMenuItems() {
             set: function(v) { applyTrackConfig(S.activeTrack, 'track_looper', v ? 1 : 0); },
             onLabel: 'On', offLabel: 'Off'
         }),
+        /* Pad-pressure (aftertouch) send mode — melodic tracks only. On drum
+         * tracks pad pressure is owned by the repeat-velocity system, so the
+         * item is hidden there. Move route supports Off/Poly only (Move
+         * instruments take poly AT); Schwung/External also offer Channel.
+         * Options recompute each menu open (buildGlobalMenuItems re-runs). Mode is
+         * JS-side (carried per-message in tN_live_at) → persisted in the sidecar. */
+        ...(S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM ? [
+            createEnum('AftTch', {
+                get: function() { return S.trackAtMode[S.activeTrack] | 0; },
+                set: function(v) { S.trackAtMode[S.activeTrack] = v | 0; writeSidecar(); },
+                options: S.trackRoute[S.activeTrack] === 1 ? [0, 1] : [0, 1, 2],
+                format: function(v) { return v === 2 ? 'Chan' : v === 1 ? 'Poly' : 'Off'; }
+            })
+        ] : []),
         /* Co-run capability gate. The chain-editor co-run feature requires the
          * patched Schwung shim (adds shadow_set_corun_chain_edit + co-run draw
          * paths in shadow_ui.js). On stock Schwung the API is undefined and
@@ -2574,7 +2588,12 @@ function applyTrackConfig(t, key, val) {
     else strVal = String(val);
     host_module_set_param('t' + t + '_' + key, strVal);
     if (key === 'channel')              S.trackChannel[t] = val;
-    else if (key === 'route')           S.trackRoute[t] = val;
+    else if (key === 'route') {
+        S.trackRoute[t] = val;
+        /* Move route offers only Off/Poly aftertouch — normalize a lingering
+         * Channel selection so the AftTch menu + send stay in sync. */
+        if (val === 1 && S.trackAtMode[t] === 2) { S.trackAtMode[t] = 1; writeSidecar(); }
+    }
     else if (key === 'pad_mode') {
         S.trackPadMode[t] = val;
         if (val === PAD_MODE_DRUM) {
@@ -4267,6 +4286,12 @@ function restoreUiSidecar(applyDefaultsNow) {
              * post-restore validity checks (e.g. hide bank 7 on melodic) still
              * apply because activeBank is a regular live variable from here on. */
             S.activeBank = S.trackActiveBank[S.activeTrack] | 0;
+        }
+        if (us.v >= 9 && Array.isArray(us.am)) {
+            for (let _t = 0; _t < NUM_TRACKS; _t++) {
+                const _m = us.am[_t];
+                S.trackAtMode[_t] = (typeof _m === 'number' && _m >= 0 && _m <= 2) ? (_m | 0) : 0;
+            }
         }
     } else {
         S.scaleAware   = 1;
@@ -8553,6 +8578,7 @@ function _onPadPressTrackView(status, d1, d2) {
             if (_pitchRaw < 0 || _pitchRaw > 127) return; /* OOB after track-octave shift */
             const pitch = _pitchRaw;
             padPitch[padIdx] = pitch;
+            S.atLastSent[padIdx] = -1;   /* fresh press → next aftertouch always sends */
             S.lastPlayedNote  = pitch;
             S.lastPadVelocity = effectiveVelocity(d2);
             S.liveActiveNotes.add(pitch);
@@ -9700,10 +9726,18 @@ function _onPadRelease(status, d1, d2) {
 
 globalThis.onMidiMessageInternal = function (data) { try { _onMidiInternalImpl(data); } catch (e) { captureError('onMidiInternal', e); } };
 function _onMidiInternalImpl(data) {
-    if (isNoiseMessage(data)) return;
     const status = data[0] | 0;
     const d1     = (data[1] ?? 0) | 0;
     const d2     = (data[2] ?? 0) | 0;
+
+    /* Pad pressure arrives as poly aftertouch (0xA0) with the pad note in d1.
+     * isNoiseMessage() classifies all 0xA0/0xD0 as noise, so handle pressure
+     * here BEFORE that filter would drop it, then return. */
+    if ((status & 0xF0) === 0xA0) {
+        if (d1 >= TRACK_PAD_BASE && d1 < TRACK_PAD_BASE + 32) _onPadAftertouch(d1, d2);
+        return;
+    }
+    if (isNoiseMessage(data)) return;
 
     /* Master volume knob (CC 79) + its capacitive touch (note 8) are owned by
      * Move firmware (button_passthrough[79] + the shim's overtake-mode volume
@@ -9904,28 +9938,52 @@ function _onMidiInternalImpl(data) {
     /* Pad releases: note-off */
     if ((status & 0xF0) === 0x80 || ((status & 0xF0) === 0x90 && d2 === 0)) { _onPadRelease(status, d1, d2); return; }
 
-    /* Poly aftertouch: update repeat velocity while rate pad is held */
-    if ((status & 0xF0) === 0xA0 && d1 >= TRACK_PAD_BASE && d1 < TRACK_PAD_BASE + 32) {
-        const t      = S.activeTrack;
-        const padIdx = d1 - TRACK_PAD_BASE;
-        if (S.trackPadMode[t] === PAD_MODE_DRUM && S.drumPerformMode[t] === 1 &&
-                S.drumRepeatHeldPad[t] === padIdx && d2 > 0) {
-            S.drumRepeatHeldPadVel[t] = d2;
-            if (typeof host_module_set_param === 'function')
-                host_module_set_param('t' + t + '_drum_repeat_vel', String(d2));
-        }
-        if (S.trackPadMode[t] === PAD_MODE_DRUM && S.drumPerformMode[t] === 2 && d2 > 0) {
-            const col2 = padIdx % 8;
-            if (col2 < 4) {
-                const lane = drumPadToLane(padIdx);
-                if (lane >= 0 && S.drumRepeat2HeldLanes[t].has(lane)) {
-                    if (typeof host_module_set_param === 'function')
-                        host_module_set_param('t' + t + '_drum_repeat2_vel', lane + ' ' + d2);
-                }
+};
+
+/* Pad pressure (poly aftertouch). On drum tracks: routes continuous pressure to
+ * the held drum-repeat pad's velocity (Rpt1) or the held repeat lanes (Rpt2). On
+ * melodic tracks: forwards pad pressure as aftertouch to the track output per the
+ * track's AftTch mode (Off/Poly/Channel). Called from the top of
+ * _onMidiInternalImpl, before isNoiseMessage would drop the 0xA0. */
+function _onPadAftertouch(d1, d2) {
+    const t      = S.activeTrack;
+    const padIdx = d1 - TRACK_PAD_BASE;
+
+    /* Melodic aftertouch send (Phase 1: live). DSP tN_live_at routes via pfx_send
+     * for the track's route (Move inject / Schwung internal / External USB). Poly
+     * carries the sounded pitch (padPitch[]); Channel is track-wide. Deduped per
+     * pad so a steady press doesn't spam the set_param channel. */
+    if (S.trackPadMode[t] !== PAD_MODE_DRUM) {
+        let mode = S.trackAtMode[t] | 0;
+        if (mode === 0) return;                       /* Off — send nothing */
+        if (S.trackRoute[t] === 1 && mode === 2) mode = 1;  /* Move = poly only */
+        if (padIdx < 0 || padIdx >= 32) return;
+        const pitch = padPitch[padIdx];
+        if (pitch < 0) return;                        /* no live note on this pad */
+        if (S.atLastSent[padIdx] === d2) return;      /* unchanged — skip */
+        S.atLastSent[padIdx] = d2;
+        if (typeof host_module_set_param === 'function')
+            host_module_set_param('t' + t + '_live_at', pitch + ' ' + d2 + ' ' + mode);
+        return;
+    }
+
+    if (S.trackPadMode[t] === PAD_MODE_DRUM && S.drumPerformMode[t] === 1 &&
+            S.drumRepeatHeldPad[t] === padIdx && d2 > 0) {
+        S.drumRepeatHeldPadVel[t] = d2;
+        if (typeof host_module_set_param === 'function')
+            host_module_set_param('t' + t + '_drum_repeat_vel', String(d2));
+    }
+    if (S.trackPadMode[t] === PAD_MODE_DRUM && S.drumPerformMode[t] === 2 && d2 > 0) {
+        const col2 = padIdx % 8;
+        if (col2 < 4) {
+            const lane = drumPadToLane(padIdx);
+            if (lane >= 0 && S.drumRepeat2HeldLanes[t].has(lane)) {
+                if (typeof host_module_set_param === 'function')
+                    host_module_set_param('t' + t + '_drum_repeat2_vel', lane + ' ' + d2);
             }
         }
     }
-};
+}
 
 globalThis.onMidiMessageExternal = function (data) { try { _onMidiExternalImpl(data); } catch (e) { captureError('onMidiExternal', e); } };
 function _onMidiExternalImpl(data) {

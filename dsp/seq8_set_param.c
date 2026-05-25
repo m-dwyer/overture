@@ -4617,6 +4617,26 @@ static void set_param(void *instance, const char *key, const char *val) {
             return;
         }
 
+        if (!strcmp(sub, "live_at")) {
+            /* tN_live_at "<pitch> <pressure> <mode>" — live pad-pressure
+             * aftertouch. mode: 1 = poly (0xA0, pitch carries the sounded note),
+             * 2 = channel (0xD0, track-wide, pitch ignored). Routed via pfx_send
+             * so it reaches the track's output the same as notes (ROUTE_MOVE
+             * inject / ROUTE_EXTERNAL USB / ROUTE_SCHWUNG internal). Stateless —
+             * no recording/playback here (Phase 2). */
+            int pitch = 0, press = 0, mode = 1;
+            sscanf(val, "%d %d %d", &pitch, &press, &mode);
+            uint8_t ch = tr->channel & 0x0F;
+            if (mode == 2)
+                pfx_send(&tr->pfx, (uint8_t)(0xD0 | ch),
+                         (uint8_t)clamp_i(press, 0, 127), 0);
+            else
+                pfx_send(&tr->pfx, (uint8_t)(0xA0 | ch),
+                         (uint8_t)clamp_i(pitch, 0, 127),
+                         (uint8_t)clamp_i(press, 0, 127));
+            return;
+        }
+
         if (!strcmp(sub, "padmap")) {
             /* tN_padmap "p0 p1 p2 ... p31" — 32 space-separated resolved
              * MIDI pitches for the 32 pads on track t. Pushed by JS whenever

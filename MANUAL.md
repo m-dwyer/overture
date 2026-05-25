@@ -1320,6 +1320,7 @@ The first section, showing the **active** track's configuration. Header reads `T
 | Mode | Melodic · Drum | Converts the track's notes when switched (see [§2.5](#25-melodic-vs-drum-tracks)) |
 | VelIn | Live · 1–127 | Live = raw velocity. A fixed value overrides all input velocity on this track, applied pre-sequencer. |
 | Looper | On · Off | Whether this track feeds Performance Mode |
+| AftTch | Off · Poly · Channel | Pad-pressure aftertouch send. **Shown on melodic tracks only** (on drum tracks pad pressure drives repeat velocity instead). Hold a note and press harder to send aftertouch to the track output. **Poly** sends per-note aftertouch (`0xA0`); **Channel** sends one track-wide channel-pressure value (`0xD0`). On **Move**-routed tracks only Off · Poly is offered (Move instruments take poly aftertouch). Default Off. |
 | **Edit Slot...** | Action | Open Schwung's native chain-slot editor for this track. Shown only on **Schwung-routed** tracks. |
 | **Edit Synth...** | Action | Open Move firmware's preset browser and device-edit pages for this track. Shown only on **Move-routed** tracks. |
 

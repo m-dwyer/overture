@@ -133,7 +133,7 @@ export function writeSidecar() {
     S.trackActiveBank[S.activeTrack] = S.activeBank;
     if (typeof host_write_file === 'function')
         host_write_file(uuidToUiStatePath(S.currentSetUuid), JSON.stringify({
-            v: 8, at: S.activeTrack, ac: S.trackActiveClip.slice(), sv: S.sessionView ? 1 : 0,
+            v: 9, at: S.activeTrack, ac: S.trackActiveClip.slice(), sv: S.sessionView ? 1 : 0,
             dl: S.activeDrumLane.slice(),
             pm: S.perfModsToggled, lm: S.perfLatchMode ? 1 : 0,
             rs: S.perfRecalledSlot, us: S.perfSnapshots.slice(8),
@@ -142,7 +142,8 @@ export function writeSidecar() {
             dva: S.drumVelZoneArmed.slice(),
             dleu: S.drumLaneEuclidN.map(function(lane) { return lane.slice(); }),
             to: S.trackOctave.slice(),
-            tab: S.trackActiveBank.slice()
+            tab: S.trackActiveBank.slice(),
+            am: S.trackAtMode.slice()
         }));
 }
 

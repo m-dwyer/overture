@@ -153,6 +153,11 @@ export const S = {
     trackPadMode: new Array(8).fill(0),
     trackVelOverride: new Array(8).fill(0),
     trackLooper: new Array(8).fill(1),
+    /* Per-track pad-pressure (aftertouch) send mode: 0=Off, 1=Poly (0xA0), 2=Channel (0xD0).
+     * Move route supports 0/1 only; Schwung/External support 0/1/2. Persisted in UI sidecar (am). */
+    trackAtMode: new Array(8).fill(0),
+    /* Per-pad last-sent aftertouch value (dedupe live send); -1 = none sent. Transient. */
+    atLastSent: new Array(32).fill(-1),
     trackClipPlaying: new Array(8).fill(false),
     trackWillRelaunch: new Array(8).fill(false),
     trackPendingPageStop: new Array(8).fill(false),
