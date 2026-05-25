@@ -96,63 +96,121 @@ payload (Phase 2-style) would lift it if needed.
 **Channel mode** collapses to one value (latest pad's pressure) by design — channel
 pressure is track-wide.
 
-## Phase 2 — record / playback / clear (SPEC ONLY — build with device)
+## Phase 2 — record / playback / clear — **interpolation model**
 
-Not built blind: it adds a per-clip data structure, a new state-serialization path, and
-audio-thread playback emission; each needs a verify-fix loop on-device. Default-Off
-gating keeps the hot path dormant, but does not make the *correctness* loop verifiable
-without the device.
+Building with the user at the device (iterative verify per increment). Default-Off gating
+keeps the hot path dormant; correctness verified on-device per increment.
 
-### Data model
+**Model: interpolated breakpoints (CC-automation analog), keyed by pitch.** Chosen over a
+flat event log (user request 2026-05-25): far smaller state footprint (the 64 KB DSP
+`state_buf` is the real constraint, not Move disk), reuses the proven `cc_auto` machinery,
+and unifies with CC automation for the Phase 3 bake/export work. CPU is a wash.
 
-Per-clip AT event log, mirroring the note text format (`tick:pitch:val;`):
+### Data model (`dsp/seq8.c`, on the track struct beside `clip_cc_auto`)
 
-- Poly: `pitch` = note number (0–127). Channel: `pitch` = `255` (track-wide sentinel).
-- Stored sorted by tick. Per-clip cap **`AT_MAX_EVENTS = 2048`** (matches note scale).
-- **Decimation at capture** (keeps the log small and the state buffer safe):
-  1. drop if `|val − lastVal(forThisPitch)| < 2`;
-  2. drop if same tick + same pitch already written (last-wins);
-  3. min inter-event spacing 1 tick per pitch.
-  At incoming ~15 Hz, decimation yields well under the cap for multi-bar clips.
+`cc_auto` has 8 *fixed* lanes (one per knob); poly AT needs a lane **per held pitch**
+(dynamic). So a parallel struct with pitch-keyed lanes:
 
-### Recording
+```c
+#define AT_MAX_LANES   12     /* max distinct AT pitches per clip (poly); channel uses 1 */
+#define AT_MAX_POINTS  512    /* breakpoints per lane (1/32-snapped → 16 bars) */
+typedef struct {
+    uint8_t  pitch[AT_MAX_LANES];                 /* 0-127 poly note; 255 = channel; 254 = free */
+    uint16_t count[AT_MAX_LANES];
+    uint16_t ticks[AT_MAX_LANES][AT_MAX_POINTS];  /* sorted, clip-tick */
+    uint8_t  vals [AT_MAX_LANES][AT_MAX_POINTS];
+} at_auto_t;   /* ~18 KB/clip → clip_at_auto[NUM_CLIPS] per track ≈ 2.3 MB total */
+```
 
-When transport playing + record-armed + AftTch non-Off: capture incoming pad pressure
-into the active clip's AT log at the current playhead tick (loop-window relative), with
-decimation. Reuses the existing record-arm gate.
+Helpers mirror cc_auto: `at_auto_reset`, `at_auto_find_lane(pitch)` /
+`at_auto_alloc_lane(pitch)`, `at_auto_set_point(lane, tick, val)` (insert/update sorted),
+`at_auto_eval(lane, tick)` (linear interpolate + hold at edges). `254` = free slot;
+allocation fails gracefully past `AT_MAX_LANES` (drops the least-recently-used or simply
+ignores new pitches — v1: ignore, log once).
 
-### Playback
+### Recording (in the `tN_live_at` DSP handler — already has `tr`, pitch, press, mode)
 
-In the per-track playback step (where notes/CC emit), scan AT events in the current tick
-window and emit via `pfx_send` (same routing as live). Emit-on-change (mirror
-`cc_auto_last_sent`; reset on transport play). Loop-window aware (wrap like notes/CC).
+When `tr->recording && pad_mode == MELODIC` and mode non-Off: snap to 1/32
+(`(current_clip_tick/12)*12`, matching CC), find/alloc the lane (poly → by pitch; channel
+→ the `255` lane), `at_auto_set_point`. Density is grid-limited (one point per 1/32 per
+lane) like CC — no separate decimation pass needed; the user accepted the resulting size.
+Live send still happens first (so it's monitored during count-in; capture is gated on
+`recording`, which is false during count-in).
 
-### Clear
+### Playback (render tick path, beside the CC-automation emit)
 
-`tN_cC_at_clear` handler wipes a clip's AT log + marks `state_dirty`. **Gesture: TBD**
-(user to design; e.g. Delete + a dedicated control). Wired into Clear Session and
-hard-reset-clip paths.
+Each tick, for every allocated lane: `at_auto_eval` at the playhead clip-tick, emit on
+change via `pfx_send` (`0xA0|ch,pitch,v` poly / `0xD0|ch,v` channel). Per-lane
+`last_sent[AT_MAX_LANES]` (0xFF = force); reset on transport play. Loop-window aware (eval
+uses the same wrapped clip-tick as notes/CC). **Independent of the AftTch toggle** —
+recorded AT always plays (decision #2).
+
+### Clear — the AUTOMATION bank (decided 2026-05-25)
+
+The CC PARAM bank (bank 6) is generalized into the **AUTOMATION** bank — a home for all
+per-clip continuous-modulation data (CC now, AT now, PB later).
+
+- **Header rename:** `CC AUTOMATION` → `AUTOMATION` (`ui_constants.mjs` `BANKS[6].name`).
+- **Type indicators:** in the bank's OLED header, show inverted badges (white bg / black
+  text) for each automation type **that has data in the focused clip** — `AT`, `CC` (and
+  `PB` once implemented). A type with no data shows **nothing**. Needs a per-clip "has
+  data" signal per type: CC = any knob has automation (`trackCCAutoBits`) or a rest value
+  (`clipCCVal`); AT = new get_param `tN_cC_at_has` (→ `at_auto_has_data`); PB = always
+  false for now.
+- **Delete tap** (press+release with no jog/knob/step in between) → **CLEAR AUTOMATION**
+  modal: jog scrolls, jog-click toggles a checkmark per type, a **CLEAR** row executes the
+  checked types, Back/Note cancels. **PB row is shown dimmed/disabled** (placeholder).
+  Existing Delete+knob-touch (per-knob CC clear) and Delete+step (per-step CC clear)
+  **stay**. CC clear = all CC data (the existing `cc_auto_clear`); AT clear =
+  `tN_cC_at_clear`.
+- **Bank reset = clear ALL automation:** both **Delete+jog** (bank-6 reset) and
+  **Shift+Delete+jog** (broad melodic FX reset) now also clear AT (and PB when it exists),
+  not just CC.
+- `tN_cC_at_clear` handler (done) + AT auto-clear at every clip-wipe site (Clear Session,
+  clip/row cut+copy, hard-reset) — done. Note-only clears leave AT intact.
 
 ### State / persistence
 
-New sparse per-clip key (e.g. `t%dc%d_at`) serialized as text — no state version bump
-(text format tolerates growth). **Budget risk:** AT events add to the 64 KB `state_buf`;
-the cap + decimation must keep total clip state under budget (overflow falls back to a
-slow synchronous write). Verify with a worst-case full-pressure clip on-device.
+Per-clip serialization of allocated lanes only (sparse). Format per lane:
+`p<pitch>:<t0>,<v0>;<t1>,<v1>;…` under a per-clip key (e.g. `t%dc%d_at`), emitted only for
+clips with ≥1 lane. **No state version bump** (stays v=32) — additive text keys, exactly
+like the CC `rest_val` addition: old state loads with AT empty, new state's AT keys are
+ignored by an old binary. No wipe. Interpolated breakpoints keep this well under the
+64 KB `state_buf`; still spot-check a worst-case full-pressure clip on-device.
 
-### Open questions for the user (resolve before building Phase 2)
+### Resolved decisions (2026-05-25)
 
-1. **Count-in capture** — should pressure during count-in be captured (like preroll
-   notes) or ignored until recording proper starts?
-2. **Scene-bake** — does baking a scene carry its AT data, or is AT live/recorded-only
-   (excluded from bake)?
-3. **Ableton export** — should the `.ablbundle` export emit recorded AT into the MIDI
-   clips, or skip it for v1?
-4. **Mode-switch with recorded data** — if a clip recorded Poly AT and the user switches
-   AftTch to Channel (or Off), what happens to the recorded poly data on playback —
-   collapse to channel, mute, or keep as-is?
-5. **Cap/decimation numbers** — confirm `AT_MAX_EVENTS = 2048` and the `|Δ| ≥ 2`
-   threshold feel right after device testing.
+1. **Auto-record.** Pressure is captured automatically whenever a melodic track is
+   record-armed and its AftTch mode is non-Off. No separate AT-arm.
+2. **The AftTch toggle governs incoming only** (live send + recording). **Recorded AT
+   always plays back as stored, independent of the toggle** — Off stops *new* AT from
+   being sent/recorded but does not mute already-recorded AT. Each stored event therefore
+   encodes its form (poly carries its pitch; channel is the `255` sentinel) so playback
+   replays faithfully regardless of the current mode. Removing recorded AT is the clear
+   gesture's job, not the toggle's.
+3. **Count-in: monitored, not recorded.** Live AT keeps sounding through the count-in
+   (the live-send path isn't gated on recording state); capture is gated to start only
+   when recording proper begins (post-count-in), like notes.
+4. **Bake / export / live-merge: capture AT *and* CC automation — deferred to Phase 3.**
+   The user wants recorded pressure *and* CC automation baked into Capture/bake,
+   Export-to-Ableton, and Live-Merge output. This is a cross-cutting follow-up (three
+   subsystems; CC-in-bake is itself new) and is intentionally **out of this Phase 2 build**
+   to keep first-time AT playback verifiable in isolation.
+5. **Cap/decimation:** `AT_MAX_EVENTS = 2048`/clip, decimate at capture (`|Δ| < 2` skip,
+   one point per pitch per tick). Confirmed; tune after device testing.
+
+### Build increments (Phase 2, device-verified each step)
+
+- **2a — storage:** per-clip AT event array on the clip struct + text serialize/load +
+  `clip_init`/clear defaults. Self-verify (ssh state file, no crash).
+- **2b — record:** capture incoming pad AT into the active clip when armed + AftTch
+  non-Off + playing + not count-in, with decimation. (Built with 2c — record needs a
+  consumer to be user-testable.)
+- **2c — playback:** emit stored AT in the playhead tick window via `pfx_send`,
+  emit-on-change, loop-window aware. **First user-verifiable unit** (record a press →
+  hear it on the next loop).
+- **2d — clear:** `tN_cC_at_clear` handler wiping a clip's AT log + Clear-Session /
+  hard-reset-clip hooks; user-facing **gesture TBD** (design with user).
 
 ## Files
 

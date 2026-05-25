@@ -213,6 +213,8 @@ export const S = {
     /* Per-clip resting value ("clip CC") per knob; -1 = "—" (unset, send nothing). */
     clipCCVal: Array.from({length: 8}, () => Array.from({length: 16}, () => new Array(8).fill(-1))),
     trackCCAutoBits: Array.from({length: 8}, () => new Array(16).fill(0)),
+    /* Per-clip "has recorded aftertouch automation" (AUTOMATION-bank indicator). */
+    clipAtHas: Array.from({length: 8}, () => new Array(16).fill(false)),
     trackCCLiveVal: Array.from({length: 8}, () => new Array(8).fill(-1)),
     /* Active CC lane (last-touched knob) per track — persistent, drives the
      * step-LED gradient and the always-highlighted overview cell. */
@@ -370,6 +372,12 @@ export const S = {
      * confirm } where confirm is null or { kind:'load'|'overwrite'|'wipe',
      * sel:1(=No default), targetId, wipeIds }. */
     snapshotPicker: null,
+    /* CLEAR AUTOMATION modal (Delete-tap on the AUTO bank). null = closed; else
+     * { sel, at, cc } — sel 0..3 (AT/PB/CC/CLEAR), at/cc = checked-to-clear. */
+    clearAutoMenu: null,
+    /* Armed on Delete-press in the AUTO bank; any other input disarms it. A clean
+     * Delete tap (still armed at release) opens the CLEAR AUTOMATION menu. */
+    deleteTapArmed: false,
     /* Set one tick after a snapshot Save fires the DSP 'save'; the live state
      * file is on disk by then, so the copy-into-snapshot runs in tick().
      * { id, label } (id reused = overwrite). */

@@ -313,8 +313,8 @@ export const BANKS = [
         p('Sync', 'Sync to Clock', 'tarp_sync',       'track', 0,   1,   1,  fmtBool,     16),
         p('Ltch', 'Latch',         'tarp_latch',      'track', 0,   1,   0,  fmtBool,     16),
     ]},
-    /* 6 — CC PARAM (pad 98) — per-track CC assignments; custom handling, no DSP-wired knobs */
-    { name: 'CC AUTOMATION', knobs: [_X, _X, _X, _X, _X, _X, _X, _X] },
+    /* 6 — AUTO (pad 98) — per-clip CC + aftertouch (+ PB later) automation; custom handling, no DSP-wired knobs */
+    { name: 'AUTO', knobs: [_X, _X, _X, _X, _X, _X, _X, _X] },
     /* 7 — ALL LANES (drum pad 92) — macro controls across all 32 drum lanes.
      * K2 Shft + Shift held = Nudge (replaced standalone Ndg knob). */
     { name: 'ALL LANES', knobs: [

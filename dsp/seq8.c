@@ -190,6 +190,24 @@ typedef struct {
     uint8_t  rest_val[8];
 } cc_auto_t;
 
+/* Per-clip pad-pressure (aftertouch) automation. Interpolated breakpoints like
+ * cc_auto, but lanes are keyed by pitch (poly) rather than fixed knobs:
+ * pitch[lane] = 0..127 poly note, 255 = channel-wide, 254 = free slot.
+ * 1/32-snapped on record, linear-interpolated + hold on playback. */
+#define AT_MAX_LANES   12     /* max distinct AT pitches per clip (poly) */
+#define AT_MAX_POINTS  512    /* breakpoints per lane (1/32-snapped → 16 bars) */
+#define AT_LANE_FREE   254
+#define AT_LANE_CHAN   255
+typedef struct {
+    uint8_t  pitch[AT_MAX_LANES];
+    uint16_t count[AT_MAX_LANES];
+    uint16_t ticks[AT_MAX_LANES][AT_MAX_POINTS];
+    uint8_t  vals [AT_MAX_LANES][AT_MAX_POINTS];
+} at_auto_t;
+/* Forward decl: at_auto_reset is used in create_instance + seq8_load_state, both
+ * defined above the helper bodies. */
+static void at_auto_reset(at_auto_t *a);
+
 typedef struct {
     /* Live params mirrored from clip_pfx_params_t via pfx_apply_params */
     uint8_t  style;        /* 0=Off (bypass), 1..9=Up/Dn/U-D/D-U/Cnv/Div/Ord/Rnd/RnO */
@@ -602,6 +620,12 @@ typedef struct {
     uint8_t  cc_type[8];
     /* Per-clip CC automation (melodic clips; persisted) */
     cc_auto_t clip_cc_auto[NUM_CLIPS];
+    /* Per-clip pad-pressure aftertouch automation (melodic clips; persisted) */
+    at_auto_t clip_at_auto[NUM_CLIPS];
+    /* Last AT value sent per lane slot during playback; 0xFF = force resend.
+     * Indexed by lane slot of the currently-playing clip; reset on play + clip change. */
+    uint8_t   at_last_sent[AT_MAX_LANES];
+    uint8_t   at_last_clip;   /* active_clip the at_last_sent[] cache reflects */
     /* Last CC value sent per knob during automation playback; 0xFF = force resend */
     uint8_t   cc_auto_last_sent[8];
     /* Defined output value at the playhead per knob (for the realtime display);
@@ -1340,6 +1364,22 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
               }
           }
     }
+    /* Pad-pressure aftertouch automation (melodic clips, sparse per track/clip/lane).
+     * Value = "<pitch>|<tick>:<val>;..." — pitch 0-127 poly, 255 channel-wide. */
+    { int _ta, _ca2, _la, _ia;
+      for (_ta = 0; _ta < NUM_TRACKS; _ta++)
+          for (_ca2 = 0; _ca2 < NUM_CLIPS; _ca2++) {
+              const at_auto_t *_ata = &inst->tracks[_ta].clip_at_auto[_ca2];
+              for (_la = 0; _la < AT_MAX_LANES; _la++) {
+                  if (_ata->pitch[_la] == AT_LANE_FREE || _ata->count[_la] == 0) continue;
+                  fprintf(fp, ",\"t%dc%dat%d\":\"%d|", _ta, _ca2, _la, (int)_ata->pitch[_la]);
+                  for (_ia = 0; _ia < (int)_ata->count[_la]; _ia++)
+                      fprintf(fp, "%d:%d;",
+                              (int)_ata->ticks[_la][_ia], (int)_ata->vals[_la][_ia]);
+                  fputc('"', fp);
+              }
+          }
+    }
     /* Global settings */
     fprintf(fp, ",\"key\":%d,\"scale\":%d,\"lq\":%d",
             (int)inst->pad_key, (int)inst->pad_scale, (int)inst->launch_quant);
@@ -1386,6 +1426,14 @@ static void seq8_load_state(seq8_instance_t *inst) {
             seq8_ilog(inst, "SEQ8 state: wrong version, deleted");
             return;
         }
+    }
+
+    /* AT automation: clear all lanes before the sparse parse below (frees lanes
+     * to 254 and prevents append-on-reload). */
+    { int _rt, _rc;
+      for (_rt = 0; _rt < NUM_TRACKS; _rt++)
+          for (_rc = 0; _rc < NUM_CLIPS; _rc++)
+              at_auto_reset(&inst->tracks[_rt].clip_at_auto[_rc]);
     }
 
     int t, c;
@@ -1622,6 +1670,42 @@ static void seq8_load_state(seq8_instance_t *inst) {
                       uint8_t _idx = _cca->count[_ka]++;
                       _cca->ticks[_ka][_idx] = (uint16_t)clamp_i(_tv, 0, 65535);
                       _cca->vals[_ka][_idx]  = (uint8_t)clamp_i(_vv, 0, 127);
+                  }
+              }
+          }
+    }
+    /* Pad-pressure aftertouch automation (melodic clips, sparse per lane slot).
+     * Value = "<pitch>|<tick>:<val>;...". Lanes were cleared above. */
+    { int _ta, _ca2, _la;
+      char _ats[40];
+      for (_ta = 0; _ta < NUM_TRACKS; _ta++)
+          for (_ca2 = 0; _ca2 < NUM_CLIPS; _ca2++) {
+              at_auto_t *_ata = &inst->tracks[_ta].clip_at_auto[_ca2];
+              for (_la = 0; _la < AT_MAX_LANES; _la++) {
+                  snprintf(_ats, sizeof(_ats), "\"t%dc%dat%d\":\"", _ta, _ca2, _la);
+                  const char *_qp = strstr(buf, _ats);
+                  if (!_qp) continue;
+                  _qp += strlen(_ats);
+                  int _pp = 0;
+                  while (*_qp >= '0' && *_qp <= '9') _pp = _pp * 10 + (*_qp++ - '0');
+                  if (*_qp != '|') continue;
+                  _qp++;
+                  _ata->pitch[_la] = (uint8_t)clamp_i(_pp, 0, 255);
+                  _ata->count[_la] = 0;
+                  while (*_qp && *_qp != '"' && _ata->count[_la] < AT_MAX_POINTS) {
+                      int _tv = 0, _vv = 0;
+                      while (*_qp >= '0' && *_qp <= '9') _tv = _tv * 10 + (*_qp++ - '0');
+                      if (*_qp != ':') {
+                          while (*_qp && *_qp != ';' && *_qp != '"') _qp++;
+                          if (*_qp == ';') _qp++;
+                          continue;
+                      }
+                      _qp++;
+                      while (*_qp >= '0' && *_qp <= '9') _vv = _vv * 10 + (*_qp++ - '0');
+                      if (*_qp == ';') _qp++;
+                      uint16_t _idx = _ata->count[_la]++;
+                      _ata->ticks[_la][_idx] = (uint16_t)clamp_i(_tv, 0, 65535);
+                      _ata->vals[_la][_idx]  = (uint8_t)clamp_i(_vv, 0, 127);
                   }
               }
           }
@@ -5288,6 +5372,12 @@ static void *create_instance(const char *module_dir, const char *json_defaults) 
         memset(inst->tracks[t].cc_auto_cur_val, 0xFF, 8);
         for (c = 0; c < NUM_CLIPS; c++)
             memset(inst->tracks[t].clip_cc_auto[c].rest_val, 0xFF, 8);
+        /* AT automation: free all lanes (pitch=254; a zeroed pitch would alias
+         * note 0). at_last_clip=0xFF forces a playback cache reset on first tick. */
+        for (c = 0; c < NUM_CLIPS; c++)
+            at_auto_reset(&inst->tracks[t].clip_at_auto[c]);
+        memset(inst->tracks[t].at_last_sent, 0xFF, AT_MAX_LANES);
+        inst->tracks[t].at_last_clip = 0xFF;
         inst->tracks[t].pfx.looper_on = 1;
         inst->tracks[t].pfx.track_idx = (uint8_t)t;
         /* Default routing: tracks 1-4 → Move (ch 1-4), tracks 5-8 → Schwung (ch 5-8) */
@@ -5972,6 +6062,76 @@ static int cc_auto_eval(const cc_auto_t *a, int k, uint32_t t,
         int fr = (int)(t - (uint32_t)t0) * 127 / sp;
         return clamp_i(v0 + (v1 - v0) * fr / 127, 0, 127);
     }
+}
+
+/* ---- Pad-pressure aftertouch automation (at_auto_t) ---- */
+
+/* Reset: drop all lanes (free slots = AT_LANE_FREE, counts 0). */
+static void at_auto_reset(at_auto_t *a) {
+    memset(a, 0, sizeof(at_auto_t));
+    memset(a->pitch, AT_LANE_FREE, AT_MAX_LANES);
+}
+
+/* True if the clip has any recorded AT data. */
+static int at_auto_has_data(const at_auto_t *a) {
+    int i;
+    for (i = 0; i < AT_MAX_LANES; i++)
+        if (a->pitch[i] != AT_LANE_FREE && a->count[i] > 0) return 1;
+    return 0;
+}
+
+/* Find the lane for a pitch key (0-127 poly, 255 channel), or -1. */
+static int at_auto_find_lane(const at_auto_t *a, uint8_t key) {
+    int i;
+    for (i = 0; i < AT_MAX_LANES; i++) if (a->pitch[i] == key) return i;
+    return -1;
+}
+
+/* Find-or-allocate the lane for a pitch key; -1 if all lanes are in use. */
+static int at_auto_alloc_lane(at_auto_t *a, uint8_t key) {
+    int i = at_auto_find_lane(a, key);
+    if (i >= 0) return i;
+    for (i = 0; i < AT_MAX_LANES; i++)
+        if (a->pitch[i] == AT_LANE_FREE) { a->pitch[i] = key; a->count[i] = 0; return i; }
+    return -1;
+}
+
+/* Insert/update a sorted breakpoint in a lane. Drops silently when full. */
+static void at_auto_set_point(at_auto_t *a, int lane, uint16_t tick, uint8_t val) {
+    int i, n = (int)a->count[lane];
+    for (i = 0; i < n; i++)
+        if (a->ticks[lane][i] == tick) { a->vals[lane][i] = val; return; }
+    if (n >= AT_MAX_POINTS) return;
+    int ins = n;
+    for (i = 0; i < n; i++) if (a->ticks[lane][i] > tick) { ins = i; break; }
+    for (i = n; i > ins; i--) {
+        a->ticks[lane][i] = a->ticks[lane][i - 1];
+        a->vals[lane][i]  = a->vals[lane][i - 1];
+    }
+    a->ticks[lane][ins] = tick;
+    a->vals[lane][ins]  = val;
+    a->count[lane]++;
+}
+
+/* Evaluate lane output at clip tick t: linear interpolation inside the recorded
+ * span, hold the last value after it, undefined before the first point (so no
+ * pressure is asserted ahead of the gesture). *defined=0 → send nothing. */
+static int at_auto_eval(const at_auto_t *a, int lane, uint32_t t, int *defined) {
+    int n = (int)a->count[lane];
+    if (defined) *defined = 1;
+    if (n == 0 || (uint16_t)t < a->ticks[lane][0]) { if (defined) *defined = 0; return -1; }
+    int lo = -1, hi = -1, i;
+    for (i = 0; i < n; i++) {
+        if (a->ticks[lane][i] <= (uint16_t)t) lo = i;
+        else { hi = i; break; }
+    }
+    if (hi == -1) return (int)a->vals[lane][lo];   /* tail: hold last value */
+    int t0 = a->ticks[lane][lo], t1 = a->ticks[lane][hi];
+    int v0 = a->vals[lane][lo],  v1 = a->vals[lane][hi];
+    int sp = t1 - t0;
+    if (sp <= 0) return v1;
+    int fr = (int)(t - (uint32_t)t0) * 127 / sp;
+    return clamp_i(v0 + (v1 - v0) * fr / 127, 0, 127);
 }
 
 /* Emit a continuous-modulation value for knob k on track tr, branching on
@@ -7686,6 +7846,11 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
                     if (_ca->count[_kb] > 0) _bits |= (1 << _kb);
                 return snprintf(out, out_len, "%d", _bits);
             }
+            if (!strcmp(p, "_at_has")) {
+                /* 1 if this clip has any recorded pad-pressure aftertouch, else 0. */
+                return snprintf(out, out_len, "%d",
+                    at_auto_has_data(&tr->clip_at_auto[cidx]) ? 1 : 0);
+            }
             if (!strcmp(p, "_cc_rest")) {
                 /* Resting value per knob (255 = "—"). */
                 cc_auto_t *_ca = &tr->clip_cc_auto[cidx];
@@ -8463,6 +8628,31 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         cc_auto_set_point(&tr->clip_cc_auto[tr->active_clip], _kt,
                                           (uint16_t)(_tsnap <= 65534 ? _tsnap : 65534),
                                           tr->cc_live_val[_kt]);
+                    }
+                }
+                /* Pad-pressure aftertouch automation playback (interpolated;
+                 * independent of the live AftTch toggle — recorded AT always
+                 * plays). Per-lane emit-on-change; cache reset on clip change. */
+                {
+                    at_auto_t *_at = &tr->clip_at_auto[tr->active_clip];
+                    if (tr->at_last_clip != tr->active_clip) {
+                        tr->at_last_clip = tr->active_clip;
+                        memset(tr->at_last_sent, 0xFF, AT_MAX_LANES);
+                    }
+                    uint8_t _ach = tr->channel & 0x0F;
+                    int _al;
+                    for (_al = 0; _al < AT_MAX_LANES; _al++) {
+                        uint8_t _ak = _at->pitch[_al];
+                        if (_ak == AT_LANE_FREE) continue;
+                        int _adef;
+                        int _av = at_auto_eval(_at, _al, _ct, &_adef);
+                        if (!_adef) continue;
+                        if ((uint8_t)_av == tr->at_last_sent[_al]) continue;
+                        tr->at_last_sent[_al] = (uint8_t)_av;
+                        if (_ak == AT_LANE_CHAN)
+                            pfx_send(&tr->pfx, (uint8_t)(0xD0 | _ach), (uint8_t)_av, 0);
+                        else
+                            pfx_send(&tr->pfx, (uint8_t)(0xA0 | _ach), _ak, (uint8_t)_av);
                     }
                 }
             }

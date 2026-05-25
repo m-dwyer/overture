@@ -293,6 +293,8 @@ static void set_param(void *instance, const char *key, const char *val) {
                     /* Re-assert CC automation at the playhead on play: force the
                      * next tick to resend every knob's value (emit-on-change). */
                     memset(_tr->cc_auto_last_sent, 0xFF, 8);
+                    /* Same for pad-pressure aftertouch automation. */
+                    memset(_tr->at_last_sent, 0xFF, AT_MAX_LANES);
                     if (_tr->will_relaunch) {
                         _tr->clip_playing      = 1;
                         _tr->will_relaunch     = 0;
@@ -788,9 +790,12 @@ static void set_param(void *instance, const char *key, const char *val) {
                  * defaults back to "—" across set switches. */
                 for (c2 = 0; c2 < NUM_CLIPS; c2++)
                     cc_auto_reset(&tr2->clip_cc_auto[c2]);
+                for (c2 = 0; c2 < NUM_CLIPS; c2++)
+                    at_auto_reset(&tr2->clip_at_auto[c2]);
                 memset(tr2->cc_type, 0, 8);
                 memset(tr2->cc_auto_last_sent, 0xFF, 8);
                 memset(tr2->cc_auto_cur_val, 0xFF, 8);
+                memset(tr2->at_last_sent, 0xFF, AT_MAX_LANES);
                 drum_track_init(tr2, t2);
                 { int _rl; for (_rl = 0; _rl < DRUM_LANES; _rl++) tr2->drum_lane_pfx[_rl].route = tr2->pfx.route; }
                 drum_repeat_init_defaults(tr2);
@@ -1073,6 +1078,7 @@ static void set_param(void *instance, const char *key, const char *val) {
             dst->active = src->active;
             clip_migrate_to_notes(dst);
             inst->tracks[dstT].clip_cc_auto[dstC] = inst->tracks[srcT].clip_cc_auto[srcC];
+            inst->tracks[dstT].clip_at_auto[dstC] = inst->tracks[srcT].clip_at_auto[srcC];
             if ((int)inst->tracks[dstT].active_clip == dstC)
                 pfx_sync_from_clip(&inst->tracks[dstT]);
         }
@@ -1106,6 +1112,7 @@ static void set_param(void *instance, const char *key, const char *val) {
             dst->active = src->active;
             clip_migrate_to_notes(dst);
             inst->tracks[t].clip_cc_auto[dstRow] = inst->tracks[t].clip_cc_auto[srcRow];
+            inst->tracks[t].clip_at_auto[dstRow] = inst->tracks[t].clip_at_auto[srcRow];
             if ((int)inst->tracks[t].active_clip == dstRow)
                 pfx_sync_from_clip(&inst->tracks[t]);
         }
@@ -1169,10 +1176,12 @@ static void set_param(void *instance, const char *key, const char *val) {
             dst->active = src->active;
             clip_migrate_to_notes(dst);
             dstTr->clip_cc_auto[dstC] = srcTr->clip_cc_auto[srcC];
+            dstTr->clip_at_auto[dstC] = srcTr->clip_at_auto[srcC];
             if ((int)dstTr->active_clip == dstC) pfx_sync_from_clip(dstTr);
             silence_track_notes_v2(inst, srcTr);
             clip_init(src);
             cc_auto_reset(&srcTr->clip_cc_auto[srcC]);
+            at_auto_reset(&srcTr->clip_at_auto[srcC]);
             if ((int)srcTr->active_clip == srcC) pfx_sync_from_clip(srcTr);
             srcTr->rec_pending_count = 0;
             srcTr->recording = 0;
@@ -1211,10 +1220,12 @@ static void set_param(void *instance, const char *key, const char *val) {
             dst->active = src->active;
             clip_migrate_to_notes(dst);
             tr->clip_cc_auto[dstRow] = tr->clip_cc_auto[srcRow];
+            tr->clip_at_auto[dstRow] = tr->clip_at_auto[srcRow];
             if ((int)tr->active_clip == dstRow) pfx_sync_from_clip(tr);
             silence_track_notes_v2(inst, tr);
             clip_init(src);
             cc_auto_reset(&tr->clip_cc_auto[srcRow]);
+            at_auto_reset(&tr->clip_at_auto[srcRow]);
             if ((int)tr->active_clip == srcRow) pfx_sync_from_clip(tr);
             tr->rec_pending_count = 0;
             tr->recording = 0;
@@ -2051,6 +2062,10 @@ static void set_param(void *instance, const char *key, const char *val) {
                 cl->note_count = 0;
                 memset(cl->notes, 0, sizeof(cl->notes));
                 cl->occ_dirty = 1;
+                /* Clip clear also removes all automation (CC + AT, + PB later). */
+                cc_auto_reset(&tr->clip_cc_auto[cidx]);
+                at_auto_reset(&tr->clip_at_auto[cidx]);
+                memset(tr->at_last_sent, 0xFF, AT_MAX_LANES);
                 /* Deactivate track if the cleared clip is active or queued */
                 if ((int)tr->active_clip == cidx) {
                     silence_track_notes_v2(inst, tr);
@@ -2087,6 +2102,10 @@ static void set_param(void *instance, const char *key, const char *val) {
                 cl->note_count = 0;
                 memset(cl->notes, 0, sizeof(cl->notes));
                 cl->occ_dirty = 1;
+                /* Clip clear also removes all automation (CC + AT, + PB later). */
+                cc_auto_reset(&tr->clip_cc_auto[cidx]);
+                at_auto_reset(&tr->clip_at_auto[cidx]);
+                memset(tr->at_last_sent, 0xFF, AT_MAX_LANES);
                 silence_track_notes_v2(inst, tr);
                 pfx_sync_from_clip(tr);
                 tr->rec_pending_count = 0;
@@ -2105,11 +2124,19 @@ static void set_param(void *instance, const char *key, const char *val) {
                 silence_track_notes_v2(inst, tr);
                 clip_init(cl);
                 cc_auto_reset(&tr->clip_cc_auto[cidx]);
+                at_auto_reset(&tr->clip_at_auto[cidx]);
                 if ((int)tr->active_clip == cidx)
                     pfx_sync_from_clip(tr);
                 tr->rec_pending_count = 0;
                 tr->recording = 0;
                 if (tr->queued_clip == cidx) tr->queued_clip = -1;
+                inst->state_dirty = 1;
+                return;
+            }
+            if (!strncmp(p, "_at_clear", 9) && p[9] == '\0') {
+                /* tN_cC_at_clear — wipe this clip's pad-pressure aftertouch automation. */
+                at_auto_reset(&tr->clip_at_auto[cidx]);
+                memset(tr->at_last_sent, 0xFF, AT_MAX_LANES);
                 inst->state_dirty = 1;
                 return;
             }
@@ -4634,6 +4661,21 @@ static void set_param(void *instance, const char *key, const char *val) {
                 pfx_send(&tr->pfx, (uint8_t)(0xA0 | ch),
                          (uint8_t)clamp_i(pitch, 0, 127),
                          (uint8_t)clamp_i(press, 0, 127));
+            /* Record into the active clip when armed+recording on a melodic track.
+             * The live send above runs regardless, so AT is monitored during the
+             * count-in (recording=0 then); capture starts at recording proper.
+             * Snap to 1/32 (matches CC); lane keyed by pitch (poly) / 255 (chan). */
+            if (tr->recording && tr->pad_mode == PAD_MODE_MELODIC_SCALE) {
+                uint8_t  key  = (mode == 2) ? AT_LANE_CHAN : (uint8_t)clamp_i(pitch, 0, 127);
+                uint32_t snap = (tr->current_clip_tick / 12) * 12;
+                int lane = at_auto_alloc_lane(&tr->clip_at_auto[tr->active_clip], key);
+                if (lane >= 0) {
+                    at_auto_set_point(&tr->clip_at_auto[tr->active_clip], lane,
+                                      (uint16_t)(snap <= 65534 ? snap : 65534),
+                                      (uint8_t)clamp_i(press, 0, 127));
+                    inst->state_dirty = 1;
+                }
+            }
             return;
         }
 

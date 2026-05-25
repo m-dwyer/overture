@@ -670,7 +670,9 @@ Quick toggle: **Shift + Step 11** flips ARP IN on/off using the last-used style.
 
 > **Try this.** Enable ARP IN with Style = Up, Rate = 1/16, Latch = On. Play a chord, then switch to a different track. The arp runs hands-free on the first track while you sequence on the second.
 
-## 5.7 CC AUTOMATION bank (melodic tracks only)
+## 5.7 AUTOMATION bank — "AUTO" (melodic tracks only)
+
+The bank header reads **AUTO**. It's the home for all of a clip's continuous-modulation data: the 8 CC knob lanes plus recorded **pad-pressure aftertouch** (see [§13.1 AftTch](#131-track-config)). When the focused clip contains data, inverted badges appear in the header — **AT** (recorded aftertouch) and/or **CC** (knob automation or a resting value). A Pitch Bend (**PB**) badge is reserved for later. A type with no data shows no badge.
 
 Each of the 8 knobs is an independent **continuous-modulation lane**. Each lane holds, **per clip**: recorded automation (up to 1024 points, 1/32 resolution, interpolated on playback) plus an optional **resting value** ("clip CC") the lane falls back to. Output follows the track's Route and MIDI channel.
 
@@ -707,7 +709,11 @@ Knob→target **assignment is per-track**; the resting value and automation are 
 
 **Step-edit.** Hold a step in this bank: the OLED shows "CC S1–S16" with a 4×2 knob grid. Turning a knob writes a clean flat hold across that step (no stray ramp). From an unset step, turning up sets a value; turning **down past 0 clears** that knob's point back to "—".
 
-**Clearing.** Delete + jog click clears all CC automation **and resting values** for the active clip. Delete + knob touch (or turn) clears that one knob (automation + resting value). Delete + a step button clears **all** knobs' points at that step.
+**Clearing.**
+- **Tap Delete** (press & release, without turning the jog) opens the **CLEAR AUTOMATION** menu: jog to scroll the list — **Aftertouch (AT)**, **Pitch bend (PB)** (disabled placeholder), **Control Change (CC)**, **CLEAR**, **Cancel** — jog-click to check AT and/or CC, then **CLEAR** to wipe the checked types for the active clip. Exit without changing anything via **Cancel**, the **Note/Session** button, or **tapping Delete again**.
+- **Delete + jog click** and **Shift + Delete + jog** clear **all** automation (CC + AT) for the clip.
+- **Delete + knob touch (or turn)** clears that one knob's CC (automation + resting value). **Delete + a step button** clears **all** knobs' CC points at that step.
+- **Clearing the clip** (notes) also removes all of its automation.
 
 ---
 
@@ -1320,7 +1326,7 @@ The first section, showing the **active** track's configuration. Header reads `T
 | Mode | Melodic · Drum | Converts the track's notes when switched (see [§2.5](#25-melodic-vs-drum-tracks)) |
 | VelIn | Live · 1–127 | Live = raw velocity. A fixed value overrides all input velocity on this track, applied pre-sequencer. |
 | Looper | On · Off | Whether this track feeds Performance Mode |
-| AftTch | Off · Poly · Channel | Pad-pressure aftertouch send. **Shown on melodic tracks only** (on drum tracks pad pressure drives repeat velocity instead). Hold a note and press harder to send aftertouch to the track output. **Poly** sends per-note aftertouch (`0xA0`); **Channel** sends one track-wide channel-pressure value (`0xD0`). On **Move**-routed tracks only Off · Poly is offered (Move instruments take poly aftertouch). Default Off. |
+| AftTch | Off · Poly · Channel | Pad-pressure aftertouch send. **Shown on melodic tracks only** (on drum tracks pad pressure drives repeat velocity instead). Hold a note and press harder to send aftertouch to the track output; when the track is record-armed the pressure is also recorded into the clip and replays each loop (see [§5.7](#57-automation-bank--auto-melodic-tracks-only)). The toggle gates *incoming* aftertouch only — recorded aftertouch always plays back until cleared. **Poly** sends per-note aftertouch (`0xA0`); **Channel** sends one track-wide channel-pressure value (`0xD0`). On **Move**-routed tracks only Off · Poly is offered (Move instruments take poly aftertouch). Default Off. |
 | **Edit Slot...** | Action | Open Schwung's native chain-slot editor for this track. Shown only on **Schwung-routed** tracks. |
 | **Edit Synth...** | Action | Open Move firmware's preset browser and device-edit pages for this track. Shown only on **Move-routed** tracks. |
 

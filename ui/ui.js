@@ -714,6 +714,12 @@ function clearClip(t, ac, keepPlaying) {
     const len = S.clipLength[t][ac];
     for (let s = 0; s < len; s++) S.clipSteps[t][ac][s] = 0;
     S.clipNonEmpty[t][ac] = false;
+    /* Clip clear now also wipes all automation DSP-side — mirror it so the
+     * AUTOMATION-bank indicators + CC values reflect the clear immediately. */
+    S.trackCCAutoBits[t][ac] = 0;
+    S.clipCCVal[t][ac] = new Array(8).fill(-1);
+    S.clipAtHas[t][ac] = false;
+    invalidateLEDCache();
     /* Re-read steps from DSP 2 ticks later so step LEDs catch up after _clear
      * has drained. Belt-and-suspenders against any state that still reads from
      * DSP after the synchronous JS mirror wipe. */
@@ -1450,6 +1456,30 @@ function drawSnapshotPicker() {
     if (top + visible < total) print(120, listTopY + (visible - 1) * lineH, 'v', 1);
 }
 
+/* CLEAR AUTOMATION modal — checkable AT / PB(disabled) / CC + a CLEAR action. */
+function drawClearAutoMenu() {
+    clear_screen();
+    const m = S.clearAutoMenu;
+    if (!m) return;
+    drawMenuHeader('CLEAR AUTOMATION');
+    const rows = [
+        { label: 'Aftertouch (AT)',     box: m.at ? '[x]' : '[ ]' },
+        { label: 'Pitch bend (PB)',     box: '( )' },   /* placeholder, not selectable */
+        { label: 'Control Change (CC)', box: m.cc ? '[x]' : '[ ]' },
+        { label: 'CLEAR',  action: true },
+        { label: 'Cancel', action: true }
+    ];
+    const lineH = 9, topY = 18;
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const y = topY + i * lineH;
+        const seld = (m.sel === i);
+        if (seld) fill_rect(2, y - 1, 124, lineH - 1, 1);
+        const txt = r.action ? r.label : (r.box + ' ' + r.label);
+        print(5, y, txt, seld ? 0 : 1);
+    }
+}
+
 function drawBakeSceneConfirm() {
     clear_screen();
     function _btn(x, y, w, h, sel, label, labelOff) {
@@ -2043,6 +2073,12 @@ function pollDSP() {
         }
     }
     if (typeof host_module_get_param !== 'function') return;
+    /* Keep the AUTOMATION-bank AT indicator live (it appears as you record). */
+    if (S.activeBank === 6 && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM) {
+        const _at = S.activeTrack, _ac = effectiveClip(_at);
+        const _ah = host_module_get_param('t' + _at + '_c' + _ac + '_at_has');
+        if (_ah !== null) S.clipAtHas[_at][_ac] = (parseInt(_ah, 10) === 1);
+    }
     const snap = host_module_get_param('state_snapshot');
     if (!snap) return;
     const v = snap.split(' ');
@@ -2500,6 +2536,9 @@ function readBankParams(t, bankIdx) {
                     S.clipCCVal[t][c][k] = (rv >= 0 && rv <= 127) ? rv : -1;
                 }
             }
+            /* Aftertouch automation presence (for the AUTOMATION-bank indicator). */
+            const ath = host_module_get_param('t' + t + '_c' + c + '_at_has');
+            S.clipAtHas[t][c] = (ath !== null && parseInt(ath, 10) === 1);
         }
         return;
     }
@@ -3213,6 +3252,7 @@ function drawUI() {
     if (S.sessionOverlayHeld) { drawSessionOverview(); return; }
     if (S.pendingInheritPicker) { drawInheritPicker(); return; }
     if (S.snapshotPicker) { drawSnapshotPicker(); return; }
+    if (S.clearAutoMenu) { drawClearAutoMenu(); return; }
     if (S.pendingSceneBakePicker) {
         clear_screen();
         print(4, 8,  'BAKE SCENE',         1);
@@ -3671,6 +3711,23 @@ function drawUI() {
         const t  = S.activeTrack;
         const ac = effectiveClip(t);
         drawBankHeadingInverted(BANKS[6].name);
+        /* Automation-type indicators: inverted badge (white bg, black text) per
+         * type that has data in the focused clip; nothing if the type is empty.
+         * PB is a placeholder (not implemented) → never shown in the header yet. */
+        {
+            const ccHas = (S.trackCCAutoBits[t][ac] !== 0) ||
+                          S.clipCCVal[t][ac].some(function(v) { return v >= 0; });
+            const atHas = !!S.clipAtHas[t][ac];
+            let bx = 68;
+            const _badge = function(txt) {
+                const w = txt.length * 6 + 3;
+                fill_rect(bx, 1, w, 7, 1);
+                print(bx + 1, 1, txt, 0);
+                bx += w + 2;
+            };
+            if (atHas) _badge('AT');
+            if (ccHas) _badge('CC');
+        }
         for (let k = 0; k < 8; k++) {
             const colX = 4 + (k % 4) * 30;
             const rowY = k < 4 ? 12 : 36;
@@ -4019,6 +4076,51 @@ function snapshotPickerClick() {
         p.confirm = { kind: 'load', sel: 1, targetId: snap.id };
     } else {
         p.confirm = { kind: 'overwrite', sel: 1, targetId: snap.id };
+    }
+    S.screenDirty = true;
+}
+
+/* ---- CLEAR AUTOMATION menu (Delete-tap on the AUTO bank) ---- */
+function openClearAutoMenu() {
+    S.clearAutoMenu = { sel: 0, at: false, cc: false };
+    S.screenDirty = true;
+}
+function closeClearAutoMenu() {
+    S.clearAutoMenu = null;
+    S.screenDirty = true;
+}
+function clearAutoMenuRotate(delta) {
+    const m = S.clearAutoMenu;
+    if (!m || delta === 0) return;
+    m.sel = (m.sel + (delta > 0 ? 1 : 4)) % 5;   /* 0=AT 1=PB 2=CC 3=CLEAR 4=Cancel */
+    S.screenDirty = true;
+}
+function clearAutoMenuClick() {
+    const m = S.clearAutoMenu;
+    if (!m) return;
+    if (m.sel === 0) { m.at = !m.at; }              /* Aftertouch (AT) */
+    else if (m.sel === 1) { /* Pitch bend (PB) — placeholder, not selectable */ }
+    else if (m.sel === 2) { m.cc = !m.cc; }         /* Control Change (CC) — all CC data */
+    else if (m.sel === 4) { closeClearAutoMenu(); return; }   /* Cancel */
+    else {                                           /* CLEAR — execute */
+        const t = S.activeTrack, c = effectiveClip(t);
+        if (m.cc) {
+            S.trackCCAutoBits[t][c] = 0;
+            S.trackCCLiveVal[t] = new Array(8).fill(-1);
+            S.clipCCVal[t][c] = new Array(8).fill(-1);
+            S.pendingDefaultSetParams.push({ key: 't' + t + '_cc_auto_clear', val: String(c) });
+        }
+        if (m.at) {
+            S.clipAtHas[t][c] = false;
+            S.pendingDefaultSetParams.push({ key: 't' + t + '_c' + c + '_at_clear', val: '1' });
+        }
+        const done = [];
+        if (m.at) done.push('AT');
+        if (m.cc) done.push('CC');
+        closeClearAutoMenu();
+        invalidateLEDCache();
+        showActionPopup('CLEARED', done.length ? done.join(' ') : 'NOTHING');
+        return;
     }
     S.screenDirty = true;
 }
@@ -5707,6 +5809,11 @@ function _onCC_jog(d1, d2) {
         snapshotPickerClick();
         return;
     }
+    /* CLEAR AUTOMATION modal: jog click toggles a row / executes CLEAR. */
+    if (d1 === 3 && d2 === 127 && S.clearAutoMenu) {
+        clearAutoMenuClick();
+        return;
+    }
     /* Schwung-slot picker: jog click confirms slot (0-3) or Cancel (4 -> -1). */
     if (d1 === 3 && d2 === 127 && S.pendingSchwungSlotPicker) {
         const p = S.pendingSchwungSlotPicker;
@@ -5894,6 +6001,14 @@ function _onCC_jog(d1, d2) {
                 const pm = BANKS[4].knobs[k];
                 if (pm) S.bankParams[_arpTrack][4][k] = pm.def;
             }
+            /* Bank reset also clears ALL automation (CC + AT, + PB later) for the clip. */
+            const _ac2 = effectiveClip(_arpTrack);
+            S.trackCCAutoBits[_arpTrack][_ac2] = 0;
+            S.trackCCLiveVal[_arpTrack] = new Array(8).fill(-1);
+            S.clipCCVal[_arpTrack][_ac2] = new Array(8).fill(-1);
+            S.clipAtHas[_arpTrack][_ac2] = false;
+            S.pendingDefaultSetParams.push({ key: 't' + _arpTrack + '_cc_auto_clear', val: String(_ac2) });
+            S.pendingDefaultSetParams.push({ key: 't' + _arpTrack + '_c' + _ac2 + '_at_clear', val: '1' });
             S.undoSeqArpSnapshot = { track: _arpTrack, params: _arpParams };
             showActionPopup('CLIP PARAMS', 'RESET');
         }
@@ -5906,15 +6021,19 @@ function _onCC_jog(d1, d2) {
          * so on a drum track in Rpt mode it was silently shadowed by the
          * repeat-groove reset path. */
         if (S.activeBank === 6) {
+            /* AUTOMATION bank: Delete+jog clears ALL automation types for the
+             * active clip (CC + AT, and PB once implemented). */
             const _t = S.activeTrack, _c = effectiveClip(_t);
             S.trackCCAutoBits[_t][_c] = 0;
             S.trackCCLiveVal[_t] = new Array(8).fill(-1);
             /* Reset the resting values too → "—" (cc_auto_clear clears both
              * automation and rest_val DSP-side). */
             S.clipCCVal[_t][_c] = new Array(8).fill(-1);
-            /* Defer clear push — synchronous from jog handler coalesces. */
+            S.clipAtHas[_t][_c] = false;
+            /* Defer clear pushes — synchronous from jog handler coalesces. */
             S.pendingDefaultSetParams.push({ key: 't' + _t + '_cc_auto_clear', val: String(_c) });
-            showActionPopup('CC', 'CLEAR');
+            S.pendingDefaultSetParams.push({ key: 't' + _t + '_c' + _c + '_at_clear', val: '1' });
+            showActionPopup('AUTOMATION', 'CLEAR');
             invalidateLEDCache();
             return;
         }
@@ -6016,6 +6135,10 @@ function _onCC_jog(d1, d2) {
         }
         if (S.snapshotPicker) {
             snapshotPickerRotate(decodeDelta(d2));
+            return;
+        }
+        if (S.clearAutoMenu) {
+            clearAutoMenuRotate(decodeDelta(d2));
             return;
         }
         if (S.pendingSchwungSlotPicker) {
@@ -6253,6 +6376,17 @@ function _onCC_buttons(d1, d2) {
 
     if (d1 === MoveDelete) {
         S.deleteHeld = d2 === 127;
+        /* AUTO-bank Delete-tap → CLEAR AUTOMATION menu. Arm on press (melodic
+         * AUTO bank only); a clean release (nothing happened while held, see the
+         * disqualify check at the top of this handler) opens the menu. */
+        if (d2 === 127) {
+            S.deleteTapArmed = (S.activeBank === 6 && !S.sessionView &&
+                                S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM &&
+                                !S.clearAutoMenu);
+        } else if (S.deleteTapArmed) {
+            S.deleteTapArmed = false;
+            openClearAutoMenu();
+        }
         /* Phase 1 / Bundle 2C-Rpt2: push Delete-held suppression to DSP.
          * Single push — carrier key is tN_-shaped but reader is global
          * inst->delete_held (Delete is a global modifier, no reason it
@@ -9748,6 +9882,14 @@ function _onMidiInternalImpl(data) {
     if ((status & 0xF0) === 0xB0 && d1 === 79) return;
     if (((status & 0xF0) === 0x90 || (status & 0xF0) === 0x80) && d1 === 8) return;
 
+    /* AUTO-bank Delete-tap detection: any input other than the Delete button
+     * itself while Delete is armed disqualifies the tap, so Delete+jog /
+     * Delete+knob / Delete+step keep their combos and don't also open the
+     * CLEAR AUTOMATION menu on release. */
+    if (S.deleteTapArmed && (status & 0x80) &&
+            !((status & 0xF0) === 0xB0 && d1 === MoveDelete))
+        S.deleteTapArmed = false;   /* (status & 0x80) ignores the Move's null/heartbeat (0x00) messages */
+
     /* Snapshot picker is a mid-session modal: swallow all input except the jog
      * (CC 3 click + CC 14 rotate, → _onCC_jog) and Note/Session (CC 50, closes
      * it), so pads/steps/transport/knobs can't edit the underlying clip while
@@ -9756,6 +9898,19 @@ function _onMidiInternalImpl(data) {
         const _ccPick = (status & 0xF0) === 0xB0 &&
             (d1 === 3 || d1 === MoveMainKnob || d1 === MoveNoteSession);
         if (!_ccPick) return;
+    }
+
+    /* CLEAR AUTOMATION modal: swallow all input except the jog (CC 3 click +
+     * CC 14 rotate, → _onCC_jog / MoveMainKnob). Exits without changing anything:
+     * Note/Session (the menu button), or tapping Delete again. */
+    if (S.clearAutoMenu) {
+        if ((status & 0xF0) === 0xB0 && d2 === 127 &&
+                (d1 === MoveNoteSession || d1 === MoveDelete)) {
+            closeClearAutoMenu();
+            return;
+        }
+        const _ccMenu = (status & 0xF0) === 0xB0 && (d1 === 3 || d1 === MoveMainKnob);
+        if (!_ccMenu) return;
     }
 
     /* While session overview is held, swallow everything except CC 50 release and Up/Down scroll. */
