@@ -535,6 +535,18 @@ typedef struct {
     /* Note-centric playback: per-note gate countdown (render state, not persisted) */
     struct { uint8_t pitch; uint16_t ticks_remaining; uint8_t lane_idx; } play_pending[32];
     uint8_t  play_pending_count;
+    /* v=34 Ratchet: deferred note-on schedule for step_ratchet sub-hits 1..r-1.
+     * Each tick, ticks_until_fire decrements; at 0 the sub-hit fires (note-on +
+     * push to play_pending for its own gate countdown) and the slot is dropped.
+     * lane_idx = 0xFF means melodic track (calls pfx_note_on); else drum lane. */
+    struct {
+        uint8_t  pitch;
+        uint8_t  vel;
+        uint16_t ticks_until_fire;
+        uint16_t gate;
+        uint8_t  lane_idx;
+    } ratchet_pending[24];
+    uint8_t  ratchet_pending_count;
     /* Per-track tick position within current step; wraps at cl->ticks_per_step */
     uint32_t tick_in_step;
     /* Atomic render-state snapshot for set_param timing reads */
@@ -8297,6 +8309,9 @@ static void silence_track_notes_v2(seq8_instance_t *inst, seq8_track_t *tr) {
             pfx_note_off(inst, tr, tr->play_pending[pp].pitch);
     }
     tr->play_pending_count = 0;
+    /* v=34 Ratchet: drop any sub-hits scheduled for the future so they
+     * don't ghost-fire after silence (transport stop, clip switch, etc.) */
+    tr->ratchet_pending_count = 0;
     tr->note_active = 0;
     tr->pending_note_count = 0;
     /* TRACK ARP: drop held buffer + silence sounding. */
@@ -8682,6 +8697,59 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                 tr->note_active = (tr->play_pending_count > 0) ? 1 : 0;
             }
 
+            /* v=34 Ratchet sub-hit fire: any ratchet_pending slot whose
+             * ticks_until_fire reaches 0 fires its note-on now and is moved
+             * into play_pending for its own gate countdown. Same-pitch
+             * play_pending entries are silenced first to avoid stuck voices
+             * when the previous sub-hit's gate hasn't elapsed yet. Runs
+             * after the gate countdown above so a clean note-off at the
+             * sub-hit boundary fires before the next sub-hit's note-on. */
+            {
+                int rp;
+                for (rp = 0; rp < (int)tr->ratchet_pending_count; ) {
+                    if (tr->ratchet_pending[rp].ticks_until_fire > 0)
+                        tr->ratchet_pending[rp].ticks_until_fire--;
+                    if (tr->ratchet_pending[rp].ticks_until_fire == 0) {
+                        uint8_t  _rp_pitch = tr->ratchet_pending[rp].pitch;
+                        uint8_t  _rp_vel   = tr->ratchet_pending[rp].vel;
+                        uint16_t _rp_gate  = tr->ratchet_pending[rp].gate;
+                        uint8_t  _rp_lane  = tr->ratchet_pending[rp].lane_idx;
+                        /* Silence any same-pitch play_pending entry first */
+                        int _pp2;
+                        for (_pp2 = 0; _pp2 < (int)tr->play_pending_count; _pp2++) {
+                            if (tr->play_pending[_pp2].pitch == _rp_pitch) {
+                                if (_rp_lane != 0xFF)
+                                    drum_pfx_note_off(inst, tr, &tr->drum_lane_pfx[_rp_lane], _rp_pitch);
+                                else
+                                    pfx_note_off(inst, tr, _rp_pitch);
+                                tr->play_pending[_pp2] = tr->play_pending[tr->play_pending_count - 1];
+                                tr->play_pending_count--;
+                                break;
+                            }
+                        }
+                        /* Fire note-on (melodic/drum split by lane_idx) */
+                        if (_rp_lane != 0xFF)
+                            drum_pfx_note_on(inst, tr, &tr->drum_lane_pfx[_rp_lane], _rp_pitch, _rp_vel);
+                        else
+                            pfx_note_on(inst, tr, _rp_pitch, _rp_vel);
+                        /* Push to play_pending for the sub-hit's own gate countdown */
+                        if (tr->play_pending_count < 32) {
+                            int _pi = (int)tr->play_pending_count;
+                            tr->play_pending[_pi].pitch           = _rp_pitch;
+                            tr->play_pending[_pi].ticks_remaining = _rp_gate;
+                            tr->play_pending[_pi].lane_idx        = _rp_lane;
+                            tr->play_pending_count++;
+                            tr->note_active = 1;
+                        }
+                        /* Drop slot via swap-and-pop */
+                        tr->ratchet_pending[rp] = tr->ratchet_pending[tr->ratchet_pending_count - 1];
+                        tr->ratchet_pending_count--;
+                    } else {
+                        rp++;
+                    }
+                }
+            }
+
             if (inst->master_tick_in_step == 0) {
                 /* Quantized boundary: launch queued clip (only if not waiting for page stop) */
                 if (tr->queued_clip >= 0 && !tr->pending_page_stop &&
@@ -8789,10 +8857,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                             if (!n->active || n->suppress_until_wrap) continue;
                             if (effective_note_tick(n, dlc, lane->pfx_params.quantize) != cct) continue;
                             /* v=34 trig conditions (Iter + Random) — per-note */
-                            {
-                                uint16_t _sidx = note_step(n->tick, dlc->length, dlc->ticks_per_step);
-                                if (!step_trig_pass(dlc, _sidx, &dpx->rng)) continue;
-                            }
+                            uint16_t _sidx = note_step(n->tick, dlc->length, dlc->ticks_per_step);
+                            if (!step_trig_pass(dlc, _sidx, &dpx->rng)) continue;
                             { int pp; for (pp = 0; pp < (int)tr->play_pending_count; pp++) {
                                 if (tr->play_pending[pp].pitch == lane_note) {
                                     drum_pfx_note_off(inst, tr, dpx, lane_note);
@@ -8803,14 +8869,36 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                             }}
                             int eff_gate = (int)n->gate * lane->pfx_params.gate_time / 100;
                             if (eff_gate < 1) eff_gate = 1;
+                            /* v=34 Ratchet: r evenly-spaced sub-hits tiling exactly one
+                             * step (Elektron-style). Sub-interval = TPS / r, regardless
+                             * of the step's Leng. Sub-hit 0 fires now (below); 1..r-1
+                             * are scheduled. ratchet < 2 = no ratchet (single emit). */
+                            uint8_t  _ratch    = dlc->step_ratchet[_sidx];
+                            if (_ratch < 2) _ratch = 1;
+                            uint16_t _sub_gate = (_ratch > 1)
+                                ? (uint16_t)(dlc->ticks_per_step / _ratch)
+                                : (uint16_t)eff_gate;
+                            if (_sub_gate < 1) _sub_gate = 1;
                             if (tr->play_pending_count < 32) {
                                 tr->play_pending[tr->play_pending_count].pitch           = lane_note;
-                                tr->play_pending[tr->play_pending_count].ticks_remaining = (uint16_t)eff_gate;
+                                tr->play_pending[tr->play_pending_count].ticks_remaining = _sub_gate;
                                 tr->play_pending[tr->play_pending_count].lane_idx        = (uint8_t)l;
                                 tr->play_pending_count++;
                                 tr->note_active = 1;
                             }
                             drum_pfx_note_on(inst, tr, dpx, lane_note, n->vel);
+                            if (_ratch > 1) {
+                                int _k;
+                                for (_k = 1; _k < _ratch; _k++) {
+                                    if (tr->ratchet_pending_count >= 24) break;
+                                    int _ri = (int)tr->ratchet_pending_count++;
+                                    tr->ratchet_pending[_ri].pitch            = lane_note;
+                                    tr->ratchet_pending[_ri].vel              = n->vel;
+                                    tr->ratchet_pending[_ri].ticks_until_fire = (uint16_t)(_k * _sub_gate);
+                                    tr->ratchet_pending[_ri].gate             = _sub_gate;
+                                    tr->ratchet_pending[_ri].lane_idx         = (uint8_t)l;
+                                }
+                            }
                         }
                     }
                 }
@@ -8824,10 +8912,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         if (!n->active || n->suppress_until_wrap) continue;
                         if (effective_note_tick(n, cl, tr->pfx.quantize) != cct) continue;
                         /* v=34 trig conditions (Iter + Random) — per-note */
-                        {
-                            uint16_t _sidx = note_step(n->tick, cl->length, cl->ticks_per_step);
-                            if (!step_trig_pass(cl, _sidx, &tr->pfx.rng)) continue;
-                        }
+                        uint16_t _sidx = note_step(n->tick, cl->length, cl->ticks_per_step);
+                        if (!step_trig_pass(cl, _sidx, &tr->pfx.rng)) continue;
                         { int pp; for (pp = 0; pp < (int)tr->play_pending_count; pp++) {
                             if (tr->play_pending[pp].pitch == n->pitch) {
                                 pfx_note_off(inst, tr, n->pitch);
@@ -8838,14 +8924,37 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         }}
                         int eff_gate = (int)n->gate * tr->pfx.gate_time / 100;
                         if (eff_gate < 1) eff_gate = 1;
+                        /* v=34 Ratchet: r evenly-spaced sub-hits tiling exactly one
+                         * step (Elektron-style). Sub-interval = TPS / r, regardless
+                         * of the step's Leng. Sub-hit 0 fires now (below); 1..r-1
+                         * scheduled. ratchet < 2 = no ratchet (single emit). */
+                        uint8_t  _ratch    = cl->step_ratchet[_sidx];
+                        if (_ratch < 2) _ratch = 1;
+                        uint16_t _sub_gate = (_ratch > 1)
+                            ? (uint16_t)(cl->ticks_per_step / _ratch)
+                            : (uint16_t)eff_gate;
+                        if (_sub_gate < 1) _sub_gate = 1;
                         if (tr->play_pending_count < 32) {
                             int pp_idx = (int)tr->play_pending_count;
                             tr->play_pending[pp_idx].pitch          = n->pitch;
-                            tr->play_pending[pp_idx].ticks_remaining = (uint16_t)eff_gate;
+                            tr->play_pending[pp_idx].ticks_remaining = _sub_gate;
+                            tr->play_pending[pp_idx].lane_idx        = 0xFF;
                             tr->play_pending_count++;
                             tr->note_active = 1;
                         }
                         pfx_note_on(inst, tr, n->pitch, n->vel);
+                        if (_ratch > 1) {
+                            int _k;
+                            for (_k = 1; _k < _ratch; _k++) {
+                                if (tr->ratchet_pending_count >= 24) break;
+                                int _ri = (int)tr->ratchet_pending_count++;
+                                tr->ratchet_pending[_ri].pitch            = n->pitch;
+                                tr->ratchet_pending[_ri].vel              = n->vel;
+                                tr->ratchet_pending[_ri].ticks_until_fire = (uint16_t)(_k * _sub_gate);
+                                tr->ratchet_pending[_ri].gate             = _sub_gate;
+                                tr->ratchet_pending[_ri].lane_idx         = 0xFF;
+                            }
+                        }
                     }
                 }
             }
