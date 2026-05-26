@@ -692,7 +692,7 @@ Knob→target **assignment is per-track**; the resting value and automation are 
 
 **Displayed value.** Stopped → the resting value (or "—"); playing → the value defined at the playhead (or "—"); holding a step → the value recorded at that step (or "—"), plus the **computed value that plays there** shown in parentheses for ramp/gap steps.
 
-**Active lane + step-LED gradient.** The **last knob you touched** is the active lane: its overview cell stays highlighted, and its automation is drawn across the **step buttons (16)** as a 3-level white brightness gradient (dim / mid / full; "—" = off); the **playhead step shows the track color**. Out-of-window steps are dim grey. The gradient holds steady as the playhead moves. Touch another knob to follow it. The bank's OLED stays up the whole time you're on it.
+**Active lane + step-LED gradient.** The **last knob you touched** is the active lane: its overview cell stays highlighted, and its automation is drawn across the **step buttons (16)** as a 3-level white brightness gradient (dim / mid / full; "—" = off); the **playhead step shows the track color**. Out-of-window steps are dim grey. The gradient holds steady as the playhead moves. Touch another knob to follow it. Like every other parameter bank, the AUTOMATION OLED auto-dismisses back to the Track-View overview after the standard idle window — touch a knob or turn the jog to bring it back.
 
 **Knob acceleration.** Turning a knob to edit a value ramps with the turn: the first few clicks of a continuous turn move finely, and a sustained spin speeds up so you can sweep the range quickly. Change direction or pause and it resets to fine control. (The Shift assignment turn stays fixed for precision.)
 

@@ -96,23 +96,25 @@ function bankHeader(bankIdx) {
     return '[ ' + BANKS[bankIdx].name + ' ]';
 }
 
-function drawBankHeading(name) {
+function drawBankHeading(name, showTrack) {
     fill_rect(0, 0, 128, 9, 1);
     print(4, 1, name, 0);
     /* Right-aligned active-track indicator. Width = "Tr" + 1 digit = 18px @ 6px/char.
-     * Placed at x=106 leaves a 4px right margin. */
-    print(106, 1, 'Tr' + (S.activeTrack + 1), 0);
+     * Placed at x=106 leaves a 4px right margin. Suppressed on the Track View
+     * resting/overview state (tracks-in-a-row already names the active track via
+     * the track row + scene letters); shown on every deeper parameter bank. */
+    if (showTrack !== false) print(106, 1, 'Tr' + (S.activeTrack + 1), 0);
     if (!S.sessionView && bankHasAltParams(S.activeTrack, S.activeBank)) {
         drawAltArrow(98, true, altIndicatorActive(S.activeTrack, S.activeBank));
     }
 }
 
-function drawBankHeadingInverted(name) {
+function drawBankHeadingInverted(name, showTrack) {
     fill_rect(0, 0, 128, 9, 0);
     fill_rect(0, 0, 128, 1, 1);
     fill_rect(0, 8, 128, 1, 1);
     print(4, 1, name, 1);
-    print(106, 1, 'Tr' + (S.activeTrack + 1), 1);
+    if (showTrack !== false) print(106, 1, 'Tr' + (S.activeTrack + 1), 1);
     if (!S.sessionView && bankHasAltParams(S.activeTrack, S.activeBank)) {
         drawAltArrow(98, false, altIndicatorActive(S.activeTrack, S.activeBank));
     }
@@ -3621,7 +3623,6 @@ function drawUI() {
 
     if (bank >= 0 && (S.knobTouched >= 0 || inTimeout ||
             (S.altMode && bankHasAltParams(S.activeTrack, bank)) ||
-            (bank === 6 && !S.sessionView && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM) ||
             (S.shiftHeld && bank === 1 && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM))) {
         const isDrumLaneBank = (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 0);
         if (isDrumLaneBank) {
@@ -3883,7 +3884,7 @@ function drawUI() {
         const name      = NOTE_KEYS[note % 12];
         const bankGroup = pg === 0 ? 'Bank: A' : 'Bank: B';
         const bankName  = S.activeBank === 0 ? 'DRUM LANE >>' : S.activeBank === 1 ? '>> NOTE FX' : S.activeBank === 5 ? 'REPEAT GROOVE' : S.activeBank === 6 ? BANKS[6].name : S.activeBank === 7 ? 'ALL LANES' : BANKS[S.activeBank] ? '>> ' + BANKS[S.activeBank].name : '?';
-        (S.activeBank === 5 || S.activeBank === 6 ? drawBankHeadingInverted : drawBankHeading)(bankName);
+        (S.activeBank === 5 || S.activeBank === 6 ? drawBankHeadingInverted : drawBankHeading)(bankName, false);
         pixelPrint(4, 10, bankGroup + '  Pad: ' + name + oct + ' (' + note + ')', 1);
         const laneBit = 1 << lane;
         if (S.drumLaneSolo[t] & laneBit) {
@@ -3918,7 +3919,7 @@ function drawUI() {
         const keyScl  = NOTE_KEYS[S.padKey] + ' ' + (SCALE_DISPLAY[S.padScale] || '?');
         const CHAR_W  = 6;
         const keySclX = 128 - 4 - keyScl.length * CHAR_W;
-        (S.activeBank === 5 || S.activeBank === 6 ? drawBankHeadingInverted : drawBankHeading)(BANKS[S.activeBank].name + recTag);
+        (S.activeBank === 5 || S.activeBank === 6 ? drawBankHeadingInverted : drawBankHeading)(BANKS[S.activeBank].name + recTag, false);
         pixelPrint(4, 10, octStr, 1);
         if (S.bankParams[S.activeTrack][5][0]) {
             if (S.bankParams[S.activeTrack][5][7]) {
