@@ -257,23 +257,23 @@ function buildGlobalMenuItems() {
             })
         ] : []),
         /* Co-run capability gate. The chain-editor co-run feature requires the
-         * patched Schwung shim (adds shadow_set_corun_chain_edit + co-run draw
-         * paths in shadow_ui.js). On stock Schwung the API is undefined and
-         * the menu entry isn't built, so the feature is invisible. All other
+         * patched Schwung shim (adds shadow_corun_begin + co-run draw paths
+         * in shadow_ui.js). On stock Schwung the API is undefined and the
+         * menu entry isn't built, so the feature is invisible. All other
          * co-run code is dormant unless this entry triggers it. Also hidden on
          * non-Schwung-routed tracks (symmetric with Edit Synth below). */
         ...((S.trackRoute[S.activeTrack] === 0 &&
-             typeof shadow_set_corun_chain_edit === 'function') ? [
+             typeof shadow_corun_begin === 'function') ? [
             createAction('Edit Slot...', function() {
                 openSchwungSlotEditor(S.activeTrack);
             })
         ] : []),
         /* Move-native co-run entry — visible only when (a) active track is
-         * ROUTE_MOVE, (b) the patched Schwung shim exposes the binding, and
+         * ROUTE_MOVE, (b) the patched Schwung shim exposes the corun API, and
          * (c) the cable-0 MIDI inject API is present (Schwung >= v0.7.0).
          * On stock Schwung or non-Move-routed tracks the entry isn't built. */
         ...((S.trackRoute[S.activeTrack] === 1 &&
-             typeof shadow_set_corun_move_native === 'function' &&
+             typeof shadow_corun_begin === 'function' &&
              typeof move_midi_inject_to_move === 'function') ? [
             createAction('Edit Synth...', function() {
                 enterMoveNativeCoRun(S.activeTrack);
@@ -417,6 +417,26 @@ function buildGlobalMenuItems() {
  * S.perfModsToggled: latched modifier bitmask (Latch-toggle presses).
  * S.perfModsHeld: momentary bitmask (held mod pads, not Latch-pressed).
  * DSP receives (S.perfModsToggled | S.perfModsHeld) as perf_mods each change. */
+/* Co-run target enum + keep-mask flags — mirrors corun_target_t and the
+ * CORUN_GRP_* / CORUN_KEEP_* bits in Schwung's shadow_constants.h. The shim
+ * registers these as globals on shadow_ui's JS context; redeclaring them
+ * here makes the dAVEBOx tool context self-contained on platforms that scope
+ * globals differently. Keep in sync with docs/CORUN.md. */
+const CORUN_TARGET_NONE        = 0;
+const CORUN_TARGET_CHAIN_EDIT  = 1;
+const CORUN_TARGET_MOVE_NATIVE = 2;
+const CORUN_GRP_PADS           = 1 << 1;
+const CORUN_GRP_STEPS          = 1 << 2;
+const CORUN_GRP_TRANSPORT      = 1 << 3;
+const CORUN_GRP_MENU           = 1 << 10;
+/* Default split: tool keeps pads / steps / transport / Menu, cedes the rest. */
+const DAVEBOX_CORUN_KEEP_DEFAULT = CORUN_GRP_PADS | CORUN_GRP_STEPS | CORUN_GRP_TRANSPORT | CORUN_GRP_MENU;
+/* Opt out of framework Back-as-exit. dAVEBOx uses Menu as the canonical exit
+ * (existing muscle memory) and lets Back cede to the peer for sub-view nav
+ * (chain editor pop-up, Move firmware preset/synth navigation). */
+const CORUN_KEEP_BACK_BIT      = 1 << 15;
+const DAVEBOX_CORUN_KEEP_MASK  = DAVEBOX_CORUN_KEEP_DEFAULT | CORUN_KEEP_BACK_BIT;
+
 const LOOPER_RATES_STRAIGHT = [12, 24, 48, 96, 192];   /* 1/32, 1/16, 1/8, 1/4, 1/2 */
 const PERF_LATCH_LONG_PRESS = 100;     /* ~510ms → clear all toggled mods + exit Latch mode */
 /* Pad → modifier bit index. R1=bits 0-7 (pitch), R2=bits 8-15 (vel/gate), R3=bits 16-23 (wild). */
@@ -2057,39 +2077,23 @@ function resetPerClipBankParamsToDefault(t) {
 }
 
 function pollDSP() {
-    /* Reconcile co-run flag with SHM. shadow_ui can clear corun_chain_edit_slot
-     * externally (e.g. Menu pressed during co-run) — when it does, the local
-     * mirror needs to clear so dAVEBOx resumes drawing. Menu is treated as a
-     * "return all the way out" gesture, so we also close the global menu the
-     * user opened to start the co-run flow. */
-    if (typeof shadow_get_corun_chain_edit === 'function') {
-        const _shm = shadow_get_corun_chain_edit();
-        if (_shm < 0 && S.schwungCoRunSlot >= 0) {
-            S.schwungCoRunSlot = -1;
+    /* Reconcile co-run state with SHM. The shim auto-clears co-run on user
+     * Back press (framework exit gesture), so dAVEBOx may discover target=NONE
+     * here without having driven the exit itself. Use the existing exit
+     * helpers for cleanup — they're idempotent on the second SHM write and
+     * carry the palette/LED-cache/modifier-clear work we need either way. */
+    if (typeof shadow_corun_state === 'function') {
+        const _st = shadow_corun_state();
+        const _slot  = (_st && _st.target === CORUN_TARGET_CHAIN_EDIT)  ? _st.id : -1;
+        const _track = (_st && _st.target === CORUN_TARGET_MOVE_NATIVE) ? _st.id : -1;
+        if (_slot < 0 && S.schwungCoRunSlot >= 0) {
+            exitSchwungCoRun();
+            /* Framework exit also closes any global menu we opened to launch it. */
             S.globalMenuOpen = false;
             S.lastSentMenuEditValue = null;
-            /* Same defensive modifier clear as exitSchwungCoRun. */
-            S.shiftHeld = false; S.deleteHeld = false; S.muteHeld = false;
-            S.copyHeld  = false; S.loopHeld  = false; S.loopJogActive = false;
-            S.captureHeld = false; S.shiftTrackLEDActive = false;
-            S.screenDirty = true;
         }
-    }
-    /* Same pattern for Move-native co-run. Phase A doesn't have a shim-side
-     * "auto-exit" path the way chain-edit does (Menu is intercepted in
-     * dAVEBOx, not shadow_ui), so the SHM clearing currently only happens
-     * via our own exitMoveNativeCoRun(). The reconcile is here for parity
-     * and so a future shim-side exit (e.g. on tool unload) propagates. */
-    if (typeof shadow_get_corun_move_native === 'function') {
-        const _shm = shadow_get_corun_move_native();
-        if (_shm < 0 && S.moveCoRunTrack >= 0) {
-            S.moveCoRunTrack = -1;
-            /* Same defensive modifier clear as exitMoveNativeCoRun. */
-            S.shiftHeld = false; S.deleteHeld = false; S.muteHeld = false;
-            S.copyHeld  = false; S.loopHeld  = false; S.loopJogActive = false;
-            S.captureHeld = false; S.shiftTrackLEDActive = false;
-            S.screenDirty = true;
-            forceRedraw();
+        if (_track < 0 && S.moveCoRunTrack >= 0) {
+            exitMoveNativeCoRun();
         }
     }
     if (typeof host_module_get_param !== 'function') return;
@@ -4231,19 +4235,21 @@ function openSchwungSlotEditor(t) {
 function enterSchwungCoRun(t, slot) {
     S.trackSchwungSlot[t] = slot;
     S.schwungCoRunSlot = slot;
-    if (typeof shadow_set_corun_chain_edit === 'function')
-        shadow_set_corun_chain_edit(slot);
+    if (typeof shadow_corun_begin === 'function')
+        shadow_corun_begin(CORUN_TARGET_CHAIN_EDIT, slot, DAVEBOX_CORUN_KEEP_MASK);
     saveState();
     S.screenDirty = true;
 }
 
-/* Exit co-run. Called on Back, on switching tracks, on global-menu open, or
- * any other dAVEBOx state change that should restore full ownership. */
+/* Exit co-run. Called on programmatic dAVEBOx state changes (track switch,
+ * global-menu open, etc.) or by the pollDSP reconcile when the shim's
+ * framework Back-handler has ended the session. Calling shadow_corun_end()
+ * after the shim already ended is a no-op. */
 function exitSchwungCoRun() {
     if (S.schwungCoRunSlot < 0) return;
     S.schwungCoRunSlot = -1;
-    if (typeof shadow_set_corun_chain_edit === 'function')
-        shadow_set_corun_chain_edit(-1);
+    if (typeof shadow_corun_end === 'function')
+        shadow_corun_end();
     /* Modifier-key release CCs the user pressed inside the co-run may have
      * been routed to Schwung and never reached us — clear defensively so a
      * stuck Shift/Mute/etc. can't silence pad dispatch on return. Mirrors
@@ -4270,10 +4276,10 @@ function exitSchwungCoRun() {
  * 4 tracks — if trackChannel is outside 1-4 we just enter co-run without
  * an auto-tap and let the user pick the Move track manually. */
 function enterMoveNativeCoRun(t) {
-    if (typeof shadow_set_corun_move_native !== 'function') return;
+    if (typeof shadow_corun_begin !== 'function') return;
     if (typeof move_midi_inject_to_move !== 'function') return;
     S.moveCoRunTrack = t;
-    shadow_set_corun_move_native(t);
+    shadow_corun_begin(CORUN_TARGET_MOVE_NATIVE, t, DAVEBOX_CORUN_KEEP_MASK);
     /* Let Move firmware's own LED writes (track buttons, knob rings, transport)
      * reach hardware while it drives the device-edit UI. skip_led_clear makes the
      * shim's overtake LED-strip loop early-return, so Move's LEDs pass through live.
@@ -4305,8 +4311,8 @@ function exitMoveNativeCoRun() {
     S.moveCoRunTrack = -1;
     S.pendingMoveCoRunInject = 0;  /* cancel any pending entry inject */
     S.moveCoRunPressQueue = null;  /* cancel any in-flight track-row press sequence */
-    if (typeof shadow_set_corun_move_native === 'function')
-        shadow_set_corun_move_native(-1);
+    if (typeof shadow_corun_end === 'function')
+        shadow_corun_end();
     /* Resume the shim's overtake LED-strip loop so dAVEBOx owns the LEDs again
      * (mirror of the skip_led_clear(1) in enterMoveNativeCoRun). */
     if (typeof shadow_set_skip_led_clear === 'function') shadow_set_skip_led_clear(0);
@@ -4682,14 +4688,11 @@ function captureError(where, e) {
 globalThis.init = function () {
     installConsoleOverride('SEQ8');
     /* Clear any lingering co-run flag from a prior session — shim's SHM
-     * may still hold a slot if we were warm-restarted (Shift+Back + relaunch
-     * does not reset shadow_control). */
+     * may still hold target/id if we were warm-restarted (Shift+Back +
+     * relaunch does not reset shadow_control). */
     S.schwungCoRunSlot = -1;
-    if (typeof shadow_set_corun_chain_edit === 'function')
-        shadow_set_corun_chain_edit(-1);
     S.moveCoRunTrack = -1;
-    if (typeof shadow_set_corun_move_native === 'function')
-        shadow_set_corun_move_native(-1);
+    if (typeof shadow_corun_end === 'function') shadow_corun_end();
     if (S.bankParams === null)
         S.bankParams = Array.from({length: NUM_TRACKS}, function() {
             return BANKS.map(function(bank) { return bank.knobs.map(function(k) { return k.def; }); });
@@ -6429,11 +6432,11 @@ function _onCC_buttons(d1, d2) {
             const _t = S.pendingEditEntryTrack;
             S.pendingEditEntryTrack = -1;
             if (S.trackRoute[_t] === 1 &&
-                typeof shadow_set_corun_move_native === 'function' &&
+                typeof shadow_corun_begin === 'function' &&
                 typeof move_midi_inject_to_move === 'function') {
                 enterMoveNativeCoRun(_t);
             } else if (S.trackRoute[_t] === 0 &&
-                typeof shadow_set_corun_chain_edit === 'function') {
+                typeof shadow_corun_begin === 'function') {
                 openSchwungSlotEditor(_t);
             }
         }
@@ -6534,19 +6537,32 @@ function _onCC_buttons(d1, d2) {
         return;
     }
 
+    /* Move's Menu button (CC 50) is in CORUN_KEEP_DEFAULT so the shim routes
+     * it to us during co-run. Charles's framework reserves Back as the
+     * canonical exit, but Menu-as-second-exit is a dAVEBOx convenience for
+     * existing muscle memory — outside co-run dAVEBOx ignores Menu (no other
+     * handler exists), so this branch is dormant unless a session is active. */
+    if (d1 === 50 && d2 === 127) {
+        if (S.moveCoRunTrack >= 0) {
+            exitMoveNativeCoRun();
+            return;
+        }
+        if (S.schwungCoRunSlot >= 0) {
+            exitSchwungCoRun();
+            forceRedraw();
+            return;
+        }
+    }
+
     /* Note/Session view toggle: Shift+press = open global menu (Track View only);
      * tap = switch view; hold = session overview */
     if (d1 === MoveNoteSession) {
         if (d2 === 127) {
-            /* Move-native co-run uses Menu as the exit gesture (Back is
-             * routed to Move firmware and never reaches us). Short-circuit
-             * BEFORE the normal Menu/Note-Session handling — shiftHeld is
-             * stale during co-run (Shift is also shim-routed to Move) so
-             * the regular branches can't be trusted. */
-            if (S.moveCoRunTrack >= 0) {
-                exitMoveNativeCoRun();
-                return;
-            }
+            /* Co-run exit is the framework's job now — the shim catches Back
+             * during corun_active() and calls shadow_corun_end() itself, and
+             * pollDSP picks up target=NONE on the next frame and runs
+             * exitMoveNativeCoRun()/exitSchwungCoRun() for the JS cleanup.
+             * No Menu intercept needed here. */
             if (S.snapshotPicker) {
                 /* Back out of a confirm to the list, else close the picker. */
                 if (S.snapshotPicker.confirm) S.snapshotPicker.confirm = null;
@@ -6841,15 +6857,12 @@ function unlatchAllTracks() {
 }
 
 function _onCC_transport(d1, d2) {
-    /* Back: close global menu if open; otherwise (with Shift) hide module */
+    /* Back: close global menu if open; otherwise (with Shift) hide module.
+     * Back during co-run never reaches us because dAVEBOx opts out of the
+     * framework Back-as-exit (CORUN_KEEP_BACK in keep_mask) and cedes Back
+     * to the peer (chain editor sub-view pop / Move firmware navigation).
+     * Menu is the dAVEBOx exit during co-run, handled in _onCC_buttons. */
     if (d1 === MoveBack && d2 === 127) {
-        if (S.schwungCoRunSlot >= 0) {
-            /* Co-run: Back exits the slot editor and restores dAVEBOx's
-             * full OLED + track-button ownership. */
-            exitSchwungCoRun();
-            forceRedraw();
-            return;
-        }
         if (S.tapTempoOpen) {
             closeTapTempo();
             forceRedraw();
