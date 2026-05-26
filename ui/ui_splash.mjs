@@ -44,5 +44,7 @@ export const SPLASH_FRAMES = HEX_FRAMES.map(function(hex) {
 export const SPLASH_BITS = SPLASH_FRAMES[0];
 
 export function pickSplashIdx() {
-    return Math.floor(Math.random() * SPLASH_COUNT);
+    /* TEMPORARY: pool restricted to frames 0–2 (dAVEBOx, dbBruce, dlrDB).
+     * Restore by changing the multiplier back to SPLASH_COUNT. */
+    return Math.floor(Math.random() * 3);
 }
