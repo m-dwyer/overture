@@ -441,19 +441,42 @@ By default the pads show an **In-Key** layout: only notes within the active scal
 
 ## 4.2 Step edit
 
-Hold any step button to open the step edit overlay. Edits apply to *every* note in the step simultaneously, non-destructively relative to neighboring steps.
+Hold any step button to open the step edit overlay. Edits apply to *every* note in the step simultaneously, non-destructively relative to neighboring steps. The overlay is a two-row grid:
 
-| Knob | Function |
-|---|---|
-| K1 (Oct) | Shift notes by octave |
-| K2 (Pit) | Shift notes by scale degree (scale-aware) or semitone (scale-aware off) |
-| K3 (Dur) | Adjust note length — touch shows a gate length overlay on the step buttons |
-| K4 (Vel) | Adjust velocity |
-| K5 (Ndg) | Shift notes forward/backward in time (±23 ticks max). Step blinks when notes are on the grid. Notes that cross into an adjacent step reassign there on release. |
+| Knob | Cell | Function |
+|---|---|---|
+| K1 | Oct  | Shift notes by octave |
+| K2 | Note | Shift notes by scale degree (scale-aware) or semitone (scale-aware off). Oct + Note share a single centered note-name display. |
+| K3 | Leng | Adjust note length — touch shows a gate length overlay on the step buttons |
+| K4 | Vel  | Adjust velocity |
+| K5 | Nudg | Shift notes forward/backward in time (±23 ticks max). Step blinks when notes are on the grid. Notes that cross into an adjacent step reassign there on release. |
+| K6 | Iter | **Trig condition** — see [§4.2.1](#421-trig-conditions-iter--prob--ratch) |
+| K7 | Prob | **Probability** — see [§4.2.1](#421-trig-conditions-iter--prob--ratch) |
+| K8 | Ratch | **Ratchet** — see [§4.2.1](#421-trig-conditions-iter--prob--ratch) |
 
 While holding a step, the OLED shows the notes in it, e.g. `C4 E4 G4`. **Up / Down** shifts the visible octave range to reach notes outside the current pad window.
 
 Hold multiple step buttons at once to edit them all together.
+
+On **drum tracks** the overlay is the same 2-row layout with three cells per row: row 1 = Leng / Vel / Nudg (K1-K3), row 2 = Iter / Prob / Ratch (K4-K6).
+
+### 4.2.1 Trig conditions: Iter / Prob / Ratch
+
+Three per-step conditions reshape *how* and *when* a step fires. The default for all three is `--` (no condition), shown when the knob sits at its minimum position.
+
+**Iter (Iteration)** — gates the step to play only on certain loop cycles. Turn K6 to step through values `1/2, 2/2, 1/3, 2/3, 3/3, … 8/8`. A value like `2/3` reads as "play on cycle 2 of every 3-cycle group," i.e. silent on cycles 1 and 3, fires on cycle 2 (and then 5, 8, …). The loop-cycle counter is per-clip: it persists across clip switches and length changes, and **resets only on the cold transport-start edge** (Stop → Play). Different steps in the same clip with different Iter values create polyrhythms; the per-clip counter keeps them in phase.
+
+**Prob (Probability)** — sets per-step play probability 0–100%. The roll happens **per-note** at fire time, so on a chord step set to 50% some loops may play 0 / 1 / 2 / 3 notes independently — voicings flicker organically rather than the whole step playing or not as one. Default (`--`) = always fires. Each playback is non-deterministic.
+
+**Ratch (Ratchet)** — retriggers the step `x2 / x3 / x4` times within one step. Sub-hits are evenly spaced over the step (TPS / ratchet) regardless of the step's Leng knob, so a step always retriggers within its own grid slot. Each sub-hit runs through the full effects chain (drum lane FX, melodic NOTE FX / HARMZ / MIDI DLY) just like the original.
+
+**Interactions.** Iter is checked first; if Iter says "skip this cycle," all ratchet sub-hits stay silent for that cycle. Prob rolls once per note; if a note passes the roll, all its ratchet sub-hits play. Different notes in a chord roll independently.
+
+**Persistence.** Trig conditions save with the clip and survive set switches. State format is v=34; clips from older saves are wiped on first load after upgrade.
+
+**Bake.** [Capture](#) (bake) treats trig conditions as real playback: it walks the requested loop count, applies Iter cycle by cycle, rolls Prob per note per cycle, and writes Ratchet sub-hits as discrete sub-step notes. The baked clip ends up with `step_iter / step_random / step_ratchet` reset to defaults — the resulting notes embody whatever pattern the trigs produced. Long chord + high ratchet bakes can exceed the 8-notes-per-step cap; excess sub-hits drop silently. Ableton `.ablbundle` export applies the same gates.
+
+> **Try this.** Set a snare on step 5 to **Iter 1/2** and a hi-hat on step 6 to **Iter 2/2** — they alternate cycles, building a 2-bar pattern from a 1-bar clip. Add **Prob 60%** to a tom on step 12 and **Ratch x3** to a clap on step 8 — the loop breathes without ever editing the underlying notes.
 
 ## 4.3 Chord entry
 
