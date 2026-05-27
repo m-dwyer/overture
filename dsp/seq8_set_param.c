@@ -4760,13 +4760,38 @@ static void set_param(void *instance, const char *key, const char *val) {
             int pitch = 0, press = 0, mode = 1;
             sscanf(val, "%d %d %d", &pitch, &press, &mode);
             uint8_t ch = tr->channel & 0x0F;
-            if (mode == 2)
-                pfx_send(&tr->pfx, (uint8_t)(0xD0 | ch),
-                         (uint8_t)clamp_i(press, 0, 127), 0);
-            else
-                pfx_send(&tr->pfx, (uint8_t)(0xA0 | ch),
-                         (uint8_t)clamp_i(pitch, 0, 127),
-                         (uint8_t)clamp_i(press, 0, 127));
+            uint8_t pv = (uint8_t)clamp_i(press, 0, 127);
+            if (mode == 2) {
+                pfx_send(&tr->pfx, (uint8_t)(0xD0 | ch), pv, 0);
+                tr->last_poly_at_press = 0;  /* channel mode: no replay needed */
+            } else {
+                /* Store latest pressure so arp_fire_step / tarp_fire_step can
+                 * replay it onto each newly-spawned voice. Without replay the
+                 * stream stalls between knuckle motions and new arp voices
+                 * are born at AT=0. */
+                tr->last_poly_at_press = pv;
+                if (tr->pfx.arp.style != 0 || tr->tarp.style != 0) {
+                    /* Arp active: fan out across every currently-sounding
+                     * output pitch (HARMZ copies, delay echoes, the sounding
+                     * arp pitch). Falls back to the pad pitch when nothing
+                     * is sounding mid-step. */
+                    int any = 0, p;
+                    for (p = 0; p < 128; p++) {
+                        if (tr->pfx.pitch_refcount[p] > 0) {
+                            pfx_send(&tr->pfx, (uint8_t)(0xA0 | ch),
+                                     (uint8_t)p, pv);
+                            any = 1;
+                        }
+                    }
+                    if (!any) {
+                        pfx_send(&tr->pfx, (uint8_t)(0xA0 | ch),
+                                 (uint8_t)clamp_i(pitch, 0, 127), pv);
+                    }
+                } else {
+                    pfx_send(&tr->pfx, (uint8_t)(0xA0 | ch),
+                             (uint8_t)clamp_i(pitch, 0, 127), pv);
+                }
+            }
             /* Record into the active clip when armed+recording on a melodic track.
              * The live send above runs regardless, so AT is monitored during the
              * count-in (recording=0 then); capture starts at recording proper.

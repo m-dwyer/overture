@@ -683,6 +683,13 @@ typedef struct {
     uint8_t   cc_was_recording;
     uint32_t  cc_prev_ct;
     uint32_t  cc_latch_last_snap[8];
+    /* Last poly-AT pressure value received via tN_live_at. Replayed on every
+     * arp/TARP step so new voices spawn with the pressure currently being
+     * applied (without this, holding pressure steady means no AT stream and
+     * each new arp voice starts at 0). 0 = no replay (after release or fresh
+     * track). Channel-pressure mode doesn't need this — the synth's channel
+     * AT register holds the value. */
+    uint8_t   last_poly_at_press;
 } seq8_track_t;
 #define LRS_SET(tr, s)  ((tr)->live_recorded_steps[(s)>>3] |=  (uint8_t)(1u<<((s)&7)))
 #define LRS_TEST(tr, s) ((tr)->live_recorded_steps[(s)>>3] &   (1u<<((s)&7)))
@@ -4062,6 +4069,14 @@ static void arp_fire_step(seq8_instance_t *inst, seq8_track_t *tr) {
      * arp_emitting=1 bypasses the pfx_send arp gate. */
     fx->arp_emitting = 1;
     pfx_send(fx, (uint8_t)(0x90 | tr->channel), pitch, (uint8_t)v);
+    /* Replay the last poly-AT pressure onto the new voice so a held finger
+     * keeps modulating across step transitions (Move's native arp does this
+     * implicitly; without it, the AT stream stalls between knuckle motions
+     * and each new arp voice is born at AT=0). */
+    if (tr->last_poly_at_press > 0) {
+        pfx_send(fx, (uint8_t)(0xA0 | tr->channel),
+                 pitch, tr->last_poly_at_press);
+    }
     fx->arp_emitting = 0;
 
     a->sounding_pitch  = pitch;
@@ -4800,6 +4815,15 @@ static void tarp_fire_step(seq8_instance_t *inst, seq8_track_t *tr) {
 
     /* Emit through pfx chain (NOTE FX → HARMZ → MIDI DLY → SEQ ARP). */
     pfx_note_on(inst, tr, pitch, (uint8_t)v);
+
+    /* Replay the last poly-AT pressure onto the new voice (see arp_fire_step
+     * comment). Only when SEQ ARP isn't downstream — when it is, SEQ ARP
+     * captures this note into its held buffer and emits its own voice
+     * separately, which arp_fire_step replays AT onto itself. */
+    if (fx->arp.style == 0 && tr->last_poly_at_press > 0) {
+        pfx_send(fx, (uint8_t)(0xA0 | tr->channel),
+                 pitch, tr->last_poly_at_press);
+    }
 
     a->sounding_pitch  = pitch;
     a->sounding_active = 1;
