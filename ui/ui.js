@@ -3529,7 +3529,7 @@ function drawUI() {
             const lane = S.activeDrumLane[t];
             if (S.heldStepNotes.length > 0) {
                 const tps   = S.drumLaneTPS[t] || 24;
-                const LABELS = ['Leng', 'Vel', 'Nudg', 'Iter', 'Rand', 'Ratch'];
+                const LABELS = ['Leng', 'Vel', 'Nudg', 'Iter', 'Prob', 'Ratch'];
                 const VALS   = [
                     (S.stepEditGate / tps).toFixed(1),
                     String(S.stepEditVel),
@@ -3563,7 +3563,7 @@ function drawUI() {
                 ? midiNoteName(root) + '+' + (S.heldStepNotes.length - 1)
                 : midiNoteName(root);
             const tps = S.clipTPS[S.activeTrack][ac] || 24;
-            const LABELS = ['Oct', 'Note', 'Leng', 'Vel', 'Nudg', 'Iter', 'Rand', 'Ratch'];
+            const LABELS = ['Oct', 'Note', 'Leng', 'Vel', 'Nudg', 'Iter', 'Prob', 'Ratch'];
             const VALS   = [
                 noteLabel,
                 noteLabel,

@@ -3221,6 +3221,9 @@ static void set_param(void *instance, const char *key, const char *val) {
                     memcpy(dst->clip.step_vel,         dlc->step_vel,         SEQ_STEPS);
                     memcpy(dst->clip.step_gate,        dlc->step_gate,        SEQ_STEPS * sizeof(uint16_t));
                     memcpy(dst->clip.note_tick_offset, dlc->note_tick_offset, SEQ_STEPS * 8 * sizeof(int16_t));
+                    memcpy(dst->clip.step_iter,    dlc->step_iter,    SEQ_STEPS);
+                    memcpy(dst->clip.step_random,  dlc->step_random,  SEQ_STEPS);
+                    memcpy(dst->clip.step_ratchet, dlc->step_ratchet, SEQ_STEPS);
                     dst->clip.length        = dlc->length;
                     dst->clip.loop_start    = dlc->loop_start;
                     dst->clip.ticks_per_step = dlc->ticks_per_step;
@@ -3253,6 +3256,9 @@ static void set_param(void *instance, const char *key, const char *val) {
                     memcpy(dst->clip.step_vel,         dlc->step_vel,         SEQ_STEPS);
                     memcpy(dst->clip.step_gate,        dlc->step_gate,        SEQ_STEPS * sizeof(uint16_t));
                     memcpy(dst->clip.note_tick_offset, dlc->note_tick_offset, SEQ_STEPS * 8 * sizeof(int16_t));
+                    memcpy(dst->clip.step_iter,    dlc->step_iter,    SEQ_STEPS);
+                    memcpy(dst->clip.step_random,  dlc->step_random,  SEQ_STEPS);
+                    memcpy(dst->clip.step_ratchet, dlc->step_ratchet, SEQ_STEPS);
                     dst->clip.length        = dlc->length;
                     dst->clip.loop_start    = dlc->loop_start;
                     dst->clip.ticks_per_step = dlc->ticks_per_step;
