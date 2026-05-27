@@ -2472,6 +2472,14 @@ function resetFxBanks(t) {
             key: 't' + t + '_c' + _ac + '_pfx_set',
             val: 'delay_level 127'
         });
+        /* Reset SEQ ARP step params (step vel levels, per-step intervals,
+         * loop length) — DSP-side clip_pfx_params_init handles these on
+         * pfx_reset; mirror in JS so the overlay reflects defaults. */
+        for (let s = 0; s < 8; s++) {
+            S.seqArpStepVel[t][_ac][s] = 4;
+            S.seqArpStepInt[t][_ac][s] = 0;
+        }
+        S.seqArpStepLoopLen[t][_ac] = 8;
     }
     const targets = [1, 2, 3, 4];
     for (let bi = 0; bi < targets.length; bi++) {
