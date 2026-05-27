@@ -4377,6 +4377,13 @@ function exitMoveNativeCoRun() {
     /* Resume the shim's overtake LED-strip loop so dAVEBOx owns the LEDs again
      * (mirror of the skip_led_clear(1) in enterMoveNativeCoRun). */
     if (typeof shadow_set_skip_led_clear === 'function') shadow_set_skip_led_clear(0);
+    /* If a drum pad hold inject was in flight, send the note-off before the
+     * co-run session ends so Move doesn't get a stuck note. */
+    if (S.moveCoRunDrumHeld >= 0 && typeof move_midi_inject_to_move === 'function') {
+        move_midi_inject_to_move([0x08, 0x80, S.moveCoRunDrumHeld, 0]);  /* pad off */
+        move_midi_inject_to_move([0x0B, 0xB0, 49, 0]);                   /* Shift off */
+    }
+    S.moveCoRunDrumHeld = -1;
     /* Modifier-key release CCs the user pressed inside Move firmware never
      * reach us during co-run — clear defensively so a stuck Shift/Mute/etc.
      * can't silence pad dispatch on return. Mirrors resume-from-suspend. */
@@ -8975,10 +8982,14 @@ function _onPadPress(status, d1, d2) {
                 d1 >= 68 && d1 <= 99 && ((d1 - 68) % 8) < 4 &&
                 (status & 0xF0) === 0x90 && d2 > 0 &&
                 typeof move_midi_inject_to_move === 'function') {
+            /* Shift + noteOn, no immediate noteOff. Note stays open until the pad is
+             * physically released (_onPadRelease sends noteOff + ShiftOff). Move sees a
+             * genuine held Shift+pad: selects the drum cell for editing AND detects a hold
+             * naturally for its per-drum volume/tuning editor. No deferred threshold needed.
+             * Still causes one dAVEBOx drum hit (double-hit fix TBD). */
             move_midi_inject_to_move([0x0B, 0xB0, 49, 127]);  /* Shift on */
-            move_midi_inject_to_move([0x09, 0x90, d1, 100]);  /* pad on */
-            move_midi_inject_to_move([0x08, 0x80, d1, 0]);    /* pad off */
-            move_midi_inject_to_move([0x0B, 0xB0, 49, 0]);    /* Shift off */
+            move_midi_inject_to_move([0x09, 0x90, d1, 100]);  /* pad on — held until release */
+            S.moveCoRunDrumHeld = d1;
         }
         if (S.tapTempoOpen && d1 >= 68 && d1 <= 99) {
             registerTapTempo(d1);
@@ -9795,6 +9806,15 @@ function _onStepButtons(d1, d2) {
 
 function _onPadRelease(status, d1, d2) {
     if (S.tapTempoOpen && d1 >= 68 && d1 <= 99) return;
+    /* Co-run drum hold release: if the hold-threshold inject fired, send note-off
+     * to close the held note in Move firmware. Always clear hold state on any
+     * release of the tracked pad, even if the threshold hadn't fired yet. */
+    if (S.moveCoRunTrack >= 0 && S.moveCoRunDrumHeld === d1 &&
+            typeof move_midi_inject_to_move === 'function') {
+        move_midi_inject_to_move([0x08, 0x80, d1, 0]);    /* pad off */
+        move_midi_inject_to_move([0x0B, 0xB0, 49, 0]);    /* Shift off */
+        S.moveCoRunDrumHeld = -1;
+    }
     /* Step buttons (notes 16-31): if a Loop+step gesture is in flight and
      * the released step is the held start, resolve the gesture — fire the
      * length-only fallback when no B-tap landed, or just clear state when
