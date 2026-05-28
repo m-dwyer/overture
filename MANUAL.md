@@ -598,6 +598,8 @@ K4 and K8 are unassigned on the CLIP bank. Clip length is set via **Loop + jog r
 
 **Direction notes.** Step LEDs, OLED playhead, and live recording all follow the visual playhead — recording into a Bwd clip captures notes at the step the playhead is on, so you can play and record in any direction. *Adaptive record arm* (the "grow when near end" press-record behavior) is forward-biased and is forced to fixed-mode arm when the active clip is non-Forward. Within each step, micro-timing still flows forward; the engine reverses step order, not the notes themselves.
 
+**Bake / Ableton export honor direction.** Capturing a non-Forward clip writes a Forward-playing clip whose note positions match the directional playback. A 4-step Bwd source bakes to a 4-step clip at [3, 2, 1, 0]; a 4-step PP source bakes to a 6-step clip at [0, 1, 2, 3, 2, 1]. Pingpong endpoints play once per direction change (matching live). After bake, the output clip's direction is reset to Forward — direction is "frozen" into the new note positions, so you can re-set direction on the baked clip without compounding. Same behavior for the Ableton `.ablbundle` export. In whole-drum-clip bake, the longest lane's *playback cycle* (including PP doubling) sets the output's loop unit; shorter-cycle lanes loop more times to fill the full extent.
+
 ## 5.2 NOTE FX bank
 
 Non-destructive transforms applied to every note before output.

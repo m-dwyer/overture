@@ -6791,10 +6791,18 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
     int scale_aware = (int)inst->scale_aware;
     uint16_t tps    = cl->ticks_per_step ? cl->ticks_per_step : (uint16_t)TICKS_PER_STEP;
     uint16_t length = cl->length;
-    uint32_t clip_ticks     = (uint32_t)length * tps;   /* L = one cycle */
+    uint32_t clip_ticks     = (uint32_t)length * tps;
     uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
-    if (out_cycle_ticks) *out_cycle_ticks = clip_ticks;
-    if (out_total_ticks) *out_total_ticks = clip_ticks * (uint32_t)loops;
+
+    /* Direction-aware cycle for export — PP cycle = 2L-2 (endpoint plays once). */
+    uint8_t pdir = cl->playback_dir;
+    uint16_t cycle_steps = (pdir == 2 || pdir == 3)
+                           ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
+                           : length;
+    uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
+    if (out_cycle_ticks) *out_cycle_ticks = cycle_ticks;
+    if (out_total_ticks) *out_total_ticks = cycle_ticks * (uint32_t)loops;
+    if (cycle_ticks == 0) return 0;
 
     static bake_note_t rmc_a[BAKE_BUF];
     static bake_note_t rmc_b[BAKE_BUF];
@@ -6803,7 +6811,7 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
     int loop;
     for (loop = 0; loop < loops; loop++) {
         int wrapped = (loop >= wrap_from);
-        uint32_t tick_offset = (uint32_t)loop * clip_ticks;
+        uint32_t loop_offset = (uint32_t)loop * cycle_ticks;
         int a_count = 0;
         fx.note_random_walk = 0;   /* fresh walk; fx.rng persists → distinct pass per cycle */
         for (ni = 0; ni < cl->note_count && a_count < BAKE_BUF; ni++) {
@@ -6815,6 +6823,31 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
             uint16_t _sidx = note_step(nn->tick, length, tps);
             if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
             uint32_t rel_tick = nn->tick - win_start_tick;
+            uint16_t S        = (uint16_t)(rel_tick / tps);
+            uint32_t micro    = rel_tick - (uint32_t)S * tps;
+
+            uint32_t emit_ticks[2];
+            int      emit_count = 0;
+            switch (pdir) {
+            case 1:
+                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                break;
+            case 2:
+                emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
+                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                    emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
+                break;
+            case 3:
+                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                    emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
+                break;
+            case 0:
+            default:
+                emit_ticks[emit_count++] = rel_tick;
+                break;
+            }
+
             uint32_t gate = (uint32_t)nn->gate;
             if (fx.gate_time != 100 && fx.gate_time > 0)
                 gate = gate * (uint32_t)fx.gate_time / 100u;
@@ -6823,8 +6856,6 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
             if (vel < 1) vel = 1; if (vel > 127) vel = 127;
             uint8_t gen[MAX_GEN_NOTES];
             int gc = pfx_build_gen_notes(inst, scale_aware, &fx, (int)nn->pitch, gen);
-            int gi;
-            uint32_t eff_tick = bake_apply_quantize(rel_tick, tps, length, fx.quantize);
             /* v=34 Ratchet bake: r evenly-spaced sub-hits at TPS/r within one
              * step; sub-hit gate = sub-interval. ratchet<2 => single emit. */
             uint8_t  _ratch = cl->step_ratchet[_sidx];
@@ -6832,13 +6863,16 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
             uint16_t _sub_interval = (_ratch > 1) ? (uint16_t)(tps / _ratch) : 0;
             uint16_t _final_gate   = (_ratch > 1) ? (_sub_interval ? _sub_interval : 1)
                                                   : (uint16_t)gate;
-            int _k;
-            for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
-                uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
-                if (_sub_tick >= clip_ticks) break;
-                for (gi = 0; gi < gc && a_count < BAKE_BUF; gi++)
-                    rmc_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
-                                                      gen[gi], (uint8_t)vel };
+            int ei, _k, gi;
+            for (ei = 0; ei < emit_count && a_count < BAKE_BUF; ei++) {
+                uint32_t eff_tick = bake_apply_quantize(emit_ticks[ei], tps, cycle_steps, fx.quantize);
+                for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
+                    uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
+                    if (_sub_tick >= cycle_ticks) break;
+                    for (gi = 0; gi < gc && a_count < BAKE_BUF; gi++)
+                        rmc_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
+                                                          gen[gi], (uint8_t)vel };
+                }
             }
         }
 
@@ -6847,14 +6881,14 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
         for (si = 0; si < 2; si++) {
             int out_count;
             if (BAKE_STAGES[si] == BAKE_STAGE_MIDI_DLY)
-                /* Wrapped cycle: generate all echoes (UINT32_MAX), fold mod L
-                 * below → steady-state. Open cycle: stop echoes at L → clean
-                 * first pass (tail cut by the loop brace at L anyway). */
-                out_count = bake_stage_midi_dly(inst, scale_aware, &fx, clip_ticks,
-                                                wrapped ? UINT32_MAX : clip_ticks,
+                /* Wrapped cycle: generate all echoes (UINT32_MAX), fold mod cycle
+                 * below → steady-state. Open cycle: stop echoes at cycle_ticks → clean
+                 * first pass (tail cut by the loop brace anyway). */
+                out_count = bake_stage_midi_dly(inst, scale_aware, &fx, cycle_ticks,
+                                                wrapped ? UINT32_MAX : cycle_ticks,
                                                 in_buf, in_count, out_buf, BAKE_BUF);
             else
-                out_count = bake_stage_arp_out(inst, &fx, clip_ticks,
+                out_count = bake_stage_arp_out(inst, &fx, cycle_ticks,
                                                in_buf, in_count, out_buf, BAKE_BUF);
             bake_note_t *tmp = in_buf; in_buf = out_buf; out_buf = tmp;
             in_count = out_count;
@@ -6862,9 +6896,9 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
 
         for (ri = 0; ri < in_count && total_out < out_cap; ri++) {
             uint32_t tick = in_buf[ri].tick;
-            if (wrapped) tick %= clip_ticks;          /* fold within this cycle */
-            else if (tick >= clip_ticks) continue;    /* open: drop tail past L */
-            out[total_out].tick  = tick + tick_offset;
+            if (wrapped) tick %= cycle_ticks;          /* fold within this cycle */
+            else if (tick >= cycle_ticks) continue;    /* open: drop tail past cycle */
+            out[total_out].tick  = tick + loop_offset;
             out[total_out].gate  = in_buf[ri].gate;
             out[total_out].pitch = in_buf[ri].pitch;
             out[total_out].vel   = in_buf[ri].vel;
@@ -6901,22 +6935,39 @@ static void bake_clip(seq8_instance_t *inst, int t, int c, int loops, int wrap) 
      * not played and therefore not baked. Tick math below operates in
      * window-relative space so the baked output anchors at step 0. */
     uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
-    uint16_t new_length  = (uint16_t)clamp_i(length * loops, 1, 256);
+
+    /* Direction-aware bake. One "cycle" = one full playback cycle in the
+     * current direction:
+     *   Forward / Backward : cycle_steps = length
+     *   PPf / PPb          : cycle_steps = 2*length - 2  (endpoint plays once)
+     * Per source note we emit 1 or 2 directional positions inside one cycle;
+     * the BAKE_STAGES operate on cycle_ticks (not clip_ticks) so MIDI DLY /
+     * SEQ ARP wrap semantics match what live playback would do. */
+    uint8_t pdir = cl->playback_dir;
+    uint16_t cycle_steps = (pdir == 2 || pdir == 3)
+                           ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
+                           : length;
+    uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
+
+    uint16_t new_length  = (uint16_t)clamp_i((int)cycle_steps * loops, 1, 256);
     uint32_t total_ticks = (uint32_t)new_length * tps;
 
     static bake_note_t bake_a[BAKE_BUF];
     static bake_note_t bake_b[BAKE_BUF];
-    static bake_note_t bake_out[BAKE_BUF * 4]; /* accumulates all loop passes */
+    static bake_note_t bake_out[BAKE_BUF * 4]; /* accumulates all cycles */
     int total_out = 0;
     int out_cap   = BAKE_BUF * loops;
 
     int loop;
     for (loop = 0; loop < loops; loop++) {
-        uint32_t tick_offset = (uint32_t)loop * clip_ticks;
+        uint32_t loop_offset = (uint32_t)loop * cycle_ticks;
         int a_count = 0;
-        fx.note_random_walk = 0; /* fresh walk each loop so loops produce independent pitch sequences */
+        fx.note_random_walk = 0; /* fresh walk each cycle so loops produce independent pitch sequences */
 
-        /* Stage 0: NOTEFX + HARMZ — reads cl->notes (unmodified until clip_init below) */
+        /* Stage 0: NOTEFX + HARMZ — reads cl->notes (unmodified until clip_init below).
+         * For each source note we compute the directional position(s) inside
+         * this cycle and emit there. PP yields up to 2 positions per source
+         * note (ascending + descending), endpoints only emit once. */
         for (ni = 0; ni < cl->note_count && a_count < BAKE_BUF; ni++) {
             note_t *nn = &cl->notes[ni];
             if (nn->suppress_until_wrap) continue;
@@ -6926,6 +6977,31 @@ static void bake_clip(seq8_instance_t *inst, int t, int c, int loops, int wrap) 
             uint16_t _sidx = note_step(nn->tick, length, tps);
             if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
             uint32_t rel_tick = nn->tick - win_start_tick;
+            uint16_t S        = (uint16_t)(rel_tick / tps);
+            uint32_t micro    = rel_tick - (uint32_t)S * tps;
+
+            uint32_t emit_ticks[2];
+            int      emit_count = 0;
+            switch (pdir) {
+            case 1: /* Backward */
+                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                break;
+            case 2: /* Pingpong Forward */
+                emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
+                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                    emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
+                break;
+            case 3: /* Pingpong Backward */
+                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                    emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
+                break;
+            case 0:
+            default: /* Forward */
+                emit_ticks[emit_count++] = rel_tick;
+                break;
+            }
+
             uint32_t gate = (uint32_t)nn->gate;
             if (fx.gate_time != 100 && fx.gate_time > 0)
                 gate = gate * (uint32_t)fx.gate_time / 100u;
@@ -6934,44 +7010,48 @@ static void bake_clip(seq8_instance_t *inst, int t, int c, int loops, int wrap) 
             if (vel < 1) vel = 1; if (vel > 127) vel = 127;
             uint8_t gen[MAX_GEN_NOTES];
             int gc = pfx_build_gen_notes(inst, scale_aware, &fx, (int)nn->pitch, gen);
-            int gi;
-            uint32_t eff_tick = bake_apply_quantize(rel_tick, tps, length, fx.quantize);
+
             /* v=34 Ratchet bake: r sub-hits tiling one step, gate=sub-interval. */
             uint8_t  _ratch = cl->step_ratchet[_sidx];
             if (_ratch < 2) _ratch = 1;
             uint16_t _sub_interval = (_ratch > 1) ? (uint16_t)(tps / _ratch) : 0;
             uint16_t _final_gate   = (_ratch > 1) ? (_sub_interval ? _sub_interval : 1)
                                                   : (uint16_t)gate;
-            int _k;
-            for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
-                uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
-                if (_sub_tick >= clip_ticks) break;
-                for (gi = 0; gi < gc && a_count < BAKE_BUF; gi++)
-                    bake_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
-                                                       gen[gi], (uint8_t)vel };
+
+            int ei, _k, gi;
+            for (ei = 0; ei < emit_count && a_count < BAKE_BUF; ei++) {
+                uint32_t eff_tick = bake_apply_quantize(emit_ticks[ei], tps, cycle_steps, fx.quantize);
+                for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
+                    uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
+                    if (_sub_tick >= cycle_ticks) break;
+                    for (gi = 0; gi < gc && a_count < BAKE_BUF; gi++)
+                        bake_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
+                                                           gen[gi], (uint8_t)vel };
+                }
             }
         }
 
-        /* Process BAKE_STAGES */
+        /* Process BAKE_STAGES — clip_ticks param = cycle_ticks for PP (so
+         * delay echo wrap math matches live playback's cycle). */
         bake_note_t *in_buf = bake_a, *out_buf = bake_b;
         int in_count = a_count;
         for (si = 0; si < 2; si++) {
             int out_count;
             if (BAKE_STAGES[si] == BAKE_STAGE_MIDI_DLY)
-                out_count = bake_stage_midi_dly(inst, scale_aware, &fx, clip_ticks,
+                out_count = bake_stage_midi_dly(inst, scale_aware, &fx, cycle_ticks,
                                                 (wrap && loop == loops - 1) ? UINT32_MAX
-                                                    : (uint32_t)(loops - loop) * clip_ticks,
+                                                    : (uint32_t)(loops - loop) * cycle_ticks,
                                                 in_buf, in_count, out_buf, BAKE_BUF);
             else
-                out_count = bake_stage_arp_out(inst, &fx, clip_ticks,
+                out_count = bake_stage_arp_out(inst, &fx, cycle_ticks,
                                                in_buf, in_count, out_buf, BAKE_BUF);
             bake_note_t *tmp = in_buf; in_buf = out_buf; out_buf = tmp;
             in_count = out_count;
         }
 
-        /* Accumulate this pass with tick_offset; wrap overflow back to start if requested */
+        /* Accumulate this cycle with loop_offset; wrap overflow back to start if requested */
         for (ri = 0; ri < in_count && total_out < out_cap; ri++) {
-            uint32_t tick = in_buf[ri].tick + tick_offset;
+            uint32_t tick = in_buf[ri].tick + loop_offset;
             if (tick >= total_ticks) {
                 if (!wrap) continue;
                 tick %= total_ticks;
@@ -6984,7 +7064,8 @@ static void bake_clip(seq8_instance_t *inst, int t, int c, int loops, int wrap) 
         }
     }
 
-    /* Write results back; clip_init also clears pfx_params */
+    /* Write results back; clip_init also clears pfx_params + resets playback_dir
+     * to Forward (direction is now "frozen" into the note positions). */
     clip_init(cl);
     cl->ticks_per_step = tps;
     cl->length         = new_length;
@@ -7042,20 +7123,29 @@ static void bake_drum_lane(seq8_instance_t *inst, int t, int c, int lane, int lo
         uint16_t length = cl->length;
         uint32_t clip_ticks  = (uint32_t)length * tps;
         uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
-        uint16_t new_length  = (uint16_t)clamp_i(length * loops, 1, 256);
+
+        /* Direction-aware bake — see bake_clip above for the full design. */
+        uint8_t pdir = cl->playback_dir;
+        uint16_t cycle_steps = (pdir == 2 || pdir == 3)
+                               ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
+                               : length;
+        uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
+
+        uint16_t new_length  = (uint16_t)clamp_i((int)cycle_steps * loops, 1, 256);
         uint32_t total_ticks = (uint32_t)new_length * tps;
         int total_out = 0;
         int out_cap   = BAKE_BUF * loops;
         int loop, si, ri;
 
         for (loop = 0; loop < loops; loop++) {
-            uint32_t tick_offset = (uint32_t)loop * clip_ticks;
+            uint32_t loop_offset = (uint32_t)loop * cycle_ticks;
             fx.note_random_walk = 0;
             int a_count = 0;
 
             /* Stage 0: vel/gate from NOTE FX — no pitch/HARMZ expansion.
-             * Window-only: skip notes outside [loop_start, loop_start+length),
-             * subtract win_start_tick so output anchors at step 0. */
+             * Window-only: skip notes outside [loop_start, loop_start+length).
+             * Each source note yields 1 or 2 directional positions inside the
+             * cycle (PP middle steps emit twice; endpoints once). */
             for (ni = 0; ni < cl->note_count && a_count < BAKE_BUF; ni++) {
                 note_t *nn = &cl->notes[ni];
                 if (nn->suppress_until_wrap) continue;
@@ -7065,25 +7155,52 @@ static void bake_drum_lane(seq8_instance_t *inst, int t, int c, int lane, int lo
                 uint16_t _sidx = note_step(nn->tick, length, tps);
                 if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
                 uint32_t rel_tick = nn->tick - win_start_tick;
+                uint16_t S        = (uint16_t)(rel_tick / tps);
+                uint32_t micro    = rel_tick - (uint32_t)S * tps;
+
+                uint32_t emit_ticks[2];
+                int      emit_count = 0;
+                switch (pdir) {
+                case 1:
+                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                    break;
+                case 2:
+                    emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
+                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                        emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
+                    break;
+                case 3:
+                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                        emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
+                    break;
+                case 0:
+                default:
+                    emit_ticks[emit_count++] = rel_tick;
+                    break;
+                }
+
                 uint32_t gate = (uint32_t)nn->gate;
                 if (fx.gate_time != 100 && fx.gate_time > 0)
                     gate = gate * (uint32_t)fx.gate_time / 100u;
                 if (gate < 1) gate = 1; if (gate > 65535u) gate = 65535u;
                 int vel = (int)nn->vel + fx.velocity_offset;
                 if (vel < 1) vel = 1; if (vel > 127) vel = 127;
-                uint32_t eff_tick = bake_apply_quantize(rel_tick, tps, length, fx.quantize);
                 /* v=34 Ratchet bake: r sub-hits tiling one step, gate=sub-interval. */
                 uint8_t  _ratch = cl->step_ratchet[_sidx];
                 if (_ratch < 2) _ratch = 1;
                 uint16_t _sub_interval = (_ratch > 1) ? (uint16_t)(tps / _ratch) : 0;
                 uint16_t _final_gate   = (_ratch > 1) ? (_sub_interval ? _sub_interval : 1)
                                                       : (uint16_t)gate;
-                int _k;
-                for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
-                    uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
-                    if (_sub_tick >= clip_ticks) break;
-                    dl_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
-                                                     dl->midi_note, (uint8_t)vel };
+                int ei, _k;
+                for (ei = 0; ei < emit_count && a_count < BAKE_BUF; ei++) {
+                    uint32_t eff_tick = bake_apply_quantize(emit_ticks[ei], tps, cycle_steps, fx.quantize);
+                    for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
+                        uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
+                        if (_sub_tick >= cycle_ticks) break;
+                        dl_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
+                                                         dl->midi_note, (uint8_t)vel };
+                    }
                 }
             }
 
@@ -7092,19 +7209,19 @@ static void bake_drum_lane(seq8_instance_t *inst, int t, int c, int lane, int lo
             for (si = 0; si < 2; si++) {
                 int out_count;
                 if (BAKE_STAGES[si] == BAKE_STAGE_MIDI_DLY)
-                    out_count = bake_stage_midi_dly(inst, scale_aware, &fx, clip_ticks,
+                    out_count = bake_stage_midi_dly(inst, scale_aware, &fx, cycle_ticks,
                                                     (wrap && loop == loops - 1) ? UINT32_MAX
-                                                        : (uint32_t)(loops - loop) * clip_ticks,
+                                                        : (uint32_t)(loops - loop) * cycle_ticks,
                                                     in_buf, in_count, out_buf, BAKE_BUF);
                 else
-                    out_count = bake_stage_arp_out(inst, &fx, clip_ticks,
+                    out_count = bake_stage_arp_out(inst, &fx, cycle_ticks,
                                                    in_buf, in_count, out_buf, BAKE_BUF);
                 bake_note_t *tmp = in_buf; in_buf = out_buf; out_buf = tmp;
                 in_count = out_count;
             }
 
             for (ri = 0; ri < in_count && total_out < out_cap; ri++) {
-                uint32_t tick = in_buf[ri].tick + tick_offset;
+                uint32_t tick = in_buf[ri].tick + loop_offset;
                 if (tick >= total_ticks) {
                     if (!wrap) continue;
                     tick %= total_ticks;
@@ -7117,7 +7234,7 @@ static void bake_drum_lane(seq8_instance_t *inst, int t, int c, int lane, int lo
             }
         }
 
-        clip_init(cl);
+        clip_init(cl);  /* also resets playback_dir to Forward */
         cl->ticks_per_step = tps;
         cl->length = new_length;
         for (ri = 0; ri < total_out; ri++) {
@@ -7184,8 +7301,16 @@ static int render_drum_lane_nd(seq8_instance_t *inst, int t, int c, int lane,
     uint16_t length = cl->length;
     uint32_t clip_ticks     = (uint32_t)length * tps;
     uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
-    if (out_lane_ticks) *out_lane_ticks = clip_ticks * (uint32_t)loops;
-    if (clip_ticks == 0) return 0;
+
+    /* Direction-aware cycle for export — see bake_clip. */
+    uint8_t pdir = cl->playback_dir;
+    uint16_t cycle_steps = (pdir == 2 || pdir == 3)
+                           ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
+                           : length;
+    uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
+
+    if (out_lane_ticks) *out_lane_ticks = cycle_ticks * (uint32_t)loops;
+    if (clip_ticks == 0 || cycle_ticks == 0) return 0;
 
     int wrapped = (fx.delay_level > 0);
     static bake_note_t dnd_a[BAKE_BUF];
@@ -7193,7 +7318,7 @@ static int render_drum_lane_nd(seq8_instance_t *inst, int t, int c, int lane,
     int n = 0;
     int loop;
     for (loop = 0; loop < loops; loop++) {
-        uint32_t tick_offset = (uint32_t)loop * clip_ticks;
+        uint32_t loop_offset = (uint32_t)loop * cycle_ticks;
         fx.note_random_walk = 0;   /* fresh walk; fx.rng persists for distinct passes */
         int a_count = 0;
         for (ni = 0; ni < cl->note_count && a_count < BAKE_BUF; ni++) {
@@ -7205,25 +7330,52 @@ static int render_drum_lane_nd(seq8_instance_t *inst, int t, int c, int lane,
             uint16_t _sidx = note_step(nn->tick, length, tps);
             if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
             uint32_t rel_tick = nn->tick - win_start_tick;
+            uint16_t S        = (uint16_t)(rel_tick / tps);
+            uint32_t micro    = rel_tick - (uint32_t)S * tps;
+
+            uint32_t emit_ticks[2];
+            int      emit_count = 0;
+            switch (pdir) {
+            case 1:
+                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                break;
+            case 2:
+                emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
+                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                    emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
+                break;
+            case 3:
+                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                    emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
+                break;
+            case 0:
+            default:
+                emit_ticks[emit_count++] = rel_tick;
+                break;
+            }
+
             uint32_t gate = (uint32_t)nn->gate;
             if (fx.gate_time != 100 && fx.gate_time > 0)
                 gate = gate * (uint32_t)fx.gate_time / 100u;
             if (gate < 1) gate = 1; if (gate > 65535u) gate = 65535u;
             int vel = (int)nn->vel + fx.velocity_offset;
             if (vel < 1) vel = 1; if (vel > 127) vel = 127;
-            uint32_t eff_tick = bake_apply_quantize(rel_tick, tps, length, fx.quantize);
             /* v=34 Ratchet: r sub-hits tiling one step, gate=sub-interval. */
             uint8_t  _ratch = cl->step_ratchet[_sidx];
             if (_ratch < 2) _ratch = 1;
             uint16_t _sub_interval = (_ratch > 1) ? (uint16_t)(tps / _ratch) : 0;
             uint16_t _final_gate   = (_ratch > 1) ? (_sub_interval ? _sub_interval : 1)
                                                   : (uint16_t)gate;
-            int _k;
-            for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
-                uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
-                if (_sub_tick >= clip_ticks) break;
-                dnd_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
-                                                  dl->midi_note, (uint8_t)vel };
+            int ei, _k;
+            for (ei = 0; ei < emit_count && a_count < BAKE_BUF; ei++) {
+                uint32_t eff_tick = bake_apply_quantize(emit_ticks[ei], tps, cycle_steps, fx.quantize);
+                for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
+                    uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
+                    if (_sub_tick >= cycle_ticks) break;
+                    dnd_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
+                                                      dl->midi_note, (uint8_t)vel };
+                }
             }
         }
 
@@ -7232,11 +7384,11 @@ static int render_drum_lane_nd(seq8_instance_t *inst, int t, int c, int lane,
         for (si = 0; si < 2; si++) {
             int out_count;
             if (BAKE_STAGES[si] == BAKE_STAGE_MIDI_DLY)
-                out_count = bake_stage_midi_dly(inst, scale_aware, &fx, clip_ticks,
-                                                wrapped ? UINT32_MAX : clip_ticks,
+                out_count = bake_stage_midi_dly(inst, scale_aware, &fx, cycle_ticks,
+                                                wrapped ? UINT32_MAX : cycle_ticks,
                                                 in_buf, in_count, out_buf, BAKE_BUF);
             else
-                out_count = bake_stage_arp_out(inst, &fx, clip_ticks,
+                out_count = bake_stage_arp_out(inst, &fx, cycle_ticks,
                                                in_buf, in_count, out_buf, BAKE_BUF);
             bake_note_t *tmp = in_buf; in_buf = out_buf; out_buf = tmp;
             in_count = out_count;
@@ -7244,9 +7396,9 @@ static int render_drum_lane_nd(seq8_instance_t *inst, int t, int c, int lane,
 
         for (ri = 0; ri < in_count && n < out_cap; ri++) {
             uint32_t tick = in_buf[ri].tick;
-            if (wrapped) tick %= clip_ticks;
-            else if (tick >= clip_ticks) continue;
-            out[n].tick  = tick + tick_offset;
+            if (wrapped) tick %= cycle_ticks;
+            else if (tick >= cycle_ticks) continue;
+            out[n].tick  = tick + loop_offset;
             out[n].gate  = in_buf[ri].gate;
             out[n].pitch = dl->midi_note;
             out[n].vel   = in_buf[ri].vel;
@@ -7277,27 +7429,34 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
 
     int scale_aware = (int)inst->scale_aware;
 
-    /* Use the LONGEST non-empty lane as the bake's loop unit so the output's
-     * total extent is (longest_lane * loops). Shorter lanes then iterate
-     * `new_length / cl->length` times each (computed per-lane below) so they
-     * loop in phase across the full output extent — same way they play live
-     * with each lane wrapping independently against its own loop_start+length. */
-    uint16_t ref_tps = (uint16_t)TICKS_PER_STEP, ref_length = (uint16_t)SEQ_STEPS_DEFAULT;
+    /* Use the LONGEST non-empty lane's *playback cycle* as the bake's unit so
+     * a PP lane (cycle = 2L-2 steps) extends the output's total extent
+     * accordingly. Shorter lanes (by cycle) loop more times to stay in phase
+     * across the full extent — same way they play live with each lane
+     * wrapping independently against its own cycle. */
+    uint16_t ref_tps = (uint16_t)TICKS_PER_STEP;
+    uint32_t ref_cycle_ticks = 0;
     {
-        uint16_t max_len = 0;
         for (l = 0; l < DRUM_LANES; l++) {
             clip_t *cl = &tr->drum_clips[c].lanes[l].clip;
-            if (cl->note_count > 0 && cl->ticks_per_step > 0) {
-                if (cl->length > max_len) {
-                    max_len = cl->length;
+            if (cl->note_count > 0 && cl->ticks_per_step > 0 && cl->length > 0) {
+                uint16_t L  = cl->length;
+                uint16_t cs = (cl->playback_dir == 2 || cl->playback_dir == 3)
+                              ? (uint16_t)((L >= 2) ? (2u * L - 2u) : L)
+                              : L;
+                uint32_t ct = (uint32_t)cs * cl->ticks_per_step;
+                if (ct > ref_cycle_ticks) {
+                    ref_cycle_ticks = ct;
                     ref_tps = cl->ticks_per_step;
                 }
             }
         }
-        if (max_len > 0) ref_length = max_len;
+        if (ref_cycle_ticks == 0)
+            ref_cycle_ticks = (uint32_t)SEQ_STEPS_DEFAULT * ref_tps;
     }
 
-    uint16_t new_length  = (uint16_t)clamp_i(ref_length * loops, 1, 256);
+    uint32_t new_ticks_raw = ref_cycle_ticks * (uint32_t)loops;
+    uint16_t new_length  = (uint16_t)clamp_i((int)(new_ticks_raw / ref_tps), 1, 256);
     uint32_t new_ticks   = (uint32_t)new_length * ref_tps;
 
     static bake_note_t dc_pool[DRUM_BAKE_POOL];
@@ -7329,24 +7488,31 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
         fx.rng       = 0xDEADBEEFu;
 
         uint16_t tps    = cl->ticks_per_step ? cl->ticks_per_step : ref_tps;
-        uint16_t length = cl->length ? cl->length : ref_length;
+        uint16_t length = cl->length ? cl->length : (uint16_t)SEQ_STEPS_DEFAULT;
         uint32_t clip_ticks = (uint32_t)length * tps;
         uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
+
+        /* Direction-aware per-lane bake. */
+        uint8_t pdir = cl->playback_dir;
+        uint16_t cycle_steps = (pdir == 2 || pdir == 3)
+                               ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
+                               : length;
+        uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
         int loop, si, ri;
-        /* This lane's cycle count = enough loops to fill the full output extent.
-         * Matches the longest lane's `loops` cycles when length == ref_length;
-         * shorter lanes loop more times (e.g. 8-step lane in a 16-step ref,
-         * 4-loop bake = 8 lane cycles total) so the lane stays in phase
-         * across the whole baked clip instead of cutting out halfway. */
-        int lane_loops = (clip_ticks > 0) ? (int)(new_ticks / clip_ticks) : loops;
+        /* Cover the full output extent — ceil so partial trailing cycle still
+         * emits content (truncated at new_ticks by the accumulate loop). */
+        int lane_loops = (cycle_ticks > 0)
+                         ? (int)((new_ticks + cycle_ticks - 1u) / cycle_ticks)
+                         : loops;
         if (lane_loops < 1) lane_loops = 1;
 
         for (loop = 0; loop < lane_loops; loop++) {
-            uint32_t tick_offset = (uint32_t)loop * clip_ticks;
+            uint32_t loop_offset = (uint32_t)loop * cycle_ticks;
             fx.note_random_walk = 0;
             int a_count = 0;
 
-            /* Window-only bake: each lane filters by its own loop_start. */
+            /* Window-only bake: each lane filters by its own loop_start.
+             * Per source note: emit 1 or 2 directional positions in cycle. */
             for (ni = 0; ni < cl->note_count && a_count < BAKE_BUF; ni++) {
                 note_t *nn = &cl->notes[ni];
                 if (nn->suppress_until_wrap) continue;
@@ -7356,6 +7522,31 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
                 uint16_t _sidx = note_step(nn->tick, length, tps);
                 if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
                 uint32_t rel_tick = nn->tick - win_start_tick;
+                uint16_t S        = (uint16_t)(rel_tick / tps);
+                uint32_t micro    = rel_tick - (uint32_t)S * tps;
+
+                uint32_t emit_ticks[2];
+                int      emit_count = 0;
+                switch (pdir) {
+                case 1:
+                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                    break;
+                case 2:
+                    emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
+                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                        emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
+                    break;
+                case 3:
+                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
+                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                        emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
+                    break;
+                case 0:
+                default:
+                    emit_ticks[emit_count++] = rel_tick;
+                    break;
+                }
+
                 uint32_t gate = (uint32_t)nn->gate;
                 if (fx.gate_time != 100 && fx.gate_time > 0)
                     gate = gate * (uint32_t)fx.gate_time / 100u;
@@ -7364,21 +7555,22 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
                 if (vel < 1) vel = 1; if (vel > 127) vel = 127;
                 uint8_t gen[MAX_GEN_NOTES];
                 int gc = pfx_build_gen_notes(inst, scale_aware, &fx, (int)nn->pitch, gen);
-                int gi;
-                uint32_t eff_tick = bake_apply_quantize(rel_tick, tps, length, fx.quantize);
                 /* v=34 Ratchet bake: r sub-hits tiling one step, gate=sub-interval. */
                 uint8_t  _ratch = cl->step_ratchet[_sidx];
                 if (_ratch < 2) _ratch = 1;
                 uint16_t _sub_interval = (_ratch > 1) ? (uint16_t)(tps / _ratch) : 0;
                 uint16_t _final_gate   = (_ratch > 1) ? (_sub_interval ? _sub_interval : 1)
                                                       : (uint16_t)gate;
-                int _k;
-                for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
-                    uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
-                    if (_sub_tick >= clip_ticks) break;
-                    for (gi = 0; gi < gc && a_count < BAKE_BUF; gi++)
-                        dc_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
-                                                         gen[gi], (uint8_t)vel };
+                int ei, _k, gi;
+                for (ei = 0; ei < emit_count && a_count < BAKE_BUF; ei++) {
+                    uint32_t eff_tick = bake_apply_quantize(emit_ticks[ei], tps, cycle_steps, fx.quantize);
+                    for (_k = 0; _k < _ratch && a_count < BAKE_BUF; _k++) {
+                        uint32_t _sub_tick = eff_tick + (uint32_t)_k * _sub_interval;
+                        if (_sub_tick >= cycle_ticks) break;
+                        for (gi = 0; gi < gc && a_count < BAKE_BUF; gi++)
+                            dc_a[a_count++] = (bake_note_t){ _sub_tick, _final_gate,
+                                                             gen[gi], (uint8_t)vel };
+                    }
                 }
             }
 
@@ -7387,12 +7579,12 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
             for (si = 0; si < 2; si++) {
                 int out_count;
                 if (BAKE_STAGES[si] == BAKE_STAGE_MIDI_DLY)
-                    out_count = bake_stage_midi_dly(inst, scale_aware, &fx, clip_ticks,
-                                                    (wrap && loop == loops - 1) ? UINT32_MAX
-                                                        : (uint32_t)(loops - loop) * clip_ticks,
+                    out_count = bake_stage_midi_dly(inst, scale_aware, &fx, cycle_ticks,
+                                                    (wrap && loop == lane_loops - 1) ? UINT32_MAX
+                                                        : (uint32_t)(lane_loops - loop) * cycle_ticks,
                                                     in_buf, in_count, out_buf, BAKE_BUF);
                 else
-                    out_count = bake_stage_arp_out(inst, &fx, clip_ticks,
+                    out_count = bake_stage_arp_out(inst, &fx, cycle_ticks,
                                                    in_buf, in_count, out_buf, BAKE_BUF);
                 bake_note_t *tmp = in_buf; in_buf = out_buf; out_buf = tmp;
                 in_count = out_count;
@@ -7400,7 +7592,7 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
 
             for (ri = 0; ri < in_count && pool_count < DRUM_BAKE_POOL; ri++) {
                 bake_note_t *bn = &in_buf[ri];
-                uint32_t tick = bn->tick + tick_offset;
+                uint32_t tick = bn->tick + loop_offset;
                 if (tick >= new_ticks) {
                     if (!wrap) continue;
                     tick %= new_ticks;
