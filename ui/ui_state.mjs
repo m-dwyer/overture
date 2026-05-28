@@ -93,6 +93,12 @@ export const S = {
     clipPlaybackAudioReverse: Array.from({length: 8}, () => new Array(16).fill(0)),
     /* Per-track-per-lane playback style for drum. */
     drumLanePlaybackAudioReverse: Array.from({length: 8}, () => new Array(32).fill(0)),
+    /* "REC Unavailable / Set Dir to Fwd or Bake" confirm dialog. Set when
+     * Record is pressed on a non-Forward / Audio clip. Sel: 0=OK (default,
+     * dismiss), 1=BAKE NOW (opens standard bake confirm). Jog turn flips
+     * selection; jog click commits. */
+    recordBlockedDialog: false,
+    recordBlockedDialogSel: 0,
     clipSeqFollow: Array.from({length: 8}, () => new Array(16).fill(true)),
     trackCurrentStep: new Array(8).fill(-1),
     trackCurrentPage: new Array(8).fill(0),

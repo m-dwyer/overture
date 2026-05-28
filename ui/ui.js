@@ -1346,6 +1346,31 @@ function ensureGlobalMenuFresh() {
 
 
 
+/* "REC Unavailable" two-option dialog (OK | BAKE NOW). Opens when Record
+ * is pressed on a clip / lane in any non-Forward direction or Audio reverse
+ * style. OK dismisses; BAKE NOW opens the standard bake confirm dialog
+ * pre-targeted at the active clip / drum lane. */
+function drawRecordBlockedDialog() {
+    clear_screen();
+    function _btn(x, y, w, h, sel, label, labelOff) {
+        if (sel) {
+            fill_rect(x, y, w, h, 1);
+            print(x + labelOff, y + 3, label, 0);
+        } else {
+            fill_rect(x, y, w, 1, 1);
+            fill_rect(x, y + h - 1, w, 1, 1);
+            fill_rect(x, y, 1, h, 1);
+            fill_rect(x + w - 1, y, 1, h, 1);
+            print(x + labelOff, y + 3, label, 1);
+        }
+    }
+    drawMenuHeader('REC Unavailable');
+    print(4, 16, 'Set Dir to Fwd', 1);
+    print(4, 25, 'or Bake', 1);
+    _btn(6,  46, 46, 13, S.recordBlockedDialogSel === 0, 'OK',       19);
+    _btn(58, 46, 64, 13, S.recordBlockedDialogSel === 1, 'BAKE NOW', 6);
+}
+
 function drawBakeConfirm() {
     clear_screen();
     function _btn(x, y, w, h, sel, label, labelOff) {
@@ -3380,6 +3405,7 @@ function drawUI() {
         return;
     }
     if (S.pendingSchwungSlotPicker) { drawSchwungSlotPicker(); return; }
+    if (S.recordBlockedDialog) { drawRecordBlockedDialog(); return; }
     if (S.confirmBakeScene) { drawBakeSceneConfirm(); return; }
     if (S.confirmBake) { drawBakeConfirm(); return; }
     if (S.globalMenuOpen || S.tapTempoOpen) { ensureGlobalMenuFresh(); drawGlobalMenu(); return; }
@@ -6064,6 +6090,29 @@ function _onCC_jog(d1, d2) {
         return;
     }
 
+    /* REC Unavailable dialog: jog click commits selection (OK = dismiss,
+     * BAKE NOW = open standard bake confirm pre-targeted at active clip). */
+    if (d1 === 3 && d2 === 127 && S.recordBlockedDialog) {
+        const _sel = S.recordBlockedDialogSel | 0;
+        S.recordBlockedDialog = false;
+        if (_sel === 1) {
+            /* Open bake confirm at active clip — same path as Capture-bare-tap. */
+            const _bt = S.activeTrack, _bc = S.trackActiveClip[_bt];
+            const _isDrum = S.trackPadMode[_bt] === PAD_MODE_DRUM;
+            S.confirmBake             = true;
+            S.confirmBakeIsDrum       = _isDrum;
+            S.confirmBakeIsMultiLoop  = !_isDrum;
+            S.confirmBakeSel          = _isDrum ? 2 : 1;
+            S.confirmBakeTrack        = _bt;
+            S.confirmBakeClip         = _bc;
+            S.confirmBakeDrumLoopOpen = false;
+            S.confirmBakeWrapPhase    = false;
+        }
+        S.screenDirty = true;
+        forceRedraw();
+        return;
+    }
+
     /* Bake confirm: jog click confirms/cancels when dialog is open */
     if (d1 === 3 && d2 === 127 && S.confirmBake) {
         if (S.confirmBakeWrapPhase) {
@@ -6359,6 +6408,14 @@ function _onCC_jog(d1, d2) {
                     S.confirmBakeSceneWrapSel = (S.confirmBakeSceneWrapSel + (delta > 0 ? 1 : 2)) % 3;
                 else
                     S.confirmBakeSceneSel = (S.confirmBakeSceneSel + (delta > 0 ? 1 : 3)) % 4;
+                S.screenDirty = true;
+            }
+            return;
+        }
+        if (S.recordBlockedDialog) {
+            const delta = decodeDelta(d2);
+            if (delta !== 0) {
+                S.recordBlockedDialogSel = S.recordBlockedDialogSel === 0 ? 1 : 0;
                 S.screenDirty = true;
             }
             return;
@@ -6702,6 +6759,9 @@ function _onCC_buttons(d1, d2) {
                 else { openGlobalMenu(); }
             } else if (S.tapTempoOpen) {
                 closeTapTempo();
+                forceRedraw();
+            } else if (S.recordBlockedDialog) {
+                S.recordBlockedDialog = false;
                 forceRedraw();
             } else if (S.confirmBake) {
                 S.confirmBake          = false;
@@ -7162,7 +7222,8 @@ function _onCC_transport(d1, d2) {
                 ? (S.drumLanePlaybackAudioReverse[_at][S.activeDrumLane[_at]] | 0)
                 : (S.clipPlaybackAudioReverse[_at][_aac] | 0);
             if (_apd !== 0 || _apar !== 0) {
-                showActionPopup('NON-FWD', 'BAKE 1ST');
+                S.recordBlockedDialog    = true;
+                S.recordBlockedDialogSel = 0;  /* default OK */
                 forceRedraw();
             } else if (!S.playing) {
             /* Stopped → DSP-side 1-bar count-in; transport+recording fire from render thread */
@@ -7808,7 +7869,7 @@ function _onCC_knobs(d1, d2) {
     if (d1 >= 71 && d1 <= 78) {
         /* Exclusive overlays — knob turns have no visible effect and should be swallowed. */
         if (S.heldStep >= 0) return;
-        if (S.globalMenuOpen || S.tapTempoOpen || S.confirmBake || S.confirmClearSession || S.confirmConvertToDrum || S.confirmExport || S.exportDoneDialog) return;
+        if (S.globalMenuOpen || S.tapTempoOpen || S.confirmBake || S.confirmClearSession || S.confirmConvertToDrum || S.confirmExport || S.exportDoneDialog || S.recordBlockedDialog) return;
         const knobIdx = d1 - 71;
         S.knobTouched          = knobIdx;
         S.knobTurnedTick[knobIdx] = S.tickCount;
