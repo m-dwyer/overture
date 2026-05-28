@@ -71,7 +71,7 @@ import {
     TPS_VALUES, NOTE_KEYS, SCALE_NAMES, SCALE_DISPLAY, DELAY_LABELS,
     fmtSign, fmtStretch, fmtLen, fmtRes, fmtPct, fmtNote, fmtPages,
     fmtDly, fmtBool, fmtRoute, fmtPlain, fmtNA, fmtGateMod,
-    fmtArpStyle, fmtArpRate, fmtArpSteps, fmtArpOct, fmtVelOverride,
+    fmtArpStyle, fmtArpRate, fmtArpSteps, fmtArpOct, fmtVelOverride, fmtPlayDir,
     col4, col5, parseActionRaw, MCUFONT, pixelPrint, pixelPrintC,
     BANKS, ACTION_POPUP_TICKS, PAD_MODE_DRUM, PAD_MODE_MELODIC_SCALE,
     POLL_INTERVAL, TAP_TEMPO_FLASH_TICKS, TAP_TEMPO_RESET_MS,
@@ -1972,11 +1972,18 @@ function refreshDrumLaneBankParams(t, lane) {
             if (v.length >= 10) S.bankParams[t][3][6] = parseInt(v[9], 10) | 0;
         }
     }
-    /* DRUM LANE bank (0): Res (K3=idx2), Eucl (K4=idx3), Len (K5=idx4), SqFl (K6=idx5) per-lane meta */
+    /* DRUM LANE bank (0): Res (K3=idx2), Eucl (K4=idx3), Dir (K5=idx4),
+     * SqFl (K6=idx5) per-lane meta. */
     const tpsIdx = TPS_VALUES.indexOf(S.drumLaneTPS[t]);
     S.bankParams[t][0][2] = tpsIdx >= 0 ? tpsIdx : 1;
     S.bankParams[t][0][3] = S.drumLaneEuclidN[t][lane] | 0;
-    S.bankParams[t][0][4] = S.drumLaneLength[t] || 16;
+    {
+        const _pd = host_module_get_param('t' + t + '_l' + lane + '_playback_dir');
+        const _pdv = parseInt(_pd, 10);
+        const _pdvi = (isFinite(_pdv) && _pdv >= 0 && _pdv <= 3) ? _pdv : 0;
+        S.drumLanePlaybackDir[t][lane] = _pdvi;
+        S.bankParams[t][0][4] = _pdvi;
+    }
     S.bankParams[t][0][5] = S.clipSeqFollow[t][S.trackActiveClip[t]] ? 1 : 0;
     /* Repeat Groove state for this lane */
     syncDrumRepeatState(t, lane);
@@ -2038,11 +2045,18 @@ function refreshPerClipBankParams(t) {
         const _ll = parseInt(v[42], 10) | 0;
         S.seqArpStepLoopLen[t][ac] = (_ll >= 1 && _ll <= 8) ? _ll : 8;
     }
-    /* CLIP bank (0): Res (K3=idx2), Len (K4=idx3), SqFl (K7=idx6) — all per-clip */
+    /* CLIP bank (0): Res (K3=idx2), Dir (K5=idx4), SqFl (K7=idx6) — all per-clip.
+     * K4 is unassigned (length is set via Loop+jog). */
     const tps    = S.clipTPS[t][ac] || 24;
     const tpsIdx = TPS_VALUES.indexOf(tps);
     S.bankParams[t][0][2] = tpsIdx >= 0 ? tpsIdx : 1;
-    S.bankParams[t][0][3] = S.clipLength[t][ac] || 16;
+    {
+        const _pd = host_module_get_param('t' + t + '_clip_playback_dir');
+        const _pdv = parseInt(_pd, 10);
+        const _pdvi = (isFinite(_pdv) && _pdv >= 0 && _pdv <= 3) ? _pdv : 0;
+        S.clipPlaybackDir[t][ac] = _pdvi;
+        S.bankParams[t][0][4] = _pdvi;
+    }
     S.bankParams[t][0][6] = S.clipSeqFollow[t][ac] ? 1 : 0;
     S.screenDirty = true;
 }
@@ -2857,7 +2871,6 @@ function applyBankParam(t, bankIdx, knobIdx, val) {
             host_module_set_param('t' + t + '_l' + lane + '_pfx_set', dKey + ' ' + strVal);
             return;
         }
-        if (pm.dspKey === 'clip_length' && S.recordArmed && !S.recordCountingIn && S.recordArmedTrack === t) return;
         if (pm.dspKey === 'seq_arp_steps_mode' || pm.dspKey === 'tarp_steps_mode'
                 || pm.dspKey === 'delay_retrig') {
             /* Defer via pendingDefaultSetParams: same-track sync tN_* set_params
@@ -2869,13 +2882,6 @@ function applyBankParam(t, bankIdx, knobIdx, val) {
             return;
         }
         host_module_set_param('t' + t + '_' + pm.dspKey, strVal);
-        if (pm.dspKey === 'clip_length') {
-            const ac = S.trackActiveClip[t];
-            S.clipLength[t][ac] = val;
-            S.clipLengthManuallySet[t][ac] = true;
-            const maxPage = Math.max(0, Math.ceil(val / 16) - 1);
-            if (S.trackCurrentPage[t] > maxPage) S.trackCurrentPage[t] = maxPage;
-        }
     } else if (pm.scope === 'clip') {
         const ac = S.trackActiveClip[t];
         if (pm.dspKey === 'clip_resolution') {
@@ -2883,6 +2889,10 @@ function applyBankParam(t, bankIdx, knobIdx, val) {
             const idx = Math.max(0, Math.min(5, val));
             S.clipTPS[t][ac] = TPS_VALUES[idx];
             host_module_set_param('t' + t + '_clip_resolution', String(idx));
+        } else if (pm.dspKey === 'clip_playback_dir') {
+            const dv = Math.max(0, Math.min(3, val | 0));
+            S.clipPlaybackDir[t][ac] = dv;
+            host_module_set_param('t' + t + '_clip_playback_dir', String(dv));
         }
     }
 }
@@ -3692,13 +3702,13 @@ function drawUI() {
             const _dlNote  = S.drumLaneNote[t][lane];
             const _noteStr = midiNoteName(_dlNote) + ' ' + _dlNote;
             const eucN = Math.min(S.drumLaneEuclidN[t][lane] | 0, len);
-            const drumLaneLabels = ['Stch', S.altMode ? 'Nudg' : 'Shft', S.altMode ? 'Zoom' : 'Res', 'Eucl', 'Len', 'SqFl', null, null];
+            const drumLaneLabels = ['Stch', S.altMode ? 'Nudg' : 'Shft', S.altMode ? 'Zoom' : 'Res', 'Eucl', 'Dir', 'SqFl', null, null];
             const drumLaneVals  = [
                 fmtStretch(S.bankParams[t][0][0]),
                 fmtSign(S.bankParams[t][0][1]),
                 fmtRes(tpsIdx),
                 String(eucN),
-                fmtLen(len),
+                fmtPlayDir(S.drumLanePlaybackDir[t][lane] | 0),
                 fmtBool(sqfl),
                 null, null,
             ];
@@ -7924,19 +7934,17 @@ function _onCC_knobs(d1, d2) {
                 return;
             }
             if (knobIdx === 4) {
-                /* K5 = Len (lane length, sens=8) */
-                if (S.recordArmed && !S.recordCountingIn) { S.screenDirty = true; return; }
+                /* K5 = Dir (per-lane playback direction, sens=16) */
                 S.knobAccum[knobIdx]++;
-                if (S.knobAccum[knobIdx] >= 8) {
+                if (S.knobAccum[knobIdx] >= 16) {
                     S.knobAccum[knobIdx] = 0;
-                    const nv = Math.max(1, Math.min(256, S.drumLaneLength[t] + dir));
-                    if (nv !== S.drumLaneLength[t]) {
-                        S.drumLaneLength[t] = nv;
-                        S.drumLaneLengthManuallySet[t] = true;
-                        const maxPage = Math.max(0, Math.ceil(nv / 16) - 1);
-                        if (S.drumStepPage[t] > maxPage) S.drumStepPage[t] = maxPage;
+                    const _cur = S.drumLanePlaybackDir[t][lane] | 0;
+                    const _nv  = Math.max(0, Math.min(3, _cur + dir));
+                    if (_nv !== _cur) {
+                        S.drumLanePlaybackDir[t][lane] = _nv;
+                        S.bankParams[t][0][4] = _nv;
                         if (typeof host_module_set_param === 'function')
-                            host_module_set_param('t' + t + '_l' + lane + '_clip_length', String(nv));
+                            host_module_set_param('t' + t + '_l' + lane + '_playback_dir', String(_nv));
                     }
                     S.screenDirty = true;
                 }

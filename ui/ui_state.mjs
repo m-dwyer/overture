@@ -82,6 +82,12 @@ export const S = {
     clipLength: Array.from({length: 8}, () => new Array(16).fill(16)),
     clipLoopStart: Array.from({length: 8}, () => new Array(16).fill(0)),
     clipTPS: Array.from({length: 8}, () => new Array(16).fill(24)),
+    /* Per-clip playback direction: 0=Fwd, 1=Bwd, 2=PPFwd, 3=PPBwd.
+     * Mirrors DSP clip.playback_dir; refreshed on clip switch / sidecar load. */
+    clipPlaybackDir: Array.from({length: 8}, () => new Array(16).fill(0)),
+    /* Per-track-per-lane playback direction for drum (active clip's lane).
+     * Mirrors DSP drum lane clip.playback_dir; refreshed on lane / clip switch. */
+    drumLanePlaybackDir: Array.from({length: 8}, () => new Array(32).fill(0)),
     clipSeqFollow: Array.from({length: 8}, () => new Array(16).fill(true)),
     trackCurrentStep: new Array(8).fill(-1),
     trackCurrentPage: new Array(8).fill(0),

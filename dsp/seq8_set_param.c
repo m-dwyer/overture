@@ -273,15 +273,21 @@ static void set_param(void *instance, const char *key, const char *val) {
                 reset_all_loop_cycles(inst);
                 for (t = 0; t < NUM_TRACKS; t++) {
                     seq8_track_t *_tr = &inst->tracks[t];
-                    _tr->current_step       = _tr->clips[_tr->active_clip].loop_start;
+                    {
+                        clip_t *_mcl = &_tr->clips[_tr->active_clip];
+                        _tr->current_step = initial_clip_step(_mcl->loop_start, _mcl->length, _mcl->playback_dir);
+                        _mcl->pp_dir_state = initial_pp_dir(_mcl->playback_dir);
+                    }
                     _tr->tick_in_step       = 0;
                     _tr->note_active        = 0;
                     _tr->pfx.sample_counter = 0;
                     {
                         int _dl;
-                        for (_dl = 0; _dl < DRUM_LANES; _dl++)
-                            _tr->drum_current_step[_dl] =
-                                _tr->drum_clips[_tr->active_clip].lanes[_dl].clip.loop_start;
+                        for (_dl = 0; _dl < DRUM_LANES; _dl++) {
+                            clip_t *_dlc = &_tr->drum_clips[_tr->active_clip].lanes[_dl].clip;
+                            _tr->drum_current_step[_dl] = initial_clip_step(_dlc->loop_start, _dlc->length, _dlc->playback_dir);
+                            _dlc->pp_dir_state = initial_pp_dir(_dlc->playback_dir);
+                        }
                     }
                     memset(_tr->drum_tick_in_step, 0, sizeof(_tr->drum_tick_in_step));
                     /* Re-assert CC automation at the playhead on play: force the
@@ -373,15 +379,21 @@ static void set_param(void *instance, const char *key, const char *val) {
             reset_all_loop_cycles(inst);
             for (t = 0; t < NUM_TRACKS; t++) {
                 seq8_track_t *_tr = &inst->tracks[t];
-                _tr->current_step       = _tr->clips[_tr->active_clip].loop_start;
+                {
+                    clip_t *_mcl = &_tr->clips[_tr->active_clip];
+                    _tr->current_step = initial_clip_step(_mcl->loop_start, _mcl->length, _mcl->playback_dir);
+                    _mcl->pp_dir_state = initial_pp_dir(_mcl->playback_dir);
+                }
                 _tr->tick_in_step       = 0;
                 _tr->note_active        = 0;
                 _tr->pfx.sample_counter = 0;
                 {
                     int _dl;
-                    for (_dl = 0; _dl < DRUM_LANES; _dl++)
-                        _tr->drum_current_step[_dl] =
-                            _tr->drum_clips[_tr->active_clip].lanes[_dl].clip.loop_start;
+                    for (_dl = 0; _dl < DRUM_LANES; _dl++) {
+                        clip_t *_dlc = &_tr->drum_clips[_tr->active_clip].lanes[_dl].clip;
+                        _tr->drum_current_step[_dl] = initial_clip_step(_dlc->loop_start, _dlc->length, _dlc->playback_dir);
+                        _dlc->pp_dir_state = initial_pp_dir(_dlc->playback_dir);
+                    }
                 }
                 memset(_tr->drum_tick_in_step, 0, sizeof(_tr->drum_tick_in_step));
                 if (_tr->will_relaunch) {
@@ -450,8 +462,38 @@ static void set_param(void *instance, const char *key, const char *val) {
                 uint16_t ttps = cl->ticks_per_step ? cl->ticks_per_step : TICKS_PER_STEP;
                 uint32_t clip_ticks = (uint32_t)cl->length * ttps;
                 uint32_t track_off  = clip_ticks ? (uint32_t)(master_off % clip_ticks) : 0;
-                /* Window-aware: place within [loop_start, loop_start+length). */
-                tr->current_step = (uint16_t)(cl->loop_start + track_off / ttps);
+                /* Window-aware + direction-aware: phase-align playhead inside
+                 * [loop_start, loop_start+length). For non-Forward modes the
+                 * step layout mirrors live playback (see advance_clip_step). */
+                {
+                    uint16_t fwd_step = (uint16_t)(track_off / ttps);
+                    uint16_t L = cl->length;
+                    uint16_t target;
+                    int8_t target_pp = +1;
+                    switch (cl->playback_dir) {
+                    case 1: target = (uint16_t)(L - 1u - fwd_step); break;
+                    case 2: { /* PPFwd: cycle = 2L-2 (endpoint plays once) */
+                        if (L <= 1) { target = 0; break; }
+                        uint32_t cyc = (uint32_t)(track_off / ttps);
+                        cyc %= (uint32_t)(2u * L - 2u);
+                        if (cyc <= (uint32_t)(L - 1)) { target = (uint16_t)cyc;            target_pp = +1; }
+                        else                          { target = (uint16_t)(2u*L - 2u - cyc); target_pp = -1; }
+                        break;
+                    }
+                    case 3: { /* PPBwd */
+                        if (L <= 1) { target = 0; break; }
+                        uint32_t cyc = (uint32_t)(track_off / ttps);
+                        cyc %= (uint32_t)(2u * L - 2u);
+                        if (cyc <= (uint32_t)(L - 1)) { target = (uint16_t)(L - 1u - cyc); target_pp = -1; }
+                        else                          { target = (uint16_t)(cyc - (L - 1u)); target_pp = +1; }
+                        break;
+                    }
+                    case 0:
+                    default: target = fwd_step; break;
+                    }
+                    tr->current_step = (uint16_t)(cl->loop_start + target);
+                    cl->pp_dir_state = target_pp;
+                }
                 tr->tick_in_step = track_off % ttps;
                 int l;
                 for (l = 0; l < DRUM_LANES; l++) {
@@ -459,7 +501,34 @@ static void set_param(void *instance, const char *key, const char *val) {
                     uint16_t dtps = dcl->ticks_per_step ? dcl->ticks_per_step : TICKS_PER_STEP;
                     uint32_t dct  = (uint32_t)dcl->length * dtps;
                     uint32_t dto  = dct ? (uint32_t)(master_off % dct) : 0;
-                    tr->drum_current_step[l] = (uint16_t)(dcl->loop_start + dto / dtps);
+                    /* Phase-align per direction (same as melodic above). */
+                    uint16_t fwd_step = (uint16_t)(dto / dtps);
+                    uint16_t L = dcl->length;
+                    uint16_t target;
+                    int8_t target_pp = +1;
+                    switch (dcl->playback_dir) {
+                    case 1: target = (uint16_t)(L - 1u - fwd_step); break;
+                    case 2: {
+                        if (L <= 1) { target = 0; break; }
+                        uint32_t cyc = (uint32_t)(dto / dtps);
+                        cyc %= (uint32_t)(2u * L - 2u);
+                        if (cyc <= (uint32_t)(L - 1)) { target = (uint16_t)cyc;            target_pp = +1; }
+                        else                          { target = (uint16_t)(2u*L - 2u - cyc); target_pp = -1; }
+                        break;
+                    }
+                    case 3: {
+                        if (L <= 1) { target = 0; break; }
+                        uint32_t cyc = (uint32_t)(dto / dtps);
+                        cyc %= (uint32_t)(2u * L - 2u);
+                        if (cyc <= (uint32_t)(L - 1)) { target = (uint16_t)(L - 1u - cyc); target_pp = -1; }
+                        else                          { target = (uint16_t)(cyc - (L - 1u)); target_pp = +1; }
+                        break;
+                    }
+                    case 0:
+                    default: target = fwd_step; break;
+                    }
+                    tr->drum_current_step[l] = (uint16_t)(dcl->loop_start + target);
+                    dcl->pp_dir_state = target_pp;
                     tr->drum_tick_in_step[l] = dto % dtps;
                 }
                 tr->note_active        = 0;
@@ -1638,9 +1707,17 @@ static void set_param(void *instance, const char *key, const char *val) {
                 clip_t  *_ncl   = &tr->clips[new_cidx];
                 uint16_t newlen = _ncl->length;
                 uint16_t _nls   = _ncl->loop_start;
-                tr->current_step     = tr->clip_playing
-                                       ? (uint16_t)(_nls + tr->current_step % newlen)
-                                       : (uint16_t)(_nls + inst->global_tick % newlen);
+                if (_ncl->playback_dir == 0) {
+                    tr->current_step     = tr->clip_playing
+                                           ? (uint16_t)(_nls + tr->current_step % newlen)
+                                           : (uint16_t)(_nls + inst->global_tick % newlen);
+                } else {
+                    /* Non-forward direction: jump to directional initial step.
+                     * Polyrhythmic phase-align across mid-play launch is forward-
+                     * only for now; re-trigger transport to resync cleanly. */
+                    tr->current_step = initial_clip_step(_nls, newlen, _ncl->playback_dir);
+                    _ncl->pp_dir_state = initial_pp_dir(_ncl->playback_dir);
+                }
                 tr->active_clip      = (uint8_t)new_cidx;
                 pfx_sync_from_clip(tr);
                 if (tr->tick_in_step >= tr->clips[new_cidx].ticks_per_step)
@@ -2759,6 +2836,14 @@ static void set_param(void *instance, const char *key, const char *val) {
                 inst->state_dirty = 1;
                 return;
             }
+            /* Playback direction for one drum lane's clip (v=35).
+             * Mid-flight change keeps current playhead; pp_dir_state resets. */
+            if (!strcmp(p2, "_playback_dir")) {
+                dlc->playback_dir = (uint8_t)clamp_i(my_atoi(val), 0, 3);
+                dlc->pp_dir_state = initial_pp_dir(dlc->playback_dir);
+                inst->state_dirty = 1;
+                return;
+            }
             if (!strcmp(p2, "_loop_set")) {
                 /* tN_lL_loop_set "packed" — atomic loop window write for one drum lane. */
                 long packed = 0;
@@ -3637,8 +3722,20 @@ static void set_param(void *instance, const char *key, const char *val) {
                  * any non-playing start (immediate). The defer-with-reset only
                  * activates for rv==2 with transport+clip playing. */
                 if (tr->clip_playing && inst->playing && rv == 2) {
-                    tr->recording_pending_page = 1;
-                    tr->recording_adaptive_arm = 1;
+                    /* Adaptive arm only makes sense in Forward playback
+                     * (the "grow when near the end" heuristic is forward-biased
+                     * and the playhead doesn't approach the end in Bwd/PPb at
+                     * all). Force fixed-mode arm when active clip is non-Fwd. */
+                    uint8_t _pd = (tr->pad_mode == PAD_MODE_DRUM)
+                        ? tr->drum_clips[tr->active_clip].lanes[tr->active_drum_lane].clip.playback_dir
+                        : tr->clips[tr->active_clip].playback_dir;
+                    if (_pd != 0) {
+                        tr->recording_pending_page = 1;
+                        tr->recording_adaptive_arm = 0;
+                    } else {
+                        tr->recording_pending_page = 1;
+                        tr->recording_adaptive_arm = 1;
+                    }
                 } else if (tr->clip_playing) {
                     /* Fixed-mode arm during playback (rv==1), or clip-playing
                      * with transport stopped: begin recording immediately. */
@@ -4879,6 +4976,18 @@ static void set_param(void *instance, const char *key, const char *val) {
                 if (tr->current_step < cl->loop_start || tr->current_step >= _le)
                     tr->current_step = cl->loop_start;
             }
+            return;
+        }
+
+        /* Playback direction for active melodic clip (v=35).
+         * 0=Forward, 1=Backward, 2=Pingpong-Forward, 3=Pingpong-Backward.
+         * Mid-flight change keeps the current playhead position; pp_dir_state
+         * resets so PP modes pick up a sane direction on the next advance. */
+        if (!strcmp(sub, "clip_playback_dir")) {
+            clip_t *cl = &tr->clips[tr->active_clip];
+            cl->playback_dir = (uint8_t)clamp_i(my_atoi(val), 0, 3);
+            cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
+            inst->state_dirty = 1;
             return;
         }
 

@@ -462,6 +462,13 @@ typedef struct {
     uint16_t note_count;         /* slots used (active+tombstoned); updated by set_param, not render */
     uint8_t  occ_cache[32];      /* 256-bit occupancy: bit S=1 if any active note in step S */
     uint8_t  occ_dirty;          /* 1 = occ_cache needs recomputation */
+    /* Playback direction: 0=Forward, 1=Backward, 2=Pingpong-Forward (start at
+     * loop_start, ascend), 3=Pingpong-Backward (start at last step, descend).
+     * Persisted with the clip. */
+    uint8_t  playback_dir;
+    /* Pingpong runtime direction: +1 ascending, -1 descending. Initialized on
+     * clip launch / transport start from playback_dir. Not persisted. */
+    int8_t   pp_dir_state;
 } clip_t;
 
 /* ------------------------------------------------------------------ */
@@ -1210,9 +1217,17 @@ static void sanitize_step_iter_arr(uint8_t *arr, uint16_t len) {
     }
 }
 
+/* Forward declarations for playback-direction helpers defined further down. */
+static void advance_clip_step(uint16_t cur, uint16_t ls, uint16_t length,
+                              uint8_t mode, int8_t pp_dir,
+                              uint16_t *out_ns, int8_t *out_pp_dir,
+                              uint8_t *out_wrapped);
+static uint16_t initial_clip_step(uint16_t ls, uint16_t length, uint8_t dir);
+static int8_t initial_pp_dir(uint8_t dir);
+
 static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
     int t, c;
-    fprintf(fp, "{\"v\":34,\"playing\":%d", inst->playing);
+    fprintf(fp, "{\"v\":35,\"playing\":%d", inst->playing);
     for (t = 0; t < NUM_TRACKS; t++)
         fprintf(fp, ",\"t%d_ac\":%d", t, inst->tracks[t].active_clip);
     for (t = 0; t < NUM_TRACKS; t++)
@@ -1258,6 +1273,9 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
             fprintf(fp, ",\"t%dc%d_len\":%d", t, c, (int)cl->length);
             if (cl->loop_start != 0)
                 fprintf(fp, ",\"t%dc%d_ls\":%d", t, c, (int)cl->loop_start);
+            /* Playback direction (v=35); sparse: 0=Forward = default, omitted. */
+            if (cl->playback_dir != 0)
+                fprintf(fp, ",\"t%dc%d_pd\":%d", t, c, (int)cl->playback_dir);
             if (cl->stretch_exp != 0)
                 fprintf(fp, ",\"t%dc%d_se\":%d", t, c, (int)cl->stretch_exp);
             if (cl->clock_shift_pos != 0)
@@ -1358,6 +1376,9 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
                     fprintf(fp, ",\"t%dc%dl%d_len\":%d", t, c, l, (int)dlc->length);
                 if (dlc->loop_start != 0)
                     fprintf(fp, ",\"t%dc%dl%d_ls\":%d", t, c, l, (int)dlc->loop_start);
+                /* Playback direction (v=35); sparse: 0=Forward = default, omitted. */
+                if (dlc->playback_dir != 0)
+                    fprintf(fp, ",\"t%dc%dl%d_pd\":%d", t, c, l, (int)dlc->playback_dir);
                 if (dlc->ticks_per_step != TICKS_PER_STEP)
                     fprintf(fp, ",\"t%dc%dl%d_tps\":%d", t, c, l, (int)dlc->ticks_per_step);
                 int wrote = 0;
@@ -1546,10 +1567,10 @@ static void seq8_load_state(seq8_instance_t *inst) {
     if (!n) { free(buf); remove(inst->state_path); return; }
     buf[n] = '\0';
 
-    /* Version gate: only v=34 accepted (dev build; wipe on version mismatch). */
+    /* Version gate: only v=35 accepted (dev build; wipe on version mismatch). */
     {
         int sv = json_get_int(buf, "v", -1);
-        if (sv != 34) {
+        if (sv != 35) {
             free(buf);
             remove(inst->state_path);
             seq8_ilog(inst, "SEQ8 state: wrong version, deleted");
@@ -1597,6 +1618,11 @@ static void seq8_load_state(seq8_instance_t *inst) {
             snprintf(key, sizeof(key), "t%dc%d_ls", t, c);
             cl->loop_start = (uint16_t)clamp_i(
                 json_get_int(buf, key, 0), 0, SEQ_STEPS - (int)cl->length);
+
+            /* Playback direction (v=35); default 0=Forward when sparse-absent. */
+            snprintf(key, sizeof(key), "t%dc%d_pd", t, c);
+            cl->playback_dir = (uint8_t)clamp_i(json_get_int(buf, key, 0), 0, 3);
+            cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
 
             snprintf(key, sizeof(key), "t%dc%d_se", t, c);
             cl->stretch_exp = (int8_t)clamp_i(json_get_int(buf, key, 0), -8, 8);
@@ -1945,6 +1971,10 @@ static void seq8_load_state(seq8_instance_t *inst) {
                 snprintf(key, sizeof(key), "t%dc%dl%d_ls", t, c, l);
                 dlc->loop_start = (uint16_t)clamp_i(
                     json_get_int(buf, key, 0), 0, SEQ_STEPS - (int)dlc->length);
+                /* Playback direction (v=35); default 0=Forward when sparse-absent. */
+                snprintf(key, sizeof(key), "t%dc%dl%d_pd", t, c, l);
+                dlc->playback_dir = (uint8_t)clamp_i(json_get_int(buf, key, 0), 0, 3);
+                dlc->pp_dir_state = initial_pp_dir(dlc->playback_dir);
                 snprintf(key, sizeof(key), "t%dc%dl%d_tps", t, c, l);
                 {
                     int raw_tps = json_get_int(buf, key, (int)TICKS_PER_STEP);
@@ -3237,6 +3267,77 @@ static void pfx_sched_delay_offs(play_fx_t *fx, pfx_active_t *an,
             pfx_q_insert(fx, off, off_s, (uint8_t)note, 0, 0);
         }
     }
+}
+
+/* ------------------------------------------------------------------ */
+/* Clip playback direction                                              */
+/* ------------------------------------------------------------------ */
+/* Per-clip / per-lane playback_dir modes:
+ *   0 = Forward                 — playhead ls → le-1 → ls → ...
+ *   1 = Backward                — playhead le-1 → ls → le-1 → ...
+ *   2 = Pingpong Forward        — ls → le-1, reverses (endpoint plays ONCE),
+ *                                 ls+1 → ls, reverses, back up. Full cycle =
+ *                                 2L-2 steps; every step gets equal time so
+ *                                 a steady rhythm pattern stays steady.
+ *   3 = Pingpong Backward       — mirror of 2 starting at le-1.
+ *
+ * pp_dir_state is +1 ascending, -1 descending; only meaningful in modes 2/3.
+ * Reset on clip launch / transport start; not persisted.
+ *
+ * "Wrap" (out_wrapped=1) means the playhead has just completed one full cycle
+ * and is back at its initial position — used to clear suppress_until_wrap
+ * flags, reset live_recorded_steps, and increment loop_cycle for Iter trigs. */
+static void advance_clip_step(uint16_t cur, uint16_t ls, uint16_t length,
+                              uint8_t mode, int8_t pp_dir,
+                              uint16_t *out_ns, int8_t *out_pp_dir,
+                              uint8_t *out_wrapped) {
+    uint16_t le = (uint16_t)(ls + length);
+    *out_wrapped = 0;
+    if (length <= 1) { *out_ns = ls; *out_pp_dir = pp_dir; *out_wrapped = 1; return; }
+
+    int32_t next;
+    switch (mode) {
+    case 1: /* Backward */
+        next = (int32_t)cur - 1;
+        if (next < ls || next >= le) { next = le - 1; *out_wrapped = 1; }
+        break;
+    case 2: /* Pingpong Forward — endpoint plays ONCE per direction change */
+        if (pp_dir != +1 && pp_dir != -1) pp_dir = +1;
+        next = (int32_t)cur + pp_dir;
+        if (next >= le)      { next = le - 2; pp_dir = -1; }   /* bounce off top, skip repeat */
+        else if (next < ls)  { next = ls + 1; pp_dir = +1; }   /* bounce off bottom */
+        /* Wrap: completed one full cycle when we land at ls heading downward
+         * (next advance will bounce back up). */
+        if ((uint16_t)next == ls && pp_dir == -1) *out_wrapped = 1;
+        break;
+    case 3: /* Pingpong Backward — endpoint plays ONCE per direction change */
+        if (pp_dir != +1 && pp_dir != -1) pp_dir = -1;
+        next = (int32_t)cur + pp_dir;
+        if (next >= le)      { next = le - 2; pp_dir = -1; }
+        else if (next < ls)  { next = ls + 1; pp_dir = +1; }
+        /* Wrap: landed at le-1 heading upward (next advance will bounce down). */
+        if ((uint16_t)next == (uint16_t)(le - 1) && pp_dir == +1) *out_wrapped = 1;
+        break;
+    case 0:
+    default: /* Forward */
+        next = (int32_t)cur + 1;
+        if (next >= le || next < ls) { next = ls; *out_wrapped = 1; }
+        break;
+    }
+    *out_pp_dir = pp_dir;
+    *out_ns = (uint16_t)next;
+}
+
+/* Initial playhead step for `dir` when launching a clip / starting transport.
+ * Forward / PPFwd start at loop_start; Backward / PPBwd start at last step. */
+static uint16_t initial_clip_step(uint16_t ls, uint16_t length, uint8_t dir) {
+    if (length == 0) return ls;
+    return (dir == 1 || dir == 3) ? (uint16_t)(ls + length - 1) : ls;
+}
+
+/* Initial pp_dir_state for `dir`. -1 for PPBwd; +1 for everything else. */
+static int8_t initial_pp_dir(uint8_t dir) {
+    return (dir == 3) ? (int8_t)-1 : (int8_t)+1;
 }
 
 /* ------------------------------------------------------------------ */
@@ -5166,7 +5267,38 @@ static inline void drum_lane_anchor_playhead(seq8_instance_t *inst,
     uint32_t elapsed = (uint32_t)inst->global_tick * (uint32_t)TICKS_PER_STEP
                        + (uint32_t)inst->master_tick_in_step;
     uint32_t steps   = elapsed / dltps;
-    tr->drum_current_step[dl] = (uint16_t)(dlls + (steps % dllen));
+    {
+        /* Phase-align the playhead to where it would be if this lane had been
+         * driving in its current direction since transport start — preserves
+         * polyrhythmic phase across mid-play clip switches in all 4 modes. */
+        uint16_t target;
+        int8_t   target_pp = +1;
+        switch (ncl->playback_dir) {
+        case 1: /* Backward */
+            target = (uint16_t)(dlls + (dllen - 1u - (steps % dllen)));
+            break;
+        case 2: { /* Pingpong Forward — cycle = 2L-2 (endpoint plays once) */
+            if (dllen <= 1) { target = dlls; break; }
+            uint32_t cyc = steps % (2u * (uint32_t)dllen - 2u);
+            if (cyc <= (uint32_t)(dllen - 1)) { target = (uint16_t)(dlls + cyc);                       target_pp = +1; }
+            else                              { target = (uint16_t)(dlls + (2u * dllen - 2u - cyc));   target_pp = -1; }
+            break;
+        }
+        case 3: { /* Pingpong Backward — cycle = 2L-2 (endpoint plays once) */
+            if (dllen <= 1) { target = dlls; break; }
+            uint32_t cyc = steps % (2u * (uint32_t)dllen - 2u);
+            if (cyc <= (uint32_t)(dllen - 1)) { target = (uint16_t)(dlls + (dllen - 1u - cyc));        target_pp = -1; }
+            else                              { target = (uint16_t)(dlls + (cyc - (dllen - 1u)));     target_pp = +1; }
+            break;
+        }
+        case 0:
+        default:
+            target = (uint16_t)(dlls + (steps % dllen));
+            break;
+        }
+        tr->drum_current_step[dl] = target;
+        ncl->pp_dir_state = target_pp;
+    }
     tr->drum_tick_in_step[dl] = elapsed % dltps;
     uint16_t ni;
     for (ni = 0; ni < ncl->note_count; ni++)
@@ -5199,6 +5331,8 @@ static void clip_init(clip_t *cl) {
     memset(cl->notes, 0, sizeof(cl->notes));
     memset(cl->occ_cache, 0, sizeof(cl->occ_cache));
     cl->occ_dirty = 0;
+    cl->playback_dir = 0;       /* Forward */
+    cl->pp_dir_state = +1;
 }
 
 static void drum_track_init(seq8_track_t *tr, int track_idx) {
@@ -7444,7 +7578,9 @@ static void convert_track_melodic_to_drum(seq8_instance_t *inst, int t) {
     tr->current_step = 0;
     tr->tick_in_step = 0;
     for (l = 0; l < DRUM_LANES; l++) {
-        tr->drum_current_step[l] = tr->drum_clips[tr->active_clip].lanes[l].clip.loop_start;
+        clip_t *_dlc = &tr->drum_clips[tr->active_clip].lanes[l].clip;
+        tr->drum_current_step[l] = initial_clip_step(_dlc->loop_start, _dlc->length, _dlc->playback_dir);
+        _dlc->pp_dir_state = initial_pp_dir(_dlc->playback_dir);
         tr->drum_tick_in_step[l] = 0;
     }
 
@@ -7524,7 +7660,11 @@ static void convert_track_drum_to_melodic(seq8_instance_t *inst, int t) {
     tr->active_drum_lane = 0;
     tr->drum_perform_mode = 0;
 
-    tr->current_step = tr->clips[tr->active_clip].loop_start;
+    {
+        clip_t *_cl = &tr->clips[tr->active_clip];
+        tr->current_step = initial_clip_step(_cl->loop_start, _cl->length, _cl->playback_dir);
+        _cl->pp_dir_state = initial_pp_dir(_cl->playback_dir);
+    }
     tr->tick_in_step = 0;
 
     silence_track_notes_v2(inst, tr);
@@ -7864,6 +8004,11 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
             return snprintf(out, out_len, "%d", (int)tr->drum_inp_quant);
         if (!strcmp(sub, "drum_repeat_sync"))
             return snprintf(out, out_len, "%u", (unsigned)tr->drum_repeat_sync);
+        /* Playback direction for the active melodic clip (0=Fwd, 1=Bwd,
+         * 2=PPFwd, 3=PPBwd). */
+        if (!strcmp(sub, "clip_playback_dir"))
+            return snprintf(out, out_len, "%d",
+                            (int)tr->clips[tr->active_clip].playback_dir);
         /* tarp_held: space-separated MIDI pitches currently in TARP input buffer
          * (held physical + latched). Empty when buffer is empty. Polled by JS to
          * light source pads while TARP is latched. */
@@ -7898,6 +8043,8 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
                 return snprintf(out, out_len, "%d", (int)dlc->note_count);
             if (!strcmp(p2, "_length"))
                 return snprintf(out, out_len, "%d", (int)dlc->length);
+            if (!strcmp(p2, "_playback_dir"))
+                return snprintf(out, out_len, "%d", (int)dlc->playback_dir);
             if (!strcmp(p2, "_loop_start"))
                 return snprintf(out, out_len, "%d", (int)dlc->loop_start);
             if (!strcmp(p2, "_current_step"))
@@ -8572,17 +8719,33 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                 for (t = 0; t < NUM_TRACKS; t++) {
                     seq8_track_t *_tr = &inst->tracks[t];
                     /* Start each track inside its window: melodic at the active
-                     * clip's loop_start, drum per-lane at each lane's loop_start. */
-                    _tr->current_step       = _tr->clips[_tr->active_clip].loop_start;
+                     * clip's loop_start, drum per-lane at each lane's loop_start.
+                     * Backward / PPBwd directions start at the last step instead. */
+                    {
+                        clip_t *_mcl = &_tr->clips[_tr->active_clip];
+                        _tr->current_step = initial_clip_step(_mcl->loop_start, _mcl->length, _mcl->playback_dir);
+                        _mcl->pp_dir_state = initial_pp_dir(_mcl->playback_dir);
+                        /* Per-lane drum init too (this loop runs for all tracks,
+                         * not just the active-pad-mode one). */
+                        int _li;
+                        for (_li = 0; _li < DRUM_LANES; _li++) {
+                            clip_t *_dlc = &_tr->drum_clips[_tr->active_clip].lanes[_li].clip;
+                            _tr->drum_current_step[_li] = initial_clip_step(_dlc->loop_start, _dlc->length, _dlc->playback_dir);
+                            _dlc->pp_dir_state = initial_pp_dir(_dlc->playback_dir);
+                            _tr->drum_tick_in_step[_li] = 0;
+                        }
+                    }
                     _tr->tick_in_step       = 0;
                     _tr->note_active        = 0;
                     _tr->pfx.sample_counter = 0;
-                    /* Prime current_clip_tick so the first post-fire tarp_fire_step
-                     * (which runs at L6744 *before* the per-track tick advance at L6857
-                     * recomputes it) reads loop_start * tps, not the stale pre-count-in
-                     * value. This is what makes the first arp note get captured at
-                     * clip tick 0 / loop window start. */
-                    _tr->current_clip_tick  = (uint32_t)_tr->clips[_tr->active_clip].loop_start
+                    /* Prime current_clip_tick to match the direction-aware
+                     * current_step set above — so the first post-fire
+                     * tarp_fire_step (which reads current_clip_tick *before*
+                     * the per-track tick advance recomputes it) sees a value
+                     * consistent with the visual playhead position. For
+                     * Backward / PPBwd this is (loop_start + length - 1) * tps
+                     * rather than loop_start * tps. */
+                    _tr->current_clip_tick  = (uint32_t)_tr->current_step
                                               * _tr->clips[_tr->active_clip].ticks_per_step;
                     /* Reschedule any pfx events the count-in TARP queued to fire
                      * immediately on next pfx_q_fire. Their original fire_at was
@@ -8645,9 +8808,11 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                     }
                     {
                         int _dl;
-                        for (_dl = 0; _dl < DRUM_LANES; _dl++)
-                            _tr->drum_current_step[_dl] =
-                                _tr->drum_clips[_tr->active_clip].lanes[_dl].clip.loop_start;
+                        for (_dl = 0; _dl < DRUM_LANES; _dl++) {
+                            clip_t *_dlc = &_tr->drum_clips[_tr->active_clip].lanes[_dl].clip;
+                            _tr->drum_current_step[_dl] = initial_clip_step(_dlc->loop_start, _dlc->length, _dlc->playback_dir);
+                            _dlc->pp_dir_state = initial_pp_dir(_dlc->playback_dir);
+                        }
                     }
                     memset(_tr->drum_tick_in_step, 0, sizeof(_tr->drum_tick_in_step));
                     if (inst->tracks[t].will_relaunch) {
@@ -8806,7 +8971,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                                 (unsigned)_dlc->loop_start, (unsigned)_dle);
                             seq8_ilog(inst, _msg);
 #endif
-                            tr->drum_current_step[_dl] = _dlc->loop_start;
+                            tr->drum_current_step[_dl] = initial_clip_step(_dlc->loop_start, _dlc->length, _dlc->playback_dir);
+                            _dlc->pp_dir_state = initial_pp_dir(_dlc->playback_dir);
                         }
                     }
                 } else {
@@ -8821,7 +8987,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                             (unsigned)cl->loop_start, (unsigned)_le);
                         seq8_ilog(inst, _msg);
 #endif
-                        tr->current_step = cl->loop_start;
+                        tr->current_step = initial_clip_step(cl->loop_start, cl->length, cl->playback_dir);
+                        cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
                     }
                 }
             }
@@ -8919,7 +9086,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                     } else {
                         pfx_sync_from_clip(tr);
                         cl = &tr->clips[tr->active_clip];
-                        tr->current_step = cl->loop_start;
+                        tr->current_step = initial_clip_step(cl->loop_start, cl->length, cl->playback_dir);
+                        cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
                         tr->tick_in_step = 0;
                     }
                     if (tr->record_armed) {
@@ -8946,11 +9114,14 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                             int _dl;
                             for (_dl = 0; _dl < DRUM_LANES; _dl++) {
                                 clip_t *_dlc = &tr->drum_clips[tr->active_clip].lanes[_dl].clip;
-                                tr->drum_current_step[_dl] = _dlc->loop_start;
+                                tr->drum_current_step[_dl] = initial_clip_step(_dlc->loop_start, _dlc->length, _dlc->playback_dir);
+                                _dlc->pp_dir_state = initial_pp_dir(_dlc->playback_dir);
                                 tr->drum_tick_in_step[_dl] = 0;
                             }
                         } else {
-                            tr->current_step = tr->clips[tr->active_clip].loop_start;
+                            clip_t *_mcl = &tr->clips[tr->active_clip];
+                            tr->current_step = initial_clip_step(_mcl->loop_start, _mcl->length, _mcl->playback_dir);
+                            _mcl->pp_dir_state = initial_pp_dir(_mcl->playback_dir);
                             tr->tick_in_step = 0;
                         }
                     }
@@ -8974,7 +9145,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         } else {
                             pfx_sync_from_clip(tr);
                             cl = &tr->clips[tr->active_clip];
-                            tr->current_step = cl->loop_start;
+                            tr->current_step = initial_clip_step(cl->loop_start, cl->length, cl->playback_dir);
+                            cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
                             tr->tick_in_step = 0;
                         }
                         if (tr->record_armed) {
@@ -9217,11 +9389,13 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                     if (tr->drum_tick_in_step[l] >= dlc->ticks_per_step) {
                         tr->drum_tick_in_step[l] = 0;
                         if (tr->clip_playing) {
-                            uint16_t _ls = dlc->loop_start;
-                            uint16_t _le = (uint16_t)(_ls + dlc->length);
-                            uint16_t ns2 = (uint16_t)(tr->drum_current_step[l] + 1);
-                            if (ns2 >= _le || ns2 < _ls) ns2 = _ls;
-                            if (ns2 == _ls) {
+                            uint16_t ns2; int8_t pp_new; uint8_t wrapped;
+                            advance_clip_step(tr->drum_current_step[l],
+                                              dlc->loop_start, dlc->length,
+                                              dlc->playback_dir, dlc->pp_dir_state,
+                                              &ns2, &pp_new, &wrapped);
+                            dlc->pp_dir_state = pp_new;
+                            if (wrapped) {
                                 uint16_t ni2;
                                 for (ni2 = 0; ni2 < dlc->note_count; ni2++)
                                     dlc->notes[ni2].suppress_until_wrap = 0;
@@ -9237,16 +9411,18 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                 if (tr->tick_in_step >= cl->ticks_per_step) {
                     tr->tick_in_step = 0;
                     if (tr->clip_playing) {
-                        uint16_t _ls = cl->loop_start;
-                        uint16_t _le = (uint16_t)(_ls + cl->length);
-                        uint16_t ns2 = (uint16_t)(tr->current_step + 1);
-                        if (ns2 >= _le || ns2 < _ls) ns2 = _ls;
-                        if (ns2 == _ls) {
+                        uint16_t ns2; int8_t pp_new; uint8_t wrapped;
+                        advance_clip_step(tr->current_step,
+                                          cl->loop_start, cl->length,
+                                          cl->playback_dir, cl->pp_dir_state,
+                                          &ns2, &pp_new, &wrapped);
+                        cl->pp_dir_state = pp_new;
+                        if (wrapped) {
                             uint16_t ni2;
                             for (ni2 = 0; ni2 < cl->note_count; ni2++)
                                 cl->notes[ni2].suppress_until_wrap = 0;
                             memset(tr->live_recorded_steps, 0, 32);
-                            /* SEQ ARP retrigger=1: restart pattern on clip loop start. */
+                            /* SEQ ARP retrigger=1: restart pattern on clip wrap. */
                             if (tr->pfx.arp.style != 0 && tr->pfx.arp.retrigger)
                                 tr->pfx.arp.pending_retrigger = 1;
                             cl->loop_cycle++;   /* v=34 Iter counter */

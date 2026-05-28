@@ -103,6 +103,8 @@ export function fmtArpSteps(v) { return ['Off','Mute','Step'][v] || 'Mute'; }
 export function fmtArpOct(v)   { if (v === 0) return 'Off'; return (v > 0 ? '+' : '') + v; }
 export function fmtVelOverride(v) { return v === 0 ? 'Live' : String(v); }
 export function fmtDiq(v) { return ['Off','1/64','1/32','1/16','1/16T','1/8','1/8T','1/4','1/4T'][v|0] || 'Off'; }
+/* Playback direction: 0=Forward, 1=Backward, 2=Pingpong-Forward, 3=Pingpong-Backward. */
+export function fmtPlayDir(v) { return ['Fwd','Bwd','PPf','PPb'][v|0] || 'Fwd'; }
 
 /* Fixed 4-char left-aligned column for overview display */
 export function col4(s) {
@@ -249,13 +251,16 @@ const _X  = p(null, null, null, 'stub', 0,   0, 0,  fmtNA);
 const _XQ = p(null, null, null, 'stub', 0, 100, -1, fmtNA);  /* bank 7 K4: quantize, def=-1 = unset */
 
 export const BANKS = [
-    /* 0 — CLIP (pad 92) — Beat Stretch, Clock Shift (Shift+turn = Nudge), Resolution, Length, K6=InQ (custom handling, mirrors drum ALL LANES K5), SqFl */
+    /* 0 — CLIP (pad 92) — Beat Stretch, Clock Shift (Shift+turn = Nudge),
+     * Resolution, K5=Dir (per-clip playback direction), K6=InQ (custom
+     * handling, mirrors drum ALL LANES K5), SqFl. K4 unassigned (clip length
+     * is set via the Loop+jog modifier shortcut). */
     { name: 'CLIP', knobs: [
         p('Stch', 'Beat Stretch',    'beat_stretch',    'action', 0, 0,   0,   fmtStretch, 16, '_factor', true),
         p('Shft', 'Clock Shift',     'clock_shift',     'action', 0, 0,   0,   fmtSign,    8),
         p('Res',  'Resolution',      'clip_resolution', 'clip',   0, 5,   1,   fmtRes, 16),
-        p('Len',  'Clip Length',     'clip_length',     'track',  1, 256, 16,  fmtLen, 8),
         _X,
+        p('Dir',  'Playback Dir',   'clip_playback_dir', 'clip',  0, 3,   0,   fmtPlayDir, 16),
         p('InQ',  'Input Quantize', 'diq',              'track', 0, 8, 0,  fmtDiq, 8),
         p('SqFl', 'Seq Follow',      null,              'seqfollow', 0, 1, 1,  fmtBool, 16),
         _X,

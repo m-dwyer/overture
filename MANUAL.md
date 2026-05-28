@@ -567,7 +567,7 @@ Every parameter in NOTE FX, HARMONY, DELAY, SEQUENCE ARP, and CC AUTOMATION is *
 Bank parameters fall into two categories:
 
 - **Non-destructive** (play FX) — applied at render time. The underlying notes aren't modified. Returning the knob to default leaves the clip unchanged. **NOTE FX, HARMONY, DELAY, SEQUENCE ARP, ARP IN** are all non-destructive.
-- **Destructive** — modifies the underlying note data immediately. Returning the knob to default does *not* revert; use **Undo** instead. The destructive controls are the **CLIP** bank's Stretch, Clock Shift, Shift+K2 Nudge, Resolution, and Length; the equivalent per-lane controls in **DRUM LANE**; and **ALL LANES K1–K2** (Stretch / Clock Shift, including Shift+K2 Nudge).
+- **Destructive** — modifies the underlying note data immediately. Returning the knob to default does *not* revert; use **Undo** instead. The destructive controls are the **CLIP** bank's Stretch, Clock Shift, Shift+K2 Nudge, and Resolution; the equivalent per-lane controls in **DRUM LANE** (plus K4 Eucl); and **ALL LANES K1–K2** (Stretch / Clock Shift, including Shift+K2 Nudge). Clip length is set non-destructively via **Loop + jog rotate** — notes outside the active loop window are preserved on disk but not played.
 
 **CC AUTOMATION** records automation data — recording overwrites the lane along the playhead (latch); reverting needs an explicit clear (Delete + jog click clears all; Delete + knob touch clears one).
 
@@ -583,18 +583,20 @@ Bank parameters fall into two categories:
 
 ## 5.1 CLIP bank
 
-Timing and playback settings for the active clip. **K1–K4 are destructive** — they modify the note data directly (see [Destructive vs non-destructive](#destructive-vs-non-destructive)). On drum tracks, this slot is replaced by DRUM LANE — see [§6.5](#65-drum-lane-bank).
+Timing and playback settings for the active clip. **K1–K3 are destructive** — they modify the note data directly (see [Destructive vs non-destructive](#destructive-vs-non-destructive)). On drum tracks, this slot is replaced by DRUM LANE — see [§6.5](#65-drum-lane-bank).
 
 | Knob | Parameter | Notes |
 |---|---|---|
 | K1 | Stretch | One-shot. Each detent doubles (right) or halves (left) the clip. Blocked if compression would put two notes on the same step. |
 | K2 | Clock Shift / **Nudg** | Plain turn: rotates all notes forward/backward by whole steps. **Shift + turn:** nudges all notes at tick resolution (finer than Clock Shift). The K2 label flips to `Nudg` while Shift is held. |
 | K3 | Resolution / **Zoom** | Per-clip playback speed: 1/32, 1/16 (default), 1/8, 1/4, 1/2, 1-bar. Rescales note positions proportionally. **Shift + K3** = Zoom: keeps absolute note positions, adjusts the step grid around them. |
-| K4 | Length | Clip length in steps, 1–256. Immediate. |
 | K6 | InQ (Input Quantize) | Per-track recording snap: Off, 1/64, 1/32, 1/16, 1/16T, 1/8, 1/8T, 1/4, 1/4T. Snaps each recorded note to the nearest boundary on this grid. Off = capture raw timing. On drum tracks the equivalent control lives at ALL LANES K5 (same underlying per-track field). |
+| K5 | Dir (Playback Direction) | Per-clip playback direction: **Fwd** (forward, default), **Bwd** (backward — playhead starts at last step, walks down), **PPf** (pingpong, forward start), **PPb** (pingpong, backward start). Pingpong endpoints play once per direction change, so a steady rhythm pattern stays steady through the bounce. Persisted with the set. Mid-playback changes pivot live without resetting the playhead. |
 | K7 | SeqFollow | On (default): Track View auto-scrolls to follow the playhead. Off: view stays put. |
 
-K5 and K8 are unassigned on the CLIP bank.
+K4 and K8 are unassigned on the CLIP bank. Clip length is set via **Loop + jog rotate** — hold Loop and turn the jog wheel to grow/shrink the active clip by ±1 step. See [Loop view (Track View + Loop held)](#loop-view-track-view--loop-held).
+
+**Direction notes.** Step LEDs, OLED playhead, and live recording all follow the visual playhead — recording into a Bwd clip captures notes at the step the playhead is on, so you can play and record in any direction. *Adaptive record arm* (the "grow when near end" press-record behavior) is forward-biased and is forced to fixed-mode arm when the active clip is non-Forward. Within each step, micro-timing still flows forward; the engine reverses step order, not the notes themselves.
 
 ## 5.2 NOTE FX bank
 
@@ -796,7 +798,7 @@ Each lane has its own **loop length** within the clip. Set with DRUM LANE bank K
 
 ## 6.5 DRUM LANE bank
 
-Per-lane settings for the active lane. (Replaces CLIP on drum tracks.) **K1–K5 are destructive** (modify per-lane note data); K6 is a display toggle; **K7–K8** change the lane's MIDI note and persist.
+Per-lane settings for the active lane. (Replaces CLIP on drum tracks.) **K1–K4 are destructive** (modify per-lane note data); K6 is a display toggle; **K7–K8** change the lane's MIDI note and persist.
 
 | Knob | Parameter | Notes |
 |---|---|---|
@@ -804,12 +806,14 @@ Per-lane settings for the active lane. (Replaces CLIP on drum tracks.) **K1–K5
 | K2 | Clock Shift / **Nudg** | Plain turn: shifts the active lane by whole steps. **Shift + turn:** nudges at tick resolution. Label flips to `Nudg` while Shift is held. |
 | K3 | Resolution / **Zoom** | Plain turn: per-lane resolution (1/32 · 1/16 · 1/8 · 1/4 · 1/2 · 1-bar). **Shift + turn:** Zoom — keeps absolute note positions, adjusts the step grid. Label flips to `Zoom`. |
 | K4 | Eucl (Euclidean) | Spreads N hits evenly across the active lane's length (0..length). Only the positions that change between the old and new count update, so hand-placed hits outside the Euclidean grid are preserved. Persists per-lane, per-clip. |
-| K5 | Length | Per-lane clip length |
+| K5 | Dir (Playback Direction) | Per-lane playback direction (same modes as melodic CLIP K5: Fwd · Bwd · PPf · PPb). Each lane has its own direction — mix Fwd hats with a Bwd snare for free, and each lane stays in phase across mid-play clip switches. |
 | K6 | SeqFollow | Per-clip auto-scroll on/off |
 | K7 | Oct (Lane Note) | Shifts the active lane's MIDI note by ±1 octave. OLED shows note name and number. |
 | K8 | Note (Lane Note) | Shifts the active lane's MIDI note by ±1 semitone |
 
-Lane MIDI note assignments persist across saves and reloads.
+Per-lane length is set via **Loop + jog rotate** — hold Loop and turn the jog wheel to grow/shrink the active lane by ±1 step.
+
+Lane MIDI note assignments and playback direction persist across saves and reloads.
 
 ## 6.6 ALL LANES bank
 
