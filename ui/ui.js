@@ -7945,9 +7945,11 @@ function _onCC_knobs(d1, d2) {
             }
             if (knobIdx === 4) {
                 /* K5 = Dir (per-lane playback direction, sens=16).
-                 * AltMode flips this to Step / Audio playback style. */
+                 * AltMode flips this to Step / Audio playback style (sens=4
+                 * so a two-value toggle doesn't need a 16-detent turn). */
                 S.knobAccum[knobIdx]++;
-                if (S.knobAccum[knobIdx] >= 16) {
+                const _k5Sens = S.altMode ? 4 : 16;
+                if (S.knobAccum[knobIdx] >= _k5Sens) {
                     S.knobAccum[knobIdx] = 0;
                     if (S.altMode) {
                         const _cur = S.drumLanePlaybackAudioReverse[t][lane] | 0;
@@ -8341,7 +8343,9 @@ function _onCC_knobs(d1, d2) {
             }
             S.knobAccum[knobIdx]++;
             /* Shift+Shft (Nudge mode) fires twice as fast as plain Clock Shift. */
-            const _effSens = (pm.dspKey === 'clock_shift' && S.altMode) ? Math.max(1, (pm.sens >> 1)) : pm.sens;
+            const _effSens = (pm.dspKey === 'clock_shift' && S.altMode) ? Math.max(1, (pm.sens >> 1))
+                           : (pm.dspKey === 'clip_playback_dir' && S.altMode) ? 4
+                           : pm.sens;
             if (S.knobAccum[knobIdx] >= _effSens) {
                 S.knobAccum[knobIdx] = 0;
                 S.screenDirty = true;

@@ -600,6 +600,8 @@ K4 and K8 are unassigned on the CLIP bank. Clip length is set via **Loop + jog r
 
 **Bake / Ableton export honor direction.** Capturing a non-Forward clip writes a Forward-playing clip whose note positions match the directional playback. A 4-step Bwd source bakes to a 4-step clip at [3, 2, 1, 0]; a 4-step PP source bakes to a 6-step clip at [0, 1, 2, 3, 2, 1]. Pingpong endpoints play once per direction change (matching live). After bake, the output clip's direction is reset to Forward — direction is "frozen" into the new note positions, so you can re-set direction on the baked clip without compounding. Same behavior for the Ableton `.ablbundle` export. In whole-drum-clip bake, the longest lane's *playback cycle* (including PP doubling) sets the output's loop unit; shorter-cycle lanes loop more times to fill the full extent.
 
+> **Note — audio-reverse bake.** Bake / export of clips set to **Audio** reverse style currently captures the **Step** semantics (note positions mirror, but the note-on/note-off swap of audio-reverse is not yet reflected in the baked layout). Live playback in Audio style works as described; a follow-up will extend the bake transform to match.
+
 ## 5.2 NOTE FX bank
 
 Non-destructive transforms applied to every note before output.
