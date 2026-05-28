@@ -3731,8 +3731,6 @@ function drawUI() {
             const len  = S.drumLaneLength[t];
             const tpsIdx = Math.max(0, TPS_VALUES.indexOf(S.drumLaneTPS[t]));
             const sqfl   = S.clipSeqFollow[t][ac] ? 1 : 0;
-            const _dlNote  = S.drumLaneNote[t][lane];
-            const _noteStr = midiNoteName(_dlNote) + ' ' + _dlNote;
             const eucN = Math.min(S.drumLaneEuclidN[t][lane] | 0, len);
             const drumLaneLabels = ['Stch', S.altMode ? 'Nudg' : 'Shft', S.altMode ? 'Zoom' : 'Res', 'Eucl', S.altMode ? 'RvSt' : 'Dir', 'SqFl', null, null];
             const drumLaneVals  = [
@@ -3755,21 +3753,6 @@ function drawUI() {
                 print(colX, rowY,      col4(drumLaneLabels[k]), hi ? 0 : 1);
                 print(colX, rowY + 12, col4(drumLaneVals[k]),   hi ? 0 : 1);
             }
-            /* K7+K8: merged Oct/Note box (same as old NOTE/NOTEFX rendering) */
-            const hiLane = (S.knobTouched === 6 || S.knobTouched === 7);
-            const LX = 64, LY = 36, LW = 54, LH = 24;
-            if (hiLane) {
-                fill_rect(LX, LY, LW, LH, 1);
-            } else {
-                fill_rect(LX,      LY,        LW, 1,  1);
-                fill_rect(LX,      LY+LH-1,   LW, 1,  1);
-                fill_rect(LX,      LY,        1,  LH, 1);
-                fill_rect(LX+LW-1, LY,        1,  LH, 1);
-            }
-            const _lc = hiLane ? 0 : 1;
-            print(LX + Math.floor((LW/2 - 18) / 2),                         LY + 1,  'Oct',  _lc);
-            print(LX + Math.floor(LW/2) + Math.floor((LW/2 - 24) / 2),      LY + 1,  'Note', _lc);
-            print(LX + Math.floor((LW - _noteStr.length * 6) / 2), LY + 13, _noteStr, _lc);
         } else if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 7) {
             /* ALL LANES bank overview */
             const t = S.activeTrack;
@@ -3804,17 +3787,45 @@ function drawUI() {
             }
         } else if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 1) {
         /* Drum NOTE/NOTEFX bank: K1=Gate K2=Vel K3=Qnt */
+        /* Drum NOTE FX: K1+K2=Oct/Note (merged), K3=Vel, K4=Qnt, K5=Len(placeholder), K6=Gate */
         const t    = S.activeTrack;
         const vals = S.bankParams[t][1];
-        const nfxLabels = ['Gate', 'Vel', 'Qnt'];
-        const nfxVals   = [fmtPct(vals[0]), fmtSign(vals[1]), fmtPct(vals[2])];
         drawBankHeading('>> NOTE FX');
-        for (let k = 0; k < 3; k++) {
-            const colX = 4 + k * 30;
-            const hi   = (S.knobTouched === k);
-            if (hi) fill_rect(colX, 12, 24, 24, 1);
-            print(colX, 12,      col4(nfxLabels[k]), hi ? 0 : 1);
-            print(colX, 12 + 12, col4(nfxVals[k]),   hi ? 0 : 1);
+        /* K1+K2: merged Oct/Note box (per-lane MIDI note editor) */
+        {
+            const lane     = S.activeDrumLane[t];
+            const _dlNote  = S.drumLaneNote[t][lane];
+            const _noteStr = midiNoteName(_dlNote) + ' ' + _dlNote;
+            const hiLane   = (S.knobTouched === 0 || S.knobTouched === 1);
+            const LX = 4, LY = 12, LW = 54, LH = 24;
+            if (hiLane) {
+                fill_rect(LX, LY, LW, LH, 1);
+            } else {
+                /* single horizontal line under the Oct/Note labels */
+                fill_rect(LX, LY + 9, LW, 1, 1);
+            }
+            const _lc = hiLane ? 0 : 1;
+            print(LX + Math.floor((LW/2 - 18) / 2),                         LY + 1,  'Oct',  _lc);
+            print(LX + Math.floor(LW/2) + Math.floor((LW/2 - 24) / 2),      LY + 1,  'Note', _lc);
+            print(LX + Math.floor((LW - _noteStr.length * 6) / 2), LY + 13, _noteStr, _lc);
+        }
+        /* K3=Vel, K4=Qnt (row 1 right half); K5=Len placeholder, K6=Gate (row 2 left half) */
+        {
+            const nfxLabels = [null, null, 'Vel', 'Qnt', 'Len>', '>Gate', null, null];
+            const nfxVals   = [null, null, fmtSign(vals[1]), fmtPct(vals[2]), '--', fmtPct(vals[0]), null, null];
+            for (let k = 2; k < 6; k++) {
+                const colX = 4 + (k % 4) * 30;
+                const rowY = k < 4 ? 12 : 36;
+                const hi   = (S.knobTouched === k);
+                /* K6 label ">Gate" is 5 chars (30px) — widen the cell so the label
+                 * and its highlight rect aren't clipped. K7/K8 are blocked on this
+                 * bank, so the extra column is free. */
+                const cellW = (k === 5) ? 30 : 24;
+                if (hi) fill_rect(colX, rowY, cellW, 24, 1);
+                const _lbl = nfxLabels[k];
+                print(colX, rowY,      _lbl.length > 4 ? _lbl : col4(_lbl), hi ? 0 : 1);
+                print(colX, rowY + 12, col4(nfxVals[k]),                    hi ? 0 : 1);
+            }
         }
 
         } else if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 5) {
@@ -8068,25 +8079,6 @@ function _onCC_knobs(d1, d2) {
                 }
                 return;
             }
-            if (knobIdx === 6 || knobIdx === 7) {
-                /* K7 = LaneOct (±12 semitones), K8 = LaneNote (±1 semitone), sens=16 */
-                S.knobAccum[knobIdx]++;
-                if (S.knobAccum[knobIdx] >= 16) {
-                    S.knobAccum[knobIdx] = 0;
-                    const delta = knobIdx === 6 ? dir * 12 : dir;
-                    const nv = Math.max(0, Math.min(127, S.drumLaneNote[t][lane] + delta));
-                    if (nv !== S.drumLaneNote[t][lane]) {
-                        S.drumLaneNote[t][lane] = nv;
-                        if (typeof host_module_set_param === 'function')
-                            host_module_set_param('t' + t + '_l' + lane + '_lane_note', String(nv));
-                        /* PHASE-1: DSP padmap caches the resolved lane notes; re-push
-                         * so on_midi dispatches the new note for this lane's pads. */
-                        if (t === S.activeTrack) computePadNoteMap();
-                        S.screenDirty = true;
-                    }
-                }
-                return;
-            }
         }
         /* ALL LANES bank (drum, bank 7): K1=Stch K2=Shft K3=Qnt K4=VelIn K5=InQ K6=SyncRpt */
         if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 7) {
@@ -8185,30 +8177,34 @@ function _onCC_knobs(d1, d2) {
             }
             return;
         }
-        /* Drum NOTE FX bank (bank 1): K1=Gate K2=Vel K3=Qnt; K4-K8 blocked */
+        /* Drum NOTE FX bank (bank 1): K1=LaneOct K2=LaneNote K3=Vel K4=Qnt K5=Len(placeholder) K6=Gate; K7/K8 blocked */
         if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 1) {
-            if (knobIdx >= 3) return;
+            if (knobIdx >= 6) return;
             const t    = S.activeTrack;
             const lane = S.activeDrumLane[t];
             const dir  = (d2 >= 1 && d2 <= 63) ? 1 : -1;
             if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
-            if (knobIdx === 0) {
-                /* K1 = Gate: 0-400, sens=2 */
+            if (knobIdx === 0 || knobIdx === 1) {
+                /* K1 = LaneOct (±12 semitones), K2 = LaneNote (±1 semitone), sens=16 */
                 S.knobAccum[knobIdx]++;
-                if (S.knobAccum[knobIdx] >= 2) {
+                if (S.knobAccum[knobIdx] >= 16) {
                     S.knobAccum[knobIdx] = 0;
-                    const nv = Math.max(0, Math.min(400, (S.bankParams[t][1][0] | 0) + dir));
-                    if (nv !== S.bankParams[t][1][0]) {
-                        S.bankParams[t][1][0] = nv;
+                    const delta = knobIdx === 0 ? dir * 12 : dir;
+                    const nv = Math.max(0, Math.min(127, S.drumLaneNote[t][lane] + delta));
+                    if (nv !== S.drumLaneNote[t][lane]) {
+                        S.drumLaneNote[t][lane] = nv;
                         if (typeof host_module_set_param === 'function')
-                            host_module_set_param('t' + t + '_l' + lane + '_pfx_set', 'gate_time ' + nv);
+                            host_module_set_param('t' + t + '_l' + lane + '_lane_note', String(nv));
+                        /* PHASE-1: DSP padmap caches the resolved lane notes; re-push
+                         * so on_midi dispatches the new note for this lane's pads. */
+                        if (t === S.activeTrack) computePadNoteMap();
+                        S.screenDirty = true;
                     }
-                    S.screenDirty = true;
                 }
                 return;
             }
-            if (knobIdx === 1) {
-                /* K2 = Vel: -127..127, sens=1 */
+            if (knobIdx === 2) {
+                /* K3 = Vel: -127..127, sens=1 */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 1) {
                     S.knobAccum[knobIdx] = 0;
@@ -8222,18 +8218,40 @@ function _onCC_knobs(d1, d2) {
                 }
                 return;
             }
-            /* knobIdx === 2: K3 = Qnt — per-lane quantize, sens=1 */
-            S.knobAccum[knobIdx]++;
-            if (S.knobAccum[knobIdx] >= 1) {
-                S.knobAccum[knobIdx] = 0;
-                const nv = Math.max(0, Math.min(100, S.drumLaneQnt[t] + dir));
-                if (nv !== S.drumLaneQnt[t]) {
-                    S.drumLaneQnt[t] = nv;
-                    S.bankParams[t][1][2] = nv;
-                    if (typeof host_module_set_param === 'function')
-                        host_module_set_param('t' + t + '_l' + lane + '_pfx_set', 'quantize ' + nv);
+            if (knobIdx === 3) {
+                /* K4 = Qnt — per-lane quantize, sens=1 */
+                S.knobAccum[knobIdx]++;
+                if (S.knobAccum[knobIdx] >= 1) {
+                    S.knobAccum[knobIdx] = 0;
+                    const nv = Math.max(0, Math.min(100, S.drumLaneQnt[t] + dir));
+                    if (nv !== S.drumLaneQnt[t]) {
+                        S.drumLaneQnt[t] = nv;
+                        S.bankParams[t][1][2] = nv;
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param('t' + t + '_l' + lane + '_pfx_set', 'quantize ' + nv);
+                    }
+                    S.screenDirty = true;
                 }
-                S.screenDirty = true;
+                return;
+            }
+            if (knobIdx === 4) {
+                /* K5 = Len placeholder — no-op until defined */
+                return;
+            }
+            if (knobIdx === 5) {
+                /* K6 = Gate: 0-400, sens=2 */
+                S.knobAccum[knobIdx]++;
+                if (S.knobAccum[knobIdx] >= 2) {
+                    S.knobAccum[knobIdx] = 0;
+                    const nv = Math.max(0, Math.min(400, (S.bankParams[t][1][0] | 0) + dir));
+                    if (nv !== S.bankParams[t][1][0]) {
+                        S.bankParams[t][1][0] = nv;
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param('t' + t + '_l' + lane + '_pfx_set', 'gate_time ' + nv);
+                    }
+                    S.screenDirty = true;
+                }
+                return;
             }
             return;
         }

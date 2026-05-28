@@ -617,7 +617,7 @@ Non-destructive transforms applied to every note before output.
 
 K7 and K8 are unassigned on the NOTE FX bank (melodic).
 
-**On drum tracks**, the NOTE FX bank is limited to **K1 (Gate), K2 (Vel), K3 (Qnt)** — applied to the active lane. K4–K8 are blocked. Use ALL LANES K3 to quantize every lane at once.
+**On drum tracks**, the NOTE FX bank reuses the cells for per-lane controls: **K1+K2 (merged Oct/Note)** edit the active lane's MIDI note (K1 = ±12 semitones, K2 = ±1 semitone); **K3 (Vel), K4 (Qnt), K6 (>Gate)** apply to the active lane; **K5 (Len>)** is a placeholder reserved for a future per-lane length control; K7 and K8 are blocked. Use ALL LANES K3 to quantize every lane at once.
 
 > **Try this.** Set Pitch Random to Walk at a low value (3–5) on a melody. The sequence drifts gradually rather than jumping — coherent variation without chaos.
 
