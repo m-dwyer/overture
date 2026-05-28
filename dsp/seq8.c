@@ -466,6 +466,14 @@ typedef struct {
      * loop_start, ascend), 3=Pingpong-Backward (start at last step, descend).
      * Persisted with the clip. */
     uint8_t  playback_dir;
+    /* Playback style: 0=Step (default; current behavior — note-on at note's
+     * recorded start in any direction), 1=Audio (in reverse motion, note-on
+     * fires at the note's END position so the note plays "in reverse" — the
+     * note's start position becomes its note-off). In PP this also switches
+     * the cycle to endpoint-plays-twice (cycle = 2L) so each note gets one
+     * forward and one audio-reverse playthrough per cycle (fugue-machine
+     * semantics). Persisted with the clip. */
+    uint8_t  playback_audio_reverse;
     /* Pingpong runtime direction: +1 ascending, -1 descending. Initialized on
      * clip launch / transport start from playback_dir. Not persisted. */
     int8_t   pp_dir_state;
@@ -1219,11 +1227,13 @@ static void sanitize_step_iter_arr(uint8_t *arr, uint16_t len) {
 
 /* Forward declarations for playback-direction helpers defined further down. */
 static void advance_clip_step(uint16_t cur, uint16_t ls, uint16_t length,
-                              uint8_t mode, int8_t pp_dir,
+                              uint8_t mode, uint8_t audio_reverse, int8_t pp_dir,
                               uint16_t *out_ns, int8_t *out_pp_dir,
                               uint8_t *out_wrapped);
 static uint16_t initial_clip_step(uint16_t ls, uint16_t length, uint8_t dir);
 static int8_t initial_pp_dir(uint8_t dir);
+static inline int clip_in_reverse_motion(const clip_t *cl);
+static inline uint32_t note_audio_reverse_cmp_tick(const note_t *n, const clip_t *cl, int quantize);
 
 static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
     int t, c;
@@ -1276,6 +1286,9 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
             /* Playback direction (v=35); sparse: 0=Forward = default, omitted. */
             if (cl->playback_dir != 0)
                 fprintf(fp, ",\"t%dc%d_pd\":%d", t, c, (int)cl->playback_dir);
+            /* Playback style: 0=Step (default, omitted), 1=Audio. */
+            if (cl->playback_audio_reverse != 0)
+                fprintf(fp, ",\"t%dc%d_par\":%d", t, c, (int)cl->playback_audio_reverse);
             if (cl->stretch_exp != 0)
                 fprintf(fp, ",\"t%dc%d_se\":%d", t, c, (int)cl->stretch_exp);
             if (cl->clock_shift_pos != 0)
@@ -1379,6 +1392,8 @@ static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
                 /* Playback direction (v=35); sparse: 0=Forward = default, omitted. */
                 if (dlc->playback_dir != 0)
                     fprintf(fp, ",\"t%dc%dl%d_pd\":%d", t, c, l, (int)dlc->playback_dir);
+                if (dlc->playback_audio_reverse != 0)
+                    fprintf(fp, ",\"t%dc%dl%d_par\":%d", t, c, l, (int)dlc->playback_audio_reverse);
                 if (dlc->ticks_per_step != TICKS_PER_STEP)
                     fprintf(fp, ",\"t%dc%dl%d_tps\":%d", t, c, l, (int)dlc->ticks_per_step);
                 int wrote = 0;
@@ -1623,6 +1638,8 @@ static void seq8_load_state(seq8_instance_t *inst) {
             snprintf(key, sizeof(key), "t%dc%d_pd", t, c);
             cl->playback_dir = (uint8_t)clamp_i(json_get_int(buf, key, 0), 0, 3);
             cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
+            snprintf(key, sizeof(key), "t%dc%d_par", t, c);
+            cl->playback_audio_reverse = (uint8_t)clamp_i(json_get_int(buf, key, 0), 0, 1);
 
             snprintf(key, sizeof(key), "t%dc%d_se", t, c);
             cl->stretch_exp = (int8_t)clamp_i(json_get_int(buf, key, 0), -8, 8);
@@ -1975,6 +1992,8 @@ static void seq8_load_state(seq8_instance_t *inst) {
                 snprintf(key, sizeof(key), "t%dc%dl%d_pd", t, c, l);
                 dlc->playback_dir = (uint8_t)clamp_i(json_get_int(buf, key, 0), 0, 3);
                 dlc->pp_dir_state = initial_pp_dir(dlc->playback_dir);
+                snprintf(key, sizeof(key), "t%dc%dl%d_par", t, c, l);
+                dlc->playback_audio_reverse = (uint8_t)clamp_i(json_get_int(buf, key, 0), 0, 1);
                 snprintf(key, sizeof(key), "t%dc%dl%d_tps", t, c, l);
                 {
                     int raw_tps = json_get_int(buf, key, (int)TICKS_PER_STEP);
@@ -3288,7 +3307,7 @@ static void pfx_sched_delay_offs(play_fx_t *fx, pfx_active_t *an,
  * and is back at its initial position — used to clear suppress_until_wrap
  * flags, reset live_recorded_steps, and increment loop_cycle for Iter trigs. */
 static void advance_clip_step(uint16_t cur, uint16_t ls, uint16_t length,
-                              uint8_t mode, int8_t pp_dir,
+                              uint8_t mode, uint8_t audio_reverse, int8_t pp_dir,
                               uint16_t *out_ns, int8_t *out_pp_dir,
                               uint8_t *out_wrapped) {
     uint16_t le = (uint16_t)(ls + length);
@@ -3301,22 +3320,36 @@ static void advance_clip_step(uint16_t cur, uint16_t ls, uint16_t length,
         next = (int32_t)cur - 1;
         if (next < ls || next >= le) { next = le - 1; *out_wrapped = 1; }
         break;
-    case 2: /* Pingpong Forward — endpoint plays ONCE per direction change */
+    case 2: /* Pingpong Forward.
+             *   Step:  endpoint plays ONCE per direction change (cycle = 2L-2).
+             *   Audio: endpoint plays TWICE — repeats at the bounce (cycle = 2L)
+             *          so each note gets one forward + one reverse playthrough. */
         if (pp_dir != +1 && pp_dir != -1) pp_dir = +1;
         next = (int32_t)cur + pp_dir;
-        if (next >= le)      { next = le - 2; pp_dir = -1; }   /* bounce off top, skip repeat */
-        else if (next < ls)  { next = ls + 1; pp_dir = +1; }   /* bounce off bottom */
-        /* Wrap: completed one full cycle when we land at ls heading downward
-         * (next advance will bounce back up). */
-        if ((uint16_t)next == ls && pp_dir == -1) *out_wrapped = 1;
+        if (audio_reverse) {
+            if (next >= le)      { next = le - 1; pp_dir = -1; }   /* endpoint repeats at top */
+            else if (next < ls)  { next = ls;     pp_dir = +1; }   /* endpoint repeats at bottom */
+            /* Wrap: landed at ls heading up (we've completed the full 2L cycle). */
+            if ((uint16_t)next == ls && pp_dir == +1) *out_wrapped = 1;
+        } else {
+            if (next >= le)      { next = le - 2; pp_dir = -1; }   /* skip repeat at top */
+            else if (next < ls)  { next = ls + 1; pp_dir = +1; }   /* skip repeat at bottom */
+            if ((uint16_t)next == ls && pp_dir == -1) *out_wrapped = 1;
+        }
         break;
-    case 3: /* Pingpong Backward — endpoint plays ONCE per direction change */
+    case 3: /* Pingpong Backward — mirror of case 2. */
         if (pp_dir != +1 && pp_dir != -1) pp_dir = -1;
         next = (int32_t)cur + pp_dir;
-        if (next >= le)      { next = le - 2; pp_dir = -1; }
-        else if (next < ls)  { next = ls + 1; pp_dir = +1; }
-        /* Wrap: landed at le-1 heading upward (next advance will bounce down). */
-        if ((uint16_t)next == (uint16_t)(le - 1) && pp_dir == +1) *out_wrapped = 1;
+        if (audio_reverse) {
+            if (next >= le)      { next = le - 1; pp_dir = -1; }
+            else if (next < ls)  { next = ls;     pp_dir = +1; }
+            /* Wrap: landed at le-1 heading down (full 2L cycle complete). */
+            if ((uint16_t)next == (uint16_t)(le - 1) && pp_dir == -1) *out_wrapped = 1;
+        } else {
+            if (next >= le)      { next = le - 2; pp_dir = -1; }
+            else if (next < ls)  { next = ls + 1; pp_dir = +1; }
+            if ((uint16_t)next == (uint16_t)(le - 1) && pp_dir == +1) *out_wrapped = 1;
+        }
         break;
     case 0:
     default: /* Forward */
@@ -3338,6 +3371,32 @@ static uint16_t initial_clip_step(uint16_t ls, uint16_t length, uint8_t dir) {
 /* Initial pp_dir_state for `dir`. -1 for PPBwd; +1 for everything else. */
 static int8_t initial_pp_dir(uint8_t dir) {
     return (dir == 3) ? (int8_t)-1 : (int8_t)+1;
+}
+
+/* True when the playhead is currently traversing the clip in reverse motion:
+ *   - Backward direction: always.
+ *   - Pingpong (either start): only while pp_dir_state == -1 (descending half).
+ * Used by note firing to swap note-on / note-off positions when the clip's
+ * playback_audio_reverse flag is set. */
+static inline int clip_in_reverse_motion(const clip_t *cl) {
+    if (cl->playback_dir == 1) return 1;
+    if ((cl->playback_dir == 2 || cl->playback_dir == 3) && cl->pp_dir_state == -1) return 1;
+    return 0;
+}
+
+/* Compare-tick a note should match against `cct` for note-on to fire. In Step
+ * style (or Forward / ascending PP), this is the note's quantized start
+ * position. In Audio style during reverse motion, it's the note's quantized
+ * end position (start + gate), clamped to the loop-window end so a sustained
+ * note never points outside its clip. */
+static inline uint32_t note_audio_reverse_cmp_tick(const note_t *n, const clip_t *cl, int quantize) {
+    uint32_t base = effective_note_tick(n, cl, quantize);
+    if (!cl->playback_audio_reverse) return base;
+    if (!clip_in_reverse_motion(cl))  return base;
+    uint32_t end_tick = base + (uint32_t)n->gate;
+    uint32_t win_end_ticks = (uint32_t)(cl->loop_start + cl->length) * (uint32_t)cl->ticks_per_step;
+    if (win_end_ticks > 0 && end_tick >= win_end_ticks) end_tick = win_end_ticks - 1u;
+    return end_tick;
 }
 
 /* ------------------------------------------------------------------ */
@@ -5277,18 +5336,31 @@ static inline void drum_lane_anchor_playhead(seq8_instance_t *inst,
         case 1: /* Backward */
             target = (uint16_t)(dlls + (dllen - 1u - (steps % dllen)));
             break;
-        case 2: { /* Pingpong Forward — cycle = 2L-2 (endpoint plays once) */
+        case 2: { /* Pingpong Forward — Step style cycle=2L-2, Audio style cycle=2L */
             if (dllen <= 1) { target = dlls; break; }
-            uint32_t cyc = steps % (2u * (uint32_t)dllen - 2u);
-            if (cyc <= (uint32_t)(dllen - 1)) { target = (uint16_t)(dlls + cyc);                       target_pp = +1; }
-            else                              { target = (uint16_t)(dlls + (2u * dllen - 2u - cyc));   target_pp = -1; }
+            if (ncl->playback_audio_reverse) {
+                /* Audio cycle = 2L. Endpoints play twice. Sequence 0,1,..,L-1,L-1,..,1,0,0,1,.. */
+                uint32_t cyc = steps % (2u * (uint32_t)dllen);
+                if (cyc < dllen)  { target = (uint16_t)(dlls + cyc);                       target_pp = +1; }
+                else              { target = (uint16_t)(dlls + (2u * dllen - 1u - cyc));   target_pp = -1; }
+            } else {
+                uint32_t cyc = steps % (2u * (uint32_t)dllen - 2u);
+                if (cyc <= (uint32_t)(dllen - 1)) { target = (uint16_t)(dlls + cyc);                       target_pp = +1; }
+                else                              { target = (uint16_t)(dlls + (2u * dllen - 2u - cyc));   target_pp = -1; }
+            }
             break;
         }
-        case 3: { /* Pingpong Backward — cycle = 2L-2 (endpoint plays once) */
+        case 3: { /* Pingpong Backward — Step style cycle=2L-2, Audio style cycle=2L */
             if (dllen <= 1) { target = dlls; break; }
-            uint32_t cyc = steps % (2u * (uint32_t)dllen - 2u);
-            if (cyc <= (uint32_t)(dllen - 1)) { target = (uint16_t)(dlls + (dllen - 1u - cyc));        target_pp = -1; }
-            else                              { target = (uint16_t)(dlls + (cyc - (dllen - 1u)));     target_pp = +1; }
+            if (ncl->playback_audio_reverse) {
+                uint32_t cyc = steps % (2u * (uint32_t)dllen);
+                if (cyc < dllen)  { target = (uint16_t)(dlls + (dllen - 1u - cyc));       target_pp = -1; }
+                else              { target = (uint16_t)(dlls + (cyc - dllen));            target_pp = +1; }
+            } else {
+                uint32_t cyc = steps % (2u * (uint32_t)dllen - 2u);
+                if (cyc <= (uint32_t)(dllen - 1)) { target = (uint16_t)(dlls + (dllen - 1u - cyc));        target_pp = -1; }
+                else                              { target = (uint16_t)(dlls + (cyc - (dllen - 1u)));     target_pp = +1; }
+            }
             break;
         }
         case 0:
@@ -5332,6 +5404,7 @@ static void clip_init(clip_t *cl) {
     memset(cl->occ_cache, 0, sizeof(cl->occ_cache));
     cl->occ_dirty = 0;
     cl->playback_dir = 0;       /* Forward */
+    cl->playback_audio_reverse = 0; /* Step style */
     cl->pp_dir_state = +1;
 }
 
@@ -8201,6 +8274,10 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
         if (!strcmp(sub, "clip_playback_dir"))
             return snprintf(out, out_len, "%d",
                             (int)tr->clips[tr->active_clip].playback_dir);
+        /* Playback style (0=Step, 1=Audio) for active melodic clip. */
+        if (!strcmp(sub, "clip_playback_audio_reverse"))
+            return snprintf(out, out_len, "%d",
+                            (int)tr->clips[tr->active_clip].playback_audio_reverse);
         /* tarp_held: space-separated MIDI pitches currently in TARP input buffer
          * (held physical + latched). Empty when buffer is empty. Polled by JS to
          * light source pads while TARP is latched. */
@@ -8237,6 +8314,8 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
                 return snprintf(out, out_len, "%d", (int)dlc->length);
             if (!strcmp(p2, "_playback_dir"))
                 return snprintf(out, out_len, "%d", (int)dlc->playback_dir);
+            if (!strcmp(p2, "_playback_audio_reverse"))
+                return snprintf(out, out_len, "%d", (int)dlc->playback_audio_reverse);
             if (!strcmp(p2, "_loop_start"))
                 return snprintf(out, out_len, "%d", (int)dlc->loop_start);
             if (!strcmp(p2, "_current_step"))
@@ -9369,7 +9448,7 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         for (ni2 = 0; ni2 < dlc->note_count; ni2++) {
                             note_t *n = &dlc->notes[ni2];
                             if (!n->active || n->suppress_until_wrap) continue;
-                            if (effective_note_tick(n, dlc, lane->pfx_params.quantize) != cct) continue;
+                            if (note_audio_reverse_cmp_tick(n, dlc, lane->pfx_params.quantize) != cct) continue;
                             /* v=34 trig conditions (Iter + Random) — per-note */
                             uint16_t _sidx = note_step(n->tick, dlc->length, dlc->ticks_per_step);
                             if (!step_trig_pass(dlc, _sidx, (uint32_t)dlc->loop_cycle, &dpx->rng)) continue;
@@ -9424,7 +9503,7 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                     for (ni2 = 0; ni2 < cl->note_count; ni2++) {
                         note_t *n = &cl->notes[ni2];
                         if (!n->active || n->suppress_until_wrap) continue;
-                        if (effective_note_tick(n, cl, tr->pfx.quantize) != cct) continue;
+                        if (note_audio_reverse_cmp_tick(n, cl, tr->pfx.quantize) != cct) continue;
                         /* v=34 trig conditions (Iter + Random) — per-note */
                         uint16_t _sidx = note_step(n->tick, cl->length, cl->ticks_per_step);
                         if (!step_trig_pass(cl, _sidx, (uint32_t)cl->loop_cycle, &tr->pfx.rng)) continue;
@@ -9584,7 +9663,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                             uint16_t ns2; int8_t pp_new; uint8_t wrapped;
                             advance_clip_step(tr->drum_current_step[l],
                                               dlc->loop_start, dlc->length,
-                                              dlc->playback_dir, dlc->pp_dir_state,
+                                              dlc->playback_dir, dlc->playback_audio_reverse,
+                                              dlc->pp_dir_state,
                                               &ns2, &pp_new, &wrapped);
                             dlc->pp_dir_state = pp_new;
                             if (wrapped) {
@@ -9606,7 +9686,8 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         uint16_t ns2; int8_t pp_new; uint8_t wrapped;
                         advance_clip_step(tr->current_step,
                                           cl->loop_start, cl->length,
-                                          cl->playback_dir, cl->pp_dir_state,
+                                          cl->playback_dir, cl->playback_audio_reverse,
+                                          cl->pp_dir_state,
                                           &ns2, &pp_new, &wrapped);
                         cl->pp_dir_state = pp_new;
                         if (wrapped) {

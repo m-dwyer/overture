@@ -71,7 +71,7 @@ import {
     TPS_VALUES, NOTE_KEYS, SCALE_NAMES, SCALE_DISPLAY, DELAY_LABELS,
     fmtSign, fmtStretch, fmtLen, fmtRes, fmtPct, fmtNote, fmtPages,
     fmtDly, fmtBool, fmtRoute, fmtPlain, fmtNA, fmtGateMod,
-    fmtArpStyle, fmtArpRate, fmtArpSteps, fmtArpOct, fmtVelOverride, fmtPlayDir,
+    fmtArpStyle, fmtArpRate, fmtArpSteps, fmtArpOct, fmtVelOverride, fmtPlayDir, fmtRevStyle,
     col4, col5, parseActionRaw, MCUFONT, pixelPrint, pixelPrintC,
     BANKS, ACTION_POPUP_TICKS, PAD_MODE_DRUM, PAD_MODE_MELODIC_SCALE,
     POLL_INTERVAL, TAP_TEMPO_FLASH_TICKS, TAP_TEMPO_RESET_MS,
@@ -1983,6 +1983,9 @@ function refreshDrumLaneBankParams(t, lane) {
         const _pdvi = (isFinite(_pdv) && _pdv >= 0 && _pdv <= 3) ? _pdv : 0;
         S.drumLanePlaybackDir[t][lane] = _pdvi;
         S.bankParams[t][0][4] = _pdvi;
+        const _par = host_module_get_param('t' + t + '_l' + lane + '_playback_audio_reverse');
+        const _parv = parseInt(_par, 10);
+        S.drumLanePlaybackAudioReverse[t][lane] = (isFinite(_parv) && _parv === 1) ? 1 : 0;
     }
     S.bankParams[t][0][5] = S.clipSeqFollow[t][S.trackActiveClip[t]] ? 1 : 0;
     /* Repeat Groove state for this lane */
@@ -2056,6 +2059,9 @@ function refreshPerClipBankParams(t) {
         const _pdvi = (isFinite(_pdv) && _pdv >= 0 && _pdv <= 3) ? _pdv : 0;
         S.clipPlaybackDir[t][ac] = _pdvi;
         S.bankParams[t][0][4] = _pdvi;
+        const _par = host_module_get_param('t' + t + '_clip_playback_audio_reverse');
+        const _parv = parseInt(_par, 10);
+        S.clipPlaybackAudioReverse[t][ac] = (isFinite(_parv) && _parv === 1) ? 1 : 0;
     }
     S.bankParams[t][0][6] = S.clipSeqFollow[t][ac] ? 1 : 0;
     S.screenDirty = true;
@@ -3702,13 +3708,14 @@ function drawUI() {
             const _dlNote  = S.drumLaneNote[t][lane];
             const _noteStr = midiNoteName(_dlNote) + ' ' + _dlNote;
             const eucN = Math.min(S.drumLaneEuclidN[t][lane] | 0, len);
-            const drumLaneLabels = ['Stch', S.altMode ? 'Nudg' : 'Shft', S.altMode ? 'Zoom' : 'Res', 'Eucl', 'Dir', 'SqFl', null, null];
+            const drumLaneLabels = ['Stch', S.altMode ? 'Nudg' : 'Shft', S.altMode ? 'Zoom' : 'Res', 'Eucl', S.altMode ? 'RvSt' : 'Dir', 'SqFl', null, null];
             const drumLaneVals  = [
                 fmtStretch(S.bankParams[t][0][0]),
                 fmtSign(S.bankParams[t][0][1]),
                 fmtRes(tpsIdx),
                 String(eucN),
-                fmtPlayDir(S.drumLanePlaybackDir[t][lane] | 0),
+                S.altMode ? fmtRevStyle(S.drumLanePlaybackAudioReverse[t][lane] | 0)
+                          : fmtPlayDir(S.drumLanePlaybackDir[t][lane] | 0),
                 fmtBool(sqfl),
                 null, null,
             ];
@@ -3924,9 +3931,11 @@ function drawUI() {
              * delay_clock_fb. Drum: K6 already holds clock_fb directly via
              * remap; no flip needed. */
             const _delayShiftClkF = S.altMode && !_isDrum && bank === 3 && k === 0;
+            const _clipDirAlt    = S.altMode && !_isDrum && knobs[k].dspKey === 'clip_playback_dir';
             if (S.altMode) {
                 if      (knobs[k].dspKey === 'clock_shift')    _lbl = 'Nudg';
                 else if (knobs[k].dspKey === 'clip_resolution') _lbl = 'Zoom';
+                else if (knobs[k].dspKey === 'clip_playback_dir') _lbl = 'RvSt';
                 else if (_delayShiftClkF)                       _lbl = 'ClkF';
             }
             print(colX, rowY,      _lbl, hi ? 0 : 1);
@@ -3934,7 +3943,8 @@ function drawUI() {
              * triplets ('1/16t','1/32t'). Skip the 4-char padding so the 't'
              * isn't truncated — the cell has ~24px and the raw string fits. */
             const _rawVal = _delayShiftClkF ? fmtSign(S.delayClockFb[S.activeTrack])
-                                            : (knobs[k].abbrev ? knobs[k].fmt(vals[k]) : null);
+                          : _clipDirAlt     ? fmtRevStyle(S.clipPlaybackAudioReverse[S.activeTrack][effectiveClip(S.activeTrack)] | 0)
+                          : (knobs[k].abbrev ? knobs[k].fmt(vals[k]) : null);
             const _txt    = (knobs[k].fmt === fmtArpRate && !_delayShiftClkF) ? (_rawVal || '-') : col4(_rawVal);
             print(colX, rowY + 12, _txt, hi ? 0 : 1);
         }
@@ -7934,17 +7944,28 @@ function _onCC_knobs(d1, d2) {
                 return;
             }
             if (knobIdx === 4) {
-                /* K5 = Dir (per-lane playback direction, sens=16) */
+                /* K5 = Dir (per-lane playback direction, sens=16).
+                 * AltMode flips this to Step / Audio playback style. */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 16) {
                     S.knobAccum[knobIdx] = 0;
-                    const _cur = S.drumLanePlaybackDir[t][lane] | 0;
-                    const _nv  = Math.max(0, Math.min(3, _cur + dir));
-                    if (_nv !== _cur) {
-                        S.drumLanePlaybackDir[t][lane] = _nv;
-                        S.bankParams[t][0][4] = _nv;
-                        if (typeof host_module_set_param === 'function')
-                            host_module_set_param('t' + t + '_l' + lane + '_playback_dir', String(_nv));
+                    if (S.altMode) {
+                        const _cur = S.drumLanePlaybackAudioReverse[t][lane] | 0;
+                        const _nv  = Math.max(0, Math.min(1, _cur + dir));
+                        if (_nv !== _cur) {
+                            S.drumLanePlaybackAudioReverse[t][lane] = _nv;
+                            if (typeof host_module_set_param === 'function')
+                                host_module_set_param('t' + t + '_l' + lane + '_playback_audio_reverse', String(_nv));
+                        }
+                    } else {
+                        const _cur = S.drumLanePlaybackDir[t][lane] | 0;
+                        const _nv  = Math.max(0, Math.min(3, _cur + dir));
+                        if (_nv !== _cur) {
+                            S.drumLanePlaybackDir[t][lane] = _nv;
+                            S.bankParams[t][0][4] = _nv;
+                            if (typeof host_module_set_param === 'function')
+                                host_module_set_param('t' + t + '_l' + lane + '_playback_dir', String(_nv));
+                        }
                     }
                     S.screenDirty = true;
                 }
@@ -8394,6 +8415,19 @@ function _onCC_knobs(d1, d2) {
                             S.clockShiftTouchDelta += dir;
                             S.bankParams[t][bank][knobIdx] = S.clockShiftTouchDelta;
                         }
+                    }
+                } else if (S.altMode && pm && pm.dspKey === 'clip_playback_dir' &&
+                           S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM) {
+                    /* AltMode CLIP K5: toggle Step / Audio playback style on
+                     * the active melodic clip. Values 0..1, clamped. */
+                    const _t  = S.activeTrack;
+                    const _ac = effectiveClip(_t);
+                    const _cur = S.clipPlaybackAudioReverse[_t][_ac] | 0;
+                    const _nv  = Math.max(0, Math.min(1, _cur + dir));
+                    if (_nv !== _cur) {
+                        S.clipPlaybackAudioReverse[_t][_ac] = _nv;
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param('t' + _t + '_clip_playback_audio_reverse', String(_nv));
                     }
                 } else {
                     const cur  = S.bankParams[S.activeTrack][bank][knobIdx];

@@ -105,6 +105,9 @@ export function fmtVelOverride(v) { return v === 0 ? 'Live' : String(v); }
 export function fmtDiq(v) { return ['Off','1/64','1/32','1/16','1/16T','1/8','1/8T','1/4','1/4T'][v|0] || 'Off'; }
 /* Playback direction: 0=Forward, 1=Backward, 2=Pingpong-Forward, 3=Pingpong-Backward. */
 export function fmtPlayDir(v) { return ['Fwd','Bwd','PPf','PPb'][v|0] || 'Fwd'; }
+/* Reverse-style: 0=Step (current note-on-at-start semantics), 1=Audio
+ * (note-on at note's end during reverse motion → "tape reversed" feel). */
+export function fmtRevStyle(v) { return v ? 'Audio' : 'Step'; }
 
 /* Fixed 4-char left-aligned column for overview display */
 export function col4(s) {

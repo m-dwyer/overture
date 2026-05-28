@@ -2844,6 +2844,12 @@ static void set_param(void *instance, const char *key, const char *val) {
                 inst->state_dirty = 1;
                 return;
             }
+            /* Playback style for one drum lane: 0=Step, 1=Audio. */
+            if (!strcmp(p2, "_playback_audio_reverse")) {
+                dlc->playback_audio_reverse = (uint8_t)clamp_i(my_atoi(val), 0, 1);
+                inst->state_dirty = 1;
+                return;
+            }
             if (!strcmp(p2, "_loop_set")) {
                 /* tN_lL_loop_set "packed" — atomic loop window write for one drum lane. */
                 long packed = 0;
@@ -4987,6 +4993,14 @@ static void set_param(void *instance, const char *key, const char *val) {
             clip_t *cl = &tr->clips[tr->active_clip];
             cl->playback_dir = (uint8_t)clamp_i(my_atoi(val), 0, 3);
             cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
+            inst->state_dirty = 1;
+            return;
+        }
+        /* Playback style for active melodic clip: 0=Step, 1=Audio (note-on at
+         * note's end when playhead is in reverse motion). */
+        if (!strcmp(sub, "clip_playback_audio_reverse")) {
+            clip_t *cl = &tr->clips[tr->active_clip];
+            cl->playback_audio_reverse = (uint8_t)clamp_i(my_atoi(val), 0, 1);
             inst->state_dirty = 1;
             return;
         }
