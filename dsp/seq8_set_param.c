@@ -3825,6 +3825,22 @@ static void set_param(void *instance, const char *key, const char *val) {
                     abs_tick = ((abs_tick + qt / 2) / qt) * qt;
                 }
 
+                /* Audio-reverse recording: in audio mode + reverse motion the
+                 * snapshot tick is the audible press position. On the next
+                 * playback pass, audio-reverse fires note-on at clip_tick +
+                 * gate, so to play back at the press position we need to
+                 * store clip_tick = press - GATE_TICKS. (GATE_TICKS is the
+                 * default recording gate; if the actual release-derived gate
+                 * differs the audible position shifts by that delta — a small
+                 * approximation acceptable for v1.) Clamp to loop_start. */
+                if (cl->playback_audio_reverse && clip_in_reverse_motion(cl)) {
+                    uint32_t _ws = (uint32_t)cl->loop_start * (uint32_t)tps;
+                    if (abs_tick >= _ws + (uint32_t)GATE_TICKS)
+                        abs_tick -= (uint32_t)GATE_TICKS;
+                    else
+                        abs_tick = _ws;
+                }
+
                 /* TRACK ARP active: arp output will be recorded in tarp_fire_step.
                  * Feed raw input only into the arp held buffer. PHASE-1: on
                  * patched Schwung on_midi already called live_note_on (which

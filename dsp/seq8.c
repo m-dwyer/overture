@@ -1235,6 +1235,11 @@ static int8_t initial_pp_dir(uint8_t dir);
 static inline int clip_in_reverse_motion(const clip_t *cl);
 static inline uint32_t note_audio_reverse_cmp_tick(const note_t *n, const clip_t *cl, int quantize);
 static inline uint32_t playback_audible_cct(const clip_t *cl, uint16_t current_step, uint16_t tick_in_step);
+static inline uint16_t playback_cycle_steps(uint8_t pdir, uint8_t audio_reverse, uint16_t length);
+static int compute_bake_emit_positions(uint8_t pdir, uint8_t audio_reverse,
+                                       uint16_t length, uint16_t tps,
+                                       uint32_t rel_tick, uint32_t gate,
+                                       uint32_t positions_out[2]);
 
 static void seq8_do_serialize(seq8_instance_t *inst, FILE *fp) {
     int t, c;
@@ -3398,6 +3403,81 @@ static inline uint32_t note_audio_reverse_cmp_tick(const note_t *n, const clip_t
     uint32_t win_end_ticks = (uint32_t)(cl->loop_start + cl->length) * (uint32_t)cl->ticks_per_step;
     if (win_end_ticks > 0 && end_tick >= win_end_ticks) end_tick = win_end_ticks - 1u;
     return end_tick;
+}
+
+/* Playback cycle length in steps for a given direction + style. Forward and
+ * Backward = L. Pingpong Step = 2L-2 (endpoint plays once). Pingpong Audio =
+ * 2L (endpoint plays twice, fugue-machine cycle). Returns L for degenerate
+ * length < 2. */
+static inline uint16_t playback_cycle_steps(uint8_t pdir, uint8_t audio_reverse, uint16_t length) {
+    if (pdir == 2 || pdir == 3) {
+        if (length < 2) return length;
+        return audio_reverse ? (uint16_t)(2u * length) : (uint16_t)(2u * length - 2u);
+    }
+    return length;
+}
+
+/* Compute the output-cycle position(s) where a source note at `rel_tick`
+ * (relative to the clip window) with `gate` ticks should audibly fire during
+ * one playback cycle. Used by bake / Ableton export to lay out forward-baked
+ * notes that mirror what live playback sounded like.
+ *
+ * Returns 0..2; fills positions_out[] with output ticks each in [0, cycle_ticks).
+ * Forward / Backward: one position per note. Pingpong: 1-2 positions per note
+ * (endpoints emit once; middle steps emit twice — one per half-cycle).
+ *
+ * Audio reverse style fires note-on at the note's END position with reversed
+ * within-step micro-timing, so a note's audible "head" in reverse motion
+ * lands at (note_end_step + reversed_micro_offset). */
+static int compute_bake_emit_positions(uint8_t pdir, uint8_t audio_reverse,
+                                       uint16_t length, uint16_t tps,
+                                       uint32_t rel_tick, uint32_t gate,
+                                       uint32_t positions_out[2]) {
+    if (length == 0 || tps == 0) return 0;
+    uint16_t S       = (uint16_t)(rel_tick / tps);
+    uint32_t micro   = rel_tick - (uint32_t)S * tps;
+    uint32_t end_tick = rel_tick + gate;
+    uint32_t win_end  = (uint32_t)length * tps;
+    if (end_tick >= win_end) end_tick = win_end - 1u;
+    uint16_t S_end   = (uint16_t)(end_tick / tps);
+    uint32_t micro_e = end_tick - (uint32_t)S_end * tps;
+
+    int count = 0;
+    switch (pdir) {
+    case 1: /* Backward */
+        if (audio_reverse)
+            positions_out[count++] = (uint32_t)(length - 1u - S_end) * tps + (tps - 1u - micro_e);
+        else
+            positions_out[count++] = (uint32_t)(length - 1u - S) * tps + micro;
+        break;
+    case 2: /* Pingpong Forward */
+        /* Ascending half — forward note-on at start (always). */
+        positions_out[count++] = (uint32_t)S * tps + micro;
+        if (audio_reverse) {
+            /* Cycle = 2L, endpoint repeats. Descending half: position = 2L-1-S_end. */
+            positions_out[count++] = (uint32_t)(2u * length - 1u - S_end) * tps + (tps - 1u - micro_e);
+        } else if (S > 0 && S < (uint16_t)(length - 1) && length >= 2) {
+            /* Cycle = 2L-2, endpoint plays once. Only middle steps emit twice. */
+            positions_out[count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
+        }
+        break;
+    case 3: /* Pingpong Backward */
+        if (audio_reverse) {
+            /* Descending first (0..L-1), ascending second (L..2L-1). */
+            positions_out[count++] = (uint32_t)(length - 1u - S_end) * tps + (tps - 1u - micro_e);
+            positions_out[count++] = (uint32_t)(length + S) * tps + micro;
+        } else {
+            positions_out[count++] = (uint32_t)(length - 1u - S) * tps + micro;
+            if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
+                positions_out[count++] = (uint32_t)(length - 1u + S) * tps + micro;
+        }
+        break;
+    case 0:
+    default: /* Forward */
+        positions_out[count++] = rel_tick;
+        break;
+    }
+    return count;
 }
 
 /* Audible cct: where the playhead is currently sounding in clip-tick space.
@@ -6887,11 +6967,10 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
     uint32_t clip_ticks     = (uint32_t)length * tps;
     uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
 
-    /* Direction-aware cycle for export — PP cycle = 2L-2 (endpoint plays once). */
+    /* Direction- and style-aware cycle for export. */
     uint8_t pdir = cl->playback_dir;
-    uint16_t cycle_steps = (pdir == 2 || pdir == 3)
-                           ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
-                           : length;
+    uint8_t paud = cl->playback_audio_reverse;
+    uint16_t cycle_steps = playback_cycle_steps(pdir, paud, length);
     uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
     if (out_cycle_ticks) *out_cycle_ticks = cycle_ticks;
     if (out_total_ticks) *out_total_ticks = cycle_ticks * (uint32_t)loops;
@@ -6916,31 +6995,6 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
             uint16_t _sidx = note_step(nn->tick, length, tps);
             if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
             uint32_t rel_tick = nn->tick - win_start_tick;
-            uint16_t S        = (uint16_t)(rel_tick / tps);
-            uint32_t micro    = rel_tick - (uint32_t)S * tps;
-
-            uint32_t emit_ticks[2];
-            int      emit_count = 0;
-            switch (pdir) {
-            case 1:
-                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                break;
-            case 2:
-                emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
-                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                    emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
-                break;
-            case 3:
-                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                    emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
-                break;
-            case 0:
-            default:
-                emit_ticks[emit_count++] = rel_tick;
-                break;
-            }
-
             uint32_t gate = (uint32_t)nn->gate;
             if (fx.gate_time != 100 && fx.gate_time > 0)
                 gate = gate * (uint32_t)fx.gate_time / 100u;
@@ -6949,6 +7003,11 @@ static int render_melodic_clip(seq8_instance_t *inst, int t, int c, int loops,
             if (vel < 1) vel = 1; if (vel > 127) vel = 127;
             uint8_t gen[MAX_GEN_NOTES];
             int gc = pfx_build_gen_notes(inst, scale_aware, &fx, (int)nn->pitch, gen);
+
+            uint32_t emit_ticks[2];
+            int emit_count = compute_bake_emit_positions(pdir, paud, length, tps,
+                                                          rel_tick, gate, emit_ticks);
+
             /* v=34 Ratchet bake: r evenly-spaced sub-hits at TPS/r within one
              * step; sub-hit gate = sub-interval. ratchet<2 => single emit. */
             uint8_t  _ratch = cl->step_ratchet[_sidx];
@@ -7029,17 +7088,16 @@ static void bake_clip(seq8_instance_t *inst, int t, int c, int loops, int wrap) 
      * window-relative space so the baked output anchors at step 0. */
     uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
 
-    /* Direction-aware bake. One "cycle" = one full playback cycle in the
-     * current direction:
-     *   Forward / Backward : cycle_steps = length
-     *   PPf / PPb          : cycle_steps = 2*length - 2  (endpoint plays once)
+    /* Direction- and style-aware bake. cycle_steps:
+     *   Forward / Backward         = length
+     *   PPf / PPb step style       = 2L-2 (endpoint plays once)
+     *   PPf / PPb audio style      = 2L   (endpoint plays twice; fugue cycle)
      * Per source note we emit 1 or 2 directional positions inside one cycle;
      * the BAKE_STAGES operate on cycle_ticks (not clip_ticks) so MIDI DLY /
      * SEQ ARP wrap semantics match what live playback would do. */
     uint8_t pdir = cl->playback_dir;
-    uint16_t cycle_steps = (pdir == 2 || pdir == 3)
-                           ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
-                           : length;
+    uint8_t paud = cl->playback_audio_reverse;
+    uint16_t cycle_steps = playback_cycle_steps(pdir, paud, length);
     uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
 
     uint16_t new_length  = (uint16_t)clamp_i((int)cycle_steps * loops, 1, 256);
@@ -7070,30 +7128,6 @@ static void bake_clip(seq8_instance_t *inst, int t, int c, int loops, int wrap) 
             uint16_t _sidx = note_step(nn->tick, length, tps);
             if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
             uint32_t rel_tick = nn->tick - win_start_tick;
-            uint16_t S        = (uint16_t)(rel_tick / tps);
-            uint32_t micro    = rel_tick - (uint32_t)S * tps;
-
-            uint32_t emit_ticks[2];
-            int      emit_count = 0;
-            switch (pdir) {
-            case 1: /* Backward */
-                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                break;
-            case 2: /* Pingpong Forward */
-                emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
-                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                    emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
-                break;
-            case 3: /* Pingpong Backward */
-                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                    emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
-                break;
-            case 0:
-            default: /* Forward */
-                emit_ticks[emit_count++] = rel_tick;
-                break;
-            }
 
             uint32_t gate = (uint32_t)nn->gate;
             if (fx.gate_time != 100 && fx.gate_time > 0)
@@ -7103,6 +7137,10 @@ static void bake_clip(seq8_instance_t *inst, int t, int c, int loops, int wrap) 
             if (vel < 1) vel = 1; if (vel > 127) vel = 127;
             uint8_t gen[MAX_GEN_NOTES];
             int gc = pfx_build_gen_notes(inst, scale_aware, &fx, (int)nn->pitch, gen);
+
+            uint32_t emit_ticks[2];
+            int emit_count = compute_bake_emit_positions(pdir, paud, length, tps,
+                                                          rel_tick, gate, emit_ticks);
 
             /* v=34 Ratchet bake: r sub-hits tiling one step, gate=sub-interval. */
             uint8_t  _ratch = cl->step_ratchet[_sidx];
@@ -7217,11 +7255,10 @@ static void bake_drum_lane(seq8_instance_t *inst, int t, int c, int lane, int lo
         uint32_t clip_ticks  = (uint32_t)length * tps;
         uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
 
-        /* Direction-aware bake — see bake_clip above for the full design. */
+        /* Direction- and style-aware bake — see bake_clip above for full design. */
         uint8_t pdir = cl->playback_dir;
-        uint16_t cycle_steps = (pdir == 2 || pdir == 3)
-                               ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
-                               : length;
+        uint8_t paud = cl->playback_audio_reverse;
+        uint16_t cycle_steps = playback_cycle_steps(pdir, paud, length);
         uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
 
         uint16_t new_length  = (uint16_t)clamp_i((int)cycle_steps * loops, 1, 256);
@@ -7248,37 +7285,17 @@ static void bake_drum_lane(seq8_instance_t *inst, int t, int c, int lane, int lo
                 uint16_t _sidx = note_step(nn->tick, length, tps);
                 if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
                 uint32_t rel_tick = nn->tick - win_start_tick;
-                uint16_t S        = (uint16_t)(rel_tick / tps);
-                uint32_t micro    = rel_tick - (uint32_t)S * tps;
-
-                uint32_t emit_ticks[2];
-                int      emit_count = 0;
-                switch (pdir) {
-                case 1:
-                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                    break;
-                case 2:
-                    emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
-                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                        emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
-                    break;
-                case 3:
-                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                        emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
-                    break;
-                case 0:
-                default:
-                    emit_ticks[emit_count++] = rel_tick;
-                    break;
-                }
-
                 uint32_t gate = (uint32_t)nn->gate;
                 if (fx.gate_time != 100 && fx.gate_time > 0)
                     gate = gate * (uint32_t)fx.gate_time / 100u;
                 if (gate < 1) gate = 1; if (gate > 65535u) gate = 65535u;
                 int vel = (int)nn->vel + fx.velocity_offset;
                 if (vel < 1) vel = 1; if (vel > 127) vel = 127;
+
+                uint32_t emit_ticks[2];
+                int emit_count = compute_bake_emit_positions(pdir, paud, length, tps,
+                                                              rel_tick, gate, emit_ticks);
+
                 /* v=34 Ratchet bake: r sub-hits tiling one step, gate=sub-interval. */
                 uint8_t  _ratch = cl->step_ratchet[_sidx];
                 if (_ratch < 2) _ratch = 1;
@@ -7395,11 +7412,10 @@ static int render_drum_lane_nd(seq8_instance_t *inst, int t, int c, int lane,
     uint32_t clip_ticks     = (uint32_t)length * tps;
     uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
 
-    /* Direction-aware cycle for export — see bake_clip. */
+    /* Direction- and style-aware cycle for export — see bake_clip. */
     uint8_t pdir = cl->playback_dir;
-    uint16_t cycle_steps = (pdir == 2 || pdir == 3)
-                           ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
-                           : length;
+    uint8_t paud = cl->playback_audio_reverse;
+    uint16_t cycle_steps = playback_cycle_steps(pdir, paud, length);
     uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
 
     if (out_lane_ticks) *out_lane_ticks = cycle_ticks * (uint32_t)loops;
@@ -7423,37 +7439,17 @@ static int render_drum_lane_nd(seq8_instance_t *inst, int t, int c, int lane,
             uint16_t _sidx = note_step(nn->tick, length, tps);
             if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
             uint32_t rel_tick = nn->tick - win_start_tick;
-            uint16_t S        = (uint16_t)(rel_tick / tps);
-            uint32_t micro    = rel_tick - (uint32_t)S * tps;
-
-            uint32_t emit_ticks[2];
-            int      emit_count = 0;
-            switch (pdir) {
-            case 1:
-                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                break;
-            case 2:
-                emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
-                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                    emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
-                break;
-            case 3:
-                emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                    emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
-                break;
-            case 0:
-            default:
-                emit_ticks[emit_count++] = rel_tick;
-                break;
-            }
-
             uint32_t gate = (uint32_t)nn->gate;
             if (fx.gate_time != 100 && fx.gate_time > 0)
                 gate = gate * (uint32_t)fx.gate_time / 100u;
             if (gate < 1) gate = 1; if (gate > 65535u) gate = 65535u;
             int vel = (int)nn->vel + fx.velocity_offset;
             if (vel < 1) vel = 1; if (vel > 127) vel = 127;
+
+            uint32_t emit_ticks[2];
+            int emit_count = compute_bake_emit_positions(pdir, paud, length, tps,
+                                                          rel_tick, gate, emit_ticks);
+
             /* v=34 Ratchet: r sub-hits tiling one step, gate=sub-interval. */
             uint8_t  _ratch = cl->step_ratchet[_sidx];
             if (_ratch < 2) _ratch = 1;
@@ -7533,10 +7529,9 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
         for (l = 0; l < DRUM_LANES; l++) {
             clip_t *cl = &tr->drum_clips[c].lanes[l].clip;
             if (cl->note_count > 0 && cl->ticks_per_step > 0 && cl->length > 0) {
-                uint16_t L  = cl->length;
-                uint16_t cs = (cl->playback_dir == 2 || cl->playback_dir == 3)
-                              ? (uint16_t)((L >= 2) ? (2u * L - 2u) : L)
-                              : L;
+                uint16_t cs = playback_cycle_steps(cl->playback_dir,
+                                                    cl->playback_audio_reverse,
+                                                    cl->length);
                 uint32_t ct = (uint32_t)cs * cl->ticks_per_step;
                 if (ct > ref_cycle_ticks) {
                     ref_cycle_ticks = ct;
@@ -7585,11 +7580,10 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
         uint32_t clip_ticks = (uint32_t)length * tps;
         uint32_t win_start_tick = (uint32_t)cl->loop_start * tps;
 
-        /* Direction-aware per-lane bake. */
+        /* Direction- and style-aware per-lane bake. */
         uint8_t pdir = cl->playback_dir;
-        uint16_t cycle_steps = (pdir == 2 || pdir == 3)
-                               ? (uint16_t)((length >= 2) ? (2u * length - 2u) : length)
-                               : length;
+        uint8_t paud = cl->playback_audio_reverse;
+        uint16_t cycle_steps = playback_cycle_steps(pdir, paud, length);
         uint32_t cycle_ticks = (uint32_t)cycle_steps * tps;
         int loop, si, ri;
         /* Cover the full output extent — ceil so partial trailing cycle still
@@ -7615,31 +7609,6 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
                 uint16_t _sidx = note_step(nn->tick, length, tps);
                 if (!step_trig_pass(cl, _sidx, (uint32_t)loop, &fx.rng)) continue;
                 uint32_t rel_tick = nn->tick - win_start_tick;
-                uint16_t S        = (uint16_t)(rel_tick / tps);
-                uint32_t micro    = rel_tick - (uint32_t)S * tps;
-
-                uint32_t emit_ticks[2];
-                int      emit_count = 0;
-                switch (pdir) {
-                case 1:
-                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                    break;
-                case 2:
-                    emit_ticks[emit_count++] = (uint32_t)S * tps + micro;
-                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                        emit_ticks[emit_count++] = (uint32_t)(2u * length - 2u - S) * tps + micro;
-                    break;
-                case 3:
-                    emit_ticks[emit_count++] = (uint32_t)(length - 1u - S) * tps + micro;
-                    if (S > 0 && S < (uint16_t)(length - 1) && length >= 2)
-                        emit_ticks[emit_count++] = (uint32_t)(length - 1u + S) * tps + micro;
-                    break;
-                case 0:
-                default:
-                    emit_ticks[emit_count++] = rel_tick;
-                    break;
-                }
-
                 uint32_t gate = (uint32_t)nn->gate;
                 if (fx.gate_time != 100 && fx.gate_time > 0)
                     gate = gate * (uint32_t)fx.gate_time / 100u;
@@ -7648,6 +7617,11 @@ static void bake_drum_clip(seq8_instance_t *inst, int t, int c, int loops, int w
                 if (vel < 1) vel = 1; if (vel > 127) vel = 127;
                 uint8_t gen[MAX_GEN_NOTES];
                 int gc = pfx_build_gen_notes(inst, scale_aware, &fx, (int)nn->pitch, gen);
+
+                uint32_t emit_ticks[2];
+                int emit_count = compute_bake_emit_positions(pdir, paud, length, tps,
+                                                              rel_tick, gate, emit_ticks);
+
                 /* v=34 Ratchet bake: r sub-hits tiling one step, gate=sub-interval. */
                 uint8_t  _ratch = cl->step_ratchet[_sidx];
                 if (_ratch < 2) _ratch = 1;
