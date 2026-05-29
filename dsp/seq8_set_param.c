@@ -676,10 +676,12 @@ static void set_param(void *instance, const char *key, const char *val) {
     /* --- Metronome --- */
     if (!strcmp(key, "metro_on")) {
         inst->metro_on = (uint8_t)clamp_i(my_atoi(val), 0, 3);
+        inst->state_dirty = 1;
         return;
     }
     if (!strcmp(key, "metro_vol")) {
         inst->metro_vol = (uint8_t)clamp_i(my_atoi(val), 0, 150);
+        inst->state_dirty = 1;
         return;
     }
 
@@ -699,24 +701,29 @@ static void set_param(void *instance, const char *key, const char *val) {
             for (tbl = 0; tbl < DRUM_LANES; tbl++)
                 inst->tracks[tb].drum_lane_pfx[tbl].cached_bpm = bpm;
         }
+        inst->state_dirty = 1;
         return;
     }
 
     /* --- Global pad tonality --- */
     if (!strcmp(key, "key")) {
         inst->pad_key = (uint8_t)clamp_i(my_atoi(val), 0, 11);
+        inst->state_dirty = 1;
         return;
     }
     if (!strcmp(key, "scale")) {
         inst->pad_scale = (uint8_t)clamp_i(my_atoi(val), 0, 13);
+        inst->state_dirty = 1;
         return;
     }
     if (!strcmp(key, "scale_aware")) {
         inst->scale_aware = my_atoi(val) ? 1 : 0;
+        inst->state_dirty = 1;
         return;
     }
     if (!strcmp(key, "inp_quant")) {
         inst->inp_quant = my_atoi(val) ? 1 : 0;
+        inst->state_dirty = 1;
         return;
     }
     if (!strcmp(key, "swing_amt")) {
@@ -764,6 +771,7 @@ static void set_param(void *instance, const char *key, const char *val) {
                 }
             }
         }
+        inst->state_dirty = 1;
         return;
     }
     if (!strcmp(key, "debug_log")) {
@@ -922,7 +930,31 @@ static void set_param(void *instance, const char *key, const char *val) {
                  * flag not touched by tarp_init_defaults; clear explicitly. */
                 tarp_init_defaults(tr2);
                 tr2->tarp_physical = 0;
+                memcpy(tr2->cc_assign, CC_ASSIGN_DEFAULT, 8);
+                tr2->track_vel_override = 0;
+                tr2->drum_inp_quant     = 0;
+                tr2->drum_repeat_sync   = 1;
             }
+        }
+        inst->pad_key         = 9;
+        inst->pad_scale       = 1;
+        inst->launch_quant    = 0;
+        inst->scale_aware     = 0;
+        inst->inp_quant       = 0;
+        inst->midi_in_channel = 0;
+        inst->metro_on        = 1;
+        inst->metro_vol       = 80;
+        inst->swing_amt       = 0;
+        inst->swing_res       = 0;
+        memset(inst->mute, 0, NUM_TRACKS);
+        memset(inst->solo, 0, NUM_TRACKS);
+        { int _sn;
+          for (_sn = 0; _sn < 16; _sn++) {
+              inst->snap_valid[_sn] = 0;
+              memset(inst->snap_mute[_sn], 0, NUM_TRACKS);
+              memset(inst->snap_solo[_sn], 0, NUM_TRACKS);
+              memset(inst->snap_drum_eff_mute[_sn], 0, NUM_TRACKS * sizeof(uint32_t));
+          }
         }
         seq8_load_state(inst);
         return;
@@ -1637,11 +1669,22 @@ static void set_param(void *instance, const char *key, const char *val) {
         for (i = 0; i < (int)inst->undo_clip_count; i++) {
             int t = (int)inst->undo_clip_tracks[i], c = (int)inst->undo_clip_indices[i];
             memcpy(&inst->redo_clips[i], &inst->tracks[t].clips[c], sizeof(clip_t));
+            memcpy(&inst->redo_auto_cc[i], &inst->tracks[t].clip_cc_auto[c], sizeof(cc_auto_t));
+            memcpy(&inst->redo_auto_at[i], &inst->tracks[t].clip_at_auto[c], sizeof(at_auto_t));
         }
         inst->redo_valid = 1;
         apply_clip_restore(inst, inst->undo_clips,
                            inst->undo_clip_tracks, inst->undo_clip_indices,
                            inst->undo_clip_count);
+        for (i = 0; i < (int)inst->undo_clip_count; i++) {
+            int t = (int)inst->undo_clip_tracks[i], c = (int)inst->undo_clip_indices[i];
+            memcpy(&inst->tracks[t].clip_cc_auto[c], &inst->undo_auto_cc[i], sizeof(cc_auto_t));
+            memcpy(&inst->tracks[t].clip_at_auto[c], &inst->undo_auto_at[i], sizeof(at_auto_t));
+            if ((int)inst->tracks[t].active_clip == c) {
+                memset(inst->tracks[t].cc_auto_last_sent, 0xFF, 8);
+                memset(inst->tracks[t].at_last_sent, 0xFF, AT_MAX_LANES);
+            }
+        }
         inst->undo_valid = 0;
         /* Also restore drum rows if snapshotted alongside melodic row undo */
         if (inst->drum_row_undo_valid) {
@@ -1734,11 +1777,22 @@ static void set_param(void *instance, const char *key, const char *val) {
         for (i = 0; i < (int)inst->redo_clip_count; i++) {
             int t = (int)inst->redo_clip_tracks[i], c = (int)inst->redo_clip_indices[i];
             memcpy(&inst->undo_clips[i], &inst->tracks[t].clips[c], sizeof(clip_t));
+            memcpy(&inst->undo_auto_cc[i], &inst->tracks[t].clip_cc_auto[c], sizeof(cc_auto_t));
+            memcpy(&inst->undo_auto_at[i], &inst->tracks[t].clip_at_auto[c], sizeof(at_auto_t));
         }
         inst->undo_valid = 1;
         apply_clip_restore(inst, inst->redo_clips,
                            inst->redo_clip_tracks, inst->redo_clip_indices,
                            inst->redo_clip_count);
+        for (i = 0; i < (int)inst->redo_clip_count; i++) {
+            int t = (int)inst->redo_clip_tracks[i], c = (int)inst->redo_clip_indices[i];
+            memcpy(&inst->tracks[t].clip_cc_auto[c], &inst->redo_auto_cc[i], sizeof(cc_auto_t));
+            memcpy(&inst->tracks[t].clip_at_auto[c], &inst->redo_auto_at[i], sizeof(at_auto_t));
+            if ((int)inst->tracks[t].active_clip == c) {
+                memset(inst->tracks[t].cc_auto_last_sent, 0xFF, 8);
+                memset(inst->tracks[t].at_last_sent, 0xFF, AT_MAX_LANES);
+            }
+        }
         inst->redo_valid = 0;
         /* Also restore drum rows if snapshotted alongside melodic row redo */
         if (inst->drum_row_redo_valid) {
@@ -2364,6 +2418,7 @@ static void set_param(void *instance, const char *key, const char *val) {
             }
             if (!strncmp(p, "_at_clear", 9) && p[9] == '\0') {
                 /* tN_cC_at_clear — wipe this clip's pad-pressure aftertouch automation. */
+                undo_begin_single(inst, tidx, cidx);
                 at_auto_reset(&tr->clip_at_auto[cidx]);
                 memset(tr->at_last_sent, 0xFF, AT_MAX_LANES);
                 inst->state_dirty = 1;
@@ -2855,6 +2910,7 @@ static void set_param(void *instance, const char *key, const char *val) {
             while (*_p == ' ') _p++;
             while (*_p >= '0' && *_p <= '9') { _c = _c * 10 + (*_p - '0'); _p++; }
             if (_c < 0 || _c >= NUM_CLIPS) return;
+            undo_begin_single(inst, tidx, _c);
             cc_auto_reset(&tr->clip_cc_auto[_c]);       /* points + rest → "—" */
             if (_c == (int)tr->active_clip)
                 memset(tr->cc_auto_last_sent, 0xFF, 8);
