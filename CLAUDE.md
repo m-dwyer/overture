@@ -63,9 +63,9 @@ Set-duplicate inheritance: when init detects a Copy-suffixed name + missing stat
 
 ## Pad drop diagnostic
 
-Intermittent bug: drum pad live notes stop reaching the output while sequenced playback continues. Suspected cause: `pad_note_map` in DSP stuck at all-0xFF after a coalesced `tN_padmap` push (e.g. session view exit + modifier edge in the same buffer). Self-heal in `tick()` reads back `pad_note_map_0` every 5 ticks and re-pushes on mismatch. DSP `on_midi` logs unexpected drops to `/data/UserData/schwung/seq8-pad-drop.log` (separate from seq8.log). JS `init()` checks for this file and shows a `PAD DROP Nx` popup on next launch.
+Intermittent bug: drum pad live notes stop reaching the output while sequenced playback continues. Suspected cause: `pad_note_map` in DSP stuck at all-0xFF after a coalesced `tN_padmap` push (e.g. session view exit + modifier edge in the same buffer). Self-heal in `tick()` reads back `pad_note_map_0` every 5 ticks and re-pushes on mismatch. DSP `on_midi` logs unexpected drops to `/data/UserData/schwung/seq8-pad-drop.log` (separate from seq8.log).
 
-**Session start check**: `ssh ableton@move.local "cat /data/UserData/schwung/seq8-pad-drop.log 2>/dev/null"`. If non-empty, report contents to user and note timestamp context. The file is cleared by JS on init after reading. Key fields: `pad` (0-31 index), `t` (track), `enabled` (should be 1). If the file never appears, the cause is upstream of `on_midi` (Schwung not delivering pad MIDI).
+**Session start check**: `ssh ableton@move.local "cat /data/UserData/schwung/seq8-pad-drop.log 2>/dev/null"`. If non-empty, report contents to user and note timestamp context. The file persists across reboots until manually cleared. Key fields: `pad` (0-31 index), `t` (track), `enabled` (should be 1). If the file never appears, the cause is upstream of `on_midi` (Schwung not delivering pad MIDI).
 
 ## QuickJS compatibility
 
