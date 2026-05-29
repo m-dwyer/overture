@@ -2693,6 +2693,11 @@ function readBankParams(t, bankIdx) {
                 const tps = S.clipTPS[t][ac] || 24;
                 const idx = TPS_VALUES.indexOf(tps);
                 S.bankParams[t][bankIdx][k] = idx >= 0 ? idx : 1;
+            } else if (pm.dspKey === 'clip_playback_dir') {
+                /* Mirror kept in sync by refreshPerClipBankParams +
+                 * applyBankParam. Without this, every bank-jog onto CLIP
+                 * resets the displayed Dir to Fwd until the next pollDSP. */
+                S.bankParams[t][bankIdx][k] = S.clipPlaybackDir[t][ac] | 0;
             } else {
                 S.bankParams[t][bankIdx][k] = pm.def;
             }
@@ -7289,7 +7294,22 @@ function _onCC_transport(d1, d2) {
             if (S.recordCountingIn) {
                 disarmRecord();
             } else if (typeof host_module_set_param === 'function') {
-                host_module_set_param('transport', S.playing ? 'stop' : 'play');
+                /* Use the combined `transport=play_focus:T:C` set_param so the
+                 * DSP arms the focused track's clip + sets playing=1 in a
+                 * single buffer. Sending launch_clip + transport=play as two
+                 * separate set_params coalesces (same buffer same channel),
+                 * leaving clip_playing=0 on the first cycle after a clip
+                 * clear (since clear leaves will_relaunch=0). */
+                if (!S.playing && !S.sessionView
+                        && !S.trackClipPlaying[S.activeTrack]
+                        && !S.trackWillRelaunch[S.activeTrack]) {
+                    const _at = S.activeTrack;
+                    const _ac = S.trackActiveClip[_at];
+                    host_module_set_param('transport', 'play_focus:' + _at + ':' + _ac);
+                    S.trackQueuedClip[_at] = _ac;
+                } else {
+                    host_module_set_param('transport', S.playing ? 'stop' : 'play');
+                }
             }
         }
     }
@@ -7315,20 +7335,18 @@ function _onCC_transport(d1, d2) {
             } /* end else (not counting in) */
         } else {
             /* Arming path. First gate: refuse if the active clip / lane is
-             * playing in any non-Forward direction or audio-reverse style.
-             * Recording into Bwd / PPf / PPb / Audio is confusing because the
-             * visual playhead is captured but next-loop semantics fire the
-             * note at a shifted position. Direct the user to bake first. */
+             * playing in any non-Forward direction. Recording into Bwd / PPf /
+             * PPb is confusing because the visual playhead is captured but
+             * next-loop semantics fire the note at a shifted position. RvSt
+             * (Step/Audio) is only meaningful during reverse motion, so it's
+             * a no-op when Dir=Fwd and doesn't need to gate recording. */
             const _at = S.activeTrack;
             const _aac = S.trackActiveClip[_at];
             const _aIsDrum = S.trackPadMode[_at] === PAD_MODE_DRUM;
             const _apd = _aIsDrum
                 ? (S.drumLanePlaybackDir[_at][S.activeDrumLane[_at]] | 0)
                 : (S.clipPlaybackDir[_at][_aac] | 0);
-            const _apar = _aIsDrum
-                ? (S.drumLanePlaybackAudioReverse[_at][S.activeDrumLane[_at]] | 0)
-                : (S.clipPlaybackAudioReverse[_at][_aac] | 0);
-            if (_apd !== 0 || _apar !== 0) {
+            if (_apd !== 0) {
                 S.recordBlockedDialog    = true;
                 S.recordBlockedDialogSel = 0;  /* default OK */
                 forceRedraw();

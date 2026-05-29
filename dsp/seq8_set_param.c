@@ -271,6 +271,31 @@ static void set_param(void *instance, const char *key, const char *val) {
 
     /* --- Transport (global) --- */
     if (!strcmp(key, "transport")) {
+        /* play_focus:T:C — same as "play" but ARM the focused track's
+         * clip to launch on this transport-start: sets will_relaunch=1
+         * + active_clip=C + queued_clip=-1 BEFORE the play loop runs,
+         * so clip_playing becomes 1 inside the same buffer (no separate
+         * launch_clip set_param needed, which would coalesce). Used by
+         * the JS Play press handler after a clip clear that left
+         * will_relaunch=0. */
+        if (!strncmp(val, "play_focus:", 11)) {
+            const char *p = val + 11;
+            int focus_t = 0, focus_c = 0;
+            while (*p >= '0' && *p <= '9') { focus_t = focus_t * 10 + (*p++ - '0'); }
+            if (*p == ':') p++;
+            while (*p >= '0' && *p <= '9') { focus_c = focus_c * 10 + (*p++ - '0'); }
+            focus_t = clamp_i(focus_t, 0, NUM_TRACKS - 1);
+            focus_c = clamp_i(focus_c, 0, NUM_CLIPS - 1);
+            if (!inst->playing) {
+                seq8_track_t *_ftr = &inst->tracks[focus_t];
+                _ftr->active_clip   = (uint8_t)focus_c;
+                _ftr->queued_clip   = -1;
+                _ftr->will_relaunch = 1;
+                pfx_sync_from_clip(_ftr);
+            }
+            /* Fall through into the normal play path below. */
+            val = "play";
+        }
         if (!strcmp(val, "play")) {
             if (!inst->playing) {
                 int t;
@@ -1755,20 +1780,32 @@ static void set_param(void *instance, const char *key, const char *val) {
                 pfx_sync_from_clip(tr);
                 if (tr->tick_in_step >= tr->clips[new_cidx].ticks_per_step)
                     tr->tick_in_step = 0;
+                /* Clear lingering recording-suppressor flags on the newly-
+                 * active clip (see render_block queued-launch path). */
+                clip_clear_suppress(&tr->clips[new_cidx]);
                 if (tr->pad_mode == PAD_MODE_DRUM) {
                     int dl;
-                    for (dl = 0; dl < DRUM_LANES; dl++)
-                        drum_lane_anchor_playhead(inst, tr, dl,
-                            &tr->drum_clips[new_cidx].lanes[dl].clip);
+                    for (dl = 0; dl < DRUM_LANES; dl++) {
+                        clip_t *_dnc = &tr->drum_clips[new_cidx].lanes[dl].clip;
+                        clip_clear_suppress(_dnc);
+                        drum_lane_anchor_playhead(inst, tr, dl, _dnc);
+                    }
                 }
                 tr->clip_playing     = 1;
                 tr->queued_clip      = -1;
                 tr->pending_page_stop = 0;
                 tr->will_relaunch    = 0;
             } else {
-                /* Quantized or stopped: queue for next boundary */
-                tr->queued_clip   = (int8_t)new_cidx;
-                tr->will_relaunch = 0;
+                /* Quantized or stopped: queue for next boundary. When stopped
+                 * with launch_quant=Now, also set will_relaunch so the next
+                 * transport=play kicks clip_playing=1 synchronously (without
+                 * this, JS pre-launch before play has no effect and the clip
+                 * stays silent until pollDSP's delayed launch lands ~1 step
+                 * later). For quantized launches (launch_quant != Now), keep
+                 * will_relaunch=0 so the launch still waits for the quant
+                 * boundary after transport starts. */
+                tr->queued_clip = (int8_t)new_cidx;
+                tr->will_relaunch = (inst->launch_quant == 0 && !inst->playing) ? 1 : 0;
                 /* Preview queued clip pfx for JS display while stopped.
                  * Safe: render loop exits immediately when !inst->playing. */
                 if (!inst->playing) {

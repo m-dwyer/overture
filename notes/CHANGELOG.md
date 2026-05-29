@@ -7,6 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com). Add entries to
 the section into a versioned heading at release time.
 
 ## [Unreleased]
+### Fixes
+- **First cycle after a clip clear is no longer silent.** Previously, clearing a clip while transport was stopped left `clip_playing=0` and `will_relaunch=0`; the next Play press would arm transport but the focused clip wouldn't actually launch until a delayed pollDSP-triggered `tN_launch_clip` arrived ~one master-step later — about 125 ms at 120 BPM / 1/16, so the first step (and sometimes the first few notes) of cycle 0 were silent. Fix: the Play press now sends a single combined `transport=play_focus:T:C` set_param so the DSP arms the focused track's clip and sets `inst->playing=1` in one buffer — no more two-set_param coalescing race. Step 0 fires immediately on cycle 0 after a clear.
+- **Recording-suppressor flags now cleared on every clip launch.** Notes recorded into a clip that never saw a loop wrap (because the user switched away before the cycle completed) stayed suppressed on re-launch — the first cycle on return would silently skip those notes. Both the queued-clip-launch path (`render_block`) and the immediate Now-launch path (`tN_launch_clip`) now call `clip_clear_suppress` on the newly-active clip.
+- **REC arm no longer blocked by RvSt=Audio when Dir=Fwd.** The "NON-FWD / BAKE 1ST" popup previously triggered on either non-Forward direction or audio-reverse style. But RvSt is a no-op in Fwd direction (no reverse motion to invert), so blocking on it was wrong. REC now only gates on `Dir != Fwd`.
+- **Dir display no longer flickers on bank jog onto CLIP.** `readBankParams` was resetting Dir to its default (Fwd) for every non-`clip_resolution` clip-scoped knob on bank-switch; it now reads the JS mirror that's kept in sync by `applyBankParam` / `refreshPerClipBankParams`.
+
 ### Features
 - **NOTE FX K5 `Len` (non-destructive fixed length) + CLIP K8 / DRUM LANE K8 `Lgto` (destructive one-shot).** Two complementary note-length controls.
   - **Len** (NOTE FX K5, melodic + drum): position-independent fixed pre-gate length. Values `--` (passthrough), `.25`, `.50`, `.75`, `1`, `2`, `4`, `8`, `16` — multiples of one step at the clip's resolution. Applied at every fire / bake / Ableton export site. Per-clip on melodic, per-lane on drum. K6 `>Gate` scales the resolved length further.

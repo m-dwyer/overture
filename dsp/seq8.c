@@ -9453,14 +9453,22 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                     tr->active_clip  = (uint8_t)tr->queued_clip;
                     tr->queued_clip  = -1;
                     tr->clip_playing = 1;
+                    /* Clear any lingering recording-suppressor flags on the
+                     * newly-active clip. Without this, notes recorded in a
+                     * prior session that never saw a loop wrap (because the
+                     * user switched clips before the cycle completed) stay
+                     * suppressed and miss their first cycle on re-launch. */
                     if (tr->pad_mode == PAD_MODE_DRUM) {
                         int _dl;
-                        for (_dl = 0; _dl < DRUM_LANES; _dl++)
-                            drum_lane_anchor_playhead(inst, tr, _dl,
-                                &tr->drum_clips[tr->active_clip].lanes[_dl].clip);
+                        for (_dl = 0; _dl < DRUM_LANES; _dl++) {
+                            clip_t *_nc = &tr->drum_clips[tr->active_clip].lanes[_dl].clip;
+                            clip_clear_suppress(_nc);
+                            drum_lane_anchor_playhead(inst, tr, _dl, _nc);
+                        }
                     } else {
                         pfx_sync_from_clip(tr);
                         cl = &tr->clips[tr->active_clip];
+                        clip_clear_suppress(cl);
                         tr->current_step = initial_clip_step(cl->loop_start, cl->length, cl->playback_dir);
                         cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
                         tr->tick_in_step = 0;
@@ -9512,14 +9520,19 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         tr->active_clip  = (uint8_t)tr->queued_clip;
                         tr->queued_clip  = -1;
                         tr->clip_playing = 1;
+                        /* Clear lingering recording-suppressor flags on the
+                         * newly-launched clip — see queued-launch path above. */
                         if (tr->pad_mode == PAD_MODE_DRUM) {
                             int _dl;
-                            for (_dl = 0; _dl < DRUM_LANES; _dl++)
-                                drum_lane_anchor_playhead(inst, tr, _dl,
-                                    &tr->drum_clips[tr->active_clip].lanes[_dl].clip);
+                            for (_dl = 0; _dl < DRUM_LANES; _dl++) {
+                                clip_t *_nc = &tr->drum_clips[tr->active_clip].lanes[_dl].clip;
+                                clip_clear_suppress(_nc);
+                                drum_lane_anchor_playhead(inst, tr, _dl, _nc);
+                            }
                         } else {
                             pfx_sync_from_clip(tr);
                             cl = &tr->clips[tr->active_clip];
+                            clip_clear_suppress(cl);
                             tr->current_step = initial_clip_step(cl->loop_start, cl->length, cl->playback_dir);
                             cl->pp_dir_state = initial_pp_dir(cl->playback_dir);
                             tr->tick_in_step = 0;
