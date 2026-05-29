@@ -1,265 +1,92 @@
 # The dAVEBOx Manual
 
-dAVEBOx is an 8-track MIDI sequencer for Ableton Move. It runs as a tool module inside the [Schwung](https://github.com/charlesvestal/schwung) framework and uses Move's pads, knobs, and screen. dAVEBOx generates no audio of its own — every note it produces is handed off to Move's native instruments, to Schwung's effect chains, or to an external synth over USB-A.
-
-Sequence melodic parts and drums on the same instrument. Build patterns one step at a time or jam them in live. Run notes through arpeggiators, harmonizers, delays, and a per-step sequence arp. Capture short loops and transform them in real time. Save 16 clip variations per track and fire them as scenes.
-
-This manual is written for two readers: someone who just powered the device on, and someone who knows their way around and needs to look something up. The first three chapters teach the system. Everything after is reference.
-
----
-
-## How to read this manual
-
-| If you are… | Start here |
-|---|---|
-| New to dAVEBOx | **Chapter 1 (Quick Start)**, then skim **Chapter 2 (The Mental Model)** |
-| Comfortable, looking for depth | Jump to the chapter for the feature you want |
-| Looking up a control | **Appendix C — Controls Cheat Sheet** |
-| Decoding a screen or LED | **Appendix A — LED Reference** · **Appendix B — OLED Reference** |
-
-Every chapter is self-contained. Cross-references are explicit when one feature depends on another. Throughout, boxed notes flag three kinds of aside:
-
-> **Try this.** A hands-on example worth playing with.
-
-> **Connection point.** How this feature relates to another.
-
-> **Advanced.** Power-user detail you can skip on a first read.
+dAVEBOx is an 8-track MIDI sequencer for Ableton Move. It runs as a tool module inside [Schwung](https://github.com/charlesvestal/schwung) and uses Move's pads, knobs, and screen. dAVEBOx generates no audio — every note it produces goes to Move's native instruments, Schwung's effect chains, or an external synth over USB-A.
 
 ---
 
 ## Table of Contents
 
-**Part I — Foundations**
 1. [Quick Start](#1-quick-start)
-2. [The Mental Model](#2-the-mental-model)
-3. [Navigation & Layout](#3-navigation--layout)
-
-**Part II — Making Music**
-4. [Sequencing](#4-sequencing)
-5. [The Effects Chain](#5-the-effects-chain)
-6. [Drum Tracks](#6-drum-tracks)
-
-**Part III — Arranging & Performing**
-7. [Scenes](#7-scenes)
-8. [Performance Mode](#8-performance-mode)
-9. [Bake & Live Merge](#9-bake--live-merge)
-
-**Part IV — Studio**
-10. [Editing — Copy, Cut, Paste, Undo](#10-editing--copy-cut-paste-undo)
-11. [Mixing — Volume, Mute, Solo](#11-mixing--volume-mute-solo)
-
-**Part V — Configuration**
-12. [MIDI Routing](#12-midi-routing)
-13. [Global Settings](#13-global-settings)
-14. [State & Persistence](#14-state--persistence)
-
-**Part VI — Reference**
-15. [Limitations & Gotchas](#15-limitations--gotchas)
-- [Appendix A — LED Reference](#appendix-a--led-reference)
-- [Appendix B — OLED Reference](#appendix-b--oled-reference)
-- [Appendix C — Controls Cheat Sheet](#appendix-c--controls-cheat-sheet)
+2. [Controls & Navigation](#2-controls--navigation)
+3. [Track View](#3-track-view)
+4. [Session View](#4-session-view)
+5. [Sequencing](#5-sequencing)
+6. [Clip & Lane Settings](#6-clip--lane-settings)
+7. [Effects](#7-effects)
+8. [Automation](#8-automation)
+9. [Drum Tracks](#9-drum-tracks)
+10. [Scenes & Performance Mode](#10-scenes--performance-mode)
+11. [Bake, Live Merge & Export](#11-bake-live-merge--export)
+12. [Editing & Mixing](#12-editing--mixing)
+13. [MIDI Routing](#13-midi-routing)
+14. [Global Settings & Persistence](#14-global-settings--persistence)
+15. [Cheat Sheet](#15-cheat-sheet)
+16. [Parameter Reference](#16-parameter-reference)
+17. [LED & OLED Reference](#17-led--oled-reference)
 
 ---
-
-# Part I — Foundations
 
 # 1. Quick Start
 
-A 10-minute walkthrough that touches the parts of dAVEBOx you'll use daily. Power on your Move and open dAVEBOx (load a Schwung set, then open the dAVEBOx slot).
+## One-time setup
 
-## 1.1 Configure Move and Schwung — one-time setup
+Before dAVEBOx can make sound, Move and Schwung need to receive on matching MIDI channels.
 
-Before sequenced notes can make sound, Move's native tracks and Schwung's slots need to be listening on the right MIDI channels. dAVEBOx's defaults send tracks 1–4 to Move's native instruments and tracks 5–8 to Schwung — but those destinations need to be configured to receive on the matching channels.
-
-**In Move**, set each of tracks 1–4 to receive on its corresponding channel, and turn MIDI Out off so notes don't echo back into a feedback loop:
+**Move** — set tracks 1–4 to receive on channels 1–4. Turn MIDI Out **off** on each (prevents echo loops):
 
 | Move track | MIDI In | MIDI Out |
 |---|---|---|
-| Track 1 | Ch 1 | Off |
-| Track 2 | Ch 2 | Off |
-| Track 3 | Ch 3 | Off |
-| Track 4 | Ch 4 | Off |
+| 1 | Ch 1 | Off |
+| 2 | Ch 2 | Off |
+| 3 | Ch 3 | Off |
+| 4 | Ch 4 | Off |
 
-**In Schwung**, set each of slots 1–4 to receive on channels 5–8. Also set **Forward Channel** to **Auto** on each slot — *not* the default **Thru**, which silently blocks routing:
+**Schwung** — set slots 1–4 to receive on channels 5–8. Set each slot's Forward Channel to **Auto** (not Thru):
 
 | Schwung slot | Rcv Channel |
 |---|---|
-| Slot 1 | Ch 5 |
-| Slot 2 | Ch 6 |
-| Slot 3 | Ch 7 |
-| Slot 4 | Ch 8 |
+| 1 | Ch 5 |
+| 2 | Ch 6 |
+| 3 | Ch 7 |
+| 4 | Ch 8 |
 
-This is a one-time setup. Once done, dAVEBOx's defaults Just Work. Full MIDI details: [Chapter 12](#12-midi-routing).
+## Your first pattern
 
-## 1.2 Find your way around
+1. Load a Schwung set and open dAVEBOx.
+2. You start in **Session View** — an 8-column clip grid. Tap **Note/Session** to switch to **Track View**.
+3. Open the Global Menu (**Shift + Note/Session**), navigate to **Mode**, and set it to **Drum**.
+4. Close the menu (Note/Session). The left 4×4 pads are now drum lanes.
+5. Tap a lane pad on the left side — you'll hear the drum sound and that lane becomes active.
+6. Tap **step buttons 1–16** below the pad grid to place hits for that lane.
+7. Press **Play**. Your pattern loops.
 
-When dAVEBOx opens, you're in **Session View** — an 8×16 grid where each column is a track and each row is a *scene*. The active track is shown on the OLED with a 1px box drawn around its number (1–8).
+## Add a melodic part
 
-Two views, two ways to switch:
+1. Switch to track 5: hold **Shift** and tap the **5th pad in the bottom row**.
+2. The pads now play pitched notes snapped to the active scale.
+3. Hold a pad and tap a step button — that step gets the held note.
+4. Hold two pads and tap a step for a chord (up to 4 notes per step).
 
-- Tap **Note/Session** to toggle Session ↔ Track View.
-- Hold **Note/Session** to peek the other view momentarily (returns on release).
+## Try the effects
 
-In **Track View**, switch the active track by:
+Rotate the **jog wheel** to cycle through parameter banks. Stop on **DELAY**. Turn K3 (Rep) to 3 — each note now echoes. Turn K5 (Pfb) to +5 — echoes climb in pitch. These settings are per-clip: switch clips with the side buttons and each clip sounds different.
 
-- **Shift + jog rotate** — steps ±1 track per detent (clamped to tracks 1–8).
-- **Shift + bottom-row pad** — the 1st pad in the bottom row selects track 1, the 2nd selects track 2, and so on through pad 8 → track 8.
+## Save
 
-In **Session View**, tap any pad in a column to make that track active.
-
-## 1.3 Make a kick pattern
-
-Switch to **Track View** (tap Note/Session if you're not there already).
-
-Convert track 1 to a drum track:
-
-1. **Shift + Note/Session** opens the Global Menu.
-2. Jog rotate until **Mode** is highlighted (under "Track [1] Config" at the top).
-3. **Jog click** to enter edit mode for that field.
-4. Jog rotate to select **Drum**, then **jog click** to commit.
-5. Tap **Note/Session** to close the menu.
-
-Track 1 is now a drum track. The left 4×4 of the pad grid is 16 drum lanes; the right 4×4 is a velocity zone (default).
-
-- Tap any left-side pad — that lane plays its sound and becomes the active lane (its LED pulses).
-- With a lane selected, tap **step buttons 1–16** to add hits at those positions.
-- Press **Play** to start transport.
-
-You've made a one-bar drum pattern.
-
-## 1.4 Add a melodic part
-
-Switch to **track 5**: hold **Shift** and tap the 5th pad in the bottom row. Track 5 is melodic by default and routes to Schwung's slot 1.
-
-The pad grid now plays scale-snapped notes. The active scale's root is lit in the track color.
-
-- Tap pads to hear Schwung respond.
-- Hold a pad, then tap a step button: that step is armed with the held note.
-- Hold two pads at once and tap a step for a chord (up to 4 notes per step).
-
-## 1.5 Try the effects chain
-
-Each track runs notes through a chain of seven banks. Rotate the jog wheel to cycle banks (no modifier held):
-
-```
-CLIP → NOTE FX → HARMONY → DELAY → SEQUENCE ARP → ARP IN → CC AUTOMATION
-```
-
-Stop on **DELAY**. Turn knob **K3** (Rep — number of echoes) to 3 or 4. Listen: each note now has a tail. Now turn **K5** (Pfb — pitch feedback) to +5, and the echoes climb a fifth above each other.
-
-Every parameter you turned is **per-clip**. Switch to a different clip on this track using one of the **four side clip buttons** on Move's left edge — the parameters now reflect that clip's settings. The same notes sound completely different per clip.
-
-## 1.6 Save your work
-
-**Shift + Note/Session** opens the menu. Jog rotate to **Save state**, then jog click. dAVEBOx confirms with "STATE SAVED" on the OLED. **Load state** brings any saved snapshot back (see [§3.5](#35-save-states-snapshots)).
-
-dAVEBOx also auto-saves when you press **Back** to suspend, or when you fully exit (Shift + Back, or **Quit** from the menu).
-
-That's the whole picture. The rest of this manual fills in the details.
+**Shift + Note/Session** → **Save**. dAVEBOx also auto-saves when you press Back (suspend) or Shift+Back (exit).
 
 ---
 
-# 2. The Mental Model
+# 2. Controls & Navigation
 
-Three concepts run through every part of dAVEBOx. Once they're clear, everything else hangs off them.
-
-## 2.1 Tracks, clips, scenes
-
-dAVEBOx has **8 tracks**. Each track holds **16 clips**. Each clip holds **notes** (or drum hits) *plus its own effects-chain settings*. A row of clips across all 8 tracks is a **scene**.
-
-```
-            T1   T2   T3   T4   T5   T6   T7   T8
-Scene 1   [ A ][ A ][   ][ A ][ A ][   ][   ][   ]
-Scene 2   [ B ][ B ][   ][ B ][ B ][   ][   ][   ]
-Scene 3   [   ][   ][ A ][   ][   ][ A ][ A ][ A ]
-…
-Scene 16
-```
-
-Clips on a track play one at a time. Launching a new clip on a track replaces what was playing on that track only; other tracks keep going. Launching a *scene* swaps every track at once.
-
-> **Connection point.** Because effects parameters live *with the clip*, switching clips is also a sound-design change. Switching scenes is sound design across the whole instrument. You're sequencing not just notes, but transformations — and the scene grid is your arrangement.
-
-## 2.2 Two views
-
-dAVEBOx has two main views. Tap **Note/Session** to switch.
-
-| | Track View | Session View |
-|---|---|---|
-| **Purpose** | Edit one clip in detail | Launch and arrange clips across all tracks |
-| **Pad grid** | Plays notes (melodic) or drum lanes (drum) | Shows the clip grid (8 cols × 8 visible rows of 16) |
-| **Step buttons** | The active clip's step pattern | Scene launchers (rows 1–16) |
-| **Jog wheel** | Cycle effects banks | Scroll scene rows |
-| **Side clip buttons** | Switch clip on the focused track | Launch full scene rows |
-
-**Holding** Note/Session momentarily peeks the other view — release to return. Useful for spot-checking arrangement without losing your editing focus.
-
-## 2.3 The effects chain
-
-Every note in dAVEBOx — whether sequenced, played live on the pads, or arriving over external MIDI — passes through the same chain before it reaches a sound source:
-
-```
- LIVE INPUT (pads, ext MIDI) ──> [ARP IN] ──┐
-                                            ├─> NOTE FX ─> HARMONY ─> DELAY ─> SEQUENCE ARP ─> OUTPUT
- SEQUENCED NOTES ───────────────────────────┘
-```
-
-- **ARP IN** intercepts live input only. Sequenced notes skip it.
-- **NOTE FX** transforms each note: octave, semitone offset, pitch randomness, gate, velocity, quantize.
-- **HARMONY** adds extra voices on top: octave, three harmony intervals.
-- **DELAY** generates rhythmic echoes with pitch and velocity feedback.
-- **SEQUENCE ARP** is a step-arpeggiator after delay, with a per-step pitch/velocity mask. (The mask only applies while a Style is active — Style = Off bypasses the engine entirely.)
-
-After this chain, global **Swing** is applied. If a Performance Mode loop is active, its mods are applied last.
-
-> **Connection point.** The chain runs in *one direction*. **Live Recording** captures what you play *before* the chain runs (so the recorded notes still get transformed every playback). **Bake** captures what the chain *produces* and writes it back as note data (the FX go away). **Live Merge** captures the running output into a new clip. Each one freezes a different snapshot of the same flow.
-
-## 2.4 Where settings live
-
-dAVEBOx has three scopes for settings. This table tells you where each lives — and therefore what changes when, and what gets saved.
-
-| Scope | What's stored here | When it changes |
-|---|---|---|
-| **Per-clip** | Notes; NOTE FX, HARMONY, DELAY, SEQUENCE ARP params; CLIP-bank params (length, resolution); CC automation data | Switching clips on that track |
-| **Per-track** | MIDI channel, route, mode, VelIn, Looper-on, ARP IN params, CC assignments, octave shift | Switching tracks |
-| **Global** | BPM, key, scale, scale-aware, swing, launch quantization, metronome, MIDI-in channel, mute/solo state and snapshots, Performance Mode mods and presets | Never (unless you change them) |
-
-Drum tracks add a fourth scope: **per-lane**. Each of the 32 lanes has its own loop length, resolution, MIDI note assignment, repeat gate mask, and groove settings — all stored within the active clip.
-
-## 2.5 Melodic vs drum tracks
-
-A track is either **Melodic** or **Drum** (set in Track Config). They share most concepts but differ in a few important ways.
-
-| | Melodic | Drum |
-|---|---|---|
-| **Pad grid** | Plays scale-snapped notes; Up/Down shifts octave | Left 4×4 plays 32 drum lanes (banked A/B); right 4×4 is a function area (Velocity / Rpt1 / Rpt2) |
-| **Step buttons** | One pattern per clip | One pattern *per lane*; switch lanes to see different patterns |
-| **Banks available** | CLIP, NOTE FX, HARMONY, DELAY, SEQUENCE ARP, ARP IN, CC AUTOMATION | DRUM LANE (replaces CLIP), NOTE FX (limited), DELAY, REPEAT GROOVE, CC AUTOMATION, ALL LANES — HARMONY and SEQUENCE ARP hidden |
-| **Per-clip independence** | Notes + FX per clip | Notes + FX per clip, *and* per lane within the clip |
-
-Drum tracks unlock per-lane loop lengths (polyrhythm with no setup) and Note Repeat (live drum rolls). They lose live harmony and the step-arp on the chain.
-
-**Switching Mode converts the track's notes.** Changing **Mode** carries the sequenced notes across all 16 clips into the new type — your part follows the track instead of disappearing. Only the notes move (timing, pitch, velocity, gate); effects, arpeggiator, and harmony reset to defaults.
-
-- **Drum → Melodic** (sometimes called "Keys" for the pitched notes it produces): each lane's hits become pitched notes at the same times; hits that land together become chords. Converts immediately.
-- **Melodic → Drum**: each distinct pitch maps to its own drum lane (lowest pitch on the first pad, ascending). A part using more than 32 distinct pitches keeps the 32 most-used. Because drum-specific settings (Note Repeat, per-lane grooves) have no melodic equivalent, this direction shows a **`Warning: Existing notes may be lost. Proceed?`** confirm first — *only* when the track actually has notes.
-
-An empty track switches instantly with no prompt either way.
-
----
-
-# 3. Navigation & Layout
-
-## 3.1 Move hardware controls
-
-For full visual reference, see Ableton's [Move manual](https://www.ableton.com/en/move/manual/). An approximation of the layout used throughout this manual:
+## Hardware layout
 
 ```
    ┌─────────────────────────────────────────┐
    │              OLED display               │   (vol)
    └─────────────────────────────────────────┘
 
-           K1   K2   K3   K4   K5   K6   K7   K8       (jog)
+  (jog)    K1   K2   K3   K4   K5   K6   K7   K8
 
        ┌──┐   ┌──┬──┬──┬──┬──┬──┬──┬──┐
        │c1│   │  │  │  │  │  │  │  │  │   R3
@@ -268,820 +95,689 @@ For full visual reference, see Ableton's [Move manual](https://www.ableton.com/e
        ├──┤   ├──┼──┼──┼──┼──┼──┼──┼──┤
        │c3│   │  │  │  │  │  │  │  │  │   R1
        ├──┤   ├──┼──┼──┼──┼──┼──┼──┼──┤
-       │c4│   │  │  │  │  │  │  │  │  │   R0   ← Shift + this row switches tracks 1–8
+       │c4│   │  │  │  │  │  │  │  │  │   R0
        └──┘   └──┴──┴──┴──┴──┴──┴──┴──┘
 
             [s1][s2][s3][s4][s5][s6][s7][s8][s9]…[s16]
-
-       (Modifier and transport buttons along the right side and bottom edge:
-        Shift · Note/Session · Up · Down · Capture · Copy · Delete ·
-        Play · Record · Mute · Sample · Loop · Undo · Back · ◁ · ▷)
 ```
 
-Throughout this manual:
+**Terminology used in this manual:**
 
-- **K1–K8** — the eight macro knobs above the pad grid, left to right.
-- **Jog wheel** — clickable encoder on the right side. "Jog rotate" turns it; "jog click" presses.
-- **Volume encoder** — at the top right of the device. Master output only; passed through to Move's firmware.
-- **R0–R3** — the four rows of the pad grid, bottom to top.
-- **Side clip buttons** — the four buttons on the **left** of the pad grid. (Move's native UI calls these "track buttons"; dAVEBOx repurposes them to switch clips on the active track.)
-- **Step buttons** — the 16 buttons below the pad grid; used for sequencing and Shift-shortcuts.
-- **Modifier buttons** — Shift, Note/Session, Up, Down, Capture, Copy, Delete.
-- **Transport buttons** — Play, Record, Mute, Sample, Loop, Undo, ◁, ▷.
-- **Back** — suspends dAVEBOx (sequencer keeps playing). **Shift + Back** fully exits.
-
-There is **no dedicated row of 8 track-select buttons**. To change the active track:
-
-- **Shift + jog rotate** (Track View) steps ±1 track per detent.
-- **Shift + bottom-row pad** (Track View) — pad 1 → track 1, pad 2 → track 2, … pad 8 → track 8.
-- **Tap any pad in a column** (Session View) sets that column's track as active.
-
-The active track is shown on the OLED as a 1px box drawn around its number (1–8).
-
-## 3.2 Track View
-
-The primary editing environment. Shows the active track and clip.
-
-| Control | Action |
+| Name | What it is |
 |---|---|
-| Pads | Play notes (melodic) or trigger drum lanes (drum) |
-| Step buttons 1–16 | Toggle steps in the active clip |
-| Side clip buttons (4, left edge) | Switch between clips on the active track |
-| K1–K8 | Adjust parameters in the active bank |
-| Jog rotate | Cycle parameter banks |
-| Jog click | On a bank with alt parameters (CLIP, DELAY, AUTOMATION; DRUM LANE, REPEAT GROOVE, ALL LANES; SEQ ARP / ARP IN), toggle alt-param mode — knob labels flip to their alternates (Nudg/Zoom/ClkF; AUTOMATION → ASSIGN, retarget CC/AT). A small down-arrow in the header flashes while you're in it. Switching banks, switching tracks, or entering Session View reverts to the primary params. |
-| Shift + jog rotate | Switch tracks 1–8 |
-| Shift + bottom-row pad (1–8) | Switch to that track |
-| Loop (held) | Enter loop view — step buttons now show pages of the clip |
-| Loop (held) + jog | Adjust clip length ±1 step per detent |
-| Up / Down | Shift the pad octave range (−4 to +4) |
-| Left / Right arrows | Navigate clip pages (for clips longer than 16 steps) |
-| Note/Session (tap) | Switch to Session View |
-| Note/Session (hold) | Momentary peek at Session View |
-| Volume encoder | Master output volume (handled by Move firmware) |
-| Delete + jog click | Reset all params in the active bank |
-| Shift + Delete + jog click | Reset all play FX across every bank (active clip/lane) |
+| K1–K8 | Eight knobs above the pad grid |
+| Jog | Clickable encoder on the left. "Jog rotate" = turn, "jog click" = press |
+| Volume | Encoder at top right. Master output only (passed to Move firmware) |
+| R0–R3 | Pad grid rows, bottom to top |
+| Side clip buttons (c1–c4) | Four buttons left of the pad grid |
+| Step buttons (s1–s16) | 16 buttons below the pad grid |
+| Back | Suspends dAVEBOx. **Shift + Back** fully exits |
 
-The OLED shows the active bank's parameters across all 8 knobs. Touching a knob highlights its row. The LED below each knob lights when that parameter has been changed from its default.
+## Switching tracks
 
-**Switching tracks while transport is running** auto-launches the destination track's focused clip if nothing is currently playing or queued there — so moving into a track gives you sound without an extra launch. (This only happens while the transport is playing; see [§4.5](#45-live-recording) for how transport start itself behaves.)
+There are no dedicated track buttons. To change the active track:
 
-## 3.3 Session View
-
-The 8×16 clip grid. 8 rows are visible at a time; scroll to reach all 16.
-
-| Control | Action |
+| Method | Where it works |
 |---|---|
-| Tap a clip pad | Launch or queue that clip |
-| Tap an empty clip pad | Focus it for recording |
-| Shift + clip pad | Launch the clip *and* jump to Track View focused on it |
-| Scene launcher (left of each row) | Launch all 8 clips in that row |
-| Step buttons 1–16 | Also launch the corresponding scene row |
-| Jog rotate | Scroll scene rows |
-| +/− buttons | Scroll by 4 rows at a time |
-| Loop (tap) | Lock Performance Mode |
-| Loop (hold) | Temporary Performance Mode |
-| Shift + Loop | Toggle Performance Mode latch |
+| Shift + jog rotate | Track View |
+| Shift + bottom-row pad (1–8) | Track View |
+| Tap any pad in a column | Session View |
 
-Mute and solo controls work the same in both views — see [Chapter 11](#11-mixing--volume-mute-solo).
+The OLED shows a 1px box around the active track number (1–8).
 
-The active track shows a 1px box around its number on the OLED's track row. Each track's currently-focused clip slot shows dark grey in Session View, so you can always see which slot is in focus. In Track View's OLED overview, clip letters for playing or will-relaunch clips display inverted (black on white) so active clips are visible at a glance.
+## Two views
 
-## 3.4 The Global Menu
-
-Open with **Shift + Note/Session**. Jog to navigate; click to enter edit mode; click again to commit; **Note/Session** to close.
-
-While the menu is open, pads, step buttons, and side clip buttons keep functioning normally — only the jog wheel is captured by the menu. This means you can keep playing while you edit settings.
-
-The menu starts with **Track [N] Config** (the *active* track's configuration; updates live if you switch tracks while the menu is open). Below a `── Global ──` divider, all global items follow.
-
-See [Chapter 13](#13-global-settings) for every item in the menu.
-
-## 3.5 Shift+Step shortcuts
-
-In Track View, while you hold **Shift**, step buttons that have an available shortcut light solid (and the icon-row LEDs above them light too).
-
-| Step | Action | Where |
+| | Track View | Session View |
 |---|---|---|
-| 2 | Open Global Menu at the **Global** section header | Both views |
-| 3 | Edit the active track's synth — **Move-routed:** open Move device-edit / preset browser. **Schwung-routed:** open the chain editor on the track's current slot. Silent no-op on External-routed tracks or on stock Schwung without the chain-edit shim. | Track View only |
-| 5 | Open Tap Tempo screen | Both views |
-| 6 | Metro toggle (Cnt-In ↔ Always) | Both views |
-| 7 | Open Global Menu at **Swing Amt** | Both views |
-| 8 | **Drum:** cycle right-pad mode (Velocity / Rpt1 / Rpt2). **Melodic:** toggle chromatic pad layout | Track View only |
-| 9 | Open Global Menu at **Scale** | Both views |
-| 10 | VelIn toggle (Live ↔ Fixed 100) | Track View only |
-| 11 | ARP IN on/off (last-used style) | Track View, melodic only |
-| 15 | Double-and-fill loop | Track View only |
-| 16 | Quantize active clip 100% | Track View only |
+| Purpose | Edit one clip in detail | Launch and arrange clips across all tracks |
+| Pad grid | Plays notes or drum lanes | Shows the clip grid |
+| Step buttons | Step pattern for active clip | Scene launchers |
+| Jog rotate | Cycle parameter banks | Scroll scene rows |
+| Note/Session | Switch views (tap) or peek (hold) | Same |
 
-The five menu/tempo shortcuts (2, 5, 6, 7, 9) work in both Session and Track View; everything else is Track-View only.
+## The Global Menu
 
-The Metro toggle here is intentionally narrow (Cnt-In ↔ Always): use the Global Menu for the full four-state setting (Off / Cnt-In / Play / Always). The **Mute + Play** shortcut in Track View flips Metro Off ↔ its previous non-Off state.
+**Shift + Note/Session** opens the menu. Jog rotates through items; jog click enters edit mode; rotate to change value; click to confirm; Note/Session closes the menu.
 
-## 3.6 Quick navigation reference
-
-| Where you are | What jog rotate does |
-|---|---|
-| Track View (default) | Cycle parameter banks |
-| Track View + Shift held | Switch tracks 1–8 |
-| Track View + Loop held | Adjust clip length ±1 step |
-| Session View | Scroll scene rows |
-| Global Menu open | Navigate / edit menu items |
-
-| Where you are | What Note/Session does |
-|---|---|
-| Track View | Tap: go to Session View · Hold: peek Session View |
-| Session View | Tap: go to Track View · Hold: peek Track View |
-| Global Menu | Close the menu (also closes Tap Tempo, BPM menu, confirm dialogs) |
-| Performance Mode (locked) | Closes Performance Mode, returns to Track View |
-
-## 3.5 Save states (snapshots)
-
-Beyond the automatic save, you can keep up to **16 named save states** per set — full snapshots of everything (clips, notes, track config, tempo, scale). Use them to bookmark a version before a big change, or to keep alternate takes.
-
-- **Save state** (Global Menu) writes a new snapshot, stamped with the date and time (e.g. `05-24 14:32`). The OLED confirms "STATE SAVED".
-- **Load state** (Global Menu) opens a list of your snapshots, newest first. **Jog** to highlight one, **jog click** to pick it, then confirm **Yes** — dAVEBOx replaces the current state with the snapshot. (Loading discards unsaved changes, so it asks first.)
-- When you already have 16 snapshots, **Save state** opens a picker instead: choose which existing snapshot to overwrite, and confirm.
-- **Note/Session** backs out of the list (or out of a confirm prompt).
-
-Snapshots belong to the set they were saved in — each set has its own list. **Clear Session does not delete your snapshots**, so they remain available to load even after you clear the live project.
-
-After a dAVEBOx update that changes the save format, older snapshots can't be loaded; the Load list marks them `(old)` and offers to remove them the first time you open it.
+The menu starts with the active track's settings (**Track [N] Config**), followed by global settings below a separator. Pads, steps, and transport keep working while the menu is open.
 
 ---
 
-# Part II — Making Music
+# 3. Track View
 
-# 4. Sequencing
+The primary editing environment. Shows the active track's clip.
 
-## 4.1 Step entry (melodic)
+## Basic controls
 
-The 16 step buttons represent the current page of the active clip. Steps are either active (lit) or empty (dark) — there's no third state.
-
-| Action | Behavior |
+| Control | Action |
 |---|---|
-| Quick tap (<200ms) on empty step | Activates the step with the **last note played** on the pads, at velocity 100 (or **VelIn** if set on this track) |
-| Quick tap on active step | Clears it (notes deleted immediately) |
-| Hold (≥200ms) on active step | Opens step edit overlay (see [§4.2](#42-step-edit)) |
-| Hold (≥200ms) on empty step | Activates the step with the last note played AND opens step edit in the same gesture, so the edit knobs work immediately. If no note has been played yet, the OLED shows a "no note" flash and the step stays empty. |
-| Tap multiple steps together | Toggles each one |
+| Pads | Play notes (melodic) or trigger drum lanes |
+| Steps 1–16 | Toggle steps in the active clip |
+| Side clip buttons | Switch clips on the active track |
+| K1–K8 | Adjust parameters in the active bank |
+| Jog rotate | Cycle parameter banks |
+| Jog click | Toggle alt-param mode on banks that support it (label flips to alternate; a down-arrow blinks in the header). Switching banks or tracks reverts to primary params. |
+| Up / Down | Shift pad octave range (−4 to +4) |
+| Left / Right | Navigate clip pages (clips longer than 16 steps) |
+| Loop (hold) | Enter loop view |
+| Loop (hold) + jog | Adjust clip length ±1 step |
 
-Steps beyond the clip's length light dark grey (out of bounds).
+The OLED shows all 8 knob parameters and values. Touching a knob highlights its row. The LED below each knob lights when that parameter differs from default.
 
-The step grid defaults to **1/16 resolution** — each step is a 16th note. Resolution is per-clip; change it in the CLIP bank (K1): values from 1/32 up to 1-bar.
+## Switching tracks while playing
 
-> **Try this.** Set one clip to 1/32 resolution and another to 1/8. Sequence the same notes in both. Switch between them — same pattern, completely different feel.
+Switching to a track that has nothing playing or queued auto-launches that track's focused clip, so you get sound immediately.
+
+## Shift + step shortcuts
+
+While holding Shift in Track View, available shortcuts light up on the step buttons:
+
+| Step | Action |
+|---|---|
+| 2 | Open Global Menu at Global section |
+| 3 | Edit the active track's sound source (forthcoming — requires a future Schwung update) |
+| 5 | Tap Tempo screen |
+| 6 | Metro toggle (Count-In ↔ Always) |
+| 7 | Open Global Menu at Swing |
+| 8 | Drum: cycle right-pad mode (Vel/Rpt1/Rpt2). Melodic: toggle chromatic layout |
+| 9 | Open Global Menu at Scale |
+| 10 | VelIn toggle (Live ↔ Fixed 100) |
+| 11 | ARP IN on/off (melodic only) |
+| 15 | Double-and-fill loop |
+| 16 | Quantize active clip 100% |
+
+Steps 2, 5, 6, 7, 9 also work in Session View. The rest are Track View only.
+
+**Mute + Play** (Track View): toggles metronome Off ↔ last non-Off state.
+
+---
+
+# 4. Session View
+
+The 8×16 clip grid. 8 rows visible at a time; jog scrolls to all 16.
+
+| Control | Action |
+|---|---|
+| Tap clip pad | Launch/queue that clip |
+| Tap empty clip pad | Focus it for recording |
+| Shift + clip pad | Launch and jump to Track View |
+| Scene launcher (side) or steps 1–16 | Launch all clips in that row |
+| Shift + scene launcher | Launch row at next bar boundary (ignores Launch Quant setting) |
+| Jog rotate | Scroll scene rows |
+| +/− | Scroll by 4 rows |
+| Loop (tap) | Lock Performance Mode |
+| Loop (hold) | Temporary Performance Mode |
+
+Empty cells in a scene row don't affect their track — that track keeps playing whatever it had.
+
+Mute/solo controls work the same in both views (see §12).
+
+---
+
+# 5. Sequencing
+
+## Tracks, clips, and scenes
+
+dAVEBOx has **8 tracks**. Each track holds **16 clips**. Each clip stores notes plus its own effects settings. A row of clips across all 8 tracks is a **scene**.
+
+Clips on a track play one at a time. Launching a new clip replaces what was playing on that track only. Launching a scene swaps every track at once.
+
+## Melodic vs drum
+
+A track is either **Melodic** or **Drum** (set in Track Config). They share the same concepts but differ in layout and available effects.
+
+| | Melodic | Drum |
+|---|---|---|
+| Pad grid | Plays scale-snapped notes | Left 4×4 = 32 drum lanes (banked A/B); right 4×4 = function area |
+| Step pattern | One pattern per clip | One pattern per lane within each clip |
+| Per-lane loops | No | Yes — each lane can loop independently (polyrhythm) |
+| Available banks | CLIP, NOTE FX, HARMONY, DELAY, SEQ ARP, ARP IN, AUTO | DRUM LANE, NOTE FX, DELAY, ALL LANES, REPEAT GROOVE, AUTO |
+
+**Switching Mode converts notes.** Changing Mode carries sequenced notes across all 16 clips into the new type. Only notes move — effects reset to defaults. Melodic→Drum shows a confirm dialog when the track has notes (drum-specific settings have no melodic equivalent). Empty tracks switch instantly.
+
+## Step entry (melodic)
+
+| Action | Result |
+|---|---|
+| Quick tap empty step | Activates with the last note played on pads, velocity 100 (or VelIn if set) |
+| Quick tap active step | Clears it |
+| Hold step ≥200ms (active) | Opens step edit |
+| Hold step ≥200ms (empty) | Activates the step and opens step edit in one gesture |
+| Tap multiple steps at once | Toggles each |
+
+Steps beyond the clip's length show dark grey.
 
 ### Pad layout
 
-By default the pads show an **In-Key** layout: only notes within the active scale are present, arranged by octave, with the root lit in the track color. Press **Shift + Step 8** to toggle **Chromatic** layout — all 12 semitones visible, in-scale notes lit dim, root in track color.
+Default is **In-Key**: only scale notes present, root lit in track color. **Shift + Step 8** toggles **Chromatic**: all 12 semitones visible, in-scale notes highlighted. **Up/Down** shifts octave.
 
-**Up / Down** shifts the visible octave range (−4 to +4 octaves from default).
+## Chord entry
 
-## 4.2 Step edit
+- **Pad-first:** hold one or more pads, then press a step. All held notes go into that step.
+- **Step-first:** hold a step, then tap pads one at a time. Tap a pad already in the step to remove it.
 
-Hold any step button to open the step edit overlay. Edits apply to *every* note in the step simultaneously, non-destructively relative to neighboring steps. The overlay is a two-row grid:
+Both methods support up to 4 notes per step.
 
-| Knob | Cell | Function |
+## Step edit
+
+Hold any step button to open the edit overlay. Edits apply to all notes in the step simultaneously.
+
+**Melodic step edit:**
+
+| Knob | Label | Function |
 |---|---|---|
-| K1 | Oct  | Shift notes by octave |
-| K2 | Note | Shift notes by scale degree (scale-aware) or semitone (scale-aware off). Oct + Note share a single centered note-name display. |
-| K3 | Leng | Adjust note length — touch shows a gate length overlay on the step buttons |
-| K4 | Vel  | Adjust velocity |
-| K5 | Nudg | Shift notes forward/backward in time (±23 ticks max). Step blinks when notes are on the grid. Notes that cross into an adjacent step reassign there on release. |
-| K6 | Iter | **Trig condition** — see [§4.2.1](#421-trig-conditions-iter--prob--ratch) |
-| K7 | Prob | **Probability** — see [§4.2.1](#421-trig-conditions-iter--prob--ratch) |
-| K8 | Ratch | **Ratchet** — see [§4.2.1](#421-trig-conditions-iter--prob--ratch) |
+| K1 | Oct | Shift by octave |
+| K2 | Pit | Shift by scale degree (or semitone if Scale Aware is off) |
+| K3 | Leng | Gate length |
+| K4 | Vel | Velocity |
+| K5 | Nudg | Nudge timing (±1 step minus 1 tick). Step blinks when on-grid. Notes that cross into an adjacent step reassign on release. |
+| K6 | Iter | Iteration — see below |
+| K7 | Prob | Probability — see below |
+| K8 | Ratch | Ratchet — see below |
 
-While holding a step, the OLED shows the notes in it, e.g. `C4 E4 G4`. **Up / Down** shifts the visible octave range to reach notes outside the current pad window.
+**Drum step edit:**
 
-Hold multiple step buttons at once to edit them all together.
+| Knob | Label | Function |
+|---|---|---|
+| K1 | Leng | Gate length |
+| K2 | Vel | Velocity |
+| K3 | Nudg | Nudge timing |
+| K5 | Iter | Iteration |
+| K6 | Prob | Probability |
+| K7 | Ratch | Ratchet |
 
-On **drum tracks** the overlay uses the same 2-row 4-column layout: row 1 = Leng / Vel / Nudg / — (K1-K4), row 2 = Iter / Prob / Ratch / — (K5-K8).
+Hold multiple steps to edit them all at once. While holding a step, Up/Down shifts the octave range for reaching higher/lower notes.
 
-### 4.2.1 Trig conditions: Iter / Prob / Ratch
+### Trig conditions: Iter, Prob, Ratch
 
-Three per-step conditions reshape *how* and *when* a step fires. The default for all three is `--` (no condition), shown when the knob sits at its minimum position.
+Three per-step conditions that reshape when and how a step fires. Default for all is `--` (no condition).
 
-**Iter (Iteration)** — gates the step to play only on certain loop cycles. Turn K6 to step through values `1/2, 2/2, 1/3, 2/3, 3/3, … 8/8`. A value like `2/3` reads as "play on cycle 2 of every 3-cycle group," i.e. silent on cycles 1 and 3, fires on cycle 2 (and then 5, 8, …). The loop-cycle counter is per-clip: it persists across clip switches and length changes, and **resets only on the cold transport-start edge** (Stop → Play). Different steps in the same clip with different Iter values create polyrhythms; the per-clip counter keeps them in phase.
+**Iter (Iteration)** — gates the step to play only on certain loop cycles. Values: `1/2, 2/2, 1/3, 2/3, 3/3, … 8/8`. Example: `2/3` means "play on cycle 2 of every 3," silent on cycles 1 and 3. The cycle counter is per-clip and resets only on cold transport start (Stop → Play).
 
-**Prob (Probability)** — sets per-step play probability 0–100%. The roll happens **per-note** at fire time, so on a chord step set to 50% some loops may play 0 / 1 / 2 / 3 notes independently — voicings flicker organically rather than the whole step playing or not as one. Default (`--`) = always fires. Each playback is non-deterministic.
+**Prob (Probability)** — per-step play chance, 0–100%. The roll is per-note: on a chord step set to 50%, each note independently has a 50% chance, so voicings vary naturally.
 
-**Ratch (Ratchet)** — retriggers the step `x2 / x3 / x4` times within one step. Sub-hits are evenly spaced over the step (TPS / ratchet) regardless of the step's Leng knob, so a step always retriggers within its own grid slot. Each sub-hit runs through the full effects chain (drum lane FX, melodic NOTE FX / HARMZ / MIDI DLY) just like the original.
+**Ratch (Ratchet)** — retriggers the step x2, x3, or x4 times within one step slot. Sub-hits are evenly spaced. Each runs through the full effects chain.
 
-**Interactions.** Iter is checked first; if Iter says "skip this cycle," all ratchet sub-hits stay silent for that cycle. Prob rolls once per note; if a note passes the roll, all its ratchet sub-hits play. Different notes in a chord roll independently.
+**How they interact:** Iter is checked first — if it says skip, no sub-hits fire. Prob rolls once per note; if a note passes, all its ratchet sub-hits play.
 
-**Persistence.** Trig conditions save with the clip and survive set switches. State format is v=34; clips from older saves are wiped on first load after upgrade.
+## Pages and loop view
 
-**Bake.** [Capture](#) (bake) treats trig conditions as real playback: it walks the requested loop count, applies Iter cycle by cycle, rolls Prob per note per cycle, and writes Ratchet sub-hits as discrete sub-step notes. The baked clip ends up with `step_iter / step_random / step_ratchet` reset to defaults — the resulting notes embody whatever pattern the trigs produced. Long chord + high ratchet bakes can exceed the 8-notes-per-step cap; excess sub-hits drop silently. Ableton `.ablbundle` export applies the same gates.
+Clips longer than 16 steps span multiple pages. **Left/Right** navigates pages.
 
-> **Try this.** Set a snare on step 5 to **Iter 1/2** and a hi-hat on step 6 to **Iter 2/2** — they alternate cycles, building a 2-bar pattern from a 1-bar clip. Add **Prob 60%** to a tom on step 12 and **Ratch x3** to a clap on step 8 — the loop breathes without ever editing the underlying notes.
+Hold **Loop** to enter loop view — step buttons represent pages:
 
-## 4.3 Chord entry
+- **Track color** = page is in the loop window (pulsing = contains notes)
+- **White** = start of a range selection (during hold+tap gesture)
+- **Off** = outside the loop window
 
-Two methods work — use whichever feels natural:
+Three ways to set the loop window while Loop is held:
 
-- **Pad-first.** Hold one or more pads, then press a step button. All held notes are captured into that step at once.
-- **Step-first.** Hold a step, then tap pads one at a time. Notes add additively. Tap a pad already in the step to remove it.
+| Gesture | Result |
+|---|---|
+| Jog ±1 | Grow or shrink the loop from the end (beginning stays fixed) |
+| Tap a page button | Loop runs from page 1 through the page you tapped |
+| Hold one page button + tap another | Loop runs from the held page through the tapped page |
 
-Both methods support up to four notes per step.
+Notes outside the window are preserved — they play again if you expand the window.
 
-> **Try this.** Hold a step, press **Up** a couple of times to reach higher notes, then tap a pad — you've built a chord that spans more than the visible range.
-
-## 4.4 Pages and loop view
-
-When a clip is longer than 16 steps, it spans multiple pages. **Left / Right** navigate between pages. The OLED position bar at the bottom shows page structure and the playhead.
-
-Hold **Loop** to enter loop view — each step button now represents a *page* (bar) of the clip:
-
-- **White** — currently selected page (held during a range gesture, see below)
-- **Track color** — page is within the loop window
-- **Track color, pulsing** — page contains notes
-- **Off** — page is outside the loop window
-
-Three ways to change the loop window while Loop is held:
-
-- **Jog ±1 step per detent** — grows or shrinks the window from the end (start stays fixed).
-- **Tap a page button** — sets the window to pages `[0, N]` where `N` is the page you tapped. If the loop is already exactly 2 pages and you tap page 2, it shrinks to 1 page.
-- **Hold a page + tap another page** — sets the window to `[start, end]`. The held page anchors the **start**; the tap sets the **end**. The range is always `[min, max]`; the held page lights white while you're mid-gesture.
-
-The bottom OLED bar shows pages in the window only. Small 1px ticks at the bar's left/right edges signal that note content exists outside the visible window — non-destructive, those notes are preserved and play again if you expand the window.
-
-> **Advanced.** **Bake** ([§9.1](#91-bake)) re-anchors the window at step 0, so you can grow the length back to 256 steps after baking a sub-range.
-
-## 4.5 Live recording
+## Live recording
 
 Press **Record** to capture pad input into the active clip.
 
 | Starting from | Behavior |
 |---|---|
-| Stopped | One-bar count-in (step buttons flash on each beat). Recording and transport start together when count-in ends. Pressing **Play** during count-in cancels both. |
-| Playing, **fixed-length clip** | Records immediately at the current step — mid-page is meaningful in an existing clip structure. Record button goes solid Red. |
-| Playing, **adaptive clip** (empty + length not set) | Recording arms but defers to the next 16-step bar boundary. The clip's playhead resets to step 0 at that moment so the bar boundary becomes the new clip start (no empty leading page). Record button **blinks Red** while pending, solid once recording begins. |
+| Stopped | 1-bar count-in, then recording + transport start together |
+| Playing, fixed-length clip | Records immediately at current position |
+| Playing, empty clip (no length set) | Arms recording, defers to next bar boundary. Record blinks red while pending. |
 
-To stop: **Record** again (transport continues) or **Play** (also stops transport).
+Stop recording: press **Record** again (transport continues) or **Play** (stops transport).
 
-**Recording is always additive — existing notes are never erased.** To get a fresh take, clear the clip first (Delete + side clip button).
+Recording is always additive — existing notes are never erased. Clear the clip first (Delete + side clip button) for a fresh take.
 
-### What Play does
+**Count-in pre-roll:** notes pressed in the last half-beat of the count-in are captured on step 1.
 
-Pressing **Play** from a stopped state resumes whatever was playing when you last stopped: every track that had a clip playing relaunches it; tracks that were silent stay silent. On a freshly loaded set or right after Clear Session, no track has anything to relaunch, so **Play alone makes no sound** — start sound by launching a clip in Session View, or by switching into a track in Track View while the transport runs (which auto-launches that track's focused clip; see [§3.2](#32-track-view)).
+**Track switching while recording:** switching tracks is free. Recording follows the focused track.
 
-### Count-in pre-roll
+**What Play does from stopped:** resumes whatever was playing when you last stopped. On a fresh set, no clips are active, so Play alone makes no sound — start sound by launching a clip or switching tracks while playing.
 
-Notes pressed in the last half-beat of the count-in are captured on **step 1** of the clip. They appear from the second loop pass onward — the system waits for the note to release and for the first full loop to complete before firing, to prevent double-triggering if the pad is still held when transport starts.
+## Undo
 
-> **Advanced.** **Solo does not affect count-in** — track solo/mute never silences the count-in click or any held pads (ARP IN latch, Rpt1, Rpt2) during the pre-roll. **ARP IN during count-in:** when ARP IN is on, the arpeggiator runs through the count-in too, so you hear the pattern you're about to record from the moment you press. The first arpeggiator note after the count-in lands on step 1 regardless of sync mode; with Sync = Off, output produced in the last half-beat of the count-in also records onto step 1.
+**Undo** button reverts the last destructive action (one level). **Shift + Undo** redoes.
 
-### Track switching while recording
-
-While record-armed, switching tracks is free. Recording follows the focused track. Notes on the previous track are closed out cleanly; record arm stays on.
-
-### Clip targeting
-
-New recordings go into whichever clip slot is currently focused. To record into a specific clip, select it in Session View first, then switch to Track View and press Record. Targeting an *empty* clip with no preset length creates an adaptive clip — it grows until you stop recording. The OLED status bar shows **Adap** for adaptive or **Fix** for fixed-length.
-
-### Undo
-
-Arming live recording snapshots the clip. A single **Undo** reverts the entire recorded session. On drum tracks the snapshot covers all 32 lanes. Undo also covers clip clear, hard reset, copy, cut, bake, legato, double-fill, scene operations, and automation clears — any of these can be reverted with one press of the Undo button. **Shift + Undo** redoes the last undone action.
+Undoable actions: step/clip/lane clear, copy/cut/paste, hard reset, live recording, bank reset, loop double, bake, legato, scene operations, automation clears.
 
 ---
 
-# 5. The Effects Chain
+# 6. Clip & Lane Settings
+
+The knobs control different things depending on which parameter bank is active. Rotate the **jog wheel** to cycle through banks:
+
+- **Melodic tracks:** CLIP, NOTE FX, HARMONY, DELAY, SEQ ARP, ARP IN, AUTO
+- **Drum tracks:** DRUM LANE, NOTE FX, DELAY, ALL LANES, REPEAT GROOVE, AUTO
+
+This section covers the CLIP, DRUM LANE, and ALL LANES banks — these control the clip's timing grid, playback direction, and note transformations. Most of these changes are permanent and directly alter your sequenced notes (use Undo to revert). The remaining banks are covered in §7 (Effects) and §8 (Automation).
+
+**Alt-params:** some knobs have a secondary function (marked **Alt** in the tables below). **Jog click** toggles between primary and alt — the label on screen flips and a down-arrow blinks in the header. Jog click again, switching banks, or switching tracks returns to the primary function.
+
+### Resetting parameters
+
+| Control | Result |
+|---|---|
+| Delete + jog click | Reset all params in the active bank |
+| Shift + Delete + jog click | Reset all effect params across every bank (preserves ARP IN) |
+| Shift + Delete + side clip | Hard reset clip: clears notes and all params |
+
+## CLIP bank (melodic)
+
+Controls the clip's timing grid, playback direction, and note transformations. **K1–K4 permanently change your notes** — use Undo to revert.
+
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Res | Resolution — sets the step grid size for the clip. Rescales note positions proportionally. **Alt: Zoom** — adjusts the grid without moving notes. | 1/32, 1/16, 1/8, 1/4, 1/2, 1bar | 1/16 |
+| K2 | Stch | Beat Stretch — each detent doubles (right) or halves (left) the clip. Blocked if notes would overlap. | — | — |
+| K3 | Shft | Clock Shift — rotates all notes forward/backward by whole steps. **Alt: Nudg** — shifts at tick resolution (finer). | — | 0 |
+| K4 | Lgto | Apply Legato — turn right to open confirm dialog. Rewrites every note's length to reach the next note. Undoable. | → (action) | — |
+| K5 | InQ | Input Quantize — snaps recorded notes to the nearest grid position. Per-track. | Off, 1/64, 1/32, 1/16, 1/16T, 1/8, 1/8T, 1/4, 1/4T | Off |
+| K7 | Dir | Playback Direction — controls the order steps are played. **Alt: RvSt** — Reverse Style (Step vs Audio). Audio swaps note-on/off during reverse motion for a tape-reverse feel. | Fwd, Bwd, PPf, PPb | Fwd |
+| K8 | SqFl | Seq Follow — auto-scroll the step display to follow the playhead. | On/Off | On |
+
+**Direction:** Fwd plays normally. Bwd plays steps in reverse. PPf/PPb are pingpong modes — the playhead bounces back and forth (endpoints play once per direction change). **Live recording only works in Fwd mode** — non-Fwd clips show a popup when you try to record, offering to bake the clip to Fwd first. Bake and Ableton export freeze direction into note positions and reset to Fwd. Audio reverse style uses a 2L pingpong cycle (endpoints play twice).
+
+## DRUM LANE bank
+
+Controls the active drum lane's timing grid, playback, and note transformations (see §9 for drum track basics). **K1–K3 and K5 permanently change notes** — use Undo to revert.
+
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Res | Resolution. **Alt: Zoom.** | 1/32–1bar | 1/16 |
+| K2 | Stch | Beat Stretch (one-shot) | — | — |
+| K3 | Shft | Clock Shift. **Alt: Nudg.** | — | 0 |
+| K4 | Lgto | Apply Legato — per-lane. Turn right to confirm. Undoable. | → (action) | — |
+| K5 | Eucl | Euclidean — spreads N hits evenly across lane length. Hand-placed hits outside the pattern are preserved. | 0–length | 0 |
+| K7 | Dir | Playback direction per-lane. **Alt: RvSt** (Step/Audio). | Fwd, Bwd, PPf, PPb | Fwd |
+| K8 | SqFl | Seq Follow | On/Off | On |
+
+## ALL LANES bank
+
+Applies settings to all 32 drum lanes at once. **K1–K3 permanently change notes across all lanes.**
+
+| Knob | Label | Function |
+|---|---|---|
+| K1 | Res | Resolution — sets all lanes to the same value. Permanently changes notes. Display resets after release. |
+| K2 | Stch | Beat Stretch — applied to all lanes. Shows "NO ROOM" if any lane can't fit. Permanently changes notes. |
+| K3 | Shft | Clock Shift. **Alt: Nudg.** Permanently changes notes. |
+| K4 | Qnt | Quantize all lanes at playback (does not change stored notes). Display resets after release. |
+| K5 | VelIn | Velocity input override for this track (same as Track Config VelIn). |
+| K6 | InQ | Recording input quantize for this track. |
+| K7 | Dir | Playback direction on all lanes. Display resets after release. **Alt: RvSt** for all lanes. |
+| K8 | SyncRpt | Repeat Sync — controls first-fire timing for held repeat pads. On = wait for the beat grid; Off = fire instantly. Default On. |
+
+---
+
+# 7. Effects
+
+Every note — sequenced, played live, or from external MIDI — passes through the same effects chain before reaching a sound source:
 
 ```
  LIVE INPUT ──> [ARP IN] ──┐
-                           ├─> NOTE FX ─> HARMONY ─> DELAY ─> SEQUENCE ARP ─> OUTPUT
- SEQUENCED NOTES ──────────┘
+                            ├─> NOTE FX ─> HARMONY ─> DELAY ─> SEQ ARP ─> OUTPUT
+ SEQUENCED NOTES ───────────┘
 ```
 
-Seven banks of parameters control every track. On melodic tracks, all seven are available. On drum tracks, **HARMONY** and **SEQUENCE ARP** are hidden (jog skips them), **CLIP** is replaced by **DRUM LANE**, and the ARP IN slot becomes **REPEAT GROOVE** when a repeat mode is active; bank 7 is **ALL LANES**.
+- **ARP IN** processes live input only. Sequenced notes skip it.
+- After the chain, global **Swing** is applied.
+- If Performance Mode is active, its mods apply last.
 
-Rotate the **jog wheel** to cycle banks. The OLED shows all 8 knob parameters and their values, with a `Tr[n]` indicator on the right of the heading showing the active track. Touching a knob inverts its row to highlight it. The LED below each knob lights when that parameter has been changed from default.
+All effects are **non-destructive** — they transform notes at playback time without changing the underlying sequenced data. Returning a knob to its default leaves the clip unchanged. NOTE FX, HARMONY, DELAY, and SEQ ARP settings are **per-clip**. ARP IN is **per-track**.
 
-Every parameter in NOTE FX, HARMONY, DELAY, SEQUENCE ARP, and CC AUTOMATION is **per-clip**. ARP IN is per-track. CLIP-bank settings (length, resolution, etc.) are per-clip.
+## NOTE FX bank
 
-### Destructive vs non-destructive
+Transforms every note's pitch, velocity, timing, and length.
 
-Bank parameters fall into two categories:
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Oct | Octave shift | ±4 | 0 |
+| K2 | Ofs | Note offset (scale-aware: steps in scale degrees when on, semitones when off) | ±24 | 0 |
+| K3 | Vel | Velocity offset | ±127 | 0 |
+| K4 | Qnt | Quantize amount at playback | 0–100% | 0% |
+| K5 | Len> | Fixed pre-gate note length. `--` = passthrough. Values are step-multiples; K6 Gate then scales the result. | --, .25, .50, .75, 1, 2, 4, 8, 16 | -- |
+| K6 | Gate | Scales note duration. Below 100% = staccato, above = legato. | 0–400% | 100% |
+| K8 | Rnd | Pitch randomness (scale-aware). 0 = off. **Alt: algorithm select** — jog click to enter alt mode, then turn to choose Walk (accumulating ±1), Uniform (random within range), or Gaussian (clusters around center). | 0–24 | 0 |
 
-- **Non-destructive** (play FX) — applied at render time. The underlying notes aren't modified. Returning the knob to default leaves the clip unchanged. **NOTE FX, HARMONY, DELAY, SEQUENCE ARP, ARP IN** are all non-destructive.
-- **Destructive** — modifies the underlying note data immediately. Returning the knob to default does *not* revert; use **Undo** instead. The destructive controls are the **CLIP** bank's Resolution, Stretch, Clock Shift (+ AltMode Nudge); the equivalent per-lane controls in **DRUM LANE** (plus K5 Eucl); and **ALL LANES** Resolution, Stretch, and Clock Shift (+ AltMode Nudge). Clip length is set non-destructively via **Loop + jog rotate** — notes outside the active loop window are preserved on disk but not played.
+On **drum tracks**, K1+K2 edit the active lane's MIDI note (K1 = ±12 semitones, K2 = ±1); K3–K6 apply per-lane.
 
-**CC AUTOMATION** records automation data — recording overwrites the lane along the playhead (latch); reverting needs an explicit clear (Delete + jog click clears all; Delete + knob touch clears one).
+## HARMONY bank (melodic only)
 
-### Resetting effects
+Adds harmonic voices on top of every note.
 
-- **Delete + jog click** — reset all params in the active bank for the active clip (or active lane on drum tracks).
-- **Shift + Delete + jog click** — reset all play FX (every bank except CLIP) across the active clip. *Excludes* ARP IN (its per-track settings are intentionally preserved) and SEQUENCE ARP on drum lanes.
-- **Shift + Delete + side clip button** — hard reset that clip: clears notes *and* resets all per-clip params. Undoable.
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Oct | Octave voice | ±4 | 0 |
+| K2 | Hrm1 | Harmony voice 1 (scale-aware) | ±24 | 0 |
+| K3 | Hrm2 | Harmony voice 2 (scale-aware) | ±24 | 0 |
+| K4 | Hrm3 | Harmony voice 3 (scale-aware) | ±24 | 0 |
 
-> **Try this.** Build a simple 4-note sequence. Dial DELAY Rep to 3 and Pfb to +7. Your sequence now generates its own counter-melody every loop.
+## DELAY bank
 
----
+MIDI delay generating rhythmic echoes of every note.
 
-## 5.1 CLIP bank
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Rate | Delay time. **Alt: ClkF** — offsets the timing of each successive repeat. | 1/64, 1/64D, 1/32, 1/16T, 1/32D, 1/16, 1/8T, 1/16D, 1/8, 1/4T, 1/8D, 1/4, 1/4D, 1/2, 1/2D, 1/1, 1/1D | 1/8D |
+| K2 | Lvl | Echo velocity level | 0–127 | 127 |
+| K3 | Rep | Number of echoes. 0 = bypass. | 0–16 | 0 |
+| K4 | Vfb | Velocity change per repeat | ±127 | 0 |
+| K5 | Pfb | Pitch shift per repeat (scale-aware) | ±24 | 0 |
+| K6 | Gate | Fixed gate for echoes. Off = natural length. | Off, 1/64, 1/32, 1/16T, 1/16, 1/8T, 1/8, 1/4T, 1/4, 1/2, 1bar | Off |
+| K7 | Rtrg | Retrigger — new note-on drops in-flight echoes. Off lets tails overlap. | On/Off | On |
+| K8 | Rnd | Pitch randomness on echoes (scale-aware). **Alt: algorithm select** — same options as NOTE FX Rnd. | 0–24 | 0 |
 
-Timing and playback settings for the active clip. **K1–K3 are destructive** — they modify the note data directly (see [Destructive vs non-destructive](#destructive-vs-non-destructive)). On drum tracks, this slot is replaced by DRUM LANE — see [§6.5](#65-drum-lane-bank).
+## SEQ ARP bank (melodic only)
 
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Resolution / **Zoom** | Per-clip playback speed: 1/32, 1/16 (default), 1/8, 1/4, 1/2, 1-bar. Rescales note positions proportionally. **AltMode + turn** = Zoom: keeps absolute note positions, adjusts the step grid around them. |
-| K2 | Stretch | One-shot. Each detent doubles (right) or halves (left) the clip. Blocked if compression would put two notes on the same step. |
-| K3 | Clock Shift / **Nudg** | Plain turn: rotates all notes forward/backward by whole steps. **AltMode + turn:** nudges all notes at tick resolution (finer than Clock Shift). The K3 label flips to `Nudg` in AltMode. |
-| K4 | `Lgto` (Apply Legato) | **Destructive one-shot.** Right-turn the knob to open a confirm popup; click jog to apply. Rewrites every note's gate to the distance from its tick to the next note's tick (clip end for the last note); same-tick chord notes share one gate. Both extends short notes and compresses long ones — every note ends exactly when the next note begins. Undoable via the Undo button. Left-turn is a no-op. |
-| K5 | InQ (Input Quantize) | Per-track recording snap: Off, 1/64, 1/32, 1/16, 1/16T, 1/8, 1/8T, 1/4, 1/4T. Snaps each recorded note to the nearest boundary on this grid. Off = capture raw timing. On drum tracks the equivalent control lives at ALL LANES K6 (same underlying per-track field). |
-| K7 | Dir (Playback Direction) | Per-clip playback direction: **Fwd** (forward, default), **Bwd** (backward — playhead starts at last step, walks down), **PPf** (pingpong, forward start), **PPb** (pingpong, backward start). Pingpong endpoints play once per direction change, so a steady rhythm pattern stays steady through the bounce. Persisted with the set. Mid-playback changes pivot live without resetting the playhead. **AltMode + turn = RvSt** (Reverse Style): toggles **Step** (default) ↔ **Audio**. Audio style swaps note-on with note-off during any reverse motion (notes play "tape-reversed") and switches pingpong to endpoint-plays-twice (cycle = 2L) — exactly what you want for fugue-machine-style polyrhythms. |
-| K8 | SeqFollow | On (default): Track View auto-scrolls to follow the playhead. Off: view stays put. |
+Step arpeggiator running after Delay. Per-clip. Applies to both sequenced and live input.
 
-K6 is unassigned on the CLIP bank. Clip length is set via **Loop + jog rotate** — hold Loop and turn the jog wheel to grow/shrink the active clip by ±1 step. See [Loop view (Track View + Loop held)](#loop-view-track-view--loop-held).
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Styl | Style | Off, Up, Dn, U/D, D/U, Cnv, Div, Ord, Rnd, RnO | Off |
+| K2 | Rate | Arp rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1bar | 1/16 |
+| K3 | Oct | Octave range. Positive = above, negative = below. | ±4 (0 = Off) | Off |
+| K4 | Gate | Note gate. Below 100% = staccato, above = legato overlap. | 1–200% | 100% |
+| K5 | Stps | Steps Mode — how level-0 steps behave in the Arp Steps editor. | Mute (rests), Step (removed from cycle) | Mute |
+| K6 | Rtrg | Retrigger — resets pattern on each new note and at loop boundary. | On/Off | On |
+| K7 | Sync | Waits for next rate boundary before firing. Off = fires from anchor. | On/Off | On |
 
-**Direction notes.** Step LEDs, OLED playhead, and live recording all follow the visual playhead — recording into a Bwd clip captures notes at the step the playhead is on, so you can play and record in any direction. *Adaptive record arm* (the "grow when near end" press-record behavior) is forward-biased and is forced to fixed-mode arm when the active clip is non-Forward. Within each step, micro-timing still flows forward; the engine reverses step order, not the notes themselves.
+**Arp Steps editor:** jog click on this bank enters the editor. K1–K8 set per-step pitch offsets (±24 scale degrees). Pads are a step-velocity editor (8 columns × 4 rows). **Loop + pad** sets step-loop length (1–8). Jog click, jog turn, or Note/Session exits. State is per-clip.
 
-**Bake / Ableton export honor direction.** Capturing a non-Forward clip writes a Forward-playing clip whose note positions match the directional playback. A 4-step Bwd source bakes to a 4-step clip at [3, 2, 1, 0]; a 4-step PP source bakes to a 6-step clip at [0, 1, 2, 3, 2, 1]. Pingpong endpoints play once per direction change (matching live). After bake, the output clip's direction is reset to Forward — direction is "frozen" into the new note positions, so you can re-set direction on the baked clip without compounding. Same behavior for the Ableton `.ablbundle` export. In whole-drum-clip bake, the longest lane's *playback cycle* (including PP doubling) sets the output's loop unit; shorter-cycle lanes loop more times to fill the full extent.
+## ARP IN bank
 
-**Audio-reverse bake.** Clips set to **Audio** reverse style bake with the matching layout: a note is placed at the output position where its audio-reverse note-on would audibly fire (the note's end position in the direction's cycle, with within-step micro-timing reversed where applicable). Pingpong-Audio cycle = 2L (endpoint plays twice), so each note appears twice per cycle in the baked output — once forward, once audio-reversed.
+Live arpeggiator for pad input and external MIDI. **Per-track**, not per-clip. Does not affect sequenced notes. Available on melodic tracks only — drum tracks use REPEAT GROOVE instead (see §9).
 
-## 5.2 NOTE FX bank
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Styl | Style | Off, Up, Dn, U/D, D/U, Cnv, Div, Ord, Rnd, RnO | Off |
+| K2 | Rate | Arp rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1bar | 1/16 |
+| K3 | Oct | Octave range | ±4 (0 = Off) | Off |
+| K4 | Gate | Note gate | 1–200% | 100% |
+| K5 | Stps | Steps Mode | Mute, Step | Mute |
+| K6 | Rtrg | Retrigger on each new note | On/Off | Off |
+| K7 | Sync | Wait for rate boundary | On/Off | On |
+| K8 | Ltch | Latch — arp runs after release. First touch of a new gesture replaces the latched set; additional presses add notes. | On/Off | Off |
 
-Non-destructive transforms applied to every note before output.
+**Latch shortcuts:**
+- While holding pads with ARP IN active, tap **Loop** to toggle latch.
+- **Delete + Loop** also unlatches.
+- Tap **Loop with no pads held** (latch already on): clears the latched chord without turning latch off.
 
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Octave | Shifts all notes up/down by octave (±4) |
-| K2 | Offset | Shifts by semitones (±24), or scale degrees when Scale Aware is on |
-| K3 | Velocity | Scales note velocity |
-| K4 | Quantize | Quantization amount applied at render time. |
-| K5 | `Len>` | Fixed pre-gate note length, non-destructive. **`--`** = passthrough (use note's source gate). **`.25`** · **`.50`** · **`.75`** · **`1`** · **`2`** · **`4`** · **`8`** · **`16`** = note rings for that many step-multiples (independent of position in cycle). K6 `>Gate` then scales the result. For destructive legato (set each note's gate to the distance to the next note), see CLIP K8 / DRUM LANE K8. |
-| K6 | `>Gate` | Scales note duration 0–400%. 100% = unchanged. Below = staccato; above = legato. |
-| K8 | Pitch Random | 0 = off. 1–24 = max deviation. **Shift + turn** to select algorithm: **Walk** (default — each note steps ±1 from previous, accumulating), **Uniform** (random offset within range), **Gaussian** (offsets cluster around center). Scale-aware: random pitches stay in key. |
+**Latch feedback:** latched pads stay lit white. The `Arp` indicator inverts on the OLED. The Loop button blinks at the arp's step rate while latched.
 
-K7 is blocked on the NOTE FX bank (melodic).
+**Latch persists** across track/route/channel changes. Clears on: transport Stop, Delete + Play, and Session View entry (active track only). Muting silences latched output but preserves the latch.
 
-**On drum tracks**, the NOTE FX bank reuses the cells for per-lane controls: **K1+K2 (merged Oct/Note)** edit the active lane's MIDI note (K1 = ±12 semitones, K2 = ±1 semitone); **K3 (Vel), K4 (Qnt), K5 (Len>), K6 (>Gate)** apply to the active lane; K7 and K8 are blocked. Use ALL LANES K4 to quantize every lane at once.
-
-> **Try this.** Set Pitch Random to Walk at a low value (3–5) on a melody. The sequence drifts gradually rather than jumping — coherent variation without chaos.
-
-## 5.3 HARMONY bank (melodic tracks only)
-
-Adds harmonic voices on top of every note. Hidden on drum tracks.
-
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Octaver | Adds an octave voice |
-| K2 | Hrm1 | Harmony voice 1 — semitones or scale degrees (Scale Aware) |
-| K3 | Hrm2 | Harmony voice 2 — semitones or scale degrees (Scale Aware) |
-| K4 | Hrm3 | Harmony voice 3 — semitones or scale degrees (Scale Aware) |
-
-K5–K8 are unassigned.
-
-## 5.4 DELAY bank
-
-A MIDI delay that generates rhythmic echoes of every note.
-
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Rate / **ClkF** | Delay time: 1/64 through 1-bar with dotted variants and triplets for 1/16, 1/8, 1/4. Default: 1/8 dotted. Use Rep = 0 to bypass. **Shift + turn** = Clock Feedback (timing shift per repeat, ±100); the label flips Rate ↔ ClkF while Shift is held. |
-| K2 | Lvl | Echo velocity level |
-| K3 | Rep | Number of echoes. Default 0 (bypass). |
-| K4 | Vfb | Velocity change per repeat |
-| K5 | Pfb | Pitch shift per repeat — semitones or scale degrees |
-| K6 | Gate | Off = natural note length. 1–10 = fixed gate length applied to all echoes. |
-| K7 | Rtrg | On (default): a new note-on drops any in-flight delay echoes for this track so the new note's repeats start fresh. Off: tails overlap (useful for cascading textures). |
-| K8 | Rnd | Same range and algorithm options as NOTE FX K3 (**Shift + turn** for algorithm). Applies to echo pitches. |
-
-> **Try this.** Rate 1/16, Rep 4, low Vfb. Tap a chord on the pads — it cascades off in time, perfect for one-finger rhythmic textures.
-
-## 5.5 SEQUENCE ARP bank (melodic tracks only)
-
-A step arpeggiator that runs after Delay. Per-clip. Applies to both sequenced output and live pad input. Hidden on drum tracks.
-
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Style | Off · Up · Down · Up/Down · Down/Up · Converge · Diverge · Play Order · Random · Random Other. Default: Off. |
-| K2 | Rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1-bar |
-| K3 | Oct | Bipolar. Positive = adds octaves above; negative = below. |
-| K4 | Gate | 1–200%. 100% = note ends as next begins. Below = staccato; above = legato overlap. |
-| K5 | Steps | **Mute** · **Step**. Gates per-step playback once the Arp Steps editor (below) has assigned step levels. Mute: level-0 steps are silenced, the cycle continues. Step: level-0 steps are removed from the cycle entirely. |
-| K6 | Rtrg | On (default): pattern resets to step 1 on each new note and at clip loop boundary. Off: arp runs free. |
-| K7 | Sync | On (default): the first arp step waits for the next global rate boundary, locking phase with transport. Off: fires from anchor. |
-
-**Arp Steps editor.** **Click the jog wheel** while on this bank to enter the persistent Arp Steps editor (OLED reads `SEQ ARP Steps`). Knobs K1–K8 set a **scale-degree pitch offset** (±14) for each of the 8 arp steps — applied scale-aware on top of whatever pitch the arp engine picks. The pad grid is the step-velocity editor (8 columns × up to 4 rows). **Hold Loop + tap any pad** sets the step-loop length (1–8); pads past the loop go dark. Click the jog, turn the jog, or press Note/Session to exit. While the editor is active, pads do not fire notes and Loop is repurposed as a modifier. The editor's state is **per-clip** for SEQUENCE ARP.
-
-**Bank reset.** **Delete + jog click** (or **Shift + Delete + jog click**) while on this bank resets every SEQUENCE ARP parameter — including step velocities, step intervals, and step-loop length — back to defaults.
-
-## 5.6 ARP IN bank
-
-A *live* arpeggiator for pad input and external MIDI. **Per-track**, not per-clip. Does not affect sequenced notes. On drum tracks, ARP IN is bypassed (its slot becomes REPEAT GROOVE when a repeat mode is active).
-
-> **Connection point.** ARP IN only sees what you play live; SEQUENCE ARP only sees what's sequenced. They're two independent arpeggiators running in parallel on the same track — use both at once for different feels on live vs sequenced material.
-
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Style | Off (disables arp) · Up · Down · Up/Down · Down/Up · Converge · Diverge · Play Order · Random · Random Other |
-| K2 | Rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1-bar |
-| K3 | Oct | −4 to +4 (0 displays as Off). Negative = arpeggiate down; positive = up. |
-| K4 | Gate | 1–200% |
-| K5 | Steps | **Mute** · **Step**. Mute: level-0 steps are rests, the cycle continues underneath. Step: level-0 steps removed from the cycle entirely. |
-| K6 | Rtrg | On: pattern resets on each new note. **Off (default).** |
-| K7 | Sync | On (default): waits for the next rate boundary before firing. Off: fires immediately on pad press. |
-| K8 | Latch | Off (default) · On. On: arp keeps running after release. First touch of a new gesture replaces the latched set; additional presses add notes. |
-
-**Latch shortcut.** While holding pads with ARP IN active, tap **Loop** to toggle latch on/off without entering the bank. **Delete + Loop** also unlatches. With latch already on and notes latched, tapping **Loop with no pads held** clears the latched chord without turning latch off — the next chord you play latches as usual.
-
-**Latch visual feedback.** When Latch is on, every pad in the current ARP IN input buffer stays lit white — held *and* latched-after-release — so you can see which notes are feeding the arp. The `Arp` indicator in the Track View header inverts (black-on-white chip) while latched. The **Loop button** also blinks in the active track's color at the arpeggiator's step-fire rate while the active track is latched with notes in the buffer — a tempo-visible hint that ARP IN is running on this track. Change the Rate knob and the blink rate follows.
-
-> **Advanced — latch lifecycle.** The latch is per-track musical intent and persists across track / route / channel / MIDI-in changes — switching tracks does not drop the latched buffer. It clears on: transport Stop, Delete + Play, and Session View entry (active track only). Muting a track silences the latched output but preserves the latch (unmute resumes mid-phrase). With `Rtrg = Off` and `Latch = On`, re-pressing a pad whose note is latched but not physically held removes that single note from the buffer — useful for plucking voices out of a stacked chord.
-
-**Arp Steps editor.** Same gesture as SEQUENCE ARP — **click the jog** to enter (OLED reads `ARP IN Steps`); K1–K8 set per-step scale-degree offsets (±14); pads are the step-velocity editor; **Loop + pad column** sets the step-loop length (1–8). ARP IN's editor state is **per-track**.
-
-**Bank reset.** **Delete + jog click** while on ARP IN resets every ARP IN parameter back to defaults (including the held buffer). **Shift + Delete + jog click does NOT reset ARP IN** — that's the broad melodic FX reset and intentionally preserves per-track ARP IN settings.
+**Arp Steps editor:** same as SEQ ARP — jog click to enter. State is per-track for ARP IN.
 
 Quick toggle: **Shift + Step 11** flips ARP IN on/off using the last-used style.
 
-> **Try this.** Enable ARP IN with Style = Up, Rate = 1/16, Latch = On. Play a chord, then switch to a different track. The arp runs hands-free on the first track while you sequence on the second.
+---
 
-## 5.7 AUTOMATION bank — "AUTO" (melodic tracks only)
+# 8. Automation
 
-The bank header reads **AUTO**. It's the home for all of a clip's continuous-modulation data: the 8 CC knob lanes plus recorded **pad-pressure aftertouch** (see [§13.1 AftTch](#131-track-config)). When the focused clip contains data, inverted badges appear in the header — **AT** (recorded aftertouch) and/or **CC** (knob automation or a resting value). A Pitch Bend (**PB**) badge is reserved for later. A type with no data shows no badge.
+## AUTO bank
 
-Each of the 8 knobs is an independent **continuous-modulation lane**. Each lane holds, **per clip**: recorded automation (up to 1024 points, 1/32 resolution, interpolated on playback) plus an optional **resting value** ("clip CC") the lane falls back to. Output follows the track's Route and MIDI channel.
+Each of the 8 knobs controls its own automation lane — a recordable stream of CC or aftertouch data that plays back with the clip. Each lane can hold up to 1024 recorded points (at 1/32 resolution, smoothly interpolated between points) plus an optional resting value that the lane returns to at each loop.
 
-Knob→target **assignment is per-track**; the resting value and automation are **per-clip** — switching the focused clip shows that clip's CC values.
+**Assigning what a knob controls:** jog click to enter alt mode on this bank, then turn a knob to step through the target options: aftertouch (AT) or any CC number (CC0–CC127). The assignment applies to the whole track — all clips on that track share it.
 
-**The "—" floor.** Every knob's value range starts with **"—"** (unset = send nothing). Turn **down past 0 → "—"**; turn **up from "—" → 0, 1 … 127**. "—" everywhere means "no value defined here."
+**The "—" floor:** every knob starts at "—" (send nothing). Turn below 0 to reach "—"; turn up from "—" to reach 0.
 
-**Assigning a target (Shift + turn).** Hold Shift and turn a knob to step through the target ladder: **AT** (channel-pressure aftertouch) ↔ **CC0 … CC127**. The label shows `AT` or the CC number. Aftertouch ignores the CC number.
+**Setting the resting value (normal turn, no step held):**
+- **Stopped** (or playing with no automation): sets the clip's resting value and sends it live.
+- **Record-armed + playing:** records by latch overwrite (see below).
+- **Playing, not armed:** transient live audition only — does not change the resting value.
 
-**Setting the resting value (normal turn, no step held).**
-- **Stopped** (or playing on a lane with no automation): turning sets the active clip's resting value and sends it live so you hear it. Turn to "—" to clear it.
-- **Record-armed + transport running:** turning records automation by latch overwrite (see Recording below).
-- **Playing on an automated lane (not armed):** turning is a transient live audition only — it does **not** change the resting value.
+**Loop reset:** when a resting value is set, the lane smoothly returns to it each time the clip loops. If the resting value is "—", the lane holds whatever value it ended on into the next loop.
 
-**Loop reset.** With a resting value set, the lane eases back to it at each loop boundary (a smooth closed curve that resets every cycle). Left at "—", the value simply carries over the loop (holds).
+**Step button display:** the last knob you touched shows its automation values across the step buttons as a brightness gradient (brighter = higher value, off = no value). The playhead step shows the track color.
 
-**Displayed value.** Stopped → the resting value (or "—"); playing → the value defined at the playhead (or "—"); holding a step → the value recorded at that step (or "—"), plus the **computed value that plays there** shown in parentheses for ramp/gap steps.
+**Knob LED states (this bank):**
 
-**Active lane + step-LED gradient.** The **last knob you touched** is the active lane: its overview cell stays highlighted, and its automation is drawn across the **step buttons (16)** as a 3-level white brightness gradient (dim / mid / full; "—" = off); the **playhead step shows the track color**. Out-of-window steps are dim grey. The gradient holds steady as the playhead moves. Touch another knob to follow it. Like every other parameter bank, the AUTOMATION OLED auto-dismisses back to the Track-View overview after the standard idle window — touch a knob or turn the jog to bring it back.
-
-**Knob acceleration.** Turning a knob to edit a value ramps with the turn: the first few clicks of a continuous turn move finely, and a sustained spin speeds up so you can sweep the range quickly. Change direction or pause and it resets to fine control. (The Shift assignment turn stays fixed for precision.)
-
-**Knob LED states (this bank only):**
-
-| State | Knob LED |
+| State | LED |
 |---|---|
-| No automation, no resting value | Off |
+| No data | Off |
 | Resting value set (stopped) | White |
-| Has automation for this clip | Vivid yellow |
-| Recording armed | Red — brightness scales with the resting value |
-| Playback with a defined value | Green — brightness scales with the value at the playhead |
+| Has automation | Yellow |
+| Record armed | Red (brightness = value) |
+| Playback | Green (brightness = value at playhead) |
 
-**Recording (latch overwrite).** While recording is armed and transport is running, **turning** a knob latches it into overwrite recording: from that moment the lane is continuously rewritten along the playhead with the knob's current value, **replacing** whatever automation was there — and it keeps writing the last value even after you stop turning, loop after loop, until you stop recording. Turn it and leave it → the lane flattens to that value; keep nudging → you draw the curve live. The first turn picks up from the value already playing there (no jump). **Touching** a knob without turning does nothing. Untouched knobs keep playing their existing automation. After each loop (and when you stop recording) the lane is tidied — redundant points on a flat hold or straight ramp collapse to their endpoints, with no change to what you hear. Switching clips while recording finalizes the latch on the old clip (it won't bleed into the new one).
+**Recording:** while record-armed and playing, turning a knob starts recording on that lane — it continuously writes the knob's current value at the playhead position, replacing whatever was there. It keeps writing even after you stop turning (holding the last value), loop after loop, until you stop recording. Knobs you don't touch keep their existing automation. Switching clips stops recording on the previous clip.
 
-**Step-edit.** Hold a step in this bank: the OLED shows "CC S1–S16" with a 4×2 knob grid. Turning a knob writes a clean flat hold across that step (no stray ramp). From an unset step, turning up sets a value; turning **down past 0 clears** that knob's point back to "—".
+**Step-edit:** hold a step on this bank. Turn a knob to write a flat value at that step. Turn below 0 to clear that knob's point back to "—".
 
-**Clearing.** All automation clears are undoable via the **Undo** button.
-- **Tap Delete** (press & release, without turning the jog) opens the **CLEAR AUTOMATION** menu: jog to scroll the list — **Aftertouch (AT)**, **Pitch bend (PB)** (disabled placeholder), **Control Change (CC)**, **CLEAR**, **Cancel** — jog-click to check AT and/or CC, then **CLEAR** to wipe the checked types for the active clip. Exit without changing anything via **Cancel**, the **Note/Session** button, or **tapping Delete again**.
-- **Delete + jog click** and **Shift + Delete + jog** clear **all** automation (CC + AT) for the clip.
-- **Delete + knob touch (or turn)** clears that one knob's CC (automation + resting value). **Delete + a step button** clears **all** knobs' CC points at that step.
-- **Clearing the clip** (notes) also removes all of its automation.
+**Clearing (all undoable):**
+- **Delete** (tap) opens the CLEAR AUTOMATION menu — check AT and/or CC, then CLEAR.
+- **Delete + jog click** or **Shift + Delete + jog** clears all automation for the clip.
+- **Delete + knob touch/turn** clears that one lane.
+- **Delete + step** clears all lanes at that step.
+- Clearing the clip (notes) also removes all its automation.
 
 ---
 
-# 6. Drum Tracks
+# 9. Drum Tracks
 
-Drum mode reshapes a track for percussion: the pad grid becomes 32 lanes, each step pattern lives on a per-lane basis, and a Note Repeat system replaces the live arp.
+On a drum track, each sound gets its own **lane** — a separate step pattern with its own loop length, timing, and effects. Think of each lane as an independent mini-sequencer for one drum sound (kick, snare, hi-hat, etc.). A drum track has 32 lanes total, each assigned to a MIDI note that triggers a specific sound in the destination instrument.
 
-## 6.1 Switching to drum mode
-
-**Shift + Note/Session** → Track Config → **Mode = Drum**. On a track that already has notes, the mode switch converts them (see [§2.5](#25-melodic-vs-drum-tracks)).
-
-## 6.2 Pad layout
+The pad grid is split into two halves:
 
 | Pad block | Contents |
 |---|---|
-| Left 4×4 | 16 drum lane pads (bank A or B — jog click cycles modes, see below) |
-| Right 4×4 | Function area — content depends on mode |
+| Left 4×4 | 16 drum lane pads. Tap one to hear its sound and select it — the step buttons then show that lane's pattern. The other 16 lanes are on bank B (see below). |
+| Right 4×4 | Function area: Velocity zones (default), Rpt1, or Rpt2 |
 
-Two banks of 16 lanes (A and B) give you 32 lanes total. The active bank is shown in the OLED.
+The left pads show 16 lanes at a time. There are two banks — **A** and **B** — giving you 32 lanes total. The OLED shows which bank is active. Cycle right-pad modes (and banks) with jog click or **Shift + Step 8**.
 
-**Right 4×4 modes** (cycle by tapping the jog wheel, or **Shift + Step 8**):
+**Velocity mode:** 16 zones from velocity 8 (bottom-left) to 127 (top-right). Pressing a zone sets the velocity for subsequent step taps. Drum velocity zones override VelIn.
 
-- **Velocity** (default). 16 zones from velocity 8 (bottom-left) to velocity 127 (top-right). Used for live monitoring, step-edit velocity, and recording. Step-tap velocity defaults to 100 until you've pressed a vel-pad on this track; after that the most recently pressed zone is sticky (persists across sessions). Drum vel zones — sticky or actively pressed — override VelIn.
-- **Rpt1.** Single-lane Note Repeat. See [§6.7](#67-note-repeat).
-- **Rpt2.** Multi-lane Note Repeat. See [§6.7](#67-note-repeat).
+To change which MIDI note (and therefore which drum sound) a lane triggers, use the NOTE FX bank — K1 shifts by octave (±12 semitones) and K2 shifts by single semitones. The OLED shows the lane's note name and number (e.g. `Pad: C3 (48)`).
 
-OLED shows `Vel`, `Rpt1`, or `Rpt2` to indicate the current mode.
+## Step sequencing
 
-## 6.3 Step sequencing on drums
+Tap a lane pad to select it, then tap steps 1–16 to place or remove hits for that lane. The step buttons always show the selected lane's pattern.
 
-Step sequencing is **per-lane** on drum tracks.
+**Capture + lane pad** selects a lane silently (no trigger).
 
-1. Tap a lane pad — it's now the active lane (its LED pulses).
-2. Tap step buttons 1–16 to add or remove hits *for that lane*.
-3. Switch to another lane and edit independently.
+## Per-lane loops (polyrhythm)
 
-The step buttons always show the active lane's pattern. To **select a lane silently** (without triggering its sound): hold **Capture** and tap the lane.
+Each lane has its own loop length. Set with **Loop + jog rotate** on the active lane. Example: kick at 16 steps, hi-hat at 12, percussion at 10 — each loops independently against shared transport.
 
-**Step edit on drum tracks** — hold a step button to open the overlay:
+## DRUM LANE bank
 
-| Knob | Function |
-|---|---|
-| K1 (Leng) | Adjust the hit's gate length |
-| K2 (Vel) | Adjust velocity |
-| K3 (Ndg) | Nudge timing (±23 ticks max) |
+Per-lane settings for the active drum lane. **K1–K3 and K5 are destructive.**
 
-To change a lane's MIDI note, use NOTE FX bank K1+K2 (per-lane Oct/Note).
+| Knob | Label | Function | Range | Default |
+|---|---|---|---|---|
+| K1 | Res | Resolution. **Alt: Zoom.** | 1/32–1bar | 1/16 |
+| K2 | Stch | Beat Stretch (one-shot) | — | — |
+| K3 | Shft | Clock Shift. **Alt: Nudg.** | — | 0 |
+| K4 | Lgto | Apply Legato — per-lane destructive one-shot. Turn right to confirm. Undoable. | → (action) | — |
+| K5 | Eucl | Euclidean — spreads N hits evenly across lane length. Hand-placed hits outside the grid are preserved. | 0–length | 0 |
+| K7 | Dir | Playback direction per-lane. **Alt: RvSt** (Step/Audio). | Fwd, Bwd, PPf, PPb | Fwd |
+| K8 | SqFl | Seq Follow | On/Off | On |
 
-## 6.4 Per-lane independence (the polyrhythm trick)
+Lane length: **Loop + jog rotate**. Lane MIDI note: NOTE FX K1+K2.
 
-Each lane has its own **loop length** within the clip. Set with **Loop + jog rotate** on the active lane.
+## ALL LANES bank
 
-> **Connection point.** This is the heart of dAVEBOx's drum design. Polyrhythmic textures need no special setup: just give each lane a different length. The clip's overall length is just the longest active lane.
+Bank 7 on drum tracks. Applies to all 32 lanes.
 
-> **Try this.** Set your kick to 16 steps, hi-hat to 12, and a percussion lane to 10. Each loops at its own rate against a shared transport — the pattern is 240 steps long before it repeats exactly.
+| Knob | Label | Function | Notes |
+|---|---|---|---|
+| K1 | Res | Resolution — sets all lanes to the same value. Resets display after release. | Destructive |
+| K2 | Stch | Beat Stretch — atomic; "NO ROOM" if any lane can't fit. | Destructive |
+| K3 | Shft | Clock Shift. **Alt: Nudg.** | Destructive |
+| K4 | Qnt | Quantize all lanes. Resets display after release. | Non-destructive |
+| K5 | VelIn | Velocity input override for this track | Per-track |
+| K6 | InQ | Recording input quantize | Per-track |
+| K7 | Dir | Playback direction on all lanes. Resets after release. **Alt: RvSt** for all lanes. | Per-lane |
+| K8 | SyncRpt | Repeat Sync — controls first-fire timing for held repeat pads. On = wait for grid; Off = instant. | Per-track, default On |
 
-## 6.5 DRUM LANE bank
+## Note Repeat
 
-Per-lane settings for the active lane. (Replaces CLIP on drum tracks.) **K1–K3 and K5 are destructive** (modify per-lane note data).
+Retriggers drum lanes at rhythmic intervals. Two modes: **Rpt1** (single-lane) and **Rpt2** (multi-lane).
 
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Resolution / **Zoom** | Plain turn: per-lane resolution (1/32 · 1/16 · 1/8 · 1/4 · 1/2 · 1-bar). **AltMode + turn:** Zoom — keeps absolute note positions, adjusts the step grid. Label flips to `Zoom`. |
-| K2 | Stretch | Per-lane beat stretch (one-shot). Blocked if compression impossible. |
-| K3 | Clock Shift / **Nudg** | Plain turn: shifts the active lane by whole steps. **AltMode + turn:** nudges at tick resolution. Label flips to `Nudg`. |
-| K4 | `Lgto` (Apply Legato) | **Destructive one-shot, per-lane.** Right-turn opens the confirm popup; click jog to apply. Rewrites every note in the active drum lane's clip to gate = distance-to-next-note (clip end for last note); same-tick notes share one gate. Both extends and compresses. Undoable. Left-turn is a no-op. |
-| K5 | Eucl (Euclidean) | Spreads N hits evenly across the active lane's length (0..length). Only the positions that change between the old and new count update, so hand-placed hits outside the Euclidean grid are preserved. Persists per-lane, per-clip. |
-| K7 | Dir (Playback Direction) | Per-lane playback direction (same modes as melodic CLIP K7: Fwd · Bwd · PPf · PPb). Each lane has its own direction — mix Fwd hats with a Bwd snare for free, and each lane stays in phase across mid-play clip switches. **AltMode + turn = RvSt** (Reverse Style): per-lane toggle of **Step** ↔ **Audio**; same semantics as melodic — Audio swaps note-on/off in reverse motion and uses 2L pingpong cycle. |
-| K8 | SeqFollow | Per-clip auto-scroll on/off |
-
-K6 is unassigned on the DRUM LANE bank. Per-lane length is set via **Loop + jog rotate** — hold Loop and turn the jog wheel to grow/shrink the active lane by ±1 step. Lane MIDI note assignment is on NOTE FX K1+K2 (per-lane Oct/Note).
-
-Lane MIDI note assignments and playback direction persist across saves and reloads.
-
-## 6.6 ALL LANES bank
-
-Bank 7 on drum tracks. Applies parameters to all 32 lanes simultaneously. **K1 (Res), K2–K3 are destructive** (modify note data across all lanes); **K4 (Qnt)** is non-destructive playback quantize; **K5 (VelIn)** and **K6 (InQ)** are track-config settings; **K7 (Dir)** sets playback direction on all lanes.
-
-| Knob | Parameter | Notes |
-|---|---|---|
-| K1 | Resolution | Sets resolution on all 32 lanes to the same value (1/32 · 1/16 · 1/8 · 1/4 · 1/2 · 1-bar). Rescales notes proportionally per lane. Display resets to `--` after touch release. |
-| K2 | Stretch | Beat stretch applied atomically. If any lane can't compress or expand, the operation is a no-op ("NO ROOM" popup). |
-| K3 | Clock Shift / **Nudg** | Plain turn: shifts all lanes by whole steps. **AltMode + turn:** nudges all lanes at tick resolution. Label flips to `Nudg`. |
-| K4 | Quantize | Playback quantize for all 32 lanes. Display resets to `--` after touch release. |
-| K5 | VelIn | Velocity input override for this track |
-| K6 | InQ | Recording input quantize (Off · 1/64 · 1/32 · 1/16 · 1/16T · 1/8 · 1/8T · 1/4 · 1/4T) |
-| K7 | Dir / **RvSt** | Sets playback direction on all 32 lanes (Fwd · Bwd · PPf · PPb). Display resets to `--` after touch release. **AltMode + turn = RvSt**: sets audio-reverse style (Step · Audio) on all lanes, also resets on release. |
-| K8 | SyncRpt (Repeat Sync) | Per-track toggle, default **On**. Controls first-fire timing for held repeat pads — see [§6.7](#67-note-repeat). |
-
-## 6.7 Note Repeat
-
-Note Repeat retriggers drum lanes at rhythmic intervals. Two modes — **Rpt1** (single-lane) and **Rpt2** (multi-lane).
-
-### Right-pad layout (Rpt1 and Rpt2)
+### Right-pad layout (both modes)
 
 ```
-   Row 3 (top)    [Gate steps 0-3]      ←  gate mask
-   Row 2          [Gate steps 4-7]      ←  gate mask
-   Row 1          [1/32T 1/16T 1/8T 1/4T]  ←  triplet rates
-   Row 0 (bottom) [1/32  1/16  1/8  1/4 ]  ←  straight rates
+   Row 3    [Gate 0] [Gate 1] [Gate 2] [Gate 3]    ← gate mask
+   Row 2    [Gate 4] [Gate 5] [Gate 6] [Gate 7]    ← gate mask
+   Row 1    [1/32T]  [1/16T]  [1/8T]  [1/4T]      ← triplet rates
+   Row 0    [1/32]   [1/16]   [1/8]   [1/4]        ← straight rates
 ```
 
-### Rpt1 — single-lane
+### Rpt1 (single-lane)
 
-- **Hold a rate pad** to retrigger the active lane at that rate. Release stops.
-- Velocity is pressure-sensitive (aftertouch); VelIn override applies.
-- Switch lanes while holding a rate pad without interrupting the repeat.
+Hold a rate pad to retrigger the active lane at that rate. Velocity is pressure-sensitive. Switch lanes while holding without interruption.
 
-### Rpt2 — multi-lane
+### Rpt2 (multi-lane)
 
-- **Tap a rate pad** to *assign* it to the active lane (doesn't trigger on its own). Default rate is 1/8.
-- **Hold a lane pad** to repeat that lane at its assigned rate.
-- Hold multiple lane pads simultaneously — each repeats independently at its rate.
-- Velocity is pressure-sensitive per held pad.
-
-### First-fire timing (Repeat Sync)
-
-The first fire of a held Rpt1 / Rpt2 pad is gated by the **Repeat Sync** toggle (ALL LANES K6, per-track, default On):
-
-- **On (default):** the first fire waits for the next boundary on the repeat-rate grid; subsequent fires roll at the repeat rate.
-- **Off:** the first fire is instant.
-
-> **Advanced.** The Repeat Sync grid is anchored to a free-running clock that resets at transport play and count-in fire, so two repeat presses at the same rate phase-lock to each other regardless of when each was pressed — in stopped, playing, and count-in states. Holding a repeat pad through the count-in click is audible and seamlessly fires the first recorded hit at the start of the loop window. Repeat Sync is independent of InQ.
-
-### Mute interaction
-
-Holding a repeat pad on a muted track makes its repeats audible — a held pad is "monitoring through the chain." Latched repeats that aren't physically held respect mute as usual.
+Tap a rate pad to assign it to the active lane (default 1/8). Hold a lane pad to repeat it at its assigned rate. Hold multiple lanes for simultaneous repeats. Velocity is pressure-sensitive per pad.
 
 ### Latching
 
-**Rpt1:** Loop + rate pad starts and latches. While holding a repeat, tap Loop to latch. Press the active rate pad again, or **Delete + Loop**, to stop.
+- **Rpt1:** Loop + rate pad starts and latches. Hold repeat + tap Loop to latch. Press active rate or Delete + Loop to stop.
+- **Rpt2:** Loop + lane pad latches. Hold lanes + Loop latches all held. Tap latched lane to unlatch. Delete + Loop stops all.
+- **Tap Loop alone** (no pads held): unlatches all Rpt1 + Rpt2 on the active track.
 
-**Rpt2:** Loop + lane pad latches that lane. Hold a lane + Loop latches all currently-held lanes. Tap a latched lane to unlatch it. **Delete + Loop** stops all.
-
-**Tap Loop alone** (drum track, no pads or lanes held) — unlatches all latched Rpt1 + Rpt2 lanes on the active track in one go.
-
-**Visual feedback.** Latched Rpt1 / Rpt2 lane pads stay lit Cyan regardless of the current right-pad mode. Track mute silences latched output but preserves the latch — unmute resumes mid-phrase. Transport Stop clears all latches across every track. Rpt1's last rate (per-track) and Rpt2's per-lane rates persist across save/load.
+Latched lanes stay lit cyan. Transport Stop clears all latches. Mute silences but preserves latch.
 
 ### Gate mask
 
-The top 2 rows of the right 4×4 (8 pads) form a looping **gate mask**:
+The top 2 rows (8 pads) form a looping gate pattern. All 8 on by default. Tap to toggle. Per-lane, persists across saves.
 
-- All 8 steps active by default.
-- Tap to toggle a step off (rest); tap again to restore.
-- Per-lane; persists across clip/track switches and save/load.
-- OLED shows each step as a solid bar (active) or empty outline (off).
-- **Delete + gate mask pad** resets that step's velocity scaling and nudge offset to defaults (doesn't affect the gate toggle).
-
-**Repeat loop length.** Hold **Loop + tap a gate pad** to set the repeat cycle length (1–8 steps). Gate pads beyond cycle length go dark.
+**Loop + gate pad** sets repeat cycle length (1–8). **Delete + gate pad** resets that step's velocity scaling and nudge.
 
 ### REPEAT GROOVE bank
 
-Available on drum tracks when a repeat mode is active (replaces the ARP IN slot). Per-lane, persists.
+Available when a repeat mode is active. Per-lane, persists.
 
-- **K1–K8, unshifted** — velocity scaling per gate step. Range 0–200%. Default 100%. Applied to the pressure-sensitive velocity input.
-- **K1–K8, Shift held** — nudge offset per gate step. Range −50% to +50% of step interval. Stored as a percentage so the groove shape is consistent at every rate.
+- **K1–K8 (unshifted):** velocity scaling per gate step (0–200%, default 100%).
+- **K1–K8 (Shift held):** nudge offset per gate step (±50% of step interval).
 
-**Delete + jog click** (in Rpt1 or Rpt2) resets the entire groove for the current lane — all gates on, all velocity 100%, all nudge 0%.
+**Delete + jog click** resets the groove for the active lane.
 
-> **Try this.** In Rpt2, assign different rates to different lanes (kick = 1/4, hi-hat = 1/16, snare = 1/8). Hold all three for a driving pattern, then release individual lanes to strip it back.
+## Drum-specific copy/mute
 
-## 6.8 Drum loop view
-
-Hold **Loop** on a drum track to see loop view on the step buttons:
-
-- Pages with notes: pulse between track color and off
-- Empty in-window pages: solid track color
-- Out-of-window pages: off
-- Held start page during a range gesture: white
-
-The window-set gestures match the melodic loop view (see [§4.4](#44-pages-and-loop-view)): tap = length-only `[0, N]`; hold + tap = range `[A, B]`. On a specific drum lane the gesture writes that lane only; in **ALL LANES** view (bank 7) it applies to all 32 lanes at once.
-
-## 6.9 Drum-specific copy / mute
-
-The general copy/cut/paste workflow lives in [Chapter 10](#10-editing--copy-cut-paste-undo); mute and solo live in [Chapter 11](#11-mixing--volume-mute-solo). Two drum-only specifics:
-
-- **Lane copy** — `Copy + lane pad` (source blinks white) → press another lane pad to paste all step data. The destination lane's MIDI note is preserved. Clipboard is sticky; **Shift + Copy** = cut. Drum *clip* copy copies all 32 lanes at once.
-- **Lane mute / solo / silent-select** — Mute + lane pad mutes; Shift + Mute + lane pad solos; Capture + lane pad selects without triggering.
+- **Copy + lane pad** → tap another lane to paste. Destination MIDI note preserved. Shift + Copy = cut.
+- **Mute + lane pad** mutes. **Shift + Mute + lane pad** solos. **Capture + lane pad** selects silently.
 
 ---
 
-# Part III — Arranging & Performing
+# 10. Scenes & Performance Mode
 
-# 7. Scenes
+## Scenes
 
-A **scene** is a row of clips across all 8 tracks. Launching a scene fires every clip in that row together.
+A scene is a row of clips across all 8 tracks. Launch with a scene launcher or step buttons 1–16 in Session View.
 
-## 7.1 Launching scenes
+### Scene editing
 
-| Control | Behavior |
+| Control | Result |
 |---|---|
-| Scene launcher (left of each Session row) | Launches the scene per the global Launch Quant setting (immediate by default). Playing clips on each track stop and the new clips start per the quantize. |
-| **Shift + scene launcher** | Always launches the row at the next bar boundary, regardless of the global Launch Quant setting — for the "queue this row to land on the downbeat" gesture without changing the global setting. |
-| Step buttons 1–16 (Session View) | Also launch the corresponding scene row. (Shift + step in Session View is reserved for the menu shortcuts; for the next-bar gesture use Shift + scene launcher.) |
-
-Empty cells in the scene don't affect their column — that track keeps doing whatever it was doing.
-
-## 7.2 Scene copy, cut, capture, clear
-
-Scene-row editing follows the same model as clip editing — full details in [Chapter 10](#10-editing--copy-cut-paste-undo). In brief:
-
-| Control | Behavior |
-|---|---|
-| Copy + scene launcher | Copy all 8 clips in that row; press another row to paste |
+| Copy + scene launcher → another row | Copy all 8 clips |
 | Shift + Copy + scene launcher | Cut the row |
-| Capture + scene launcher | Snapshot whatever's currently playing into that row (see below) |
-| Delete + scene launcher | Clear all notes in the row's 8 clips. Undoable. |
-| Shift + Delete + scene launcher | Hard reset — clears notes **and** per-clip params for all 8 clips. Undoable. |
+| Capture + scene launcher | Snapshot currently-playing clips into that row (skips tracks with no notes or already on target row) |
+| Delete + scene launcher | Clear notes in all 8 clips |
+| Shift + Delete + scene launcher | Hard reset all 8 clips |
 
-**Capture scene from what's playing.** `Capture + scene launcher` copies each track's currently-active clip into the pressed row, in one gesture (works in both views). Two skip rules protect the target row: tracks whose active clip has no notes are skipped (existing content stays), and tracks already on the target row are skipped (no self-copy). OLED confirms `CAPTURED / TO ROW N`, or `NOTHING / TO CAPTURE` if every track was skipped.
+## Performance Mode
 
----
+Performance Mode captures a short loop of what's currently playing and lets you transform it in real time using a grid of effects. It works in Session View.
 
-# 8. Performance Mode
-
-Performance Mode is a real-time effect layer in Session View. It captures a short loop from the sequencer output and plays it back through a grid of live transformations.
-
-## 8.1 Entering and exiting
-
-Use the **Loop** button (in Session View):
+### Entering and exiting
 
 | Action | Result |
 |---|---|
-| Tap Loop | **Lock** — persists hands-free. Loop blinks at 1/8-note rate. |
-| Hold Loop | **Temporary** — pads active while held, exits on release. |
-| Shift + Loop *or* tap **Latch** pad (R0-8) | Toggle latch mode. Toggling latch only changes how mod pads behave (sticky vs momentary) — it does **not** wipe currently active mods. |
+| Loop (tap) in Session View | Lock — persists hands-free |
+| Loop (hold) | Temporary — exits on release |
+| Shift + Loop or Latch pad (R0-8) | Toggle latch mode |
 
-While Loop is held to enter, press a **step button** to set the **capture length**:
+While holding Loop to enter, press a **step button** to set capture length:
 
-| Step | Length | + Step 16 held |
-|---|---|---|
-| 1 | 1/32 | 1/32 triplet |
-| 2 | 1/16 | 1/16 triplet |
-| 3 | 1/8 | 1/8 triplet |
-| 4 | 1/4 | 1/4 triplet |
-| 5 | 1/2 bar | 1/2 bar triplet |
-| 6 | 1 bar | 1 bar triplet |
-
-The looper waits for the next aligned clock boundary (when Sync is on — default), captures, then loops continuously.
-
-## 8.2 Per-track inclusion
-
-Each track has a **Looper** flag in Track Config:
-
-- **On** — the track feeds the looper and is silenced during loop playback.
-- **Off** — the track plays through normally; the looper ignores it.
-
-**Shortcut.** While Performance Mode is locked, **touch a knob** to toggle that track's Looper flag (K1 = track 1, … K8 = track 8). The knob LED lights in the track's color when its Looper is on, dark when off. A `LOOPER ON / TRACK N` popup confirms the change.
-
-## 8.3 The mod grid
-
-While Performance Mode is active (locked, held, or latched), the pad grid becomes 32 mod pads in 4 rows.
-
-```
-   R3 (top)   Wild mods       — cyan
-   R2         Vel/Gate mods   — yellow
-   R1         Pitch mods      — magenta
-   R0 (bottom) length / hold / sync / latch — see below
-```
-
-Mods come from two sources that layer simultaneously:
-
-- **Sticky mods** — set by latch-mode taps and by recalling a preset. Persist until you toggle them off (or recall a different preset, which replaces sticky mods with the preset's bits).
-- **Momentary mods** — held with the mod pad while latch is off. Released when the pad is released.
-
-**Pressing a mod pad whose LED is lit always clears that bit**, regardless of latch mode. So you can take a recalled preset and dial individual mods off by tapping their pads.
-
-### R0 — length and controls
-
-| R0 Pad | Function |
+| Step | Length |
 |---|---|
-| 1 | 1/32 capture |
-| 2 | 1/16 capture |
-| 3 | 1/8 capture |
-| 4 | 1/4 capture |
-| 5 | 1/2 bar capture |
-| 6 | **Hold** — persistent hold mode (releasing a length pad doesn't stop the loop). Dim red when off, bright red when on. |
-| 7 | **Sync** — toggle clock-aligned capture. On = wait for next boundary; Off = capture starts immediately. Dim green when off, bright green when on. |
-| 8 | **Latch** — toggle latch mode. Dark olive when off, bright green when on. |
+| 1 | 1/32 |
+| 2 | 1/16 |
+| 3 | 1/8 |
+| 4 | 1/4 |
+| 5 | 1/2 bar |
+| 6 | 1 bar |
 
-Length pads (1–5) are dark grey when idle and bright white when their rate is engaged. R0 covers 1/32 through 1/2 bar; for 1-bar captures, use step button 6 while entering Performance Mode (Loop held).
+Hold Step 16 + a length pad for the triplet variant of that length.
 
-### R1 — Pitch mods (magenta, melodic only — bypassed on drum tracks)
+### Per-track inclusion
 
-| Pad | Name | Behavior |
+Each track's **Looper** flag (Track Config) controls whether it feeds Performance Mode. While locked, touch K1–K8 to toggle each track's Looper (knob LED = track color when on, off when off).
+
+### The mod grid
+
+```
+   R3   Wild mods       — cyan
+   R2   Vel/Gate mods   — yellow
+   R1   Pitch mods      — magenta (melodic only, bypassed on drums)
+   R0   Length / Hold / Sync / Latch controls
+```
+
+With **Latch on**, tapping a mod pad toggles it on or off — it stays active until you tap it again. With **Latch off**, mods are only active while you hold the pad. You can combine both: latched mods stay active while you hold additional pads for momentary effects on top. Pressing a lit pad always turns that mod off.
+
+### R0 — controls
+
+| Pad | Function |
+|---|---|
+| 1–5 | Capture lengths: 1/32, 1/16, 1/8, 1/4, 1/2 bar |
+| 6 | Hold — loop persists when you release a length pad |
+| 7 | Sync — clock-aligned capture on/off |
+| 8 | Latch — sticky mod mode on/off |
+
+### R1 — Pitch mods (magenta, melodic only)
+
+| Pad | Name | Effect |
 |---|---|---|
-| 1 | Oct Up | Even cycles +1 octave; odd cycles original |
-| 2 | Oct Down | Even cycles −1 octave; odd cycles original |
-| 3 | Scale Up | +1/+2/+3 scale degrees across 3 cycles, then resets |
-| 4 | Scale Down | −1/−2/−3 scale degrees across 3 cycles, then resets |
-| 5 | Fifth | Ascends by 5th each cycle, then octave+2nd, then octave+5th |
-| 6 | Tritone | Ascends by 4th, 6th, octave+2nd across 4 cycles |
-| 7 | Drift | ±1 scale degree random walk per cycle, accumulates up to ±6 |
-| 8 | Storm | Each note gets a random ±6 scale degree shift every play — chaotic but always in key |
+| 1 | Oct Up | Alternating octave up / original |
+| 2 | Oct Down | Alternating octave down / original |
+| 3 | Scale Up | +1/+2/+3 scale degrees across 3 cycles, resets |
+| 4 | Scale Down | −1/−2/−3 across 3 cycles |
+| 5 | Fifth | Ascending fifths pattern |
+| 6 | Tritone | 4th, 6th, octave+2nd across 4 cycles |
+| 7 | Drift | ±1 scale degree random walk, accumulates to ±6 |
+| 8 | Storm | Random ±6 scale degrees per note per play — chaotic but in key |
 
-### R2 — Velocity and gate mods (yellow, applies to all tracks)
+### R2 — Velocity/gate mods (yellow, all tracks)
 
-| Pad | Name | Behavior |
+| Pad | Name | Effect |
 |---|---|---|
-| 1 | Decrescendo | Vel ×0.85 per cycle — fades out over ~6–7 cycles |
-| 2 | Swell | 16-cycle triangle wave — loud at 0 and 16, quietest at 8 |
-| 3 | Crescendo | Vel ×1.15 per cycle |
-| 4 | Pulse | Even cycles = full vel; odd cycles = 20% vel |
-| 5 | Sidechain | Successive notes within each cycle get −15% vel per note |
-| 6 | Staccato | Gates all notes to 1/8 of loop length |
-| 7 | Legato | Gates all notes to full loop length |
-| 8 | Ramp Gate | Gate ramps up across notes in cycle |
+| 1 | Decrescendo | Velocity ×0.85 per cycle |
+| 2 | Swell | 16-cycle triangle wave |
+| 3 | Crescendo | Velocity ×1.15 per cycle |
+| 4 | Pulse | Even cycles full, odd cycles 20% |
+| 5 | Sidechain | −15% velocity per successive note in cycle |
+| 6 | Staccato | Gates to 1/8 of loop length |
+| 7 | Legato | Gates to full loop length |
+| 8 | Ramp Gate | Gate ramps up across notes |
 
 ### R3 — Wild mods (cyan)
 
-| Pad | Name | Behavior |
+| Pad | Name | Effect |
 |---|---|---|
 | 1 | Half Time | Every other cycle suppressed |
 | 2 | 3 Skip | Every third cycle suppressed |
-| 3 | Phantom | Ghost note 1 octave below each — quarter vel, short gate |
-| 4 | Sparse | ~50% chance each note suppressed per cycle |
-| 5 | Glitch | Each note ±2 scale degrees random shift |
-| 6 | Stagger | Note 1 = original, note 2 = +1, note 3 = +2, etc. |
-| 7 | Shuffle | Pitch order randomizes each cycle; drum hit order shuffles |
-| 8 | Backwards | Pitch order reverses each cycle; drum sequence reverses |
+| 3 | Phantom | Ghost note 1 octave below, quarter velocity |
+| 4 | Sparse | ~50% chance each note suppressed |
+| 5 | Glitch | ±2 scale degree random shift per note |
+| 6 | Stagger | Notes offset by +0, +1, +2… scale degrees |
+| 7 | Shuffle | Pitch/hit order randomized each cycle |
+| 8 | Backwards | Pitch/hit order reversed each cycle |
 
-> **Try this.** Activate Storm (R1-8) + Sparse (R3-4) + Decrescendo (R2-1) together. The result is an unpredictable, thinning-out melodic scatter that sounds nothing like the source pattern.
+### Presets
 
-## 8.4 Preset slots
+Step buttons 1–16 are preset slots. Tap to recall (replaces sticky mods). Hold ~0.75s to save. Delete + step clears.
 
-In Performance Mode, step buttons 1–16 are preset slots.
-
-| Control | Behavior |
-|---|---|
-| Tap step | Recall slot — replaces sticky mods with the preset's bits. Tap the same slot again to clear. |
-| Hold step ~0.75s | Save current mod state (sticky + held) to slot. Step double-blinks to confirm; OLED shows `PERF PRESET / SAVED`. |
-| Delete + step | Clear that slot. OLED shows `PERF PRESET / CLEARED`. |
-
-After recalling a preset you can dial individual mods off by tapping their pads.
-
-**Steps 1–8 are factory presets:**
+**Factory presets (1–8):**
 
 | Slot | Name | Mods |
 |---|---|---|
@@ -1094,697 +790,647 @@ After recalling a preset you can dial individual mods off by tapping their pads.
 | 7 | Chaos | Storm + Glitch + Backwards |
 | 8 | Lift | Scale Up + Crescendo + Ramp Gate |
 
-**Steps 9–16 are user slots** — empty by default.
+Slots 9–16 are user slots (empty by default).
 
-## 8.5 Loop control and persistence
+### Loop control
 
-- **Change length while running:** press a different length pad to queue — current cycle finishes, then a fresh capture begins.
-- **Retrigger:** press the same length pad again to immediately recapture.
-- **Lock vs Hold:** Lock (tap Loop) persists hands-free; Hold (hold Loop) is momentary.
-- **Switching to Track View** unlocks and stops the loop but preserves your mod state.
+- Press a different length pad to queue a new capture (finishes current cycle first).
+- Press the same length pad to immediately recapture.
+- Switching to Track View exits Performance Mode but preserves mod state.
 
-Latched mods, latch mode, the recalled preset slot, and user presets (slots 9–16) persist when you leave Performance Mode and across saves.
+Latched mods, latch mode, user presets, and the recalled slot persist across saves.
 
 ---
 
-# 9. Bake & Live Merge
+# 11. Bake, Live Merge & Export
 
-These are two ways to commit transformations into clip data. They operate on the same chain from different angles.
+## Bake
 
-> **Connection point.** **Bake** runs the chain *offline* on a clip's existing notes and writes the result back, then resets the chain to defaults. **Live Merge** captures the chain's *live* output into a new clip while it's running. Bake is deterministic; Live Merge captures one specific performance.
+**Capture** button. Bake renders a clip's effects (NOTE FX, HARMONY, DELAY, SEQ ARP) into permanent note data, then resets the effects to defaults. The result sounds the same without any effects applied — useful for layering new effects on top, or for freezing a specific sound.
 
-## 9.1 Bake
+### Melodic bake (Track View)
 
-Bake = **Capture** button. Tap **Capture** in Track View to open the bake dialog for the active clip; tap **Capture** in Session View to open the scene-bake picker ([§9.1.3](#913-scene-bake)).
+Tap **Capture** → two dialogs:
+1. Loop count: 1x / 2x / 4x
+2. Wrap tails? Yes / No (Yes wraps echoes past clip end back to the beginning for seamless loops)
 
-### 9.1.1 Melodic bake
+Full chain runs: NOTE FX → HARMONY → DELAY → SEQ ARP. Trig conditions (Iter/Prob/Ratch) are applied per the loop count — the baked result embodies whatever pattern they produced.
 
-Two dialogs in sequence:
+### Drum bake (Track View)
 
-1. **Loop count:** 1x / 2x / 4x / CANCEL (default 1x)
-2. **WRAP TAILS?** YES / NO / CANCEL
+Tap **Capture** → three dialogs:
+1. Clip / Lane (Clip = all lanes with full chain; Lane = active lane only, no pitch transforms)
+2. Loop count: 1x / 2x / 4x
+3. Wrap tails? Yes / No
 
-- **1x** bakes the clip once.
-- **2x / 4x** stack multiple loops end-to-end, letting delay echoes bleed between them.
-- **WRAP TAILS = YES** wraps echoes that fall past the clip end back to the beginning — use it for seamless loops.
+### Scene bake (Session View)
 
-The full chain runs: NOTE FX → HARMONY → DELAY → SEQUENCE ARP. Walk-mode Pitch Random produces independent sequences per loop.
+Tap **Capture** → pick a target row (tap scene launcher or step 1–16). Then loop count and wrap tails. Each track runs its per-clip bake. Empty clips are skipped.
 
-### 9.1.2 Drum bake
+Alternative: **Sample + scene launcher** goes directly to the confirm dialog.
 
-Three dialogs in sequence:
+## Live Merge
 
-1. **CLIP / LANE / CANCEL** — choose mode
-2. **1x / 2x / 4x / CANCEL** — loop count
-3. **WRAP TAILS?** YES / NO / CANCEL
-
-- **CLIP mode** — full chain runs per lane. HARMONY can move hits between lanes. Notes at pitches with no matching lane are dropped. All lane FX params reset to defaults.
-- **LANE mode** — processes the active lane only. Captures velocity, gate, timing, and SEQUENCE ARP. Pitch transforms and HARMONY are not applied.
-
-If the clip is empty, bake does nothing.
-
-> **Try this.** Bake a clip at 4x, then load fresh effects on top of the baked result and bake again. Layer by layer, you can build patterns that would be impossible to sequence by hand.
-
-### 9.1.3 Scene bake
-
-Two ways in:
-
-- **Session View, tap Capture** → "BAKE SCENE / Tap row or scene step to pick destination" picker. Tap a scene launcher or a step button (1–16) to pick the row; tap any other input to cancel.
-- **Session View, hold Sample + tap a scene row** → goes directly to the scene-bake confirm dialog (legacy direct gesture).
-
-Confirm dialog: **CANCEL / 1x / 2x / 4x** (loop count), then **WRAP TAILS? YES / NO / CANCEL**. Each track in the column runs the chain its per-clip bake would (melodic = full chain; drum = CLIP-mode semantics). Empty clips on a track are skipped silently.
-
-## 9.2 Live Merge
-
-Live Merge captures the running chain output from **all 8 tracks simultaneously** into a deferred buffer; on stop, you pick a scene row to drop the captured clips into.
+Live Merge records the actual output of all 8 tracks simultaneously as they play — capturing a live performance, effects and all, into new clips.
 
 | Step | Control |
 |---|---|
-| Arm | Session View, tap **Sample** (LED red; OLED popup describes the operation) |
-| Capture starts | At the next bar boundary if transport is already running; on transport start otherwise |
-| Stop | Tap **Sample** again — capture finalizes at the next 16-step page boundary |
-| Auto-stop | At 256 steps (max clip length) |
-| Place | After stop, OLED prompts "PLACE MERGED CLIPS / Tap row or scene step to pick destination" — tap any row or scene step to commit |
-| Cancel placement | Tap **Capture** instead of a row — captured notes are discarded |
+| Arm | Session View, tap **Sample** |
+| Capture starts | Next bar boundary (or on transport start) |
+| Stop | Tap **Sample** again (finalizes at next page boundary) |
+| Auto-stop | 256 steps (max clip length) |
+| Place | After stop, tap a scene row to commit |
+| Cancel | Tap **Capture** instead of a row |
 
-**Selective per-track placement.** Each track is committed independently:
+Tracks that captured notes overwrite their clip at the target row. Tracks that captured nothing leave the existing clip untouched.
 
-- Tracks that **captured at least one note** during the window overwrite their existing clip at the destination row.
-- Tracks that **captured nothing** leave their existing clip at the destination row untouched.
+## Export to Ableton Live
 
-So you can overlay a merged drum + bass onto a row that already has piano and guitar parts — the piano and guitar tracks stay intact because they weren't playing during the merge window.
+**Global Menu → Export to Ableton.** Writes an `.ablbundle` that desktop Live opens directly (then Save As .als).
 
-> **Try this.** Run a sequence with heavy Pitch Random and Delay for a while, then live merge. You've captured the actual randomized output as fixed note data — a snapshot of one specific performance of the chain.
+Requirements: transport must be stopped. Confirm dialog appears.
 
----
+The bundle lands at `/data/UserData/schwung/davebox-exports/<set name>-<date>.ablbundle`. Retrieve via SFTP. Opens in Live as 8 MIDI tracks × 16 scene slots with tempo and key.
 
-## 9.3 Export to Ableton Live
+**Track instruments follow routing:** Move-routed tracks get the actual Move instrument with its preset and color. Schwung-routed get a placeholder Drift. External-routed get a placeholder Drift.
 
-**Global Menu → Export to Ableton.** Writes the current set as an Ableton `.ablbundle` that desktop Live opens directly (then *Save As* `.als`).
+**Notes are baked** — each clip exports "what you hear" with effects rendered. Drum clips flatten per-lane polymeters to their least common multiple. Randomized clips export 8 cycles of variations. Delay echoes wrap for seamless loops.
 
-| Step | What happens |
-|---|---|
-| Transport check | Must be **stopped**. If it's running you'll see **STOP TRANSPORT / FOR EXPORT** and nothing is written. |
-| Confirm | A Yes/No dialog (No default) appears — jog to choose, click to confirm, **Back** to cancel. |
-| Export | The OLED shows **EXPORTING…** while it works, then a persistent **EXPORTED TO** screen with the full file path — dismiss it with **OK** (jog-click or **Back**). |
-
-The bundle lands at `/data/UserData/schwung/davebox-exports/<set name>-<date>.ablbundle` (a same-day repeat gets `-2`, `-3`, …) — the path shown on the EXPORTED screen. Retrieve it over SFTP. It opens in Live as **8 MIDI tracks × 16 scene slots**, carrying your set's tempo and key. It is **self-contained** — the instruments' samples are bundled inside, so it opens with all sounds even on a computer that doesn't have the Move sample packs installed.
-
-**Track instruments and names follow each track's route:**
-
-| Track route | In Live |
-|---|---|
-| **Move** | The actual Move instrument for that channel (drum kit or melodic), named after the Move preset, with its color. |
-| **Schwung** | A placeholder Drift instrument, named `SCH-<chain name>`. |
-| **External** | A placeholder Drift instrument, named `Ext ch <n>`. |
-
-**Clip notes are baked** — each clip exports the *"what you hear"* result with its effects rendered into actual notes (SEQUENCE ARP runs, MIDI Delay echoes, Harmony stacks, gate length). The exported clip plays back in Live the same as it sounds in dAVEBOx, with no live effects needed. **Drum clips** flatten their lanes onto one clip: because lanes can each loop at a different length (polymeter), the exported drum clip length is the **least common multiple** of the active lanes' loops, so it repeats seamlessly with every drum keeping its own cycle. **Randomized clips** export **8 cycles** of distinct variations (so the randomness plays out instead of freezing on one loop); **clips with Delay** are wrapped so the echoes loop seamlessly.
-
-> Move Drum Racks need **Live 12.1+** (older versions substitute Simpler and sound different). Export is **one-way** — a saved `.als` can't be loaded back onto Move.
-
+The bundle is self-contained — samples are included. Requires Live 12.1+ for Move Drum Racks. Export is one-way.
 
 ---
 
-# Part IV — Studio
+# 12. Editing & Mixing
 
-# 10. Editing — Copy, Cut, Paste, Undo
+## Copy, cut, paste
 
-All of dAVEBOx's content editing lives here: copying and cutting at every level (step, clip, scene, drum lane), clearing, resetting, and undo. Feature chapters point here for the full semantics.
+The clipboard stays live after paste — paste to multiple destinations from one source. Clipboard clears when you release Copy. **Cut = Shift + Copy** (source clears after first paste).
 
-## 10.1 The sticky clipboard
+| Level | Copy gesture | Paste gesture |
+|---|---|---|
+| Step | Copy + source step → destination step | Same clip only |
+| Clip | Copy + side clip button (Track View) or clip pad (Session View) | Press destination clip |
+| Scene row | Copy + scene launcher | Press another scene launcher |
+| Drum lane | Copy + lane pad → destination lane | MIDI note preserved |
+| Drum clip | Copy + side clip button (drum) → destination | All 32 lanes; MIDI notes preserved |
 
-The clipboard stays live after each paste — paste to multiple destinations from the same source without re-selecting. The clipboard clears when you release the Copy button. **Cut** is **Shift + Copy**: same workflow, but the source clears after the first paste.
+## Clear and reset
 
-## 10.2 Copy / cut by level
-
-| Level | Copy | Paste | Notes |
-|---|---|---|---|
-| **Step** (within a clip) | Copy + source step (blinks white) | Press destination step | Copies notes, gate lengths, velocities, timing offsets. Same clip only. |
-| **Clip** | Copy + side clip button (Track View) or clip pad (Session View) | Press destination | "COPIED" pops up; "PASTED" on paste. |
-| **Scene row** | Copy + scene launcher | Press another scene launcher | Copies all 8 clips in the row. |
-| **Drum lane** | Copy + lane pad (Track View, drum) | Press destination lane | Destination lane's MIDI note is preserved. |
-| **Drum clip** | Copy + side clip button (drum track) | Press destination | Copies all 32 lanes; each destination lane's MIDI note preserved. Cross-track works; pasting to a melodic track is ignored. |
-
-Mixing clip-level and scene-row-level kinds in a single press-and-paste sequence is rejected.
-
-## 10.3 Clear and reset
-
-dAVEBOx distinguishes **Clear** (wipe note data only, structure survives) from **Reset / hard reset** (wipe notes *and* structure/params).
-
-| Control (Track View) | Action |
+| Control | Action |
 |---|---|
 | Delete + step | Clear that step |
-| Delete + side clip button | Clear all notes in the clip. Length, loop window, resolution, destructive CLIP-bank params, per-clip play FX, and CC automation all survive. Pops "SEQUENCE CLEARED". |
-| Shift + Delete + side clip button | Hard reset clip — clears notes **and** length / loop / per-clip params / CC automation. Pops "CLIP CLEARED". |
-| Delete + lane-pad (drum) | Clear all notes in that lane. Preserves lane length, loop window, per-lane play FX, per-lane Rpt groove, and MIDI note. Pops "LANE CLEARED". |
-| Shift + Delete + lane-pad (drum) | Hard reset lane — wipes notes, length / loop / per-lane play FX, and per-lane Rpt groove. MIDI note is preserved (a kick lane stays a kick lane). Pops "LANE RESET". |
-| Delete + jog click | Reset all params in the active bank (active clip/lane) |
-| Shift + Delete + jog click | Reset all play FX across every bank (active clip/lane); preserves ARP IN |
+| Delete + side clip button | Clear notes (structure survives) |
+| Shift + Delete + side clip | Hard reset — notes and all params |
+| Delete + lane pad (drum) | Clear lane notes |
+| Shift + Delete + lane pad | Hard reset lane (MIDI note preserved) |
+| Delete + jog click | Reset active bank params |
+| Shift + Delete + jog click | Reset all play-FX (preserves ARP IN) |
+| Delete + clip pad (Session) | Delete clip |
+| Delete + scene launcher | Clear notes in row |
+| Shift + Delete + scene launcher | Hard reset row |
 
-| Control (Session View) | Action |
-|---|---|
-| Delete + clip pad | Delete clip immediately |
-| Delete + scene launcher | Clear all notes in the row. Pops "SEQUENCES CLEARED". |
-| Shift + Delete + scene launcher | Hard reset all clips in the row. Pops "CLIPS CLEARED". |
-| Delete + Mute | Clear all mutes/solos |
-
-## 10.4 Undo / Redo
-
-dAVEBOx supports **one level** of undo and redo.
-
-- **Undo** — Undo button. **Redo** — Shift + Undo.
-- After undoing, performing any new action discards the redo state.
-- If nothing to undo/redo, brief "NOTHING TO UNDO" / "NOTHING TO REDO" on the OLED.
-
-**Undoable actions** include: step clear, step copy, clip clear, clip copy/cut, hard reset (single clip or scene row), row clear, row copy, live recording session, bank param reset, full bank reset, Loop Double, drum lane copy/cut, drum clip copy/cut, drum lane clear, drum lane reset.
-
----
-
-# 11. Mixing — Volume, Mute, Solo
-
-## 11.1 Output volume
-
-Turn the **Volume encoder** in either view (no modifier held) to adjust master output. The volume goes through Move's hardware audio path.
-
-Per-track volume is not implemented in dAVEBOx — the Volume encoder is passed through to Move's firmware, which controls master output only. For per-track levels, adjust the gain on the destination (Move's native track mixer or the Schwung slot's chain).
-
-## 11.2 Mute and solo
+## Mute and solo
 
 | View | Mute | Solo |
 |---|---|---|
-| **Track View** | Press **Mute** — toggles mute on the active track | **Shift + Mute** — toggles solo on the active track |
-| **Session View** | Hold **Mute + tap a pad** in a column | Hold **Shift + Mute + tap a pad** in a column |
-| **Drum lanes** (Track View) | **Mute + lane pad** | **Shift + Mute + lane pad** |
+| Track View | Mute button | Shift + Mute |
+| Session View | Mute + clip pad | Shift + Mute + clip pad |
+| Drum lanes | Mute + lane pad | Shift + Mute + lane pad |
 
-**Either view: Delete + Mute** clears all mutes and solos.
+**Delete + Mute** clears all mutes and solos.
 
-Mute and solo are mutually exclusive: soloing a muted track clears its mute; muting a soloed track clears its solo. Same for drum lanes.
+Mute and solo are mutually exclusive per track/lane. Track mute silences sequenced notes and latched output, but held live pads still monitor through.
 
-> **Advanced.** Track mute silences sequenced notes *and* latched ARP IN / Rpt output, but held live/repeat pads still monitor through the chain (see [§6.7](#67-note-repeat)). Latches are preserved through mute — unmute resumes mid-phrase.
+### Mute/solo snapshots
 
-## 11.3 Mute/solo snapshots
+16 slots. In Session View, hold **Mute** and step buttons light (dark grey = empty, yellow = saved).
 
-16 slots save and recall full mute/solo state (including per-lane drum mutes). In Session View, hold **Mute** and the step buttons light: dark grey = empty slot, vivid yellow = saved state.
-
-| Control | Behavior |
+| Control | Action |
 |---|---|
-| Mute + hold a step ~0.75s | **Save** — step double-blinks to confirm |
-| Mute + tap a lit step | **Recall** — all tracks jump to the saved state immediately |
-| Mute + Delete + step | **Clear** the slot |
+| Mute + hold step ~0.75s | Save |
+| Mute + tap lit step | Recall |
+| Mute + Delete + step | Clear slot |
 
 Snapshots persist across reboots.
 
+## Volume
+
+The Volume encoder controls master output only (passed to Move firmware). Per-track volume is not available in dAVEBOx — adjust gain on the destination (Move mixer or Schwung chain).
+
 ---
 
-# Part V — Configuration
+# 13. MIDI Routing
 
-# 12. MIDI Routing
+## Default setup
 
-## 12.1 The default setup
+- **Tracks 1–4** → channels 1–4 → Move's native instruments
+- **Tracks 5–8** → channels 5–8 → Schwung slots 1–4
 
-dAVEBOx ships configured to drive Move and Schwung simultaneously:
+Requires Move and Schwung configured per §1.
 
-- **Tracks 1–4** → MIDI channels 1–4 → **Move's native instruments** (tracks 1–4 inside Move).
-- **Tracks 5–8** → MIDI channels 5–8 → **Schwung** (slots 1–4).
+## Per-track settings (Track Config)
 
-For this to work, Move and Schwung must receive on matching channels — configure them per [§1.1](#11-configure-move-and-schwung--one-time-setup). Set **MIDI Out = Off** on the Move tracks (prevents an echo loop), and set each Schwung slot's **Forward Channel** to **Auto** (not the default **Thru**, which silently blocks routing).
+- **Channel** — MIDI channel 1–16 (default: track N = channel N)
+- **Route** — Move, Schwung, or External (USB-A output)
 
-## 12.2 Per-track channel and route
+## External MIDI input
 
-Each track independently configures, via **Track Config** in the Global Menu:
+External MIDI from a USB-A controller routes to the active track. Filter by channel in Global Menu (MIDI In: All or 1–16). dAVEBOx rechannelizes incoming MIDI to the active track's channel.
 
-- **Channel** — MIDI channel 1–16. Default: track N on channel N.
-- **Route** — **Move** (native instruments), **Schwung** (internal chain), or **External** (USB-A out).
+## Live effects on external input
 
-## 12.3 External MIDI input
-
-dAVEBOx receives external MIDI from a controller on Move's USB-A port. Filter by channel in the Global Menu **MIDI In** field (All or 1–16).
-
-External MIDI is always routed to the **active track**. Switching tracks closes notes cleanly on the previous track. It integrates with step input: playing a note while holding a step adds it to the step exactly like a pad would. dAVEBOx rechannelizes incoming MIDI to the active track's configured channel — your controller doesn't need to be on the synth's channel.
-
-## 12.4 Live effects on external MIDI
-
-| Route | Live effects on external MIDI |
+| Route | Live effects |
 |---|---|
-| **Schwung** | Full chain applies — ARP IN, NOTE FX, HARMONY, DELAY all process external MIDI like pad input. |
-| **Move** | The chain does **not** apply. Notes reach the Move instrument directly. |
-| **External** | The chain applies; output goes back out via USB-A. |
+| Schwung | Full chain applies |
+| Move | Chain bypassed (would cause feedback loop) |
+| External | Full chain applies; output goes via USB-A |
 
-> **⚠ Important.** Routing live external MIDI through the chain on Move-routed tracks would create an echo cascade. dAVEBOx bypasses the chain for live input on Move-routed tracks regardless (Schwung v0.9.13 also suppresses it upstream; earlier versions could crash). Use **Schwung** routing if you need effects on a live external controller.
+## External MIDI output
 
-## 12.5 External MIDI output
+When Route = External, all MIDI goes out via USB-A: sequencer, live pads, external echo, effects, ARP IN, Performance Mode. Multiple tracks can route External for multi-timbral setups.
 
-When a track's Route is **External**, all of that track's MIDI goes out via USB-A: sequencer playback, live pad input, echoed external MIDI input, the full effects chain, ARP IN output, and Performance Mode mods. Notes are sent on the track's configured channel. Multiple tracks can route to External at once for multi-timbral setups on one connection.
+**Transport Stop** sends note-offs and clears ARP IN latches on all tracks. **Delete + Play (stopped)** sends MIDI panic on all channels and clears Rpt1, Rpt2, and ARP IN latches. **Delete + Play (running)** deactivates all clips and clears latches.
 
-Transport Stop sends note-offs for sounding notes and clears ARP IN latches across every track. Delete + Play (stopped) sends a full panic on all channels and clears Rpt1, Rpt2, and ARP IN latches across all tracks; Delete + Play (running) deactivates all clips and clears the same latches.
+## CC and aftertouch output
 
-## 12.6 Continuous-modulation output (CC / aftertouch)
-
-The CC AUTOMATION bank lanes run at 1/32 resolution with interpolation on playback, plus an opt-in per-clip resting value the lane resets to at each loop boundary. Each lane sends either a **CC** (its assigned number) or **channel-pressure aftertouch** (`AT`), per the knob's type. On External-routed tracks the output goes via USB-A. Knob→target assignment and per-knob type are per-track; resting values and automation are per-clip — see [§5.7](#57-cc-automation-bank-melodic-tracks-only).
+The AUTO bank lanes output CC or aftertouch data at 1/32 resolution with smooth interpolation. On External-routed tracks, output goes via USB-A. Aftertouch can also be recorded live via pad pressure when the track's AftTch setting is enabled (see §14 Track Config).
 
 ---
 
-# 13. Global Settings
+# 14. Global Settings & Persistence
 
-Open the menu with **Shift + Note/Session**. Jog navigates; jog click enters edit; jog rotate changes the value; jog click commits; **Note/Session** closes.
+## Track Config
 
-## 13.1 Track Config
-
-The first section, showing the **active** track's configuration. Header reads `Track [N] Config`. Values update live if you switch tracks while the submenu is open.
+Shown at the top of the Global Menu for the active track. Updates live if you switch tracks.
 
 | Entry | Values | Notes |
 |---|---|---|
-| Channel | 1–16 | MIDI channel for this track |
-| Route | Move · Schwung · External | Output routing |
-| Mode | Melodic · Drum | Converts the track's notes when switched (see [§2.5](#25-melodic-vs-drum-tracks)) |
-| VelIn | Live · 1–127 | Live = raw velocity. A fixed value overrides all input velocity on this track, applied pre-sequencer. |
-| Looper | On · Off | Whether this track feeds Performance Mode |
-| AftTch | Off · Poly · Channel | Pad-pressure aftertouch send. **Shown on melodic tracks only** (on drum tracks pad pressure drives repeat velocity instead). Hold a note and press harder to send aftertouch to the track output; when the track is record-armed the pressure is also recorded into the clip and replays each loop (see [§5.7](#57-automation-bank--auto-melodic-tracks-only)). The toggle gates *incoming* aftertouch only — recorded aftertouch always plays back until cleared. **Poly** sends per-note aftertouch (`0xA0`); **Channel** sends one track-wide channel-pressure value (`0xD0`). On **Move**-routed tracks only Off · Poly is offered (Move instruments take poly aftertouch). Default Off. |
-| **Edit Slot...** | Action | Open Schwung's native chain-slot editor for this track. Shown only on **Schwung-routed** tracks. |
-| **Edit Synth...** | Action | Open Move firmware's preset browser and device-edit pages for this track. Shown only on **Move-routed** tracks. |
+| Channel | 1–16 | MIDI channel |
+| Route | Move, Schwung, External | Output routing |
+| Mode | Melodic, Drum | Converts notes when switched |
+| VelIn | Live, 1–127 | Live = raw velocity. Fixed value overrides all input velocity. |
+| Looper | On, Off | Whether track feeds Performance Mode |
+| AftTch | Off, Poly, Channel | Pad-pressure aftertouch (melodic tracks only). Poly sends individual pressure per note; Channel sends one pressure value for the whole track. Move-routed tracks only offer Off/Poly. Default Off. |
+| Edit Slot... | Action | Open Schwung chain editor (Schwung-routed only). *Forthcoming — requires a future Schwung update.* |
+| Edit Synth... | Action | Open Move preset browser (Move-routed only). *Forthcoming — requires a future Schwung update.* |
 
-Both `Edit Slot...` and `Edit Synth...` require the patched Schwung shim from [`legsmechanical/schwung`](https://github.com/legsmechanical/schwung); on stock Schwung these entries are hidden. Both run *alongside* dAVEBOx — the sequencer keeps playing so you can audition changes against the running pattern.
+### Edit Slot / Edit Synth (forthcoming)
 
-### Edit Slot... — Schwung chain editor
+These features allow editing the active track's sound source from within dAVEBOx — the Schwung chain editor (Edit Slot) or Move's preset browser (Edit Synth). Both require a future Schwung update that has not yet been released. They will appear in the Track Config menu once the update is available.
 
-Hands the **OLED, jog wheel, side clip buttons, and knob row** to Schwung's native chain-slot editor while dAVEBOx keeps the pads, step buttons, and transport.
+## Global settings
 
-- **First use** prompts a slot picker (1–4); your choice is remembered per track.
-- **Side clip buttons** inside the editor switch which slot you're editing.
-- **Knobs (K1–K8)** drive the focused chain component's parameters — turn to adjust, touch to peek the current value.
-- **Menu** exits and returns to dAVEBOx. **Back** also exits as a fallback (framework gesture). Inside the chain editor, Back pops one level within the editor's sub-views (component/patches/hierarchy); at the top level Back is silent so Menu is the explicit exit.
-- **Shift + Edit Slot...** (selecting the menu item with Shift held) reopens the slot picker to reassign this track to a different slot.
+| Item | Values | Default | Notes |
+|---|---|---|---|
+| Metro | Off, Cnt-In, Play, Always | — | Metronome timing |
+| Metro Vol | 0–150% | 100% | |
+| Tap Tempo | — | — | Full-screen tap interface. Pad taps calculate BPM. Jog ±1 BPM. |
+| BPM | 40–250 | — | |
+| Key | C through B | — | |
+| Scale | Major, Minor, Dorian, Phrygian, Lydian, Mixolydian, Locrian, Harmonic Minor, Melodic Minor, Pentatonic Major, Pentatonic Minor, Blues, Whole Tone, Diminished | — | |
+| Scale Aware | On, Off | On | Scale-aware params step in scale degrees instead of semitones |
+| Launch Quant | Now, 1/16, 1/8, 1/4, 1/2, 1-bar | Now | Now = clips start immediately when launched. Other values wait for the next beat boundary. |
+| MIDI In | All, 1–16 | All | External input channel filter |
+| Swing Amt | 50–75% | 50% | 50% = no swing, 66% = triplet swing |
+| Swing Res | 1/16, 1/8 | 1/16 | Which positions are affected |
+| Beat Markers | On, Off | On | Dim markers on steps 1, 5, 9, 13 |
+| Clear Session | — | — | Resets entire instance (confirm dialog) |
+| Save | — | — | Immediate save |
+| Quit | — | — | Save and exit |
 
-### Edit Synth... — Move device editor
+## Save states (snapshots)
 
-Hands the **OLED, jog wheel, side clip buttons (input), Shift, Back, the 8 device-edit knobs, and the master knob** to Move's native preset browser and device-edit pages. dAVEBOx keeps the pads, step buttons, transport, and Menu.
+Up to **16 snapshots** per set — full state backups stamped with date/time.
 
-- **On entry,** dAVEBOx lands Move on the track matching this track's **Channel** (channel 1 → Move Track 1, … channel 4 → Move Track 4), opening straight to that device's page with its knob-ring LEDs lit. On channels outside 1–4, pick a Move track manually.
-- **Side clip-button LEDs** are lit solid white during co-run as a "press to switch Move tracks" affordance. Move firmware doesn't continuously repaint those LEDs on its own (it only emits writes on certain events), so dAVEBOx paints them itself for a consistent read; pressing one still routes to Move firmware and switches the focused Move track. On exit, dAVEBOx reclaims the knob-ring LEDs immediately.
-- **Menu** exits and returns to dAVEBOx. Back is routed to Move's preset/device editor for in-Move navigation, so Menu is the explicit exit.
-- **Drum-mode tracks:** tapping a left-4-column pad silently selects the matching cell in Move's drum-instrument editor. dAVEBOx still fires the drum from its sequencer, so there's no double-trigger.
+- **Save state** (Global Menu) writes a new snapshot. When 16 exist, a picker opens to choose which to overwrite.
+- **Load state** opens a list (newest first). Jog to select, click to confirm. Loading discards unsaved changes.
+- Snapshots belong to the set. **Clear Session does not delete snapshots.**
+- After a format-changing update, old snapshots are marked `(old)` and can be removed.
 
-While either co-run is active, pad colors switch to a grayscale scheme to signal split-UI mode; normal colors restore on exit.
+## What persists per set
 
-A `── Global ──` separator divides Track Config from the global items.
+Auto-saves on suspend (Back) and exit (Shift+Back / Quit).
 
-## 13.2 Global items
+- All note data, per-clip effects, CLIP/DRUM LANE params, CC automation
+- Track settings: channel, route, mode, octave, VelIn, Looper, AftTch
+- Per-track active bank
+- Global settings (BPM, key, scale, swing, launch quant, metro, etc.)
+- Mute/solo state and all 16 snapshots
+- ARP IN state (latch clears on Stop/Delete+Play/Session entry but persists across track switches)
+- Performance Mode presets, latched mods
+- Note Repeat gate masks, grooves, per-lane rates
 
-| Item | Description |
-|---|---|
-| **Metro** | Off · Cnt-In · Play · Always. When the metronome click is audible. Count-in click plays on all 4 beats. **Shortcuts:** Mute + Play (Track View) toggles Off ↔ last non-Off; Shift + Step 6 cycles Cnt-In ↔ Always. |
-| **Metro Vol** | 0–150%. 100% = full scale; 150% = hot. |
-| **Tap Tempo** | Full-screen tap interface. Any pad tap calculates BPM from a rolling average. Jog adjusts ±1 BPM per detent. Jog click or Note/Session exits and applies. |
-| **BPM** | 40–250. Updates in real time. Note/Session cancels and restores previous. |
-| **Key** | Global root note (A through G#) |
-| **Scale** | Major · Minor · Dorian · Phrygian · Lydian · Mixolydian · Locrian · Harmonic Minor · Melodic Minor · Pentatonic Major · Pentatonic Minor · Blues · Whole Tone · Diminished |
-| **Scale Aware** | On (default) / Off. When On, scale-aware parameters (NOTE FX Offset and Rnd, HARMONY Hrm1/Hrm2, DELAY Pfb and Rnd) step in scale degrees rather than semitones. Bypassed on drum tracks. |
-| **Launch Quant** | **Now (default)** · 1/16 · 1/8 · 1/4 · 1/2 · 1-bar. When set to Now, clip launches are immediate and legato if a clip is already playing. All other values wait for the next boundary and start from the beginning. |
-| **MIDI In** | All (default) / 1–16. Channel filter for external MIDI input. |
-| **Swing Amt** | 50%–75%. 50% = no swing. 66% = perfect triplet swing. Applied globally at render time. |
-| **Swing Res** | 1/16 (default) · 1/8. Which note positions are affected by swing. |
-| **Beat Markers** | On (default) / Off. When On, step buttons 1, 5, 9, 13 show a dim track-color marker in Track View when not otherwise active. |
-| **Clear Session** | Resets the entire dAVEBOx instance (Yes/No dialog, defaults to No). Only the active set is affected. Resets all tracks to defaults — including per-track ARP IN latch state — so latched chords don't keep firing into the cleared session. |
-| **Save** | Closes the menu and saves DSP state and UI state immediately. Shows "STATE SAVED". |
-| **Quit** | Saves current state and exits dAVEBOx (equivalent to Shift+Back). |
+## Set duplication
 
----
+Duplicating a Move set via the native set page inherits dAVEBOx state:
+- **1 parent found:** silent auto-inherit
+- **0 parents:** blank start
+- **2+ candidates:** picker dialog
 
-# 14. State & Persistence
+## Cleanup
 
-## 14.1 What saves, and when
-
-State saves automatically when you:
-
-- **Suspend** dAVEBOx (press **Back** — the sequencer keeps playing in the background).
-- **Exit** dAVEBOx (**Shift + Back** or **Quit** — equivalent).
-
-Use **Save** in the Global Menu for an immediate manual save at any time. State is **not** saved continuously during use.
-
-## 14.2 What persists per set
-
-- All note data (per clip, per track)
-- Per-clip params (NOTE FX, HARMONY, DELAY, SEQUENCE ARP, CC AUTOMATION per clip) and CLIP-bank values per clip
-- Track settings: channel, route, mode, octave shift, VelIn, Looper
-- Per-track active param bank (which bank each track was on when last left)
-- Global settings (BPM, key, scale, scale-aware, launch quant, metro, swing, MIDI in, beat markers)
-- Mute / solo state and all 16 snapshots (including per-lane drum mutes)
-- ARP IN per-track state (except latch, which resets on transport Stop, Delete + Play, or Session View entry — but persists across track switches)
-- Performance Mode user presets (slots 9–16) and currently-latched mods
-- Note Repeat per-lane gate masks, groove, and lengths
-
-## 14.3 Set duplication and state inheritance
-
-When you duplicate a Move set via the native set page, the new set inherits dAVEBOx state from the source on first launch. Behavior depends on how many known parent sets are found:
-
-- **One known parent.** Silent auto-inherit, no dialog.
-- **Zero known parents.** Silent blank start.
-- **Two or more candidates.** A dialog appears: **"Copied Move set detected / Inherit dAVEBOx state from?"** with each candidate listed plus a **Start blank** option. Jog to navigate, jog click to confirm; **Sample** cancels (= Start blank).
-
-Sources whose Move set has since been deleted are filtered out of the picker. Selecting **Start blank** cleanly resets the DSP with no carryover.
-
-## 14.4 Orphan cleanup
-
-On launch, dAVEBOx prunes its own state files for any Move set that has been deleted. Schwung's files in those folders are left untouched.
+When you delete a Move set, dAVEBOx automatically removes its own saved data for that set the next time it launches.
 
 ---
 
-# Part VI — Reference
+# 15. Cheat Sheet
 
-# 15. Limitations & Gotchas
-
-| Limitation | Notes |
-|---|---|
-| **External MIDI into Move-routed tracks bypasses the effects chain** | Routing live external MIDI through the chain on a Move-routed track would create an echo cascade, so dAVEBOx skips the chain for live input there; the keyboard plays the Move track whose MIDI In matches its channel. Use **Schwung** routing if you need effects on live external MIDI. |
-| **The hardware volume knob is master-only** | Per-track volume isn't implemented; adjust gain on the destination instead. |
-| **Powering Move off from within dAVEBOx causes a brief hang** before shutdown. | — |
-| **CC automation lanes are not swung** | Intentional — keeps automation precisely on the grid. |
-
----
-
-# Appendix A — LED Reference
-
-### Clip pads (Session View)
-
-| State | LED |
-|---|---|
-| Empty slot | Off |
-| Has content, inactive | Very dim track color |
-| Active empty slot (focused) | Dark grey |
-| Will relaunch when transport starts | Solid bright track color |
-| Playing | Flash between dim and bright track color at 1/8-note rate |
-| Queued to launch | Flash at 1/16-note rate |
-| Queued to stop | Flash between dim and off at 1/16-note rate |
-
-All playing clips flash in sync, locked to the main clock.
-
-### Side clip buttons (Track View)
-
-| State | LED |
-|---|---|
-| Playing | Flash between bright and dim track color at 1/8-note rate |
-| Focused, will relaunch | Slow pulse between bright and dim track color |
-| Focused (not playing) | Solid bright track color |
-| Has content, not focused | Dim track color |
-| Empty | Dark grey |
-
-### Step buttons (Track View)
-
-| State | LED |
-|---|---|
-| Playhead position | White |
-| Active step (has notes) | Track color |
-| Inactive step within clip | Off (beat-marker positions 1/5/9/13 show dim track color when Beat Markers is on) |
-| Out of bounds (beyond clip length) | Dark grey |
-
-### Step buttons (Session View — scene scroll indicator)
-
-| State | LED |
-|---|---|
-| Rows currently in view | Red (pulsing if any clip in that row is playing) |
-| Rows out of view with playing clips | Pulsing white |
-| Rows out of view with content | Solid white |
-| Rows out of view, all empty | Off |
-
-### Knob LEDs
-
-**Performance Mode (locked):** each knob LED shows the looper state for the corresponding track — track color when looper is on, off when off. Touching a knob toggles that track's looper and updates the LED immediately.
-
-**All banks except CC AUTOMATION (Track View):** lit when the parameter has been changed from its default; off when at default.
-
-**CC AUTOMATION bank:**
-
-| State | LED |
-|---|---|
-| Unassigned | Off |
-| Assigned, no automation | White |
-| Has automation for this clip | Vivid yellow |
-| Recording armed | Red — brightness = current knob value |
-| Playback with automation | Green — brightness = automation value at playhead |
-
-### Mute button LED (Track View)
-
-| State | LED |
-|---|---|
-| Active track muted | Solid |
-| Active track soloed | Blinking (~4 Hz) |
-| Neither | Solid dim |
-
-### Mute/solo snapshot slots (Session View, while holding Mute)
-
-| State | LED |
-|---|---|
-| Empty slot | Dark grey |
-| Saved state | Vivid yellow |
-
----
-
-# Appendix B — OLED Reference
-
-### Bank header format
-
-Bank headers use `[ LABEL ]` format, e.g. `[ NOTE FX ]`, with a `Tr[n]` indicator on the right showing the active track. On drum tracks, headers use a prefix convention: `DRUM LANE >>` for the DRUM LANE bank itself, `>> BANKNAME` for other per-lane banks (e.g. `>> NOTE FX`), and `ALL LANES` (no prefix).
-
-### Bank parameter display
-
-All 8 parameters and their values show at once in Track View. Touching or turning a knob inverts that parameter's row (black on white); the highlight clears on release. The full overview is always visible — touching a knob never replaces it.
-
-### Idle screen — melodic track
-
-**Row 1 (status bar):** Metro mode · VelIn indicator (Live or fixed value) · Fix / Adap recording indicator.
-
-| Indicator | Meaning |
-|---|---|
-| Fix | Clip has content or a preset length — recording loops at the existing size |
-| Adap | Clip slot is empty with no preset length — recording grows until stopped |
-
-**Row 2:** `Oct:+0` · `Arp` (only when ARP IN is active; inverts when latched) · current key and scale right-aligned (`A Min`, `C# Pent+`). When Scale Aware is on, a 1px underline appears beneath key/scale.
-
-### Idle screen — drum track
-
-**Pad info row:** `Bank: A   Pad: C3 (48)` — active bank (A/B) and the active lane's MIDI note name + number.
-**Mute/solo row:** mute/solo status for the active lane.
-
-### Performance Mode
-
-- **Header bar** — preset name when a slot is recalled (e.g. `Float`); otherwise `PERFORMANCE`. White-on-black.
-- **Body** — abbreviated list of all active mods (sticky + held), e.g. `Oct+  Sc+  Drift  Sprs`, up to four lines. When none: `no mods active / tap pad to engage`.
-- **Footer chips** — `Latch` (filled = sticky mode), `Hold` (filled when engaged), `Sync` (filled = clock-aligned), and the current loop rate on the right when a length is engaged.
-
-Pressing a mod pad briefly replaces the body with the full mod name. Hold-saving a preset shows `PERF PRESET / SAVED`; clearing shows `PERF PRESET / CLEARED`.
-
-### Track number row
-
-Track numbers 1–8 across the OLED width.
-
-| State | Display |
-|---|---|
-| Active track | 1px box around the number |
-| Muted track | Number blinks |
-| Soloed track | Filled box, solid inverted number (does not blink) |
-
-### Position bar
-
-A segmented bar at the bottom of Track View showing the clip's page structure (window-relative):
-
-| Segment | Meaning |
-|---|---|
-| Solid block | Page currently in view |
-| Outline box | Page the playhead is on (when different from view page) |
-| Bottom edge line | Other pages with content |
-
-A dot moves across the bar tracking the playhead; it inverts to black when crossing the solid block so it stays visible. 1px ticks at the edges signal content beyond the visible window.
-
-### Action pop-ups (~520 ms)
-
-Dismissed immediately if you touch a knob or enter step edit.
-
-| Action | Message |
-|---|---|
-| Copy source selected | COPIED |
-| Cut source selected | CUT |
-| Paste confirmed | PASTED |
-| Clip clear | SEQUENCE CLEARED |
-| Scene row clear | SEQUENCES CLEARED |
-| Hard reset (single clip) | CLIP CLEARED |
-| Hard reset (scene row) | CLIPS CLEARED |
-| Bank param reset | BANK RESET |
-| Full bank reset | CLIP PARAMS RESET |
-| Loop double | LOOP DOUBLED |
-| Loop double at max length | CLIP FULL |
-| Drum lane clear | LANE CLEARED |
-| Drum lane reset | LANE RESET |
-| Scene captured | CAPTURED / TO ROW N |
-| Nothing to capture | NOTHING / TO CAPTURE |
-| Mute snapshot saved / cleared | MUTE STATE / SAVED · MUTE STATE / CLEARED |
-| Perf preset saved / cleared | PERF PRESET / SAVED · PERF PRESET / CLEARED |
-| Beat stretch blocked (no room) | NO ROOM |
-| Resolution zoom blocked | NOTES OUT OF RANGE |
-| State saved | STATE SAVED |
-| Undo / nothing to undo | UNDO · NOTHING TO UNDO |
-| Redo / nothing to redo | REDO · NOTHING TO REDO |
-
-(`COMPRESS LIMIT`, shown when a beat-stretch compress is blocked, appears as a brief on-screen dialog rather than an action popup.)
-
----
-
-# Appendix C — Controls Cheat Sheet
-
-## Track View — melodic
+## Track View — Melodic
 
 | Control | Action |
 |---|---|
-| Pad | Play note; add to step if step held (step-first chord entry) |
-| Pads held + step | Capture all held notes into that step (pad-first chord entry) |
-| Up / Down | Shift pad octave range |
-| Step (tap) | Add/remove hit; assigns last played note to empty steps |
-| Step (hold ≥200ms) | Open step edit overlay |
-| Multiple steps tapped | Toggle several at once |
-| Side clip buttons (left edge, 4) | Switch active clip on the current track |
-| Jog rotate | Cycle parameter banks |
-| Shift + jog rotate | Switch tracks 1–8 |
-| Shift + bottom-row pad (1–8) | Switch to that track |
-| Loop + jog rotate | Adjust clip length ±1 step |
-| Delete + jog click | Reset params in active bank |
-| Shift + Delete + jog click | Reset all play FX (preserves ARP IN) |
-| Left / Right arrows | Navigate clip pages |
-| Volume encoder | Master output volume |
-| Play | Resume previously-playing clips (start/stop transport) |
-| Shift + Play | Restart transport from start |
-| Loop + Play | Restart with active clip at the visible page's first step (others land in sync) |
-| Delete + Play (running) | Deactivate all clips + unlatch ARP IN / Rpt1 / Rpt2 on every track |
-| Delete + Play (stopped) | MIDI panic + unlatch on every track |
-| Record | Start / stop recording |
-| Capture | Open clip-bake dialog |
-| Loop | Enter loop view |
-| Mute | Toggle mute on active track |
-| Shift + Mute | Toggle solo on active track |
+| Pad | Play note |
+| Pads held + step | Chord entry (pad-first) |
+| Step held + pads | Chord entry (step-first) |
+| Step tap | Toggle step on/off |
+| Step hold (≥200ms) | Open step edit |
+| Up / Down | Shift octave |
+| Left / Right | Navigate pages |
+| Side clip buttons | Switch clips |
+| Jog rotate | Cycle banks |
+| Jog click | Toggle alt-param mode |
+| Shift + jog rotate | Switch tracks |
+| Shift + bottom-row pad | Switch to track 1–8 |
+| K1–K8 | Adjust active bank params |
+| Loop (hold) | Loop view |
+| Loop + jog | Adjust clip length |
+| Play | Start/stop transport |
+| Shift + Play | Restart from start |
+| Loop + Play | Restart at visible page |
+| Record | Start/stop recording |
+| Capture | Bake dialog |
+| Mute | Toggle mute |
+| Shift + Mute | Toggle solo |
 | Delete + Mute | Clear all mutes/solos |
-| Copy + step | Copy step → press dest step |
-| Copy + side clip | Copy clip → press dest |
-| Shift + Copy + side clip | Cut clip |
+| Mute + Play | Metro Off ↔ last non-Off |
+| Copy + step/clip | Copy → press destination |
+| Shift + Copy + clip | Cut |
 | Delete + step | Clear step |
-| Delete + side clip | Clear all notes in clip |
+| Delete + side clip | Clear clip notes |
 | Shift + Delete + side clip | Hard reset clip |
-| Undo / Shift + Undo | Undo / Redo |
-| Note/Session (tap / hold) | Switch to / peek Session View |
-| Shift + Note/Session | Open Global Menu |
-| K1–K8 | Adjust parameter in active bank |
-| Shift + K2 (CLIP) | Nudge (label flips to `Nudg`) |
-| Shift + K3 (CLIP) | Resolution Zoom mode |
-| Mute + Play | Metro toggle (Off ↔ last non-Off) |
+| Delete + jog click | Reset bank params |
+| Shift + Delete + jog click | Reset all play-FX |
+| Delete + Play (running) | Deactivate all clips + unlatch |
+| Delete + Play (stopped) | MIDI panic + unlatch |
+| Undo | Undo |
+| Shift + Undo | Redo |
+| Note/Session tap | Switch to Session View |
+| Note/Session hold | Peek Session View |
+| Shift + Note/Session | Global Menu |
 
-**Shift + Step shortcuts (Track View):** 2 = Global Menu (Global) · 3 = Edit Synth/Slot · 5 = Tap Tempo · 6 = Metro toggle · 7 = Swing Amt · 8 = Chromatic layout · 9 = Scale · 10 = VelIn toggle · 11 = ARP IN on/off · 15 = Double-and-fill loop · 16 = Quantize clip 100%. (See [§3.5](#35-shiftstep-shortcuts) for which work in Session View.)
+### Shift + step shortcuts
 
-## Track View — drum
+| Step | Action | Views |
+|---|---|---|
+| 2 | Global Menu (global section) | Both |
+| 3 | Edit Synth/Slot (forthcoming) | Track |
+| 5 | Tap Tempo | Both |
+| 6 | Metro (Cnt-In ↔ Always) | Both |
+| 7 | Swing | Both |
+| 8 | Chromatic toggle (melodic) / cycle right-pad mode (drum) | Track |
+| 9 | Scale | Both |
+| 10 | VelIn toggle (Live ↔ 100) | Track |
+| 11 | ARP IN on/off | Track (melodic) |
+| 15 | Double-and-fill loop | Track |
+| 16 | Quantize 100% | Track |
 
-All melodic Track View controls apply except as noted.
+## Track View — Drum (additions/changes)
 
 | Control | Action |
 |---|---|
-| Lane pad (left 4×4) | Trigger lane / select as active |
-| Capture + lane pad | Select lane silently (no trigger) |
-| Jog click | Cycle right-pad mode: Velocity → Rpt1 → Rpt2 |
-| Shift + Step 8 | Cycle right-pad mode (same as jog click) |
-| Step (tap) | Add/remove hit on active lane |
-| Step (hold) | Open step edit overlay for active lane (K3/K4/K5 only) |
-| Mute + lane pad | Mute / unmute lane |
-| Shift + Mute + lane pad | Solo / unsolo lane |
-| Copy + lane pad | Copy lane → press dest lane |
+| Lane pad | Trigger + select lane |
+| Capture + lane pad | Select silently |
+| Jog click | Cycle right-pad mode (Vel/Rpt1/Rpt2) |
+| Step hold | Drum step edit (K1 Leng, K2 Vel, K3 Nudg, K5 Iter, K6 Prob, K7 Ratch) |
+| Mute + lane pad | Mute/unmute lane |
+| Shift + Mute + lane pad | Solo/unsolo lane |
+| Copy + lane pad → dest | Copy lane |
 | Shift + Copy + lane pad | Cut lane |
-| Delete + lane pad | Clear lane notes |
+| Delete + lane pad | Clear lane |
 | Shift + Delete + lane pad | Hard reset lane |
+| Loop + rate pad (Rpt1) | Latch repeat |
+| Loop + lane pad (Rpt2) | Latch lane repeat |
+| Held lanes + Loop (Rpt2) | Latch all held |
 | Delete + Loop | Stop all latched repeats |
-| Delete + jog click (Rpt1/Rpt2) | Reset groove for active lane |
-| Loop + rate pad (Rpt1) | Start and latch repeat at that rate |
-| Loop + lane pad (Rpt2) | Latch repeat on that lane |
-| Held lanes + Loop (Rpt2) | Latch all currently held lanes |
-| Loop + gate mask pad | Set repeat cycle length (1–8) |
-
-**Drum step edit (hold step):** K3 = gate length · K4 = velocity · K5 = nudge timing.
+| Loop + gate pad | Set repeat cycle length |
 
 ## Session View
 
 | Control | Action |
 |---|---|
-| Clip pad (tap) | Launch or queue clip (queue-to-stop if already playing) |
-| Empty clip pad (tap) | Focus for recording |
-| Shift + clip pad | Launch and jump to Track View |
-| Scene launcher | Launch full scene row |
-| Shift + scene launcher | Launch row at next bar (regardless of Launch Quant) |
-| Step buttons 1–16 | Launch corresponding scene row |
-| Jog rotate | Scroll scene rows |
-| +/− | Scroll by 4 rows |
-| Tap a pad in any column | Set that track as active |
-| Volume encoder | Master output volume |
-| Play / Shift + Play | Start-stop / restart transport |
-| Delete + Play (running / stopped) | Deactivate all + unlatch / MIDI panic + unlatch |
-| Mute + clip pad | Mute / unmute track |
-| Shift + Mute + clip pad | Solo / unsolo track |
+| Clip pad | Launch/queue clip |
+| Empty clip pad | Focus for recording |
+| Shift + clip pad | Launch + jump to Track View |
+| Scene launcher / steps 1–16 | Launch scene row |
+| Shift + scene launcher | Launch at next bar |
+| Jog rotate | Scroll rows |
+| +/− | Scroll by 4 |
+| Mute + clip pad | Mute/unmute track |
+| Shift + Mute + clip pad | Solo/unsolo track |
 | Delete + Mute | Clear mutes/solos |
-| Mute (held) + step (tap / hold ~0.75s) | Recall / save mute-solo snapshot |
+| Mute (hold) + step tap | Recall mute snapshot |
+| Mute (hold) + step hold | Save mute snapshot |
 | Mute + Delete + step | Clear snapshot slot |
-| Copy + clip pad / Shift + Copy + clip pad | Copy / cut clip |
-| Copy + scene launcher / Shift + Copy + scene launcher | Copy / cut scene row |
-| Capture + scene launcher | Snapshot active clips into that row |
-| Capture (tap) | Open scene-bake picker |
-| Sample (tap) | Arm / stop multi-track Live Merge |
-| Sample + scene launcher | Scene-bake confirm (direct) |
+| Copy + clip pad | Copy clip |
+| Shift + Copy + clip pad | Cut clip |
+| Copy + scene launcher | Copy row |
+| Capture + scene launcher | Snapshot playing clips to row |
+| Capture (tap) | Scene-bake picker |
+| Sample (tap) | Arm/stop Live Merge |
+| Sample + scene launcher | Direct scene bake |
 | Delete + clip pad | Delete clip |
-| Delete + scene launcher | Clear all notes in row |
+| Delete + scene launcher | Clear row notes |
 | Shift + Delete + scene launcher | Hard reset row |
-| Undo / Shift + Undo | Undo / Redo |
-| Loop (tap / hold) | Lock / temporary Performance Mode |
-| Shift + Loop | Toggle Performance Mode latch |
-| Note/Session (tap / hold) | Switch to / peek Track View |
-| Shift + Note/Session | Open Global Menu |
-
-**Shift + Step shortcuts (Session View):** 2 = Global Menu · 5 = Tap Tempo · 6 = Metro toggle · 7 = Swing Amt · 9 = Scale.
-
-## Performance Mode (Session View + Loop)
-
-| Control | Action |
-|---|---|
-| Loop (tap / hold) | Lock / temporary |
+| Loop (tap) | Lock Performance Mode |
+| Loop (hold) | Temporary Performance Mode |
 | Shift + Loop | Toggle latch mode |
-| R0 length pads 1–5 (1/32 – 1/2) | Set capture length, trigger capture |
-| Step 6 (while holding Loop to enter) | 1-bar capture length |
-| Step 16 (held) + length pad | Triplet variant of that length |
-| R0 Hold / Sync / Latch pads | Persistent hold / clock-aligned capture / latch mode |
-| R1 / R2 / R3 pads | Pitch / vel-gate / wild mods |
-| Knob touch (K1–K8) | Toggle that track's Looper flag |
-| Tap mod pad (lit) | Clear that mod (either latch state) |
-| Step (tap / hold ~0.75s) | Recall / save preset slot |
-| Delete + step | Clear preset slot |
 
-## Loop view (Track View + Loop held)
+## Performance Mode
 
 | Control | Action |
 |---|---|
-| Jog rotate | Adjust clip length ±1 step |
-| Two page buttons | Set loop start and end |
-| Page (tap) | Set window `[0, N]` |
-| Play | Restart with active clip at the visible page's first step |
-| Delete | Delete active clip |
-| Delete + page | Clear all notes in that page |
+| R0 pads 1–5 | Set capture length (1/32–1/2 bar) |
+| Step 6 (while entering) | 1-bar capture |
+| Step 16 + length pad | Triplet variant |
+| R0-6 Hold | Persistent hold |
+| R0-7 Sync | Clock-aligned capture |
+| R0-8 Latch | Latch mode |
+| R1–R3 pads | Pitch / vel-gate / wild mods |
+| Lit pad tap | Clear that mod |
+| K1–K8 touch | Toggle track's Looper |
+| Step tap | Recall preset |
+| Step hold ~0.75s | Save preset |
+| Delete + step | Clear preset |
+
+## Loop View (Track View + Loop held)
+
+| Control | Action |
+|---|---|
+| Jog rotate | Adjust length ±1 step |
+| Tap page | Set window [start, tapped] |
+| Hold page + tap page | Set range [held, tapped] |
+| Play | Restart at visible page |
+| Delete | Delete clip |
+| Delete + page | Clear page notes |
 | Copy + page | Copy page |
-| Shift + Step 15 | Double-and-fill loop |
+| Shift + Step 15 | Double-and-fill |
 
-## Step edit overlay (Track View — hold a step)
-
-| Control | Action |
-|---|---|
-| K1 / K2 | Shift notes by octave / scale degree |
-| K3 / K4 / K5 | Gate length / velocity / nudge timing (±23 ticks) |
-| Up / Down | Shift pad octave range |
-| Pads | Add/remove notes (step-first chord entry) |
-| Multiple steps held | Apply edits to all held steps |
-
-## Global Menu (Shift + Note/Session)
+## Step Edit (hold step)
 
 | Control | Action |
 |---|---|
-| Jog rotate | Navigate items (change value in edit mode) |
-| Jog click | Enter edit mode / confirm |
-| Note/Session | Close menu |
-| Pads / step buttons | Function normally while menu is open |
+| K1–K5 | Oct / Pit / Leng / Vel / Nudg (melodic) |
+| K6–K8 | Iter / Prob / Ratch (melodic) |
+| K1–K3, K5–K7 | Leng / Vel / Nudg / Iter / Prob / Ratch (drum) |
+| Up / Down | Shift octave range |
+| Pads | Add/remove notes |
+| Multiple steps held | Edit all at once |
+
+---
+
+# 16. Parameter Reference
+
+## CLIP bank (melodic)
+
+| K | Label | Range | Default | Destructive | Alt-mode |
+|---|---|---|---|---|---|
+| 1 | Res | 1/32, 1/16, 1/8, 1/4, 1/2, 1bar | 1/16 | Yes | Zoom |
+| 2 | Stch | Halve ← · → Double | — | Yes | — |
+| 3 | Shft | Whole steps ±N | 0 | Yes | Nudg (tick resolution) |
+| 4 | Lgto | → (right-turn opens confirm) | — | Yes (one-shot) | — |
+| 5 | InQ | Off, 1/64, 1/32, 1/16, 1/16T, 1/8, 1/8T, 1/4, 1/4T | Off | No (per-track) | — |
+| 7 | Dir | Fwd, Bwd, PPf, PPb | Fwd | No | RvSt (Step, Audio) |
+| 8 | SqFl | On, Off | On | No | — |
+
+## DRUM LANE bank
+
+| K | Label | Range | Default | Destructive | Alt-mode |
+|---|---|---|---|---|---|
+| 1 | Res | 1/32, 1/16, 1/8, 1/4, 1/2, 1bar | 1/16 | Yes | Zoom |
+| 2 | Stch | Halve ← · → Double | — | Yes | — |
+| 3 | Shft | Whole steps ±N | 0 | Yes | Nudg |
+| 4 | Lgto | → (right-turn opens confirm) | — | Yes (one-shot) | — |
+| 5 | Eucl | 0–lane length | 0 | Yes | — |
+| 7 | Dir | Fwd, Bwd, PPf, PPb | Fwd | No | RvSt (Step, Audio) |
+| 8 | SqFl | On, Off | On | No | — |
+
+## NOTE FX bank
+
+| K | Label | Range | Default | Notes |
+|---|---|---|---|---|
+| 1 | Oct | ±4 octaves | 0 | |
+| 2 | Ofs | ±24 | 0 | Scale-aware |
+| 3 | Vel | ±127 | 0 | Velocity offset (signed) |
+| 4 | Qnt | 0–100% | 0% | Playback quantize |
+| 5 | Len> | --, .25, .50, .75, 1, 2, 4, 8, 16 | -- | Fixed pre-gate length (step-multiples). -- = passthrough. |
+| 6 | Gate | 0–400% | 100% | Post-Len gate scale. <100% = staccato, >100% = legato. |
+| 8 | Rnd | 0–24 | 0 | Pitch random (scale-aware). Alt: Walk/Uniform/Gaussian. |
+
+On drums: K1+K2 = lane MIDI note, K3–K6 = per-lane.
+
+## HARMONY bank (melodic only)
+
+| K | Label | Range | Default | Notes |
+|---|---|---|---|---|
+| 1 | Oct | ±4 | 0 | |
+| 2 | Hrm1 | ±24 | 0 | Scale-aware |
+| 3 | Hrm2 | ±24 | 0 | Scale-aware |
+| 4 | Hrm3 | ±24 | 0 | Scale-aware |
+
+## DELAY bank
+
+| K | Label | Range | Default | Notes |
+|---|---|---|---|---|
+| 1 | Rate | 1/64 through 1/1D (17 values incl. dotted/triplet) | 1/8D | Alt: ClkF (offsets timing per repeat, ±100) |
+| 2 | Lvl | 0–127 | 127 | Echo velocity |
+| 3 | Rep | 0–16 | 0 | 0 = bypass |
+| 4 | Vfb | ±127 | 0 | Velocity per repeat |
+| 5 | Pfb | ±24 | 0 | Pitch per repeat (scale-aware) |
+| 6 | Gate | Off, 1/64, 1/32, 1/16T, 1/16, 1/8T, 1/8, 1/4T, 1/4, 1/2, 1bar | Off | Fixed echo gate |
+| 7 | Rtrg | On, Off | On | New note drops in-flight echoes |
+| 8 | Rnd | 0–24 | 0 | Echo pitch random (scale-aware). Alt: algorithm. |
+
+## SEQ ARP bank (melodic only)
+
+| K | Label | Range | Default |
+|---|---|---|---|
+| 1 | Styl | Off, Up, Dn, U/D, D/U, Cnv, Div, Ord, Rnd, RnO | Off |
+| 2 | Rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1bar | 1/16 |
+| 3 | Oct | ±4 (0 = Off) | Off |
+| 4 | Gate | 1–200% | 100% |
+| 5 | Stps | Mute, Step | Mute |
+| 6 | Rtrg | On, Off | On |
+| 7 | Sync | On, Off | On |
+
+Jog click → Arp Steps editor.
+
+## ARP IN bank
+
+| K | Label | Range | Default |
+|---|---|---|---|
+| 1 | Styl | Off, Up, Dn, U/D, D/U, Cnv, Div, Ord, Rnd, RnO | Off |
+| 2 | Rate | 1/32, 1/16, 1/16t, 1/8, 1/8t, 1/4, 1/4t, 1/2, 1/2t, 1bar | 1/16 |
+| 3 | Oct | ±4 (0 = Off) | Off |
+| 4 | Gate | 1–200% | 100% |
+| 5 | Stps | Mute, Step | Mute |
+| 6 | Rtrg | On, Off | Off |
+| 7 | Sync | On, Off | On |
+| 8 | Ltch | On, Off | Off |
+
+Per-track. Jog click → Arp Steps editor.
+
+## ALL LANES bank (drum)
+
+| K | Label | Range | Default | Notes |
+|---|---|---|---|---|
+| 1 | Res | 1/32–1bar | -- (resets after release) | Sets all lanes |
+| 2 | Stch | Halve/Double | — | Atomic; "NO ROOM" if blocked |
+| 3 | Shft | ±N steps | 0 | Alt: Nudg |
+| 4 | Qnt | 0–100% | -- (resets after release) | Non-destructive |
+| 5 | VelIn | Live, 1–127 | Live | Per-track |
+| 6 | InQ | Off, 1/64–1/4T | Off | Per-track |
+| 7 | Dir | Fwd, Bwd, PPf, PPb | -- (resets) | Alt: RvSt |
+| 8 | SyncRpt | On, Off | On | Repeat first-fire timing |
+
+## REPEAT GROOVE bank (drum, repeat active)
+
+| K | Label (unshifted) | Label (Shift) |
+|---|---|---|
+| 1–8 | Velocity scaling per gate step (0–200%) | Nudge offset per gate step (±50%) |
+
+Per-lane. Delete + jog click resets.
+
+## Step edit — melodic
+
+| K | Label | Range |
+|---|---|---|
+| 1 | Oct | ±octaves |
+| 2 | Pit | ±scale degrees (scale-aware) |
+| 3 | Leng | Gate length |
+| 4 | Vel | 0–127 |
+| 5 | Nudg | ±1 step minus 1 tick |
+| 6 | Iter | --, 1/2, 2/2, … 8/8 |
+| 7 | Prob | --, 0–100% |
+| 8 | Ratch | --, x2, x3, x4 |
+
+## Step edit — drum
+
+| K | Label | Range |
+|---|---|---|
+| 1 | Leng | Gate length |
+| 2 | Vel | 0–127 |
+| 3 | Nudg | ±1 step minus 1 tick |
+| 5 | Iter | --, 1/2, 2/2, … 8/8 |
+| 6 | Prob | --, 0–100% |
+| 7 | Ratch | --, x2, x3, x4 |
+
+---
+
+# 17. LED & OLED Reference
+
+## Clip pads (Session View)
+
+| State | LED |
+|---|---|
+| Empty | Off |
+| Has content, inactive | Very dim track color |
+| Active empty (focused) | Dark grey |
+| Will relaunch on Play | Solid bright track color |
+| Playing | Flash dim/bright track color at 1/8-note rate |
+| Queued to launch | Flash at 1/16-note rate |
+| Queued to stop | Flash dim/off at 1/16-note rate |
+
+## Side clip buttons (Track View)
+
+| State | LED |
+|---|---|
+| Playing | Flash bright/dim track color at 1/8-note rate |
+| Focused, will relaunch | Slow pulse bright/dim |
+| Focused (not playing) | Solid bright track color |
+| Has content, not focused | Dim track color |
+| Empty | Dark grey |
+
+## Step buttons (Track View)
+
+| State | LED |
+|---|---|
+| Playhead | White |
+| Active step (has notes) | Track color |
+| Inactive step | Off (beat markers 1/5/9/13 dim track color when Beat Markers on) |
+| Beyond clip length | Dark grey |
+
+## Step buttons (Session View)
+
+| State | LED |
+|---|---|
+| Rows in view | Red (pulsing if row has playing clips) |
+| Out-of-view with playing clips | Pulsing white |
+| Out-of-view with content | Solid white |
+| Out-of-view, empty | Off |
+
+## Knob LEDs
+
+- **Performance Mode (locked):** track color = Looper on, off = Looper off.
+- **Most banks:** lit = param changed from default, off = at default.
+- **AUTO bank:** see §8 Automation.
+
+## Mute button (Track View)
+
+| State | LED |
+|---|---|
+| Muted | Solid |
+| Soloed | Blinking (~4 Hz) |
+| Neither | Solid dim |
+
+## OLED — Track View header
+
+**Melodic:** Metro mode · VelIn · Fix/Adap indicator · `Oct:±N` · `Arp` (inverts when latched) · Key + Scale (underlined when Scale Aware on)
+
+**Drum:** `Bank: A/B   Pad: C3 (48)` · mute/solo status for active lane
+
+## OLED — Track numbers
+
+| State | Display |
+|---|---|
+| Active | 1px box around number |
+| Muted | Number blinks |
+| Soloed | Filled box, solid inverted |
+
+## OLED — Position bar
+
+Segmented bar at bottom of Track View: solid block = current page, outline = playhead page (if different), bottom edge = other pages with content. Dot tracks playhead. 1px ticks at edges signal content outside window.
+
+## Action popups (~520ms)
+
+| Action | Message |
+|---|---|
+| Copy/Cut/Paste | COPIED / CUT / PASTED |
+| Clip clear | SEQUENCE CLEARED |
+| Row clear | SEQUENCES CLEARED |
+| Hard reset (clip) | CLIP CLEARED |
+| Hard reset (row) | CLIPS CLEARED |
+| Bank reset | BANK RESET |
+| Full FX reset | CLIP PARAMS RESET |
+| Loop double | LOOP DOUBLED |
+| Loop at max | CLIP FULL |
+| Lane clear / reset | LANE CLEARED / LANE RESET |
+| Scene capture | CAPTURED / TO ROW N |
+| Nothing to capture | NOTHING / TO CAPTURE |
+| Mute snapshot save/clear | MUTE STATE / SAVED · CLEARED |
+| Perf preset save/clear | PERF PRESET / SAVED · CLEARED |
+| Stretch blocked | NO ROOM |
+| Zoom blocked | NOTES OUT OF RANGE |
+| State saved | STATE SAVED |
+| Undo / nothing | UNDO · NOTHING TO UNDO |
+| Redo / nothing | REDO · NOTHING TO REDO |
+
+---
+
+## Limitations
+
+| Limitation | Notes |
+|---|---|
+| External MIDI on Move-routed tracks bypasses the effects chain | Would cause feedback loop. Use Schwung routing for effects on external input. |
+| Volume encoder is master-only | Per-track volume: adjust on destination. |
+| CC automation lanes are not swung | By design — keeps automation on the grid. |
+| Powering off from within dAVEBOx causes a brief hang | — |

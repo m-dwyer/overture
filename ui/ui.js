@@ -3644,8 +3644,8 @@ function drawUI() {
         }
         const ac        = effectiveClip(S.activeTrack);
         if (S.heldStepNotes.length > 0) {
-            /* Melodic step edit: 2-row 4-col grid. Row 1: K1 Oct, K2 Pit, K3 Dur, K4 Vel.
-             * Row 2: K5 Ndg, K6 Iter, K7 Rand, K8 Ratch. */
+            /* Melodic step edit: 2-row 4-col grid. Row 1: K1 Oct, K2 Note, K3 Leng, K4 Vel.
+             * Row 2: K5 Nudg, K6 Iter, K7 Prob, K8 Ratch. */
             const root = S.heldStepNotes[0];
             const noteLabel = S.heldStepNotes.length > 1
                 ? midiNoteName(root) + '+' + (S.heldStepNotes.length - 1)
@@ -3738,7 +3738,7 @@ function drawUI() {
 
     /* Arp Steps interval overlay: persistent bank overview while jog-clicked into
      * step-interval mode on SEQ ARP (4) or TARP (5). K1-K8 = per-step scale-degree
-     * offsets (±14); pad grid is the persistent step-vel level editor handled in
+     * offsets (±24); pad grid is the persistent step-vel level editor handled in
      * updateTrackLEDs. Renders REGARDLESS of knob-touch / inTimeout (persistent). */
     if (bank >= 0 && S.stepIntervalMode && !S.sessionView && (bank === 4 || bank === 5)) {
         const t      = S.activeTrack;
@@ -6506,7 +6506,7 @@ function _onCC_jog(d1, d2) {
     }
     /* Plain jog click on SEQ ARP (bank 4) or TARP (bank 5) in Track View toggles
      * the Arp Steps interval-edit overlay: knobs K1-K8 become per-step scale-degree
-     * offsets (±14), pad grid is the persistent step-vel level editor. Auto-clears
+     * offsets (±24), pad grid is the persistent step-vel level editor. Auto-clears
      * on next jog turn (handled in the main-knob delta branch below). */
     if (d1 === 3 && d2 === 127 && !S.shiftHeld && !S.deleteHeld && !S.copyHeld && !S.muteHeld &&
             !S.sessionView && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM &&
@@ -7967,7 +7967,7 @@ function _onCC_stepedit(d1, d2) {
         }
         return;
     }
-    /* Melodic step edit: K1 Oct, K2 Pit, K3 Dur, K4 Vel, K5 Ndg, K6 Iter, K7 Rand, K8 Ratch */
+    /* Melodic step edit: K1 Oct, K2 Note, K3 Leng, K4 Vel, K5 Nudg, K6 Iter, K7 Prob, K8 Ratch */
     if (S.heldStep >= 0 && S.heldStepNotes.length > 0 && d1 >= 71 && d1 <= 78) {
         const knobIdx = d1 - 71;
         const dir     = (d2 >= 1 && d2 <= 63) ? 1 : -1;
@@ -10061,7 +10061,7 @@ function _onStepButtons(d1, d2) {
         }
         forceRedraw();
     } else if (!S.shiftHeld && S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM) {
-        /* Drum mode: tap toggles hit; hold enters step edit (Dur/Vel).
+        /* Drum mode: tap toggles hit; hold enters step edit (Leng/Vel).
          * Press records time and state; toggle/clear deferred to release. */
         const t       = S.activeTrack;
         const lane    = S.activeDrumLane[t];
