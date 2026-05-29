@@ -2022,22 +2022,22 @@ function refreshDrumLaneBankParams(t, lane) {
             if (v.length >= 11) S.drumLaneLenMode[t][lane] = parseInt(v[10], 10) | 0;
         }
     }
-    /* DRUM LANE bank (0): Res (K3=idx2), Eucl (K4=idx3), Dir (K5=idx4),
-     * SqFl (K6=idx5) per-lane meta. */
+    /* DRUM LANE bank (0): Res (K1=idx0), Eucl (K5=idx4), Dir (K7=idx6),
+     * SqFl (K8=idx7) per-lane meta. */
     const tpsIdx = TPS_VALUES.indexOf(S.drumLaneTPS[t]);
-    S.bankParams[t][0][2] = tpsIdx >= 0 ? tpsIdx : 1;
-    S.bankParams[t][0][3] = S.drumLaneEuclidN[t][lane] | 0;
+    S.bankParams[t][0][0] = tpsIdx >= 0 ? tpsIdx : 1;
+    S.bankParams[t][0][4] = S.drumLaneEuclidN[t][lane] | 0;
     {
         const _pd = host_module_get_param('t' + t + '_l' + lane + '_playback_dir');
         const _pdv = parseInt(_pd, 10);
         const _pdvi = (isFinite(_pdv) && _pdv >= 0 && _pdv <= 3) ? _pdv : 0;
         S.drumLanePlaybackDir[t][lane] = _pdvi;
-        S.bankParams[t][0][4] = _pdvi;
+        S.bankParams[t][0][6] = _pdvi;
         const _par = host_module_get_param('t' + t + '_l' + lane + '_playback_audio_reverse');
         const _parv = parseInt(_par, 10);
         S.drumLanePlaybackAudioReverse[t][lane] = (isFinite(_parv) && _parv === 1) ? 1 : 0;
     }
-    S.bankParams[t][0][5] = S.clipSeqFollow[t][S.trackActiveClip[t]] ? 1 : 0;
+    S.bankParams[t][0][7] = S.clipSeqFollow[t][S.trackActiveClip[t]] ? 1 : 0;
     /* Repeat Groove state for this lane */
     syncDrumRepeatState(t, lane);
     S.screenDirty = true;
@@ -2102,22 +2102,21 @@ function refreshPerClipBankParams(t) {
         const _ll = parseInt(v[42], 10) | 0;
         S.seqArpStepLoopLen[t][ac] = (_ll >= 1 && _ll <= 8) ? _ll : 8;
     }
-    /* CLIP bank (0): Res (K3=idx2), Dir (K5=idx4), SqFl (K7=idx6) — all per-clip.
-     * K4 is unassigned (length is set via Loop+jog). */
+    /* CLIP bank (0): Res (K1=idx0), Dir (K7=idx6), SqFl (K8=idx7) — all per-clip. */
     const tps    = S.clipTPS[t][ac] || 24;
     const tpsIdx = TPS_VALUES.indexOf(tps);
-    S.bankParams[t][0][2] = tpsIdx >= 0 ? tpsIdx : 1;
+    S.bankParams[t][0][0] = tpsIdx >= 0 ? tpsIdx : 1;
     {
         const _pd = host_module_get_param('t' + t + '_clip_playback_dir');
         const _pdv = parseInt(_pd, 10);
         const _pdvi = (isFinite(_pdv) && _pdv >= 0 && _pdv <= 3) ? _pdv : 0;
         S.clipPlaybackDir[t][ac] = _pdvi;
-        S.bankParams[t][0][4] = _pdvi;
+        S.bankParams[t][0][6] = _pdvi;
         const _par = host_module_get_param('t' + t + '_clip_playback_audio_reverse');
         const _parv = parseInt(_par, 10);
         S.clipPlaybackAudioReverse[t][ac] = (isFinite(_parv) && _parv === 1) ? 1 : 0;
     }
-    S.bankParams[t][0][6] = S.clipSeqFollow[t][ac] ? 1 : 0;
+    S.bankParams[t][0][7] = S.clipSeqFollow[t][ac] ? 1 : 0;
     S.screenDirty = true;
 }
 
@@ -2753,7 +2752,7 @@ function readTrackConfig(t) {
     const diq = host_module_get_param('t' + t + '_diq');
     if (diq !== null && diq !== undefined) {
         S.drumInpQuant[t] = Math.max(0, Math.min(8, parseInt(diq, 10) | 0));
-        S.bankParams[t][7][4] = S.drumInpQuant[t];
+        S.bankParams[t][7][5] = S.drumInpQuant[t];
     }
 }
 
@@ -3767,16 +3766,17 @@ function drawUI() {
             const tpsIdx = Math.max(0, TPS_VALUES.indexOf(S.drumLaneTPS[t]));
             const sqfl   = S.clipSeqFollow[t][ac] ? 1 : 0;
             const eucN = Math.min(S.drumLaneEuclidN[t][lane] | 0, len);
-            const drumLaneLabels = ['Stch', S.altMode ? 'Nudg' : 'Shft', S.altMode ? 'Zoom' : 'Res', 'Eucl', S.altMode ? 'RvSt' : 'Dir', 'SqFl', null, 'Lgto'];
+            const drumLaneLabels = [S.altMode ? 'Zoom' : 'Res', 'Stch', S.altMode ? 'Nudg' : 'Shft', 'Lgto', 'Eucl', '-', S.altMode ? 'RvSt' : 'Dir', 'SqFl'];
             const drumLaneVals  = [
-                fmtStretch(S.bankParams[t][0][0]),
-                fmtSign(S.bankParams[t][0][1]),
                 fmtRes(tpsIdx),
+                fmtStretch(S.bankParams[t][0][1]),
+                fmtSign(S.bankParams[t][0][2]),
+                '->',
                 String(eucN),
+                '-',
                 S.altMode ? fmtRevStyle(S.drumLanePlaybackAudioReverse[t][lane] | 0)
                           : fmtPlayDir(S.drumLanePlaybackDir[t][lane] | 0),
                 fmtBool(sqfl),
-                null, '->',
             ];
             drawBankHeading('DRUM LANE >>');
             for (let k = 0; k < 8; k++) {
@@ -3791,17 +3791,20 @@ function drawUI() {
         } else if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 7) {
             /* ALL LANES bank overview */
             const t = S.activeTrack;
-            const qv = S.bankParams[t][7][2];
+            const rv = S.bankParams[t][7][0];
+            const qv = S.bankParams[t][7][3];
+            const dv = S.bankParams[t][7][6];
             const DIQ_LABELS = ['Off','1/64','1/32','1/16','1/16T','1/8','1/8T','1/4','1/4T'];
-            const allLabels = ['Stch', S.altMode ? 'Nudg' : 'Shft', 'Qnt', 'VelIn', 'InQ', 'SyncRpt', null, null];
+            const allLabels = ['Res', 'Stch', S.altMode ? 'Nudg' : 'Shft', 'Qnt', 'VelIn', 'InQ', S.altMode ? 'RvSt' : 'Dir', 'SyncRpt'];
             const allVals = [
-                fmtStretch(S.bankParams[t][7][0]),
-                fmtSign(S.bankParams[t][7][1]),
+                rv < 0 ? '--' : fmtRes(rv),
+                fmtStretch(S.bankParams[t][7][1]),
+                fmtSign(S.bankParams[t][7][2]),
                 qv <= 0 ? '--' : fmtPct(qv),
                 fmtVelOverride(S.trackVelOverride[t]),
                 DIQ_LABELS[S.drumInpQuant[t]] || 'Off',
-                fmtBool(S.bankParams[t][7][5]),
-                null, null,
+                dv < 0 ? '--' : (S.altMode ? fmtRevStyle(dv) : fmtPlayDir(dv)),
+                fmtBool(S.bankParams[t][7][7]),
             ];
             fill_rect(0, 0, 128, 9, 1);
             print(4, 1, (Math.floor(S.tickCount / 24) % 2 === 0 ? 'ALL' : '   ') + ' LANES', 0);
@@ -5397,13 +5400,25 @@ function _tickImpl() {
         const _res = host_module_get_param('t' + _sat + '_all_lanes_stretch_result');
         if (_res !== null && parseInt(_res, 10) === -1) {
             showActionPopup('NO ROOM');
-            S.bankParams[_sat][7][0] -= (S.knobLastDir[0] || 1); /* revert display counter */
+            S.bankParams[_sat][7][1] -= (S.knobLastDir[1] || 1);
         }
     }
     if (S.allLanesQntResetTick >= 0 && S.tickCount >= S.allLanesQntResetTick) {
-        S.bankParams[S.allLanesQntResetTrack][7][2] = -1;
+        S.bankParams[S.allLanesQntResetTrack][7][3] = -1;
         S.allLanesQntResetTick  = -1;
         S.allLanesQntResetTrack = -1;
+        S.screenDirty = true;
+    }
+    if (S.allLanesResResetTick >= 0 && S.tickCount >= S.allLanesResResetTick) {
+        S.bankParams[S.allLanesResResetTrack][7][0] = -1;
+        S.allLanesResResetTick  = -1;
+        S.allLanesResResetTrack = -1;
+        S.screenDirty = true;
+    }
+    if (S.allLanesDirResetTick >= 0 && S.tickCount >= S.allLanesDirResetTick) {
+        S.bankParams[S.allLanesDirResetTrack][7][6] = -1;
+        S.allLanesDirResetTick  = -1;
+        S.allLanesDirResetTrack = -1;
         S.screenDirty = true;
     }
     if (S.pendingDrumResync > 0) {
@@ -7499,7 +7514,7 @@ function _onCC_transport(d1, d2) {
         const _sfAc = effectiveClip(S.activeTrack);
         if (S.clipSeqFollow[S.activeTrack][_sfAc]) {
             S.clipSeqFollow[S.activeTrack][_sfAc] = false;
-            S.bankParams[S.activeTrack][0][6] = 0;
+            S.bankParams[S.activeTrack][0][7] = 0;
         }
         S.screenDirty = true;
     }
@@ -8041,54 +8056,7 @@ function _onCC_knobs(d1, d2) {
             if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
 
             if (knobIdx === 0) {
-                /* K1 = Stch (beat stretch, lock, sens=16) */
-                if (S.knobLocked[knobIdx]) return;
-                const len = S.drumLaneLength[t];
-                const canFire = dir === 1 ? (len * 2 <= 256) : (len >= 2);
-                if (!canFire) return;
-                S.knobAccum[knobIdx]++;
-                if (S.knobAccum[knobIdx] >= 16) {
-                    S.knobAccum[knobIdx] = 0;
-                    if (typeof host_module_set_param === 'function')
-                        host_module_set_param('t' + t + '_l' + lane + '_beat_stretch', String(dir));
-                    S.knobLocked[knobIdx] = true;
-                    const blocked = host_module_get_param('t' + t + '_beat_stretch_blocked') === '1';
-                    if (dir === -1 && blocked) {
-                        S.stretchBlockedEndTick = S.tickCount + STRETCH_BLOCKED_TICKS;
-                    } else {
-                        S.drumLaneLength[t] = dir === 1 ? len * 2 : Math.floor(len / 2);
-                        const maxPage = Math.max(0, Math.ceil(S.drumLaneLength[t] / 16) - 1);
-                        if (S.drumStepPage[t] > maxPage) S.drumStepPage[t] = maxPage;
-                        S.bankParams[t][0][0] = dir;
-                        S.pendingDrumResync = 2; S.pendingDrumResyncTrack = t;
-                    }
-                    S.screenDirty = true;
-                }
-                return;
-            }
-            if (knobIdx === 1) {
-                /* K2 = Shft (clock shift, sens=8). Shift+turn = Nudge (sens=4, faster). */
-                S.knobAccum[knobIdx]++;
-                if (S.knobAccum[knobIdx] >= (S.altMode ? 4 : 8)) {
-                    S.knobAccum[knobIdx] = 0;
-                    if (S.altMode) {
-                        /* alt = Nudge */
-                        S.bankParams[t][0][knobIdx] += dir;
-                        if (typeof host_module_set_param === 'function')
-                            host_module_set_param('t' + t + '_l' + lane + '_nudge', String(dir));
-                    } else {
-                        S.clockShiftTouchDelta += dir;
-                        S.bankParams[t][0][knobIdx] = S.clockShiftTouchDelta;
-                        if (typeof host_module_set_param === 'function')
-                            host_module_set_param('t' + t + '_l' + lane + '_clock_shift', String(dir));
-                    }
-                    S.pendingDrumLaneResync = 2; S.pendingDrumLaneResyncTrack = t; S.pendingDrumLaneResyncLane = lane;
-                    S.screenDirty = true;
-                }
-                return;
-            }
-            if (knobIdx === 2) {
-                /* K3 = Res (normal=proportional rescale; Shift=zoom, sens=16) */
+                /* K1 = Res (normal=proportional rescale; alt=zoom, sens=16) */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 16) {
                     S.knobAccum[knobIdx] = 0;
@@ -8096,7 +8064,6 @@ function _onCC_knobs(d1, d2) {
                     const nv = Math.max(0, Math.min(5, curIdx + dir));
                     if (nv !== curIdx) {
                         if (S.altMode) {
-                            /* Zoom: absolute note positions fixed, step grid shifts, length adjusts */
                             const newTps = TPS_VALUES[nv];
                             const newLen = Math.ceil(S.drumLaneLength[t] * S.drumLaneTPS[t] / newTps);
                             if (newLen > 256) {
@@ -8127,8 +8094,69 @@ function _onCC_knobs(d1, d2) {
                 }
                 return;
             }
+            if (knobIdx === 1) {
+                /* K2 = Stch (beat stretch, lock, sens=16) */
+                if (S.knobLocked[knobIdx]) return;
+                const len = S.drumLaneLength[t];
+                const canFire = dir === 1 ? (len * 2 <= 256) : (len >= 2);
+                if (!canFire) return;
+                S.knobAccum[knobIdx]++;
+                if (S.knobAccum[knobIdx] >= 16) {
+                    S.knobAccum[knobIdx] = 0;
+                    if (typeof host_module_set_param === 'function')
+                        host_module_set_param('t' + t + '_l' + lane + '_beat_stretch', String(dir));
+                    S.knobLocked[knobIdx] = true;
+                    const blocked = host_module_get_param('t' + t + '_beat_stretch_blocked') === '1';
+                    if (dir === -1 && blocked) {
+                        S.stretchBlockedEndTick = S.tickCount + STRETCH_BLOCKED_TICKS;
+                    } else {
+                        S.drumLaneLength[t] = dir === 1 ? len * 2 : Math.floor(len / 2);
+                        const maxPage = Math.max(0, Math.ceil(S.drumLaneLength[t] / 16) - 1);
+                        if (S.drumStepPage[t] > maxPage) S.drumStepPage[t] = maxPage;
+                        S.bankParams[t][0][1] = dir;
+                        S.pendingDrumResync = 2; S.pendingDrumResyncTrack = t;
+                    }
+                    S.screenDirty = true;
+                }
+                return;
+            }
+            if (knobIdx === 2) {
+                /* K3 = Shft (clock shift, sens=8). Alt = Nudge (sens=4, faster). */
+                S.knobAccum[knobIdx]++;
+                if (S.knobAccum[knobIdx] >= (S.altMode ? 4 : 8)) {
+                    S.knobAccum[knobIdx] = 0;
+                    if (S.altMode) {
+                        S.bankParams[t][0][knobIdx] += dir;
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param('t' + t + '_l' + lane + '_nudge', String(dir));
+                    } else {
+                        S.clockShiftTouchDelta += dir;
+                        S.bankParams[t][0][knobIdx] = S.clockShiftTouchDelta;
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param('t' + t + '_l' + lane + '_clock_shift', String(dir));
+                    }
+                    S.pendingDrumLaneResync = 2; S.pendingDrumLaneResyncTrack = t; S.pendingDrumLaneResyncLane = lane;
+                    S.screenDirty = true;
+                }
+                return;
+            }
             if (knobIdx === 3) {
-                /* K4 = Eucl (Bjorklund hit count, sens=8) */
+                /* K4 = Lgto: destructive one-shot. Right-turn opens confirm dialog. */
+                if (S.knobLocked[knobIdx]) return;
+                if (dir !== 1) return;
+                S.knobAccum[knobIdx]++;
+                if (S.knobAccum[knobIdx] >= 16) {
+                    S.knobAccum[knobIdx] = 0;
+                    S.confirmLgto       = true;
+                    S.confirmLgtoSel    = 0;
+                    S.confirmLgtoIsDrum = true;
+                    S.knobLocked[knobIdx] = true;
+                    forceRedraw();
+                }
+                return;
+            }
+            if (knobIdx === 4) {
+                /* K5 = Eucl (Bjorklund hit count, sens=8) */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 8) {
                     S.knobAccum[knobIdx] = 0;
@@ -8141,20 +8169,19 @@ function _onCC_knobs(d1, d2) {
                             host_module_set_param('t' + t + '_l' + lane + '_euclid_stamp',
                                                   prev + ' ' + nv + ' ' + vel);
                         S.drumLaneEuclidN[t][lane] = nv;
-                        S.bankParams[t][0][3] = nv;
+                        S.bankParams[t][0][4] = nv;
                         S.pendingDrumLaneResync = 2; S.pendingDrumLaneResyncTrack = t; S.pendingDrumLaneResyncLane = lane;
                     }
                     S.screenDirty = true;
                 }
                 return;
             }
-            if (knobIdx === 4) {
-                /* K5 = Dir (per-lane playback direction, sens=16).
-                 * AltMode flips this to Step / Audio playback style (sens=4
-                 * so a two-value toggle doesn't need a 16-detent turn). */
+            if (knobIdx === 6) {
+                /* K7 = Dir (per-lane playback direction, sens=16).
+                 * AltMode flips this to Step / Audio playback style (sens=4). */
                 S.knobAccum[knobIdx]++;
-                const _k5Sens = S.altMode ? 4 : 16;
-                if (S.knobAccum[knobIdx] >= _k5Sens) {
+                const _k7Sens = S.altMode ? 4 : 16;
+                if (S.knobAccum[knobIdx] >= _k7Sens) {
                     S.knobAccum[knobIdx] = 0;
                     if (S.altMode) {
                         const _cur = S.drumLanePlaybackAudioReverse[t][lane] | 0;
@@ -8169,7 +8196,7 @@ function _onCC_knobs(d1, d2) {
                         const _nv  = Math.max(0, Math.min(3, _cur + dir));
                         if (_nv !== _cur) {
                             S.drumLanePlaybackDir[t][lane] = _nv;
-                            S.bankParams[t][0][4] = _nv;
+                            S.bankParams[t][0][6] = _nv;
                             if (typeof host_module_set_param === 'function')
                                 host_module_set_param('t' + t + '_l' + lane + '_playback_dir', String(_nv));
                         }
@@ -8178,8 +8205,8 @@ function _onCC_knobs(d1, d2) {
                 }
                 return;
             }
-            if (knobIdx === 5) {
-                /* K6 = SqFl: sens=16 — matches melodic */
+            if (knobIdx === 7) {
+                /* K8 = SqFl: sens=16 — matches melodic */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 16) {
                     S.knobAccum[knobIdx] = 0;
@@ -8187,63 +8214,61 @@ function _onCC_knobs(d1, d2) {
                     const _nv  = Math.max(0, Math.min(1, _cur + dir));
                     if (_nv !== _cur) {
                         S.clipSeqFollow[t][ac] = _nv !== 0;
-                        S.bankParams[t][0][5]  = _nv;
+                        S.bankParams[t][0][7]  = _nv;
                         S.screenDirty = true;
                     }
                 }
                 return;
             }
-            if (knobIdx === 7) {
-                /* K8 = Lgto: destructive one-shot. Right-turn opens confirm
-                 * dialog; on confirm, DSP rewrites each note's gate to its
-                 * distance from the next note (or to clip end). Undoable. */
-                if (S.knobLocked[knobIdx]) return;
-                if (dir !== 1) return;  /* one-way: right-turn only */
-                S.knobAccum[knobIdx]++;
-                if (S.knobAccum[knobIdx] >= 16) {
-                    S.knobAccum[knobIdx] = 0;
-                    S.confirmLgto       = true;
-                    S.confirmLgtoSel    = 0;  /* default OK */
-                    S.confirmLgtoIsDrum = true;
-                    S.knobLocked[knobIdx] = true;
-                    forceRedraw();
-                }
-                return;
-            }
         }
-        /* ALL LANES bank (drum, bank 7): K1=Stch K2=Shft K3=Qnt K4=VelIn K5=InQ K6=SyncRpt */
+        /* ALL LANES bank (drum, bank 7): K1=Res K2=Stch K3=Shft K4=Qnt K5=VelIn K6=InQ K7=Dir K8=SyncRpt */
         if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 7) {
             const t   = S.activeTrack;
             const dir = (d2 >= 1 && d2 <= 63) ? 1 : -1;
             if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
             if (knobIdx === 0) {
-                /* K1 = Stch: beat stretch all lanes, lock, sens=16 */
+                /* K1 = Res: set resolution on all 32 lanes (absolute), sens=16 */
+                S.knobAccum[knobIdx]++;
+                if (S.knobAccum[knobIdx] >= 16) {
+                    S.knobAccum[knobIdx] = 0;
+                    const curIdx = S.bankParams[t][7][0] < 0 ? -1 : S.bankParams[t][7][0];
+                    const nv = Math.max(0, Math.min(5, curIdx + dir));
+                    if (nv !== curIdx) {
+                        S.bankParams[t][7][0] = nv;
+                        S.drumLaneTPS[t] = TPS_VALUES[nv];
+                        host_module_set_param('t' + t + '_all_lanes_clip_resolution', String(nv));
+                        S.pendingDrumResync = 2; S.pendingDrumResyncTrack = t;
+                    }
+                    S.screenDirty = true;
+                }
+                return;
+            }
+            if (knobIdx === 1) {
+                /* K2 = Stch: beat stretch all lanes, lock, sens=16 */
                 if (S.knobLocked[knobIdx]) return;
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 16) {
                     S.knobAccum[knobIdx] = 0;
                     host_module_set_param('t' + t + '_all_lanes_beat_stretch', String(dir));
                     S.knobLocked[knobIdx] = true;
-                    S.bankParams[t][7][0] += dir;
+                    S.bankParams[t][7][1] += dir;
                     S.pendingAllLanesStretchCheck = t;
                     S.pendingDrumResync = 2; S.pendingDrumResyncTrack = t;
                     S.screenDirty = true;
                 }
                 return;
             }
-            if (knobIdx === 1) {
-                /* K2 = Shft: clock shift all lanes, sens=8. Shift+turn = Nudge (sens=1,
-                 * every detent fires — much faster than per-lane nudge sens=4 to
-                 * compensate for DSP-side latency when nudging 32 lanes at once). */
+            if (knobIdx === 2) {
+                /* K3 = Shft: clock shift all lanes, sens=8. Alt = Nudge (sens=1). */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= (S.altMode ? 1 : 8)) {
                     S.knobAccum[knobIdx] = 0;
                     if (S.altMode) {
-                        S.bankParams[t][7][1] += dir;
+                        S.bankParams[t][7][2] += dir;
                         host_module_set_param('t' + t + '_all_lanes_nudge', String(dir));
                     } else {
                         S.clockShiftTouchDelta += dir;
-                        S.bankParams[t][7][1] = S.clockShiftTouchDelta;
+                        S.bankParams[t][7][2] = S.clockShiftTouchDelta;
                         host_module_set_param('t' + t + '_all_lanes_clock_shift', String(dir));
                     }
                     S.pendingDrumResync = 2; S.pendingDrumResyncTrack = t;
@@ -8251,15 +8276,15 @@ function _onCC_knobs(d1, d2) {
                 }
                 return;
             }
-            if (knobIdx === 2) {
-                /* K3 = Qnt: quantize all lanes 0-100, sens=1 */
+            if (knobIdx === 3) {
+                /* K4 = Qnt: quantize all lanes 0-100, sens=1 */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 1) {
                     S.knobAccum[knobIdx] = 0;
-                    const cur7q = S.bankParams[t][7][2] < 0 ? 0 : S.bankParams[t][7][2];
+                    const cur7q = S.bankParams[t][7][3] < 0 ? 0 : S.bankParams[t][7][3];
                     const nv = Math.max(0, Math.min(100, cur7q + dir));
                     if (nv !== cur7q) {
-                        S.bankParams[t][7][2] = nv;
+                        S.bankParams[t][7][3] = nv;
                         S.drumLaneQnt[t] = nv;
                         S.bankParams[t][1][2] = nv;
                         host_module_set_param('t' + t + '_drum_lanes_qnt', String(nv));
@@ -8268,38 +8293,64 @@ function _onCC_knobs(d1, d2) {
                 }
                 return;
             }
-            if (knobIdx === 3) {
-                /* K4 = VelIn: track velocity override, sens=1 */
+            if (knobIdx === 4) {
+                /* K5 = VelIn: track velocity override, sens=1 */
                 const cur7v = S.trackVelOverride[t];
                 const nv = Math.max(0, Math.min(127, cur7v + dir));
                 if (nv !== cur7v) applyTrackConfig(t, 'track_vel_override', nv);
                 S.screenDirty = true;
                 return;
             }
-            if (knobIdx === 4) {
-                /* K5 = InQ: per-track drum input quantize, 9 values (0=Off..8=1/4T), sens=8 */
+            if (knobIdx === 5) {
+                /* K6 = InQ: per-track drum input quantize, 9 values (0=Off..8=1/4T), sens=8 */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 8) {
                     S.knobAccum[knobIdx] = 0;
                     const nv = Math.max(0, Math.min(8, S.drumInpQuant[t] + dir));
                     if (nv !== S.drumInpQuant[t]) {
                         S.drumInpQuant[t] = nv;
-                        S.bankParams[t][7][4] = nv;
+                        S.bankParams[t][7][5] = nv;
                         host_module_set_param('t' + t + '_diq', String(nv));
                     }
                     S.screenDirty = true;
                 }
                 return;
             }
-            if (knobIdx === 5) {
-                /* K6 = SyncRpt: per-track drum repeat sync toggle, bool, sens=8 */
+            if (knobIdx === 6) {
+                /* K7 = Dir: set playback direction on all 32 lanes, sens=16.
+                 * Alt = RvSt (audio reverse on all lanes), sens=4. */
+                S.knobAccum[knobIdx]++;
+                const _k7Sens = S.altMode ? 4 : 16;
+                if (S.knobAccum[knobIdx] >= _k7Sens) {
+                    S.knobAccum[knobIdx] = 0;
+                    if (S.altMode) {
+                        const curRv = S.bankParams[t][7][6] < 0 ? -1 : S.bankParams[t][7][6];
+                        const nvRv = Math.max(0, Math.min(1, curRv + dir));
+                        if (nvRv !== curRv) {
+                            S.bankParams[t][7][6] = nvRv;
+                            host_module_set_param('t' + t + '_all_lanes_playback_audio_reverse', String(nvRv));
+                        }
+                    } else {
+                        const curDir = S.bankParams[t][7][6] < 0 ? -1 : S.bankParams[t][7][6];
+                        const nvDir = Math.max(0, Math.min(3, curDir + dir));
+                        if (nvDir !== curDir) {
+                            S.bankParams[t][7][6] = nvDir;
+                            host_module_set_param('t' + t + '_all_lanes_playback_dir', String(nvDir));
+                        }
+                    }
+                    S.screenDirty = true;
+                }
+                return;
+            }
+            if (knobIdx === 7) {
+                /* K8 = SyncRpt: per-track drum repeat sync toggle, bool, sens=8 */
                 S.knobAccum[knobIdx]++;
                 if (S.knobAccum[knobIdx] >= 8) {
                     S.knobAccum[knobIdx] = 0;
-                    const cur6 = S.bankParams[t][7][5] | 0;
-                    const nv = Math.max(0, Math.min(1, cur6 + dir));
-                    if (nv !== cur6) {
-                        S.bankParams[t][7][5] = nv;
+                    const cur7s = S.bankParams[t][7][7] | 0;
+                    const nv = Math.max(0, Math.min(1, cur7s + dir));
+                    if (nv !== cur7s) {
+                        S.bankParams[t][7][7] = nv;
                         host_module_set_param('t' + t + '_drum_repeat_sync', String(nv));
                     }
                     S.screenDirty = true;
@@ -8555,9 +8606,9 @@ function _onCC_knobs(d1, d2) {
         /* Melodic CLIP K6 = InQ — per-track input quantize, mirrors drum
          * ALL LANES K5. Custom path keeps S.drumInpQuant (the shared JS
          * mirror used by both bank-overview render paths) in sync with
-         * bankParams[t][0][5]. The DSP field is `tr->drum_inp_quant` —
+         * bankParams[t][0][4]. The DSP field is `tr->drum_inp_quant` —
          * historical name; now per-track-type-agnostic. */
-        if (S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM && bank === 0 && knobIdx === 5) {
+        if (S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM && bank === 0 && knobIdx === 4) {
             const t   = S.activeTrack;
             const dir = (d2 >= 1 && d2 <= 63) ? 1 : -1;
             if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
@@ -8567,7 +8618,7 @@ function _onCC_knobs(d1, d2) {
                 const nv = Math.max(0, Math.min(8, S.drumInpQuant[t] + dir));
                 if (nv !== S.drumInpQuant[t]) {
                     S.drumInpQuant[t] = nv;
-                    S.bankParams[t][0][5] = nv;
+                    S.bankParams[t][0][4] = nv;
                     if (typeof host_module_set_param === 'function')
                         host_module_set_param('t' + t + '_diq', String(nv));
                 }
@@ -9911,7 +9962,7 @@ function _onStepButtons(d1, d2) {
                     /* ALL LANES: quantize all drum lanes */
                     if (typeof host_module_set_param === 'function')
                         host_module_set_param('t' + t + '_drum_lanes_qnt', '100');
-                    S.bankParams[t][7][2] = 100;
+                    S.bankParams[t][7][3] = 100;
                     S.drumLaneQnt[t] = 100;
                     S.bankParams[t][1][2] = 100;
                 } else {
@@ -10589,10 +10640,11 @@ function _onMidiInternalImpl(data) {
                                     host_module_set_param('t' + S.activeTrack + '_nudge', '0');
                             }
                         }
-                        /* ALL LANES K3 (Qnt, idx 2): schedule display reset to '--' after ~500ms */
-                        if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && S.activeBank === 7 && d1 === 2) {
-                            S.allLanesQntResetTick  = S.tickCount + 47;
-                            S.allLanesQntResetTrack = S.activeTrack;
+                        /* ALL LANES: schedule display reset to '--' after ~500ms on touch release */
+                        if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && S.activeBank === 7) {
+                            if (d1 === 0) { S.allLanesResResetTick = S.tickCount + 47; S.allLanesResResetTrack = S.activeTrack; }
+                            if (d1 === 3) { S.allLanesQntResetTick = S.tickCount + 47; S.allLanesQntResetTrack = S.activeTrack; }
+                            if (d1 === 6) { S.allLanesDirResetTick = S.tickCount + 47; S.allLanesDirResetTrack = S.activeTrack; }
                         }
                     }
                     /* CC bank: touch-record — stop overwriting automation on release */

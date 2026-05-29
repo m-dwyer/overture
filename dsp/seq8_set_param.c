@@ -4129,6 +4129,65 @@ static void set_param(void *instance, const char *key, const char *val) {
             return;
         }
 
+        if (!strcmp(sub, "all_lanes_clip_resolution")) {
+            /* tN_all_lanes_clip_resolution "idx" — set resolution on all 32 drum lanes. */
+            int idx = clamp_i(my_atoi(val), 0, 5);
+            uint16_t new_tps = TPS_VALUES[idx];
+            drum_clip_t *dc_ar = &tr->drum_clips[tr->active_clip];
+            int l_ar;
+            for (l_ar = 0; l_ar < DRUM_LANES; l_ar++) {
+                clip_t *dlc = &dc_ar->lanes[l_ar].clip;
+                uint16_t old_tps = dlc->ticks_per_step;
+                if (new_tps == old_tps) continue;
+                { uint32_t gmax = (uint32_t)SEQ_STEPS * new_tps;
+                  if (gmax > 65535) gmax = 65535;
+                  uint16_t ni;
+                  for (ni = 0; ni < dlc->note_count; ni++) {
+                      note_t *n = &dlc->notes[ni];
+                      n->tick = (uint32_t)((uint64_t)n->tick * new_tps / old_tps);
+                      uint32_t ng = (uint32_t)((uint64_t)n->gate * new_tps / old_tps);
+                      if (ng < 1) ng = 1;
+                      if (ng > gmax) ng = gmax;
+                      n->gate = (uint16_t)ng;
+                  }
+                }
+                dlc->ticks_per_step = new_tps;
+                if (old_tps > 0)
+                    tr->drum_tick_in_step[l_ar] =
+                        (uint32_t)((uint64_t)tr->drum_tick_in_step[l_ar] * new_tps / old_tps);
+                if (tr->drum_tick_in_step[l_ar] >= new_tps)
+                    tr->drum_tick_in_step[l_ar] = 0;
+                clip_build_steps_from_notes(dlc);
+            }
+            inst->state_dirty = 1;
+            return;
+        }
+
+        if (!strcmp(sub, "all_lanes_playback_dir")) {
+            /* tN_all_lanes_playback_dir "value" — set playback direction on all 32 drum lanes. */
+            int v = clamp_i(my_atoi(val), 0, 3);
+            drum_clip_t *dc_ad = &tr->drum_clips[tr->active_clip];
+            int l_ad;
+            for (l_ad = 0; l_ad < DRUM_LANES; l_ad++) {
+                dc_ad->lanes[l_ad].clip.playback_dir = (uint8_t)v;
+                dc_ad->lanes[l_ad].clip.pp_dir_state = initial_pp_dir((uint8_t)v);
+            }
+            inst->state_dirty = 1;
+            return;
+        }
+
+        if (!strcmp(sub, "all_lanes_playback_audio_reverse")) {
+            /* tN_all_lanes_playback_audio_reverse "value" — set audio reverse on all 32 drum lanes. */
+            int v = clamp_i(my_atoi(val), 0, 1);
+            drum_clip_t *dc_av = &tr->drum_clips[tr->active_clip];
+            int l_av;
+            for (l_av = 0; l_av < DRUM_LANES; l_av++) {
+                dc_av->lanes[l_av].clip.playback_audio_reverse = (uint8_t)v;
+            }
+            inst->state_dirty = 1;
+            return;
+        }
+
         if (!strcmp(sub, "all_lanes_beat_stretch")) {
             /* tN_all_lanes_beat_stretch "dir" — stretch/shrink all 32 drum lanes.
              * Pre-flight: if ANY lane is blocked, no-op entirely and set result=-1. */

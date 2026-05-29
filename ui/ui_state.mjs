@@ -131,6 +131,10 @@ export const S = {
     confirmLgtoIsDrum: false,
     allLanesQntResetTick: -1,   /* tick at which to reset bankParams[t][7][3] to -1 after knob release */
     allLanesQntResetTrack: -1,
+    allLanesResResetTick: -1,
+    allLanesResResetTrack: -1,
+    allLanesDirResetTick: -1,
+    allLanesDirResetTrack: -1,
     drumPerformMode: new Array(8).fill(0),
     drumRepeatHeldPad: new Array(8).fill(-1),
     drumRepeatHeldPadVel: new Array(8).fill(100),

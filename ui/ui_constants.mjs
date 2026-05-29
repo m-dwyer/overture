@@ -257,23 +257,24 @@ function p(abbrev, full, dspKey, scope, min, max, def, fmt, sens, actionSuffix, 
              lock: lock || false,
              step: step || 1 };
 }
-const _X  = p(null, null, null, 'stub', 0,   0, 0,  fmtNA);
-const _XQ = p(null, null, null, 'stub', 0, 100, -1, fmtNA);  /* bank 7 K4: quantize, def=-1 = unset */
+const _X   = p(null, null, null, 'stub', 0,   0,  0, fmtNA);
+const _XQ  = p(null, null, null, 'stub', 0, 100, -1, fmtNA);  /* bank 7 Qnt: def=-1 = unset */
+const _XR  = p(null, null, null, 'stub', 0,   0, -1, fmtNA);  /* bank 7 Res/Dir: def=-1 = unset */
 
 export const BANKS = [
-    /* 0 — CLIP (pad 92) — Beat Stretch, Clock Shift (Shift+turn = Nudge),
-     * Resolution, K5=Dir (per-clip playback direction), K6=InQ (custom
-     * handling, mirrors drum ALL LANES K5), SqFl, K8=Lgto (destructive
-     * one-shot — opens confirm dialog on right-turn). K4 unassigned. */
+    /* 0 — CLIP (pad 92) — K1=Res, K2=Stch (Beat Stretch), K3=Shft (Clock
+     * Shift, Shift+turn=Nudge), K4=Lgto (destructive one-shot — opens
+     * confirm dialog on right-turn), K5=InQ (custom handling, mirrors drum
+     * ALL LANES K5), K6 unassigned, K7=Dir, K8=SqFl. */
     { name: 'CLIP', knobs: [
+        p('Res',  'Resolution',      'clip_resolution', 'clip',   0, 5,   1,   fmtRes, 16),
         p('Stch', 'Beat Stretch',    'beat_stretch',    'action', 0, 0,   0,   fmtStretch, 16, '_factor', true),
         p('Shft', 'Clock Shift',     'clock_shift',     'action', 0, 0,   0,   fmtSign,    8),
-        p('Res',  'Resolution',      'clip_resolution', 'clip',   0, 5,   1,   fmtRes, 16),
+        p('Lgto', 'Apply Legato',   'lgto_apply',       'action', 0, 0,   0,   fmtLgto,    16, '_factor', true),
+        p('InQ',  'Input Quantize', 'diq',              'track', 0, 8, 0,  fmtDiq, 8),
         _X,
         p('Dir',  'Playback Dir',   'clip_playback_dir', 'clip',  0, 3,   0,   fmtPlayDir, 16),
-        p('InQ',  'Input Quantize', 'diq',              'track', 0, 8, 0,  fmtDiq, 8),
         p('SqFl', 'Seq Follow',      null,              'seqfollow', 0, 1, 1,  fmtBool, 16),
-        p('Lgto', 'Apply Legato',   'lgto_apply',       'action', 0, 0,   0,   fmtLgto,    16, '_factor', true),
     ]},
     /* 1 — NOTE FX (pad 93). Layout (melodic, K-cells 1..8):
      * K1=Oct, K2=Ofs, K3=Vel, K4=Qnt, K5=Len, K6=>Gate, K7=blocked, K8=Rnd.
@@ -336,15 +337,18 @@ export const BANKS = [
     /* 6 — AUTO (pad 98) — per-clip CC + aftertouch (+ PB later) automation; custom handling, no DSP-wired knobs */
     { name: 'AUTO', knobs: [_X, _X, _X, _X, _X, _X, _X, _X] },
     /* 7 — ALL LANES (drum pad 92) — macro controls across all 32 drum lanes.
-     * K2 Shft + Shift held = Nudge (replaced standalone Ndg knob). */
+     * K1=Res (all-lane resolution, custom), K2=Stch, K3=Shft (alt=Nudge),
+     * K4=Qnt (custom), K5=VelIn (custom), K6=InQ (custom),
+     * K7=Dir (all-lane playback dir, alt=RvSt, custom), K8=SyncRpt. */
     { name: 'ALL LANES', knobs: [
+        _XR,  /* K1: Res — all-lane resolution, custom handling, def=-1 */
         p('Stch', 'Beat Stretch', 'beat_stretch', 'action', 0, 0,  0,  fmtStretch, 16, '_factor', true),
         p('Shft', 'Clock Shift',  'clock_shift',  'action', 0, 0,  0,  fmtSign,    8),
-        _XQ,  /* K3: quantize all lanes — custom handling, def=-1 */
-        _X,   /* K4: VelIn — custom handling via trackVelOverride */
-        _X,   /* K5: InQ — per-track drum input quantize, custom handling */
+        _XQ,  /* K4: Qnt — quantize all lanes, custom handling, def=-1 */
+        _X,   /* K5: VelIn — custom handling via trackVelOverride */
+        _X,   /* K6: InQ — per-track drum input quantize, custom handling */
+        _XR,  /* K7: Dir — all-lane playback dir, custom handling, def=-1 */
         p('SyncRpt', 'Repeat Sync', 'drum_repeat_sync', 'track', 0, 1, 1, fmtBool, 16),
-        _X, _X,
     ]},
 ];
 
