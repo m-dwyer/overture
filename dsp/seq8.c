@@ -6394,6 +6394,7 @@ static void on_midi(void *instance, const uint8_t *msg, int len, int source) {
         if (inst->pad_dispatch_muted) { inst->pad_source_scratch[t] = (uint8_t)PAD_SRC_NORMAL; return; }
         live_note_on(inst, tr, pitch, (uint8_t)effective_vel(tr, (int)d2));
     } else {
+        if (inst->pad_dispatch_muted) return;
         live_note_off(inst, tr, pitch);
     }
     inst->pad_source_scratch[t] = (uint8_t)PAD_SRC_NORMAL;

@@ -9070,6 +9070,7 @@ function _onPadPressTrackView(status, d1, d2) {
             if (_sl_lane >= 0 && _sl_lane < DRUM_LANES) {
                 const t = S.activeTrack;
                 S.captureUsedAsModifier = true;
+                padPitch[padIdx] = 0xFF;
                 setActiveDrumLane(t, _sl_lane);
                 syncDrumLaneSteps(t, _sl_lane);
                 refreshDrumLaneBankParams(t, _sl_lane);
