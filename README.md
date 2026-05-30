@@ -1,6 +1,6 @@
 # dAVEBOx
 
-**A creative 8-track MIDI sequencer for the [Schwung](https://github.com/charlesvestal/schwung) framework on Ableton Move.**
+**MORE BETTER TRACKS FOR YOUR MOVE. dAVEBOx is a creative 8-track MIDI sequencer for the [Schwung](https://github.com/charlesvestal/schwung) framework on Ableton Move.**
 
 ![dAVEBOx](https://github.com/user-attachments/files/28072600/Untitled.-.May.20.2026.at.14.49.53.2.bmp)
 
@@ -15,7 +15,7 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
 
 ---
 
-## Cool stuff:
+## Basic Stuff:
 
 **Sequence 4 Move instruments and 4 Schwung slots simultaneously from one device.** That's 4 extra tracks with full control over each.
 
@@ -27,6 +27,10 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
 
 **Bake the chain into notes.** Once you like what the effects are doing, render them down into actual note data. Multi-loop bake (1×–8×) carries delay tails between loops; an optional wrap mode folds tails past the clip end back to the start for seamless loops. Then you can layer fresh effects on top and bake again.
 
+**Per-step note editing:** Pitch, velocity, gate length, timing nudge, probability, iteration, and ratchets can all be set per-step.
+
+**Export to Live.** dAVEBOx sessions can be exported to Ableton Live sets, even carrying over your Move instruments. 
+
 **Live input goes through the effects.** On drum tracks and Schwung-routed melodic tracks, what you play live is processed through the same effects chain as sequenced notes. The arpeggiator picks up your held chord, the delay echoes your live taps, pitch random applies in real time.
 
 **Note repeat with loop cycle length.** Drum tracks have single-lane and multi-lane repeat modes with configurable rate, velocity, groove, latch, and a cycle length that lets you build evolving drum patterns without step-sequencing them.
@@ -35,18 +39,14 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
 
 ---
 
-## Also includes
+## Cool Stuff
 
 - 8 tracks (melodic + drum), 16 clips per track, up to 256 steps per clip
-- Step sequencing and live recording on the same timeline
-- Count-in with pre-roll capture
-- Global swing (50–75%, 1/16 or 1/8 resolution)
-- Both arpeggiators (Sequence Arp and Arp In) support per-step velocity editing and trance-gating
-- Per-step note editing: pitch, velocity, gate length, and timing nudge
+- Arpeggiators (Sequence Arp and Arp In) with per-step velocity and note editing
 - 16 mute/solo snapshot slots for saving and recalling track states
 - Copy/paste for notes, steps, clips, and scenes
 - 8 assignable CC lanes per track with per-clip automation at 1/32 resolution (interpolated)
-- Per-track MIDI channel and routing (Move · Schwung · External)
+- Per-track MIDI channel and routing options (Move · Schwung · External)
 
   
 ## Requirements
