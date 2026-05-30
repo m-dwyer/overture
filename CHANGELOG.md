@@ -13,6 +13,7 @@ the section into a versioned heading at release time.
 
 ### Fixes
 - **Empty drum→melodic track conversion now reliably flips pad mode.** Previously, converting an empty drum track to melodic left DSP in drum mode (pads showed melodic layout but right half acted as velocity zones). Fixed by adding a get_param flush barrier for the empty-track path.
+- **`delete_held` flag now shares padmap self-heal.** Moved from a separate `t0_delete_held` set_param (vulnerable to onMidiMessage coalescing) into the padmap payload's 35th token, giving it the same tick-based reconciliation as `pad_dispatch_muted`.
 - **Incompatible state files prompt before erasing.** When loading a set saved by an older dAVEBOx version, a confirm dialog asks before wiping. "No" exits the module with the file preserved.
 
 ## [1.0b] — 2026-05-29

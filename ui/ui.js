@@ -1789,6 +1789,7 @@ function computePadNoteMap() {
          * the existing pad_note_map=0xFF mute. Fixes Shift+bottom-row track
          * shortcut leaking into Rpt1/Rpt2 latch on the prior active track. */
         payload += ' ' + (padDispatchMuted ? 1 : 0);
+        payload += ' ' + (S.deleteHeld ? 1 : 0);
         host_module_set_param('t' + t + '_padmap', payload);
         S.lastPushedMuted = padDispatchMuted;
     }
@@ -6888,17 +6889,10 @@ function _onCC_buttons(d1, d2) {
             S.deleteTapArmed = false;
             openClearAutoMenu();
         }
-        /* Phase 1 / Bundle 2C-Rpt2: push Delete-held suppression to DSP.
-         * Single push — carrier key is tN_-shaped but reader is global
-         * inst->delete_held (Delete is a global modifier, no reason it
-         * was ever per-track). Empirically the previous fan-out of 8
-         * tN_delete_held writes within this onMidiMessage callback
-         * coalesced (only the last N landed) — likely a host-queue depth
-         * limit on rapid same-shape pushes. Single push is reliable.
-         * Future modal modifiers (Shift/Copy/Mute/Capture) — see parked
-         * memory project_modal_pad_interception_regression. */
-        if (typeof host_module_set_param === 'function')
-            host_module_set_param('t0_delete_held', S.deleteHeld ? '1' : '0');
+        /* delete_held now rides as the 35th token in the tN_padmap payload
+         * (computePadNoteMap), so it shares the tick-based self-heal and
+         * avoids the onMidiMessage coalescing risk the old separate
+         * t0_delete_held push had. */
         computePadNoteMap();
     }
 

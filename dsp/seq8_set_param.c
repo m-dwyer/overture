@@ -5300,6 +5300,15 @@ static void set_param(void *instance, const char *key, const char *val) {
                 while (*sp >= '0' && *sp <= '9') { pdm = pdm * 10 + (*sp++ - '0'); }
                 inst->pad_dispatch_muted = (pdm != 0) ? 1 : 0;
             }
+            /* 35th token = delete_held. Moved here from the separate
+             * t0_delete_held set_param to share the padmap's tick-based
+             * self-heal and avoid onMidiMessage coalescing. */
+            while (*sp == ' ') sp++;
+            if (*sp) {
+                int dh = 0;
+                while (*sp >= '0' && *sp <= '9') { dh = dh * 10 + (*sp++ - '0'); }
+                inst->delete_held = (dh != 0) ? 1 : 0;
+            }
             return;
         }
 
