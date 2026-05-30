@@ -19,9 +19,9 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
 
 ## Basic Stuff:
 
-**Sequence 4 Move instruments and 4 Schwung slots simultaneously from one device.** That's 4 extra tracks with full control over each.
+**Sequence 4 Move instruments and 4 Schwung slots simultaneously from one device.** That's 4 extra tracks with full control over each. External midi supported too.
 
-**Every clip has its own effects chain.** Pitch randomization, harmonization, MIDI delay, and a step-based arpeggiator sit between the sequencer and MIDI output of every clip. Settings are per-clip, so the same source notes can morph into something completely different depending on which clip is playing.
+**Every clip has its own effects chain.** Pitch randomization, harmonization, MIDI delay, and a step-based arpeggiator sit between the sequencer and MIDI output of every clip. Settings are per-clip, so the same source notes can morph into something completely different depending on which clip is playing. 
 
 **Drum lanes are basically mini-tracks.** Each of the 32 lanes on a drum track has its own step sequence, loop length, effects chain, and note repeat settings — independent per clip. Set different loop lengths across lanes and you get polyrhythmic patterns without any extra setup.
 
@@ -47,6 +47,7 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
 - Arpeggiators (Sequence Arp and Arp In) with per-step velocity and note editing
 - 16 mute/solo snapshot slots for saving and recalling track states
 - Copy/paste for notes, steps, clips, and scenes
+- Per-clip and per-drum lane playback direction options
 - Seamless suspend and resume between dAVEBOx and Schwung/Move native
 - Auto-save, Move set association, and save state snapshots that can be loaded on demand
 - 8 assignable CC lanes per track with per-clip automation at 1/32 resolution (interpolated)
@@ -55,15 +56,7 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
   
 ## Requirements
 
-Schwung **v0.9.13 or later**
-
-## Known Limitations
-
-- Live record note duration is not accurately recorded in some instances.
-- Live recording accuracy has some jitter when playing unquantized (improvements coming soon).
-- The hardware volume knob briefly interrupts MIDI output when turned.
-- Powering Move off from within dAVEBOx causes a brief hang.
-
+Schwung **v0.9.16 or later**
 
 ---
 
