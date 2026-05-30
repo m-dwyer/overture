@@ -2778,8 +2778,24 @@ static void set_param(void *instance, const char *key, const char *val) {
             inst->state_dirty = 1;
             return;
         }
+        if (!strcmp(sub, "cc_type_assign")) {
+            /* Format: "K T A" — knob index 0-7, type 0-2, assign 0-127. Atomic. */
+            const char *_p = val;
+            int _k = 0, _tp = 0, _cc = 0;
+            while (*_p == ' ') _p++;
+            while (*_p >= '0' && *_p <= '9') { _k = _k * 10 + (*_p - '0'); _p++; }
+            while (*_p == ' ') _p++;
+            while (*_p >= '0' && *_p <= '9') { _tp = _tp * 10 + (*_p - '0'); _p++; }
+            while (*_p == ' ') _p++;
+            while (*_p >= '0' && *_p <= '9') { _cc = _cc * 10 + (*_p - '0'); _p++; }
+            if (_k < 0 || _k > 7) return;
+            tr->cc_type[_k] = (uint8_t)clamp_i(_tp, 0, 2);
+            tr->cc_assign[_k] = (uint8_t)clamp_i(_cc, 0, 127);
+            inst->state_dirty = 1;
+            return;
+        }
         if (!strcmp(sub, "cc_type")) {
-            /* Format: "K T" — knob index 0-7, type 0=CC, 1=Channel Pressure. */
+            /* Format: "K T" — knob index 0-7, type 0=CC, 1=Channel Pressure, 2=Chain knob (Sch). */
             const char *_p = val;
             int _k = 0, _tp = 0;
             while (*_p == ' ') _p++;
@@ -2787,7 +2803,7 @@ static void set_param(void *instance, const char *key, const char *val) {
             while (*_p == ' ') _p++;
             while (*_p >= '0' && *_p <= '9') { _tp = _tp * 10 + (*_p - '0'); _p++; }
             if (_k < 0 || _k > 7) return;
-            tr->cc_type[_k] = (uint8_t)clamp_i(_tp, 0, 1);
+            tr->cc_type[_k] = (uint8_t)clamp_i(_tp, 0, 2);
             inst->state_dirty = 1;
             return;
         }

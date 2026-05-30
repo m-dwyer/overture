@@ -3616,7 +3616,8 @@ function drawUI() {
                 const _x = 4 + _col * 31, _y = 24 + _row * 20;
                 const _hi = (S.knobTouched === _k);
                 if (_hi) fill_rect(_x - 1, _y - 1, 29, 18, 1);
-                const _lbl = S.trackCCType[_t6s][_k] === 1 ? 'AT'
+                const _lbl = S.trackCCType[_t6s][_k] === 2 ? ('Sch' + S.trackCCAssign[_t6s][_k])
+                           : S.trackCCType[_t6s][_k] === 1 ? 'AT'
                            : (S.trackCCAssign[_t6s][_k] > 0 ? 'C' + S.trackCCAssign[_t6s][_k] : '--');
                 let _vs;
                 if (S.ccStepEditSet[_k]) {
@@ -3952,12 +3953,14 @@ function drawUI() {
         const ac = effectiveClip(t);
         drawBankHeadingInverted(S.altMode ? 'ASSIGN' : BANKS[6].name);
         /* Automation-type indicators: inverted badge (white bg, black text) per
-         * type that has data in the focused clip; nothing if the type is empty.
-         * PB is a placeholder (not implemented) → never shown in the header yet. */
+         * type that has data in the focused clip; nothing if the type is empty. */
         {
             const ccHas = (S.trackCCAutoBits[t][ac] !== 0) ||
                           S.clipCCVal[t][ac].some(function(v) { return v >= 0; });
             const atHas = !!S.clipAtHas[t][ac];
+            const schHas = S.trackCCType[t].some(function(tp, k) {
+                return tp === 2 && (((S.trackCCAutoBits[t][ac] >> k) & 1) || S.clipCCVal[t][ac][k] >= 0);
+            });
             let bx = 60;
             const _badge = function(txt) {
                 const w = txt.length * 6 + 3;
@@ -3965,6 +3968,7 @@ function drawUI() {
                 print(bx + 1, 1, txt, 0);
                 bx += w + 2;
             };
+            if (schHas) _badge('Sch');
             if (atHas) _badge('AT');
             if (ccHas) _badge('CC');
         }
@@ -3976,7 +3980,8 @@ function drawUI() {
              * value. In normal mode, the touched/active lane gets the full-cell
              * inversion as before. */
             const touchedHi = (S.knobTouched === k) || (S.ccActiveLane[t] === k);
-            const lbl = S.trackCCType[t][k] === 1 ? 'AT' : fmtCCLabel(S.trackCCAssign[t][k]);
+            const lbl = S.trackCCType[t][k] === 2 ? ('Sch' + S.trackCCAssign[t][k])
+                      : S.trackCCType[t][k] === 1 ? 'AT' : fmtCCLabel(S.trackCCAssign[t][k]);
             const rawV = S.playing ? S.trackCCLiveVal[t][k] : S.clipCCVal[t][ac][k];
             const val  = (rawV >= 0 && rawV <= 127) ? String(rawV) : '--';
             if (S.altMode) {
@@ -5306,6 +5311,13 @@ function _tickImpl() {
             }
         }
     }
+
+    /* Sch (chain knob) automation routing: poll cc_auto_cur_val for every
+     * playing track that has Sch lanes, and push values to chain slots via
+     * shadow_set_param. Runs regardless of active bank. */
+    /* Sch (chain knob) automation: DSP handles playback and live sends via
+     * pfx_send (CC 102-109 → chain on_midi absolute knob handler). No JS
+     * routing needed. */
 
     /* CC-bank step-LED gradient palette: 6 white brightness levels (the playhead
      * uses the track color instead). Written on bank-6 entry / track switch
@@ -8624,17 +8636,31 @@ function _onCC_knobs(d1, d2) {
             if (dir !== S.knobLastDir[knobIdx]) { S.knobAccum[knobIdx] = 0; S.knobLastDir[knobIdx] = dir; }
             S.knobAccum[knobIdx]++;
 
-            /* alt mode: type/number ladder — AT (type 1) ↔ CC0 ↔ CC1 … CC127. sens=4 */
+            /* alt mode: type/number ladder — Sch1..Sch8 (type 2) ↔ AT (type 1) ↔ CC0..CC127 (type 0).
+             * Sch (chain knob) only available when patched Schwung is present.
+             * Unified position: CC0..127 = 0..127, AT = -1, Sch1 = -2, Sch2 = -3, ..., Sch8 = -9.
+             * When type=2, trackCCAssign holds the chain knob number (1-8). */
             if (S.altMode) {
                 if (S.knobAccum[knobIdx] >= 4) {
                     S.knobAccum[knobIdx] = 0;
-                    const cur = (S.trackCCType[t][knobIdx] === 1) ? -1 : S.trackCCAssign[t][knobIdx];
-                    const nx  = Math.max(-1, Math.min(127, cur + dir));
-                    if (nx < 0) {
-                        if (S.trackCCType[t][knobIdx] !== 1) { S.trackCCType[t][knobIdx] = 1; _setp('cc_type', knobIdx + ' 1'); }
+                    const hasSch = typeof shadow_set_param === 'function';
+                    const cur = (S.trackCCType[t][knobIdx] === 2) ? -(S.trackCCAssign[t][knobIdx] + 1)
+                              : (S.trackCCType[t][knobIdx] === 1) ? -1
+                              : S.trackCCAssign[t][knobIdx];
+                    const minVal = hasSch ? -9 : -1;
+                    const nx  = Math.max(minVal, Math.min(127, cur + dir));
+                    if (nx <= -2) {
+                        const schKnob = -(nx + 1);
+                        S.trackCCType[t][knobIdx] = 2;
+                        S.trackCCAssign[t][knobIdx] = schKnob;
+                        _setp('cc_type_assign', knobIdx + ' 2 ' + schKnob);
+                    } else if (nx === -1) {
+                        S.trackCCType[t][knobIdx] = 1;
+                        _setp('cc_type_assign', knobIdx + ' 1 ' + S.trackCCAssign[t][knobIdx]);
                     } else {
-                        if (S.trackCCType[t][knobIdx] !== 0) { S.trackCCType[t][knobIdx] = 0; _setp('cc_type', knobIdx + ' 0'); }
-                        if (nx !== S.trackCCAssign[t][knobIdx]) { S.trackCCAssign[t][knobIdx] = nx; _setp('cc_assign', knobIdx + ' ' + nx); }
+                        S.trackCCType[t][knobIdx] = 0;
+                        S.trackCCAssign[t][knobIdx] = nx;
+                        _setp('cc_type_assign', knobIdx + ' 0 ' + nx);
                     }
                     S.screenDirty = true;
                 }

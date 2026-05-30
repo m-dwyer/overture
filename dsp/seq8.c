@@ -1881,7 +1881,7 @@ static void seq8_load_state(seq8_instance_t *inst) {
                   json_get_int(buf, key, CC_ASSIGN_DEFAULT[_k]), 0, 127);
               snprintf(key, sizeof(key), "t%dcct%d", t, _k);
               inst->tracks[t].cc_type[_k] = (uint8_t)clamp_i(
-                  json_get_int(buf, key, 0), 0, 1);
+                  json_get_int(buf, key, 0), 0, 2);
           }
     }
     /* CC automation (melodic clips, sparse) + per-clip resting value */
@@ -6994,7 +6994,9 @@ static int at_auto_eval(const at_auto_t *a, int lane, uint32_t t, int *defined) 
  * pfx_emit's USB-MIDI CIN = status>>4 = 0xD already encodes the length). */
 static void cc_emit(seq8_track_t *tr, int k, uint8_t v) {
     uint8_t ch = tr->channel & 0x0F;
-    if (tr->cc_type[k] == 1)
+    if (tr->cc_type[k] == 2)
+        pfx_send(&tr->pfx, (uint8_t)(0xB0 | ch), (uint8_t)(101 + tr->cc_assign[k]), v);
+    else if (tr->cc_type[k] == 1)
         pfx_send(&tr->pfx, (uint8_t)(0xD0 | ch), v, 0);
     else
         pfx_send(&tr->pfx, (uint8_t)(0xB0 | ch), tr->cc_assign[k], v);

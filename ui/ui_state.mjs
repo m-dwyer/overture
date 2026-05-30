@@ -242,7 +242,7 @@ export const S = {
     lastBlinkOn: null,
     bankParams: null,  /* set in ui.js after BANKS is defined */
     trackCCAssign: Array.from({length: 8}, () => CC_ASSIGN_DEFAULTS.slice()),
-    /* Per-knob continuous-modulation type: 0 = CC, 1 = Channel Pressure (aftertouch). Per-track. */
+    /* Per-knob continuous-modulation type: 0 = CC, 1 = Channel Pressure (aftertouch), 2 = Sch (chain knob). Per-track. */
     trackCCType: Array.from({length: 8}, () => new Array(8).fill(0)),
     /* Per-clip resting value ("clip CC") per knob; -1 = "—" (unset, send nothing). */
     clipCCVal: Array.from({length: 8}, () => Array.from({length: 16}, () => new Array(8).fill(-1))),

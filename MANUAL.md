@@ -524,7 +524,7 @@ Quick toggle: **Shift + Step 11** flips ARP IN on/off using the last-used style.
 
 Each of the 8 knobs controls its own automation lane — a recordable stream of CC or aftertouch data that plays back with the clip. Each lane can hold up to 1024 recorded points (at 1/32 resolution, smoothly interpolated between points) plus an optional resting value that the lane returns to at each loop.
 
-**Assigning what a knob controls:** jog click to enter alt mode on this bank, then turn a knob to step through the target options: aftertouch (AT) or any CC number (CC0–CC127). The assignment applies to the whole track — all clips on that track share it.
+**Assigning what a knob controls:** jog click to enter alt mode on this bank, then turn a knob to step through the target options: aftertouch (AT), any CC number (CC0–CC127), or — on Schwung-routed tracks with patched Schwung — Schwung chain knob assignments (Sch1–Sch8). Sch lanes automate the knob assignments configured on the track's chain slot. The assignment applies to the whole track — all clips on that track share it.
 
 **The "—" floor:** every knob starts at "—" (send nothing). Turn below 0 to reach "—"; turn up from "—" to reach 0.
 
@@ -953,7 +953,7 @@ When Route = External, all MIDI goes out via USB-A: sequencer, live pads, extern
 
 ## CC and aftertouch output
 
-The AUTO bank lanes output CC or aftertouch data at 1/32 resolution with smooth interpolation. On External-routed tracks, output goes via USB-A. Aftertouch can also be recorded live via pad pressure when the track's AftTch setting is enabled (see §14 Track Config).
+The AUTO bank lanes output CC, aftertouch, or Schwung chain knob (Sch) data at 1/32 resolution with smooth interpolation. On External-routed tracks, CC/AT output goes via USB-A. Sch lanes send CC 102-109 on the internal Schwung MIDI path to control chain knob assignments (requires patched Schwung). Aftertouch can also be recorded live via pad pressure when the track's AftTch setting is enabled (see §14 Track Config).
 
 ---
 
