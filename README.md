@@ -21,7 +21,7 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
 
 **Sequence 4 Move instruments and 4 Schwung slots simultaneously from one device.** That's 4 extra tracks with full control over each. External midi supported too.
 
-**Workflow mimics native Move sequencer** but with WAY more options.
+**Workflow mimics native Move sequencer.** The Move you know with double the tracks, double the clips, and way more functionality.
 
 **Every clip has its own effects chain.** Pitch randomization, harmonization, MIDI delay, and a step-based arpeggiator sit between the sequencer and MIDI output of every clip. Settings are per-clip, so the same source notes can morph into something completely different depending on which clip is playing. 
 
@@ -37,7 +37,7 @@ dAVEBOx was built by AI goblins and meticulously designed by a human who is not 
 
 **Live input goes through the effects.** On drum tracks and Schwung-routed melodic tracks, what you play live is processed through the same effects chain as sequenced notes. The arpeggiator picks up your held chord, the delay echoes your live taps, pitch random applies in real time.
 
-**Note repeat with loop cycle length.** Drum tracks have single-lane and multi-lane repeat modes with configurable rate, velocity, groove, latch, and a cycle length that lets you build evolving drum patterns without step-sequencing them.
+**Customizable note repeat pads with groove options.** Drum tracks have single-lane and multi-lane repeat modes with configurable rate, velocity, groove, latch, and a cycle length that lets you build evolving drum patterns without step-sequencing them.
 
 **Performance mode.** Tap the Loop button in Session View to turn the pads into real-time mod controllers. Hold for temporary, tap to lock hands-free, Shift+Loop for latch. 16 snapshot slots for preset mod combinations.
 
