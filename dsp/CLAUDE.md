@@ -27,6 +27,14 @@ GLIBC ≤ 2.35 required. No complex static initializers. Schwung core v0.9.9.
 ssh ableton@move.local "tail -f /data/UserData/schwung/seq8.log"
 ```
 
+## Drum clip allocation
+
+`drum_clip_t *drum_clips[16]` — pointers, NULL when track is in melodic mode. Allocated via `drum_clips_alloc(inst, tr)` on: state load (if `t%d_pm=1`), first `tN_lL_*` lane write (reliable trigger — see below), `tN_pad_mode`/`tN_convert_to_drum` (if they reach DSP). Freed via `drum_clips_free(tr)` on state reload or `destroy_instance`. Inner lane loops (`for l in 0..DRUM_LANES`) unchanged; all 32 lanes always exist within an allocated clip.
+
+**Critical platform constraint:** Schwung host silently drops `tN_pad_mode` and `tN_convert_to_drum` set_params — they never reach the DSP handler. The `tN_lL_*` dispatch (drum lane setters) is the reliable allocation trigger: on first lane write, if `pad_mode != DRUM`, set it and allocate. This is safe because JS only sends `tN_lL_*` keys for drum-mode tracks.
+
+All `pad_mode == PAD_MODE_DRUM` checks in `render_block` must also guard `&& tr->drum_clips[tr->active_clip]` to handle the window between pad_mode being set and clips being allocated.
+
 ## MIDI routing
 
 `midi_send_internal` → Schwung chain (safe from render path).
