@@ -203,46 +203,69 @@ export function updateStepLEDs() {
         return;
     }
 
-    /* CC bank: step LEDs show the active lane's automation as a white brightness
-     * gradient (6 levels). "—"=off, value 0=dim floor, 127=full; the playhead
-     * step shows the track color; out-of-window=DarkGrey. */
+    /* CC bank: step LEDs show the active lane's automation as a warm gradient
+     * (7 levels: val=0 → dim, rising through yellow/orange/red to full white).
+     * "—"=off; playhead = track color; out-of-window = DarkGrey. */
     if (S.activeBank === 6) {
+        const CC_GRAD = [76, 29, 29, 3, 4, 67, 127];
         const t    = S.activeTrack;
         const c    = ac;
         const lane = S.ccActiveLane[t] | 0;
         const pg   = S.trackCurrentPage[t];
         const csCC = S.trackCurrentStep[t];
-        const lenCC    = S.clipLength[t][c];
-        const lsBaseCC = S.clipLoopStart[t][c] | 0;
-        const winEndCC = lsBaseCC + lenCC;
+        var _ccLenCC = S.ccLaneLength[t][c][lane];
+        var _ccLsCC  = _ccLenCC > 0 ? (S.ccLaneLoopStart[t][c][lane] | 0)
+                                     : (S.clipLoopStart[t][c] | 0);
+        var _ccWinEnd = _ccLsCC + (_ccLenCC > 0 ? _ccLenCC : S.clipLength[t][c]);
+        var _ccPlayStep = -1;
+        if (S.playing) {
+            var _lTps = S.ccLaneTps[t][c][lane] || (S.clipTPS[t][c] || 24);
+            var _effLen = _ccLenCC > 0 ? _ccLenCC : S.clipLength[t][c];
+            var _lLenTicks = _effLen * _lTps;
+            var _lTickPos = S.masterPos % _lLenTicks;
+            var _progress = _lTickPos / _lLenTicks;
+            _ccPlayStep = _ccLsCC + Math.floor(_progress * _effLen);
+        }
         const key = t + '_' + c + '_' + lane + '_' + pg;
         if (key !== S.ccGradKey || (S.tickCount % POLL_INTERVAL) === 0) {
-            const raw = (typeof host_module_get_param === 'function')
+            var raw = (typeof host_module_get_param === 'function')
                 ? host_module_get_param('t' + t + '_c' + c + '_ccsv_' + lane + '_' + pg) : null;
             if (raw) {
-                const parts = raw.split(' ');
+                var parts = raw.split(' ');
                 for (let s = 0; s < 16; s++) {
-                    const v = s < parts.length ? parseInt(parts[s], 10) : 255;
+                    var v = s < parts.length ? parseInt(parts[s], 10) : 255;
                     S.ccGradVals[s] = (v >= 0 && v <= 127) ? v : 255;
                 }
             }
+            var bpRaw = (typeof host_module_get_param === 'function')
+                ? host_module_get_param('t' + t + '_c' + c + '_ccbp_' + lane + '_' + pg) : null;
+            if (bpRaw) {
+                var bpParts = bpRaw.split(' ');
+                for (let s = 0; s < 16; s++)
+                    S.ccGradHasBP[s] = s < bpParts.length ? (bpParts[s] === '1') : false;
+            } else {
+                for (let s = 0; s < 16; s++) S.ccGradHasBP[s] = false;
+            }
             S.ccGradKey = key;
         }
+        const _blip = (S.tickCount % 47) < 2;
         const baseCC = pg * 16;
         for (let i = 0; i < 16; i++) {
             const absStep = baseCC + i;
             let color;
-            if (absStep < lsBaseCC || absStep >= winEndCC) {
+            if (absStep < _ccLsCC || absStep >= _ccWinEnd) {
                 color = DarkGrey;
-            } else if (S.playing && absStep === csCC) {
-                color = TRACK_COLORS[t];   /* playhead = track color */
+            } else if (absStep === _ccPlayStep) {
+                color = White;
             } else {
                 const v = S.ccGradVals[i];
                 if (v >= 0 && v <= 127) {
-                    const level = Math.min(CC_GRADIENT_LEVELS - 1, Math.floor(v * CC_GRADIENT_LEVELS / 128));
-                    color = CC_GRADIENT_BASE + level;   /* white brightness level */
+                    if (_blip && S.ccGradHasBP[i]) { color = LED_OFF; }
+                    else {
+                    const level = v === 0 ? 0 : Math.min(6, 1 + Math.floor((v - 1) * 6 / 127));
+                    color = CC_GRAD[level]; }
                 } else {
-                    color = LED_OFF;   /* "—" */
+                    color = LED_OFF;
                 }
             }
             setLED(16 + i, color);
@@ -606,8 +629,9 @@ export function updateTrackLEDs() {
                 cachedSetLED(TRACK_PAD_BASE + i, color);
             }
         } else {
-        const rootColor    = _inCoRunPad ? DarkGrey : TRACK_COLORS[S.activeTrack];
-        const nonRootColor = _inCoRunPad ? TRACK_COLORS[S.activeTrack] : DarkGrey;
+        const _autoGrey    = S.activeBank === 6;
+        const rootColor    = _autoGrey ? 118 : (_inCoRunPad ? DarkGrey : TRACK_COLORS[S.activeTrack]);
+        const nonRootColor = _autoGrey ? 124 : (_inCoRunPad ? TRACK_COLORS[S.activeTrack] : DarkGrey);
         const _tarpActive = (S.bankParams[S.activeTrack][5][7] | 0) !== 0 &&
                             (S.bankParams[S.activeTrack][5][0] | 0) !== 0;
         const _tarpHeld = _tarpActive ? S.tarpHeldNotes[S.activeTrack] : null;
@@ -635,7 +659,7 @@ export function updateTrackLEDs() {
             const semitone = ((S.padNoteMap[i] % 12) - S.padKey + 12) % 12;
             const inScale  = S.padScaleSet.has(semitone);
             const chromatic = S.padLayoutChromatic[S.activeTrack];
-            color = (sounding || inHeld || inLatch) ? White
+            color = (sounding || inHeld || inLatch) ? (_autoGrey ? 120 : White)
                   : (chromatic && !inScale) ? LED_OFF
                   : (S.padNoteMap[i] % 12 === S.padKey ? rootColor : nonRootColor);
             cachedSetLED(TRACK_PAD_BASE + i, color);

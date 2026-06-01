@@ -3833,7 +3833,7 @@ function drawUI() {
             }
             fill_rect(0, 15, 128, 1, 1);
             print(_loopX2, 22, _loopL2, 1);
-            var _resLine = 'PAD ROW=res (' + _resN + ')';
+            var _resLine = '< ' + _resN + ' >  Loop Res';
             print(Math.floor((128 - _resLine.length * 6) / 2), 34, _resLine, 1);
             _drawLoopSteps(_llen_l > 0 ? _llen_l : S.clipLength[_t_l][_ac_l]);
         } else {
@@ -5884,7 +5884,9 @@ function _tickImpl() {
                  * lastPlayedNote so step edit knobs work in one gesture (mirrors
                  * the drum-mode auto-assign above and the tap-empty path at
                  * ~L8589). If no lastPlayedNote, fall back to no-note flash. */
-                if (S.lastPlayedNote >= 0 && typeof host_module_set_param === 'function') {
+                if (S.activeBank === 6) {
+                    /* CC bank: no note auto-assign */
+                } else if (S.lastPlayedNote >= 0 && typeof host_module_set_param === 'function') {
                     const ac_he       = effectiveClip(S.activeTrack);
                     const assignNote  = S.lastPlayedNote;
                     const assignVel   = stepEntryVelocity(S.activeTrack, -1, false);
@@ -5921,7 +5923,7 @@ function _tickImpl() {
          * _set_notes is a no-op on empty steps, so _toggle must fire first to activate.
          * Context is self-contained — does not depend on heldStep (may fire after quick release).
          * Sets pendingChordPhase2 for the NEXT tick; phase 2 check above ensures they never coalesce. */
-        if (S.pendingChordToStep !== null) {
+        if (S.pendingChordToStep !== null && S.activeBank !== 6) {
             const _cp1 = S.pendingChordToStep;
             if (_cp1.wasEmpty) {
                 if (typeof host_module_set_param === 'function')
@@ -7756,25 +7758,52 @@ function _onCC_transport(d1, d2) {
     /* Left/Right: page nav in Track View — clamp to the loop window so
      * step-edit nav never lands on a page that won't play. */
     if ((d1 === MoveLeft || d1 === MoveRight) && d2 === 127 && !S.sessionView) {
-        if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM) {
-            const t = S.activeTrack;
-            const lsBase = S.drumLaneLoopStart[t] | 0;
-            const startPage = lsBase >> 4;
-            const lastPage  = startPage + Math.max(1, Math.ceil(S.drumLaneLength[t] / 16)) - 1;
+        var _t_lr = S.activeTrack;
+        if (S.loopHeld && S.activeBank === 6 && S.trackPadMode[_t_lr] !== PAD_MODE_DRUM) {
+            var RES_TPS = [12, 24, 48, 96, 384];
+            var _ac_lr = effectiveClip(_t_lr);
+            var _ccL_lr = S.ccActiveLane[_t_lr];
+            var _curTps = S.ccLaneTps[_t_lr][_ac_lr][_ccL_lr] || (S.clipTPS[_t_lr][_ac_lr] || 24);
+            var _ci = RES_TPS.indexOf(_curTps);
+            if (_ci < 0) _ci = 1;
+            if (d1 === MoveLeft && _ci > 0) _ci--;
+            else if (d1 === MoveRight && _ci < RES_TPS.length - 1) _ci++;
+            S.ccLaneTps[_t_lr][_ac_lr][_ccL_lr] = RES_TPS[_ci];
+            if (typeof host_module_set_param === 'function')
+                host_module_set_param('t' + _t_lr + '_c' + _ac_lr + '_k' + _ccL_lr + '_cc_lane_tps',
+                                      String(RES_TPS[_ci]));
+            forceRedraw();
+            return;
+        }
+        if (S.trackPadMode[_t_lr] === PAD_MODE_DRUM) {
+            var lsBase = S.drumLaneLoopStart[_t_lr] | 0;
+            var startPage = lsBase >> 4;
+            var lastPage  = startPage + Math.max(1, Math.ceil(S.drumLaneLength[_t_lr] / 16)) - 1;
             if (d1 === MoveLeft)
-                S.drumStepPage[t] = Math.max(startPage, S.drumStepPage[t] - 1);
+                S.drumStepPage[_t_lr] = Math.max(startPage, S.drumStepPage[_t_lr] - 1);
             else
-                S.drumStepPage[t] = Math.min(lastPage, S.drumStepPage[t] + 1);
+                S.drumStepPage[_t_lr] = Math.min(lastPage, S.drumStepPage[_t_lr] + 1);
         } else {
-            const t  = S.activeTrack;
-            const ac = effectiveClip(t);
-            const lsBase = S.clipLoopStart[t][ac] | 0;
-            const startPage = lsBase >> 4;
-            const lastPage  = startPage + Math.max(1, Math.ceil(S.clipLength[t][ac] / 16)) - 1;
+            var ac = effectiveClip(_t_lr);
+            var lsBase, startPage, lastPage;
+            if (S.activeBank === 6) {
+                var _ccL2 = S.ccActiveLane[_t_lr];
+                var _llen = S.ccLaneLength[_t_lr][ac][_ccL2];
+                if (_llen > 0) {
+                    lsBase = S.ccLaneLoopStart[_t_lr][ac][_ccL2] | 0;
+                    startPage = lsBase >> 4;
+                    lastPage = startPage + Math.max(1, Math.ceil(_llen / 16)) - 1;
+                }
+            }
+            if (lastPage === undefined) {
+                lsBase = S.clipLoopStart[_t_lr][ac] | 0;
+                startPage = lsBase >> 4;
+                lastPage = startPage + Math.max(1, Math.ceil(S.clipLength[_t_lr][ac] / 16)) - 1;
+            }
             if (d1 === MoveLeft)
-                S.trackCurrentPage[t] = Math.max(startPage, S.trackCurrentPage[t] - 1);
+                S.trackCurrentPage[_t_lr] = Math.max(startPage, S.trackCurrentPage[_t_lr] - 1);
             else
-                S.trackCurrentPage[t] = Math.min(lastPage, S.trackCurrentPage[t] + 1);
+                S.trackCurrentPage[_t_lr] = Math.min(lastPage, S.trackCurrentPage[_t_lr] + 1);
         }
         /* Manual navigation disables SeqFollow so the view stays where the user navigated */
         const _sfAc = effectiveClip(S.activeTrack);
@@ -8172,7 +8201,7 @@ function _onCC_stepedit(d1, d2) {
         return;
     }
     /* Melodic step edit: K1 Oct, K2 Note, K3 Leng, K4 Vel, K5 Nudg, K6 Iter, K7 Prob, K8 Ratch */
-    if (S.heldStep >= 0 && S.heldStepNotes.length > 0 && d1 >= 71 && d1 <= 78) {
+    if (S.heldStep >= 0 && S.heldStepNotes.length > 0 && d1 >= 71 && d1 <= 78 && S.activeBank !== 6) {
         const knobIdx = d1 - 71;
         const dir     = (d2 >= 1 && d2 <= 63) ? 1 : -1;
         const t       = S.activeTrack;
@@ -9124,23 +9153,6 @@ function _onPadPressTrackView(status, d1, d2) {
     if (d1 >= TRACK_PAD_BASE && d1 < TRACK_PAD_BASE + 32) {
         const padIdx = d1 - TRACK_PAD_BASE;
 
-        if (S.loopHeld && S.activeBank === 6 &&
-                S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM) {
-            var row = Math.floor(padIdx / 8);
-            var col = padIdx % 8;
-            if (row === 0 && col < 5) {
-                var RES_TPS = [12, 24, 48, 96, 384];
-                var _t  = S.activeTrack;
-                var _ac = effectiveClip(_t);
-                var _ccL = S.ccActiveLane[_t];
-                S.ccLaneTps[_t][_ac][_ccL] = RES_TPS[col];
-                if (typeof host_module_set_param === 'function')
-                    host_module_set_param('t' + _t + '_c' + _ac + '_k' + _ccL + '_cc_lane_tps',
-                                          String(RES_TPS[col]));
-                forceRedraw();
-            }
-            return;
-        }
 
         /* Drum lane RESET: Shift+Delete+lane pad — full factory reset (length,
          * loop, pfx, Rpt groove all wiped). midi_note is preserved (lane
@@ -10234,10 +10246,12 @@ function _onStepButtons(d1, d2) {
         /* Delete + step button (Track View): clear all notes from that step.
          * On the CC bank (melodic), instead clear all knobs' points in the step. */
         if (S.activeBank === 6 && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM) {
-            const t = S.activeTrack, ac = effectiveClip(t);
-            const absIdx = S.trackCurrentPage[t] * 16 + idx;
-            const tps = S.clipTPS[t][ac] || 24;
-            const t1 = absIdx * tps, t2 = Math.min(65535, t1 + tps - 1);
+            var t = S.activeTrack, ac = effectiveClip(t);
+            var absIdx = S.trackCurrentPage[t] * 16 + idx;
+            var _ccL_d = S.ccActiveLane[t];
+            var _ltps_d = S.ccLaneTps[t][ac][_ccL_d];
+            var tps = (_ltps_d > 0) ? _ltps_d : (S.clipTPS[t][ac] || 24);
+            var t1 = absIdx * tps, t2 = Math.min(65535, t1 + tps - 1);
             if (typeof host_module_set_param === 'function')
                 host_module_set_param('t' + t + '_cc_auto_clear_step', ac + ' ' + t1 + ' ' + t2);
             /* DSP may have emptied some lanes — refresh auto bits / rest on next tick
@@ -10467,7 +10481,7 @@ function _onStepButtons(d1, d2) {
                 S.stepWasHeld = true;
             }
             forceRedraw();
-        } else if (S.stepBtnPressedTick[S.heldStepBtn] >= 0) {
+        } else if (S.stepBtnPressedTick[S.heldStepBtn] >= 0 && S.activeBank !== 6) {
             /* Primary still in tap window: multi-toggle this step immediately.
              * Use S.clipSteps for state — get_param is unreliable from onMidiMessage context. */
             const ac_mp    = effectiveClip(S.activeTrack);
@@ -10497,7 +10511,7 @@ function _onStepButtons(d1, d2) {
             }
             S.stepBtnPressedTick[idx] = -1;
             forceRedraw();
-        } else if (S.heldStepNotes.length > 0) {
+        } else if (S.heldStepNotes.length > 0 && S.activeBank !== 6) {
             /* Primary in step edit (past tap threshold): tap sets gate span.
              * Clear S.heldStepBtn press-tick so the first step's release doesn't also tap-toggle. */
             S.stepBtnPressedTick[S.heldStepBtn] = -1;
@@ -10705,7 +10719,7 @@ function _onPadRelease(status, d1, d2) {
                         host_module_set_param('t' + t + '_l' + lane + '_step_' + S.heldStep + '_vel', String(S.stepEditVel));
                 }
             } else {
-            if (S.stepBtnPressedTick[btn] >= 0) {
+            if (S.stepBtnPressedTick[btn] >= 0 && S.activeBank !== 6) {
                 /* Quick release within threshold — commit as tap toggle */
                 const ac_t   = effectiveClip(S.activeTrack);
                 const absIdx = S.heldStep;
@@ -10732,7 +10746,7 @@ function _onPadRelease(status, d1, d2) {
             }
             /* On long-hold release: if nudge moved notes past the step midpoint,
              * reassign them to the adjacent step slot so it's editable from there. */
-            if (S.stepWasHeld && S.heldStep >= 0 && S.heldStepNotes.length > 0) {
+            if (S.stepWasHeld && S.heldStep >= 0 && S.heldStepNotes.length > 0 && S.activeBank !== 6) {
                 const ac_ra = effectiveClip(S.activeTrack);
                 const lenRa = S.clipLength[S.activeTrack][ac_ra];
                 let dstStep = -1;

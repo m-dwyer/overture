@@ -9018,28 +9018,33 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
                 while (*_q >= '0' && *_q <= '9') { _sidx = _sidx * 10 + (*_q++ - '0'); }
                 cc_auto_t *_ca = &tr->clip_cc_auto[cidx];
                 uint32_t _tps = cl->ticks_per_step;
-                uint32_t _t1  = (uint32_t)_sidx * _tps;
-                uint32_t _t2  = _t1 + (_tps ? _tps - 1 : 0);
                 uint32_t _ws  = (uint32_t)cl->loop_start * _tps;
                 uint32_t _we  = (uint32_t)(cl->loop_start + cl->length) * _tps;
                 int _pos = 0, _k2;
                 for (_k2 = 0; _k2 < 8; _k2++) {
+                    uint32_t _ktps = (_ca->lane_tps[_k2] > 0)
+                                   ? _ca->lane_tps[_k2] : _tps;
+                    uint32_t _t1k = (uint32_t)_sidx * _ktps;
+                    uint32_t _t2k = _t1k + (_ktps ? _ktps - 1 : 0);
                     int _pv = -1, _ip;
                     for (_ip = 0; _ip < (int)_ca->count[_k2]; _ip++) {
                         uint16_t _tk = _ca->ticks[_k2][_ip];
-                        if (_tk >= (uint16_t)_t1 && _tk <= (uint16_t)_t2) { _pv = _ca->vals[_k2][_ip]; break; }
+                        if (_tk >= (uint16_t)_t1k && _tk <= (uint16_t)_t2k) { _pv = _ca->vals[_k2][_ip]; break; }
                     }
                     _pos += snprintf(out + _pos, (size_t)(out_len - _pos), _k2 ? " %d" : "%d", _pv);
                 }
                 for (_k2 = 0; _k2 < 8; _k2++) {
-                    uint32_t _ews = _ws, _ewe = _we, _et = _t1;
+                    uint32_t _ktps2 = (_ca->lane_tps[_k2] > 0)
+                                    ? _ca->lane_tps[_k2] : _tps;
+                    uint32_t _et = (uint32_t)_sidx * _ktps2;
+                    uint32_t _ews = _ws, _ewe = _we;
                     if (_ca->lane_length[_k2] > 0) {
                         uint32_t _ltps = _ca->lane_tps[_k2] > 0
                                        ? _ca->lane_tps[_k2] : _tps;
                         _ews = (uint32_t)_ca->lane_loop_start[_k2] * _ltps;
                         uint32_t _llen = (uint32_t)_ca->lane_length[_k2] * _ltps;
                         _ewe = _ews + _llen;
-                        _et  = cc_lane_wrap_tick(_t1, _ews, _llen);
+                        _et  = cc_lane_wrap_tick(_et, _ews, _llen);
                     }
                     int _def, _ov = cc_auto_eval(_ca, _k2, _et, _ews, _ewe, &_def);
                     _pos += snprintf(out + _pos, (size_t)(out_len - _pos), " %d", _def ? _ov : -1);
@@ -9075,6 +9080,31 @@ static int get_param(void *instance, const char *key, char *out, int out_len) {
                     int _def, _ov = cc_auto_eval(_ca, _k2, _t, _ews, _ewe, &_def);
                     _pos += snprintf(out + _pos, (size_t)(out_len - _pos),
                                      _s ? " %d" : "%d", _def ? _ov : 255);
+                }
+                return _pos;
+            }
+            if (!strncmp(p, "_ccbp_", 6)) {
+                /* "_ccbp_<k>_<page>" → 16 flags: 1 if a real breakpoint exists
+                 * in that step's tick window, 0 if interpolated/resting/empty. */
+                const char *_q = p + 6;
+                int _k2 = 0, _pg = 0;
+                while (*_q >= '0' && *_q <= '9') { _k2 = _k2 * 10 + (*_q++ - '0'); }
+                if (*_q == '_') _q++;
+                while (*_q >= '0' && *_q <= '9') { _pg = _pg * 10 + (*_q++ - '0'); }
+                if (_k2 < 0 || _k2 > 7) return -1;
+                cc_auto_t *_ca = &tr->clip_cc_auto[cidx];
+                uint32_t _ktps = cl->ticks_per_step;
+                int _pos = 0, _s;
+                for (_s = 0; _s < 16; _s++) {
+                    uint32_t _t1 = (uint32_t)(_pg * 16 + _s) * _ktps;
+                    uint32_t _t2 = _t1 + (_ktps ? _ktps - 1 : 0);
+                    int _has = 0, _ip;
+                    for (_ip = 0; _ip < (int)_ca->count[_k2]; _ip++) {
+                        uint16_t _tk = _ca->ticks[_k2][_ip];
+                        if (_tk >= (uint16_t)_t1 && _tk <= (uint16_t)_t2) { _has = 1; break; }
+                    }
+                    _pos += snprintf(out + _pos, (size_t)(out_len - _pos),
+                                     _s ? " %d" : "%d", _has);
                 }
                 return _pos;
             }
@@ -9992,13 +10022,17 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                 for (_kp = 0; _kp < 8; _kp++) {
                     int _def;
                     uint32_t _lws = _ws, _lwe = _we, _lct = _ct;
-                    if (_ca->lane_length[_kp] > 0) {
+                    if (_ca->lane_length[_kp] > 0 || _ca->lane_tps[_kp] > 0) {
                         uint32_t _ltps = _ca->lane_tps[_kp] > 0
                                        ? _ca->lane_tps[_kp] : _tps;
-                        _lws = (uint32_t)_ca->lane_loop_start[_kp] * _ltps;
-                        uint32_t _llen = (uint32_t)_ca->lane_length[_kp] * _ltps;
-                        _lwe = _lws + _llen;
-                        _lct = _lws + (_abs_tick % _llen);
+                        uint32_t _elen = _ca->lane_length[_kp] > 0
+                                       ? _ca->lane_length[_kp] : _acl->length;
+                        uint32_t _cycle = (uint32_t)_elen * _ltps;
+                        uint32_t _data_len = (uint32_t)_elen * _tps;
+                        _lws = (uint32_t)_ca->lane_loop_start[_kp] * _tps;
+                        _lwe = _lws + _data_len;
+                        uint32_t _prog = _abs_tick % _cycle;
+                        _lct = _lws + (uint32_t)((uint64_t)_prog * _data_len / _cycle);
                     }
                     int _ov = cc_auto_eval(_ca, _kp, _lct, _lws, _lwe, &_def);
                     /* A latched knob is actively being recorded: report the live
@@ -10026,26 +10060,30 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                  * whatever was there). Continues even when the knob isn't moving,
                  * until recording stops (finalized at the 1->0 edge above). */
                 if (tr->recording && tr->cc_latched) {
-                    /* Loop-wrap → decimate each latched lane (collapse the cycle's
-                     * redundant collinear points; a flat hold becomes endpoints). */
-                    if (_ct < tr->cc_prev_ct) {
-                        int _kt;
-                        for (_kt = 0; _kt < 8; _kt++)
-                            if ((tr->cc_latched >> _kt) & 1) cc_auto_decimate(_ca, _kt);
-                    }
-                    uint32_t _snap = (_ct / 12) * 12;
-                    uint16_t _s    = (uint16_t)(_snap <= 65534 ? _snap : 65534);
                     int _kt;
                     for (_kt = 0; _kt < 8; _kt++) {
                         if (!((tr->cc_latched >> _kt) & 1)) continue;
+                        uint32_t _rec_tick;
+                        if (_ca->lane_length[_kt] > 0) {
+                            uint32_t _ltps = _ca->lane_tps[_kt] > 0
+                                           ? _ca->lane_tps[_kt] : _tps;
+                            uint32_t _llen = (uint32_t)_ca->lane_length[_kt] * _ltps;
+                            _rec_tick = _abs_tick % _llen;
+                        } else {
+                            _rec_tick = _ct;
+                        }
+                        uint32_t _snap = (_rec_tick / 12) * 12;
                         if (_snap == tr->cc_latch_last_snap[_kt]) continue;
+                        /* Loop-wrap → decimate (collapse collinear points) */
+                        if (_rec_tick < tr->cc_latch_last_snap[_kt])
+                            cc_auto_decimate(_ca, _kt);
                         tr->cc_latch_last_snap[_kt] = _snap;
+                        uint16_t _s = (uint16_t)(_snap <= 65534 ? _snap : 65534);
                         cc_auto_clear_range(_ca, _kt, _s, (uint16_t)(_s + 11));
                         cc_auto_set_point(_ca, _kt, _s, tr->cc_live_val[_kt]);
                     }
                     inst->state_dirty = 1;
                 }
-                tr->cc_prev_ct = _ct;
                 /* Pad-pressure aftertouch automation playback (interpolated;
                  * independent of the live AftTch toggle — recorded AT always
                  * plays). Per-lane emit-on-change; cache reset on clip change. */

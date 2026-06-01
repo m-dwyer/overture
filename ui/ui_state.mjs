@@ -301,6 +301,7 @@ export const S = {
      * (255 = "—"), the cache key (track/clip/lane/page), and which track's 6
      * gradient palette entries are currently loaded. */
     ccGradVals: new Array(16).fill(255),
+    ccGradHasBP: new Array(16).fill(false),
     ccGradKey: '',
     ccGradPaletteTrack: -1,
     stepBtnPressedTick: new Array(16).fill(-1),
