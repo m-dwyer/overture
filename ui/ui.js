@@ -8082,16 +8082,13 @@ function _onCC_transport(d1, d2) {
                     var _zResValid = RES_TPS.indexOf(_zNewRes) >= 0;
                     S.ccLaneResTps[_zt][_zac][_zL] = _zResValid ? _zNewRes : 0;
                 }
-                if (typeof host_module_set_param === 'function') {
-                    host_module_set_param('t' + _zt + '_c' + _zac + '_k' + _zL + '_cc_lane_tps',
-                                          String(_zNewTps));
-                    var _zPacked = ((S.ccLaneLoopStart[_zt][_zac][_zL] | 0) << 16) | (_zNewLen & 0xFFFF);
-                    host_module_set_param('t' + _zt + '_c' + _zac + '_k' + _zL + '_cc_loop_set',
-                                          String(_zPacked));
-                    if (_zOldRes > 0)
-                        host_module_set_param('t' + _zt + '_c' + _zac + '_k' + _zL + '_cc_lane_res_tps',
-                                              String(S.ccLaneResTps[_zt][_zac][_zL]));
-                }
+                var _zPre = 't' + _zt + '_c' + _zac + '_k' + _zL;
+                S.pendingDefaultSetParams.push({ key: _zPre + '_cc_lane_tps', val: String(_zNewTps) });
+                S.pendingDefaultSetParams.push({ key: _zPre + '_cc_loop_set',
+                    val: String(((S.ccLaneLoopStart[_zt][_zac][_zL] | 0) << 16) | (_zNewLen & 0xFFFF)) });
+                if (_zOldRes > 0)
+                    S.pendingDefaultSetParams.push({ key: _zPre + '_cc_lane_res_tps',
+                        val: String(S.ccLaneResTps[_zt][_zac][_zL]) });
                 var _zMaxPage = Math.max(0, Math.ceil(_zNewLen / 16) - 1);
                 if (S.trackCurrentPage[_zt] > _zMaxPage) S.trackCurrentPage[_zt] = _zMaxPage;
                 forceRedraw();
