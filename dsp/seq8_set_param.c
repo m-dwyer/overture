@@ -392,6 +392,19 @@ static void set_param(void *instance, const char *key, const char *val) {
                 inst->playing        = 0;
                 inst->count_in_ticks = 0;
                 send_panic(inst);
+                for (t = 0; t < NUM_TRACKS; t++) {
+                    seq8_track_t *_tr = &inst->tracks[t];
+                    if (_tr->pad_mode != PAD_MODE_MELODIC_SCALE) continue;
+                    cc_auto_t *_ca = &_tr->clip_cc_auto[_tr->active_clip];
+                    int _k;
+                    for (_k = 0; _k < 8; _k++) {
+                        if (_ca->rest_val[_k] != 0xFF) {
+                            cc_emit(_tr, _k, _ca->rest_val[_k]);
+                            _tr->cc_auto_cur_val[_k] = _ca->rest_val[_k];
+                        }
+                        _tr->cc_auto_last_sent[_k] = 0xFF;
+                    }
+                }
                 seq8_ilog(inst, "SEQ8 transport: stop");
             }
         } else if (!strcmp(val, "restart")) {

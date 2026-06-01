@@ -303,6 +303,8 @@ export const S = {
     ccGradVals: new Array(16).fill(255),
     ccGradHasBP: new Array(16).fill(false),
     ccGradKey: '',
+    ccGraphOvData: [],
+    ccGraphOvKey: '',
     ccGradPaletteTrack: -1,
     stepBtnPressedTick: new Array(16).fill(-1),
     lastPlayedNote: -1,

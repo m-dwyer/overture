@@ -3676,33 +3676,112 @@ function drawUI() {
 
     /* Step edit: show assigned notes and step identity */
     if (S.heldStep >= 0) {
-        drawStepEditHeader();
         if (S.activeBank === 6 && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM) {
-            /* CC step-edit: per knob — a set point shows its value; an unset step
-             * shows the computed output value in (parens) (what plays here), or
-             * "—" when nothing is defined. */
-            const _t6s = S.activeTrack;
-            print(4, 10, 'CC  S' + (S.heldStep + 1), 1);
-            for (let _k = 0; _k < 8; _k++) {
-                const _col = _k % 4, _row = Math.floor(_k / 4);
-                const _x = 4 + _col * 31, _y = 24 + _row * 20;
-                const _hi = (S.knobTouched === _k);
-                if (_hi) fill_rect(_x - 1, _y - 1, 29, 18, 1);
-                const _lbl = S.trackCCType[_t6s][_k] === 2 ? ('Sch' + S.trackCCAssign[_t6s][_k])
-                           : S.trackCCType[_t6s][_k] === 1 ? 'AT'
-                           : (S.trackCCAssign[_t6s][_k] > 0 ? 'C' + S.trackCCAssign[_t6s][_k] : '--');
-                let _vs;
-                if (S.ccStepEditSet[_k]) {
-                    _vs = String(S.ccStepEditVal[_k]);
-                } else {
-                    const _cv = S.ccStepEditComputed[_k];
-                    _vs = (_cv >= 0 && _cv <= 127) ? '(' + _cv + ')' : '--';
+            /* CC bank step-hold: compact graph + knob values */
+            var _t6s = S.activeTrack, _ac6s = effectiveClip(_t6s);
+            var _gLane6 = S.ccActiveLane[_t6s];
+            var _gEffLen6 = S.ccLaneLength[_t6s][_ac6s][_gLane6] || S.clipLength[_t6s][_ac6s];
+            var _gLTps6 = S.ccLaneTps[_t6s][_ac6s][_gLane6] || (S.clipTPS[_t6s][_ac6s] || 24);
+            /* Compact graph (12px) just above progress bar */
+            var _sgBarY = 60, _sgBarH = 3;
+            var _sgH = 12, _sgY = _sgBarY - _sgH - 2;
+            var _sgPages = Math.ceil(_gEffLen6 / 16);
+            var _sgKey = 'sg_' + _t6s + '_' + _ac6s + '_' + _gLane6;
+            if (_sgKey !== S.ccGraphOvKey || (S.tickCount % POLL_INTERVAL) === 0) {
+                S.ccGraphOvData = [];
+                for (var _sgp = 0; _sgp < _sgPages; _sgp++) {
+                    var _sgRaw = (typeof host_module_get_param === 'function')
+                        ? host_module_get_param('t' + _t6s + '_c' + _ac6s + '_ccsv_' + _gLane6 + '_' + _sgp) : null;
+                    if (_sgRaw) {
+                        var _sgParts = _sgRaw.split(' ');
+                        for (var _sgs = 0; _sgs < 16 && _sgp * 16 + _sgs < _gEffLen6; _sgs++)
+                            S.ccGraphOvData.push(_sgs < _sgParts.length ? parseInt(_sgParts[_sgs], 10) : 255);
+                    }
                 }
-                print(_x, _y,     col4(_lbl), _hi ? 0 : 1);
-                print(_x, _y + 9, col5(_vs),  _hi ? 0 : 1);  /* 5 chars so "(127)" isn't clipped */
+                S.ccGraphOvKey = _sgKey;
+            }
+            fill_rect(0, _sgY, 128, 1, 1);
+            fill_rect(0, _sgY + _sgH - 1, 128, 1, 1);
+            fill_rect(0, _sgY, 1, _sgH, 1);
+            fill_rect(127, _sgY, 1, _sgH, 1);
+            var _sgDLen = S.ccGraphOvData.length || 1;
+            var _sgDrawY = _sgY + 2, _sgDrawH = _sgH - 4;
+            var _sgPrevPy = -1;
+            for (var _sgc = 1; _sgc < 127; _sgc++) {
+                var _sgIdx = Math.floor(_sgc * _sgDLen / 128);
+                var _sgv = _sgIdx < S.ccGraphOvData.length ? S.ccGraphOvData[_sgIdx] : -1;
+                if (_sgv >= 0 && _sgv <= 127) {
+                    var _sgpy = _sgDrawY + _sgDrawH - 1 - Math.round(_sgv * (_sgDrawH - 1) / 127);
+                    if (_sgPrevPy >= 0 && _sgPrevPy !== _sgpy) {
+                        var _sgyMin = Math.min(_sgPrevPy, _sgpy);
+                        var _sgyMax = Math.max(_sgPrevPy, _sgpy);
+                        fill_rect(_sgc, _sgyMin, 1, _sgyMax - _sgyMin + 1, 1);
+                    } else {
+                        fill_rect(_sgc, _sgpy, 1, 1, 1);
+                    }
+                    _sgPrevPy = _sgpy;
+                } else {
+                    _sgPrevPy = -1;
+                }
+            }
+            /* Step position indicator on graph — white vertical line */
+            var _sgSx = Math.min(126, Math.max(1, Math.floor(S.heldStep * 126 / _sgDLen) + 1));
+            fill_rect(_sgSx, _sgY + 1, 1, _sgH - 2, 1);
+            /* Step header: MCU font, white on black, separator line */
+            pixelPrint(1, 1, 'Step ' + (S.heldStep + 1), 1);
+            var _pnLbl = '';
+            var _pnK = S.knobTouched >= 0 ? S.knobTouched : _gLane6;
+            if (S.trackCCType[_t6s][_pnK] === 2)
+                _pnLbl = S.schLabel[_t6s][_pnK] || ('Sch' + S.trackCCAssign[_t6s][_pnK]);
+            if (_pnLbl) pixelPrint(128 - _pnLbl.length * 6 - 1, 1, _pnLbl, 1);
+            fill_rect(0, 7, 128, 1, 1);
+            /* 8 knobs in 2 rows of 4 (standard font) */
+            for (var _k6 = 0; _k6 < 8; _k6++) {
+                var _col6 = _k6 % 4, _row6 = Math.floor(_k6 / 4);
+                var _x6 = 4 + _col6 * 31, _y6 = 11 + _row6 * 18;
+                var _hi6 = (S.knobTouched === _k6) || (S.ccActiveLane[_t6s] === _k6);
+                if (_hi6) fill_rect(_x6 - 1, _y6 - 1, 29, 18, 1);
+                var _lbl6 = S.trackCCType[_t6s][_k6] === 2 ? ('Sch' + S.trackCCAssign[_t6s][_k6])
+                          : S.trackCCType[_t6s][_k6] === 1 ? 'AT'
+                          : (S.trackCCAssign[_t6s][_k6] > 0 ? 'C' + S.trackCCAssign[_t6s][_k6] : '--');
+                var _vs6;
+                if (S.ccStepEditSet[_k6]) {
+                    _vs6 = String(S.ccStepEditVal[_k6]);
+                } else {
+                    var _cv6 = S.ccStepEditComputed[_k6];
+                    _vs6 = (_cv6 >= 0 && _cv6 <= 127) ? '(' + _cv6 + ')' : '--';
+                }
+                print(_x6, _y6, col4(_lbl6), _hi6 ? 0 : 1);
+                print(_x6, _y6 + 9, col5(_vs6), _hi6 ? 0 : 1);
+            }
+            /* Progress bar */
+            var _sgWP = Math.max(1, Math.ceil(_gEffLen6 / 16));
+            var _sgVP = Math.max(0, Math.min(S.trackCurrentPage[_t6s], _sgWP - 1));
+            var _sgSG = 1, _sgSW = Math.max(2, Math.floor((120 - (_sgWP - 1) * _sgSG) / _sgWP));
+            var _sgPP = -1;
+            if (S.playing) {
+                var _sgProg = (S.masterPos % (_gEffLen6 * _gLTps6)) / (_gEffLen6 * _gLTps6);
+                _sgPP = Math.floor(_sgProg * _sgWP);
+            }
+            for (var _sgPg = 0; _sgPg < _sgWP; _sgPg++) {
+                var _sgx = 4 + _sgPg * (_sgSW + _sgSG);
+                if (_sgPg === _sgVP) fill_rect(_sgx, _sgBarY, _sgSW, _sgBarH, 1);
+                else if (_sgPg === _sgPP) {
+                    fill_rect(_sgx, _sgBarY, _sgSW, 1, 1);
+                    fill_rect(_sgx, _sgBarY + _sgBarH - 1, _sgSW, 1, 1);
+                    fill_rect(_sgx, _sgBarY, 1, _sgBarH, 1);
+                    fill_rect(_sgx + _sgSW - 1, _sgBarY, 1, _sgBarH, 1);
+                } else fill_rect(_sgx, _sgBarY + _sgBarH - 1, _sgSW, 1, 1);
+            }
+            if (S.playing) {
+                var _sgBW = _sgWP * (_sgSW + _sgSG) - _sgSG;
+                var _sgDX = 4 + Math.floor(_sgProg * _sgBW);
+                var _sgVS = 4 + _sgVP * (_sgSW + _sgSG);
+                fill_rect(_sgDX, _sgBarY, 1, _sgBarH, (_sgDX >= _sgVS && _sgDX < _sgVS + _sgSW) ? 0 : 1);
             }
             return;
-        }
+        } else {
+        drawStepEditHeader();
         if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM) {
             /* Drum step edit: 2-row 4-col grid matching melodic layout width.
              * Row 1: K1 Leng, K2 Vel, K3 Nudg, K4 —.
@@ -3791,6 +3870,7 @@ function drawUI() {
             return;
         }
         /* non-empty step, notes still loading at hold threshold — fall through to bank/header */
+    } /* end else (non-bank-6 step edit) */
     }
 
     /* Loop view: own priority state so screen is fully cleared first */
@@ -3876,6 +3956,134 @@ function drawUI() {
             const val = (v === 0) ? ' 0' : (v > 0 ? '+' + v : String(v));
             print(colX, rowY,      col4(lbl), hi ? 0 : 1);
             print(colX, rowY + 12, col4(val), hi ? 0 : 1);
+        }
+        return;
+    }
+
+    /* Auto bank idle display: lane info + automation graph + progress bar */
+    if (bank === 6 && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM &&
+            !S.loopHeld && S.knobTouched < 0 && !inTimeout) {
+        var _gt = S.activeTrack;
+        var _gac = effectiveClip(_gt);
+        var _gLane = S.ccActiveLane[_gt];
+        var _gLbl = S.trackCCType[_gt][_gLane] === 2
+                  ? ('Sch' + S.trackCCAssign[_gt][_gLane])
+                  : fmtCCLabel(S.trackCCAssign[_gt][_gLane]);
+        var _gParam = S.trackCCType[_gt][_gLane] === 2
+                    ? (S.schLabel[_gt][_gLane] || '') : '';
+        var _gEffLen = S.ccLaneLength[_gt][_gac][_gLane] || S.clipLength[_gt][_gac];
+        var _gLTps = S.ccLaneTps[_gt][_gac][_gLane] || (S.clipTPS[_gt][_gac] || 24);
+        var _gResN = _gLTps === 12 ? '1/32' : _gLTps === 48 ? '1/8'
+                   : _gLTps === 96 ? '1/4' : _gLTps === 384 ? '1bar' : '1/16';
+        drawBankHeadingInverted(BANKS[6].name);
+        {
+            var _ccHas = (S.trackCCAutoBits[_gt][_gac] !== 0) ||
+                         S.clipCCVal[_gt][_gac].some(function(v) { return v >= 0; });
+            var _atHas = !!S.clipAtHas[_gt][_gac];
+            var _schHas = S.trackCCType[_gt].some(function(tp, k) {
+                return tp === 2 && (((S.trackCCAutoBits[_gt][_gac] >> k) & 1) || S.clipCCVal[_gt][_gac][k] >= 0);
+            });
+            var _bx = 60;
+            var _badge = function(txt) {
+                var w = txt.length * 6 + 3;
+                fill_rect(_bx, 1, w, 7, 1);
+                print(_bx + 1, 1, txt, 0);
+                _bx += w + 2;
+            };
+            if (_schHas) _badge('Sch');
+            if (_atHas) _badge('AT');
+            if (_ccHas) _badge('CC');
+        }
+        /* Lane info rows */
+        var _gKnobLbl = 'K' + (_gLane + 1) + '-' + _gLbl;
+        print(4, 10, _gKnobLbl, 1);
+        fill_rect(4, 19, _gKnobLbl.length * 6, 1, 1);
+        if (_gParam) print(128 - _gParam.length * 6 - 4, 10, _gParam, 1);
+        var _gVal = S.playing ? S.trackCCLiveVal[_gt][_gLane] : S.clipCCVal[_gt][_gac][_gLane];
+        var _gValStr = (_gVal >= 0 && _gVal <= 127) ? String(_gVal) : '--';
+        print(4, 21, _gValStr, 1);
+        print(128 - ('Res: ' + _gResN).length * 6 - 4, 21, 'Res: ' + _gResN, 1);
+        /* Automation graph: 128px wide, just above progress bar */
+        var _gBarY = 60, _gBarH = 3;
+        var _gH = 24, _gY = _gBarY - _gH - 3;
+        var _gPages = Math.ceil(_gEffLen / 16);
+        var _gCTps = S.clipTPS[_gt][_gac] || 24;
+        var _gTotalSteps = _gEffLen;
+        var _gKey = 'g_' + _gt + '_' + _gac + '_' + _gLane;
+        if (_gKey !== S.ccGraphOvKey || (S.tickCount % POLL_INTERVAL) === 0) {
+            S.ccGraphOvData = [];
+            for (var _gp = 0; _gp < _gPages; _gp++) {
+                var _gRaw = (typeof host_module_get_param === 'function')
+                    ? host_module_get_param('t' + _gt + '_c' + _gac + '_ccsv_' + _gLane + '_' + _gp) : null;
+                if (_gRaw) {
+                    var _gParts = _gRaw.split(' ');
+                    for (var _gs = 0; _gs < 16 && _gp * 16 + _gs < _gTotalSteps; _gs++)
+                        S.ccGraphOvData.push(_gs < _gParts.length ? parseInt(_gParts[_gs], 10) : 255);
+                }
+            }
+            S.ccGraphOvKey = _gKey;
+        }
+        /* Render graph: black background, 1px white border, white line */
+        fill_rect(0, _gY, 128, 1, 1);
+        fill_rect(0, _gY + _gH - 1, 128, 1, 1);
+        fill_rect(0, _gY, 1, _gH, 1);
+        fill_rect(127, _gY, 1, _gH, 1);
+        var _gDataLen = S.ccGraphOvData.length || 1;
+        var _gDrawY = _gY + 2, _gDrawH = _gH - 4;
+        var _gPrevPy = -1;
+        for (var _gc = 1; _gc < 127; _gc++) {
+            var _gIdx = Math.floor(_gc * _gDataLen / 128);
+            var _gv = _gIdx < S.ccGraphOvData.length ? S.ccGraphOvData[_gIdx] : -1;
+            if (_gv >= 0 && _gv <= 127) {
+                var _gpy = _gDrawY + _gDrawH - 1 - Math.round(_gv * (_gDrawH - 1) / 127);
+                if (_gPrevPy >= 0 && _gPrevPy !== _gpy) {
+                    var _gyMin = Math.min(_gPrevPy, _gpy);
+                    var _gyMax = Math.max(_gPrevPy, _gpy);
+                    fill_rect(_gc, _gyMin, 1, _gyMax - _gyMin + 1, 1);
+                } else {
+                    fill_rect(_gc, _gpy, 1, 1, 1);
+                }
+                _gPrevPy = _gpy;
+            } else {
+                _gPrevPy = -1;
+            }
+        }
+        /* Step-hold position indicator — black vertical line on graph */
+        if (S.heldStep >= 0) {
+            var _gSx = Math.floor(S.heldStep * 128 / _gDataLen);
+            if (_gSx > 127) _gSx = 127;
+            fill_rect(_gSx, _gY, 1, _gH, 0);
+        }
+        /* Progress bar — lane-aware */
+        var _gWinPages = Math.max(1, Math.ceil(_gEffLen / 16));
+        var _gViewPage = Math.max(0, Math.min(S.trackCurrentPage[_gt], _gWinPages - 1));
+        var _gSegGap = 1;
+        var _gSegW = Math.max(2, Math.floor((120 - (_gWinPages - 1) * _gSegGap) / _gWinPages));
+        var _gPlayPage = -1;
+        if (S.playing) {
+            var _gProg2 = (S.masterPos % (_gEffLen * _gLTps)) / (_gEffLen * _gLTps);
+            _gPlayPage = Math.floor(_gProg2 * _gWinPages);
+        }
+        for (var _gPg = 0; _gPg < _gWinPages; _gPg++) {
+            var _gx = 4 + _gPg * (_gSegW + _gSegGap);
+            if (_gPg === _gViewPage) {
+                fill_rect(_gx, _gBarY, _gSegW, _gBarH, 1);
+            } else if (_gPg === _gPlayPage) {
+                fill_rect(_gx, _gBarY, _gSegW, 1, 1);
+                fill_rect(_gx, _gBarY + _gBarH - 1, _gSegW, 1, 1);
+                fill_rect(_gx, _gBarY, 1, _gBarH, 1);
+                fill_rect(_gx + _gSegW - 1, _gBarY, 1, _gBarH, 1);
+            } else {
+                fill_rect(_gx, _gBarY + _gBarH - 1, _gSegW, 1, 1);
+            }
+        }
+        /* Playhead dot on progress bar */
+        if (S.playing) {
+            var _gBarW = _gWinPages * (_gSegW + _gSegGap) - _gSegGap;
+            var _gDotX = 4 + Math.floor(_gProg2 * _gBarW);
+            var _gViewStart = 4 + _gViewPage * (_gSegW + _gSegGap);
+            var _gOnSolid = _gDotX >= _gViewStart && _gDotX < _gViewStart + _gSegW;
+            fill_rect(_gDotX, _gBarY, 1, _gBarH, _gOnSolid ? 0 : 1);
         }
         return;
     }
