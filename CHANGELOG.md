@@ -7,6 +7,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com). Add entries to
 the section into a versioned heading at release time.
 
 ## [Unreleased]
+### Features
+- **Per-lane automation loops.** Each CC/Sch automation lane can have its own independent loop length, resolution (playback speed), and zoom (step granularity). Loops cycle independently from the clip — set via Hold Loop on AUTO bank. Step buttons set loop length by page, jog adjusts by step. Left/Right changes resolution (playback speed). Up/Down changes zoom (step grid density). Delete+Loop or Loop+Delete resets the lane to clip defaults. Shift+Step 15 doubles the lane loop with data copy.
+- **Auto bank visual mode.** AUTO bank has a distinct look: warm-color step LED gradient (yellow→orange→red→white), grayscale pads, OLED automation graph with playhead cursor and progress bar. Step-edit shows compact graph + knob values split-screen. Breakpoint steps blip periodically to distinguish real points from interpolated values.
+- **Transport stop returns to resting values.** When transport stops, all CC lanes emit their resting values so parameters don't get stuck.
 
 ## [1.0b3] — 2026-05-30
 ### Features

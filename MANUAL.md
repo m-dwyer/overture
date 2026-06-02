@@ -558,6 +558,54 @@ Each of the 8 knobs controls its own automation lane — a recordable stream of 
 - **Delete + step** clears all lanes at that step.
 - Clearing the clip (notes) also removes all its automation.
 
+## Per-lane loops
+
+Each automation lane can have its own independent loop — separate from the clip's note loop. This lets you create polyrhythmic automation: a 3-step filter sweep cycling over a 4-bar melody, an LFO-like pattern at a different rate than the drums, etc.
+
+Lanes inherit the clip's loop length and resolution by default. Once you set a custom loop, the lane cycles independently using the global transport — it fires at the same time as the clip but loops at its own rate.
+
+**Setting a lane loop (Hold Loop on AUTO bank):**
+
+The last-touched knob is the active lane. All Loop gestures target it.
+
+| Gesture | Effect |
+|---|---|
+| **Step buttons** | Set loop length by page (same as clip loop) |
+| **Jog wheel** | Adjust loop length by 1 step |
+| **Left / Right** | Change resolution (playback speed) — same data, faster or slower cycle |
+| **Up / Down** | Change zoom (step grid density) — same time span, more or fewer steps |
+| **Delete + Loop** or **Loop + Delete** | Reset lane to clip defaults (length, resolution, zoom all cleared) |
+| **Shift + Step 15** | Double lane loop with data copy |
+
+**Resolution vs zoom:**
+
+- **Resolution** changes how fast the lane plays through its steps. At 1/8 resolution, a 16-step loop takes twice as long as at 1/16. The step LED display doesn't change — same data, different speed.
+- **Zoom** changes the step grid granularity. Zooming in shows finer divisions (more steps, more pages). Zooming out shows coarser divisions (fewer steps). The total time span stays the same. Breakpoints stay at their exact tick positions — the grid moves around them.
+
+Both are shown on the Loop config screen and the idle AUTO bank display.
+
+**OLED display (AUTO bank idle):** shows the bank header with Sch/AT/CC badges, the active lane's knob label + real-time value, resolution + zoom indicators, an automation value graph (black background, white line with playhead cursor), and a lane-aware progress bar.
+
+**OLED display (step held):** split-screen with compact graph (showing held-step position marker) above the progress bar, and the 8-knob step-edit values below the header. Active lane is highlighted.
+
+**Step LED colors (AUTO bank):**
+
+| Value | Color |
+|---|---|
+| No data ("—") | Off |
+| 0 | Dim warm |
+| Low | Yellow/orange (rising) |
+| Mid | Orange/red |
+| High–127 | Bright white |
+| Playhead | White |
+| Out of loop | Dark grey |
+
+Steps with real recorded breakpoints blip briefly (~every 0.5s) to distinguish them from interpolated values.
+
+**Pad colors (AUTO bank):** grayscale version of the note layout — root notes bright, in-scale notes grey, chromatic out-of-scale off.
+
+**Undo:** lane double-fill, lane reset, Delete+step, live latch recording, and clear automation are all undoable (Shift + Step 1).
+
 ---
 
 # 9. Drum Tracks
