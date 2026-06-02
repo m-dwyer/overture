@@ -1358,6 +1358,7 @@ function doLaneDoubleFill() {
         showActionPopup('LANE FULL');
         return;
     }
+    S.undoAvailable = true; S.redoAvailable = false; S.undoSeqArpSnapshot = null;
     S.ccLaneLength[_t][_ac][_l] = _len * 2;
     var _pre = 't' + _t + '_c' + _ac + '_k' + _l;
     S.pendingDefaultSetParams.push({ key: _pre + '_cc_lane_double_fill', val: '1' });
@@ -7290,10 +7291,8 @@ function _onCC_buttons(d1, d2) {
             S.ccLaneLength[_rdt][_rdac][_rdl] = 0;
             S.ccLaneTps[_rdt][_rdac][_rdl] = 0;
             S.ccLaneResTps[_rdt][_rdac][_rdl] = 0;
-            var _rdpre = 't' + _rdt + '_c' + _rdac + '_k' + _rdl;
-            S.pendingDefaultSetParams.push({ key: _rdpre + '_cc_loop_set', val: '0' });
-            S.pendingDefaultSetParams.push({ key: _rdpre + '_cc_lane_tps', val: '0' });
-            S.pendingDefaultSetParams.push({ key: _rdpre + '_cc_lane_res_tps', val: '0' });
+            S.undoAvailable = true; S.redoAvailable = false; S.undoSeqArpSnapshot = null;
+            S.pendingDefaultSetParams.push({ key: 't' + _rdt + '_c' + _rdac + '_k' + _rdl + '_cc_lane_reset', val: '1' });
             showActionPopup('LANE LOOP', 'RESET');
             forceRedraw();
             computePadNoteMap();
@@ -7588,10 +7587,8 @@ function _onCC_buttons(d1, d2) {
                 S.ccLaneLength[_lrt][_rac][_rl] = 0;
                 S.ccLaneTps[_lrt][_rac][_rl] = 0;
                 S.ccLaneResTps[_lrt][_rac][_rl] = 0;
-                var _rpre = 't' + _lrt + '_c' + _rac + '_k' + _rl;
-                S.pendingDefaultSetParams.push({ key: _rpre + '_cc_loop_set', val: '0' });
-                S.pendingDefaultSetParams.push({ key: _rpre + '_cc_lane_tps', val: '0' });
-                S.pendingDefaultSetParams.push({ key: _rpre + '_cc_lane_res_tps', val: '0' });
+                S.undoAvailable = true; S.redoAvailable = false; S.undoSeqArpSnapshot = null;
+                S.pendingDefaultSetParams.push({ key: 't' + _lrt + '_c' + _rac + '_k' + _rl + '_cc_lane_reset', val: '1' });
                 showActionPopup('LANE LOOP', 'RESET');
                 forceRedraw();
                 return;
@@ -10579,6 +10576,7 @@ function _onStepButtons(d1, d2) {
             var _ltps_d = S.ccLaneTps[t][ac][_ccL_d];
             var tps = (_ltps_d > 0) ? _ltps_d : (S.clipTPS[t][ac] || 24);
             var t1 = absIdx * tps, t2 = Math.min(65535, t1 + tps - 1);
+            S.undoAvailable = true; S.redoAvailable = false; S.undoSeqArpSnapshot = null;
             if (typeof host_module_set_param === 'function')
                 host_module_set_param('t' + t + '_cc_auto_clear_step', ac + ' ' + t1 + ' ' + t2);
             /* DSP may have emptied some lanes — refresh auto bits / rest on next tick

@@ -2441,7 +2441,17 @@ static void set_param(void *instance, const char *key, const char *val) {
                     inst->state_dirty = 1;
                     return;
                 }
+                if (!strcmp(p + 3, "_cc_lane_reset")) {
+                    undo_begin_single(inst, tidx, cidx);
+                    _ca->lane_loop_start[_kidx] = 0;
+                    _ca->lane_length[_kidx] = 0;
+                    _ca->lane_tps[_kidx] = 0;
+                    _ca->lane_res_tps[_kidx] = 0;
+                    inst->state_dirty = 1;
+                    return;
+                }
                 if (!strcmp(p + 3, "_cc_lane_double_fill")) {
+                    undo_begin_single(inst, tidx, cidx);
                     uint16_t _old_len = _ca->lane_length[_kidx];
                     if (_old_len == 0) _old_len = cl->length;
                     uint16_t _ltps = _ca->lane_tps[_kidx] > 0
@@ -2951,6 +2961,8 @@ static void set_param(void *instance, const char *key, const char *val) {
              * Reset the latch snap on the 0->1 edge so the first 1/32 cell writes. */
             if (tr->recording && tr->pad_mode == PAD_MODE_MELODIC_SCALE) {
                 if (!((tr->cc_latched >> _k) & 1)) {
+                    if (tr->cc_latched == 0)
+                        undo_begin_single(inst, tidx, (int)tr->active_clip);
                     tr->cc_latched |= (uint8_t)(1u << _k);
                     tr->cc_latch_last_snap[_k] = 0xFFFFFFFFu;
                 }
@@ -3056,6 +3068,11 @@ static void set_param(void *instance, const char *key, const char *val) {
         }
         if (!strcmp(sub, "cc_auto_clear_k")) {
             /* Format: "C K" — clear all automation points for knob K in clip C. */
+            {   const char *_pc = val; int _cc = 0;
+                while (*_pc == ' ') _pc++;
+                while (*_pc >= '0' && *_pc <= '9') { _cc = _cc * 10 + (*_pc - '0'); _pc++; }
+                if (_cc >= 0 && _cc < NUM_CLIPS) undo_begin_single(inst, tidx, _cc);
+            }
             const char *_p = val;
             int _c = 0, _k = 0;
             while (*_p == ' ') _p++;
@@ -3098,6 +3115,11 @@ static void set_param(void *instance, const char *key, const char *val) {
         if (!strcmp(sub, "cc_auto_clear_step")) {
             /* Format: "C T1 T2" — drop ALL knobs' points in [T1,T2] for clip C
              * (whole-step wipe). Atomic so the 8 lanes don't coalesce. */
+            {   const char *_pc = val; int _cc = 0;
+                while (*_pc == ' ') _pc++;
+                while (*_pc >= '0' && *_pc <= '9') { _cc = _cc * 10 + (*_pc - '0'); _pc++; }
+                if (_cc >= 0 && _cc < NUM_CLIPS) undo_begin_single(inst, tidx, _cc);
+            }
             const char *_p = val;
             int _c = 0, _t1 = 0, _t2 = 0, _k;
             while (*_p == ' ') _p++;
