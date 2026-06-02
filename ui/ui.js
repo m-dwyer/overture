@@ -1351,6 +1351,20 @@ function doDoubleFill() {
     }
 }
 
+function doLaneDoubleFill() {
+    var _t = S.activeTrack, _ac = effectiveClip(_t), _l = S.ccActiveLane[_t];
+    var _len = S.ccLaneLength[_t][_ac][_l] || S.clipLength[_t][_ac];
+    if (_len * 2 > 256) {
+        showActionPopup('LANE FULL');
+        return;
+    }
+    S.ccLaneLength[_t][_ac][_l] = _len * 2;
+    var _pre = 't' + _t + '_c' + _ac + '_k' + _l;
+    S.pendingDefaultSetParams.push({ key: _pre + '_cc_lane_double_fill', val: '1' });
+    showActionPopup('LANE LOOP', 'DOUBLED');
+    forceRedraw();
+}
+
 function openGlobalMenu() {
     /* Co-run owns the OLED — exit it before opening the menu so dAVEBOx
      * can draw again. */
@@ -7268,6 +7282,23 @@ function _onCC_buttons(d1, d2) {
 
     if (d1 === MoveDelete) {
         S.deleteHeld = d2 === 127;
+        /* Loop+Delete on auto bank: reset active lane's loop params */
+        if (d2 === 127 && S.loopHeld && S.activeBank === 6 &&
+                S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM && !S.sessionView) {
+            var _rdt = S.activeTrack, _rdac = effectiveClip(_rdt), _rdl = S.ccActiveLane[_rdt];
+            S.ccLaneLoopStart[_rdt][_rdac][_rdl] = 0;
+            S.ccLaneLength[_rdt][_rdac][_rdl] = 0;
+            S.ccLaneTps[_rdt][_rdac][_rdl] = 0;
+            S.ccLaneResTps[_rdt][_rdac][_rdl] = 0;
+            var _rdpre = 't' + _rdt + '_c' + _rdac + '_k' + _rdl;
+            S.pendingDefaultSetParams.push({ key: _rdpre + '_cc_loop_set', val: '0' });
+            S.pendingDefaultSetParams.push({ key: _rdpre + '_cc_lane_tps', val: '0' });
+            S.pendingDefaultSetParams.push({ key: _rdpre + '_cc_lane_res_tps', val: '0' });
+            showActionPopup('LANE LOOP', 'RESET');
+            forceRedraw();
+            computePadNoteMap();
+            return;
+        }
         /* AUTO-bank Delete-tap → CLEAR AUTOMATION menu. Arm on press (melodic
          * AUTO bank only); a clean release (nothing happened while held, see the
          * disqualify check at the top of this handler) opens the menu. */
@@ -7548,6 +7579,22 @@ function _onCC_buttons(d1, d2) {
                 !_rpt1FreshHold && !_rpt2FreshHold &&
                 S.liveActiveNotes.size === 0) {
                 S.loopTapUnlatchTrack = _lrt;
+            }
+            /* Delete+Loop on auto bank: reset active lane's loop/res/zoom to clip defaults */
+            if (S.deleteHeld && S.activeBank === 6 && S.trackPadMode[_lrt] !== PAD_MODE_DRUM) {
+                var _rac = effectiveClip(_lrt);
+                var _rl = S.ccActiveLane[_lrt];
+                S.ccLaneLoopStart[_lrt][_rac][_rl] = 0;
+                S.ccLaneLength[_lrt][_rac][_rl] = 0;
+                S.ccLaneTps[_lrt][_rac][_rl] = 0;
+                S.ccLaneResTps[_lrt][_rac][_rl] = 0;
+                var _rpre = 't' + _lrt + '_c' + _rac + '_k' + _rl;
+                S.pendingDefaultSetParams.push({ key: _rpre + '_cc_loop_set', val: '0' });
+                S.pendingDefaultSetParams.push({ key: _rpre + '_cc_lane_tps', val: '0' });
+                S.pendingDefaultSetParams.push({ key: _rpre + '_cc_lane_res_tps', val: '0' });
+                showActionPopup('LANE LOOP', 'RESET');
+                forceRedraw();
+                return;
             }
             /* Delete+Loop: unconditionally stop active drum repeat latch */
             if (S.deleteHeld && S.trackPadMode[_lrt] === PAD_MODE_DRUM) {
@@ -10598,9 +10645,13 @@ function _onStepButtons(d1, d2) {
             applyBankParam(t, 5, 0, nextStyle);
         } else if (idx === 14) {
             /* Step 15: double-and-fill */
-            doDoubleFill();
-        } else if (idx === 15) {
-            /* Step 16: set quantize to 100% */
+            if (S.activeBank === 6 && !isDrum) {
+                doLaneDoubleFill();
+            } else {
+                doDoubleFill();
+            }
+        } else if (idx === 15 && S.activeBank !== 6) {
+            /* Step 16: set quantize to 100% (not on auto bank) */
             if (isDrum) {
                 if (S.activeBank === 7) {
                     /* ALL LANES: quantize all drum lanes */

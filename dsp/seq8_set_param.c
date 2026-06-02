@@ -2441,6 +2441,64 @@ static void set_param(void *instance, const char *key, const char *val) {
                     inst->state_dirty = 1;
                     return;
                 }
+                if (!strcmp(p + 3, "_cc_lane_double_fill")) {
+                    uint16_t _old_len = _ca->lane_length[_kidx];
+                    if (_old_len == 0) _old_len = cl->length;
+                    uint16_t _ltps = _ca->lane_tps[_kidx] > 0
+                                   ? _ca->lane_tps[_kidx] : cl->ticks_per_step;
+                    uint32_t _half_ticks = (uint32_t)_old_len * _ltps;
+                    uint16_t _new_len = (uint16_t)(_old_len * 2);
+                    if (_new_len > SEQ_STEPS) return;
+                    int _n = (int)_ca->count[_kidx];
+                    /* Add seam point at the boundary: evaluate what the loop
+                     * would produce at the last tick of the first half, so the
+                     * wrap-back transition is captured as an explicit point. */
+                    if (_n > 0 && _n < CC_AUTO_MAX_POINTS) {
+                        uint32_t _seam_t = _half_ticks > 0 ? _half_ticks - 1 : 0;
+                        int _has_seam = 0, _si;
+                        for (_si = 0; _si < _n; _si++)
+                            if (_ca->ticks[_kidx][_si] == (uint16_t)_seam_t) { _has_seam = 1; break; }
+                        if (!_has_seam) {
+                            int _def;
+                            int _sv = cc_auto_eval(_ca, _kidx, _seam_t, 0, _half_ticks, &_def);
+                            if (_def && _sv >= 0 && _sv <= 127) {
+                                cc_auto_set_point(_ca, _kidx, (uint16_t)_seam_t, (uint8_t)_sv);
+                                _n = (int)_ca->count[_kidx];
+                            }
+                        }
+                    }
+                    int _added = 0;
+                    int _orig_n = _n;
+                    for (int _i = 0; _i < _orig_n && _n + _added < CC_AUTO_MAX_POINTS; _i++) {
+                        uint16_t _ot = _ca->ticks[_kidx][_i];
+                        if (_ot >= _half_ticks) continue;
+                        uint32_t _nt = (uint32_t)_ot + _half_ticks;
+                        if (_nt > 65535) continue;
+                        _ca->ticks[_kidx][_n + _added] = (uint16_t)_nt;
+                        _ca->vals[_kidx][_n + _added]  = _ca->vals[_kidx][_i];
+                        _added++;
+                    }
+                    _ca->count[_kidx] = (uint16_t)(_n + _added);
+                    /* Sort the combined array (insertion sort — small N) */
+                    { int _total = (int)_ca->count[_kidx];
+                      int _j;
+                      for (_j = 1; _j < _total; _j++) {
+                          uint16_t _kt = _ca->ticks[_kidx][_j];
+                          uint8_t  _kv = _ca->vals[_kidx][_j];
+                          int _jj = _j - 1;
+                          while (_jj >= 0 && _ca->ticks[_kidx][_jj] > _kt) {
+                              _ca->ticks[_kidx][_jj + 1] = _ca->ticks[_kidx][_jj];
+                              _ca->vals[_kidx][_jj + 1]  = _ca->vals[_kidx][_jj];
+                              _jj--;
+                          }
+                          _ca->ticks[_kidx][_jj + 1] = _kt;
+                          _ca->vals[_kidx][_jj + 1]  = _kv;
+                      }
+                    }
+                    _ca->lane_length[_kidx] = _new_len;
+                    inst->state_dirty = 1;
+                    return;
+                }
             }
             if (!strncmp(p, "_pfx_set", 8) && p[8] == '\0') {
                 /* tN_cC_pfx_set "key value" — apply pfx param to this clip's

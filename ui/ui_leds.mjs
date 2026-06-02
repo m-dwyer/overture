@@ -139,7 +139,8 @@ export function updateStepLEDs() {
             const isDrum = S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM;
             for (let i = 0; i < 16; i++) {
                 let on = i === 1 || i === 2 || (i >= 4 && i <= 6) || i === 8;
-                if (i === 7 || i === 9 || (i === 10 && !isDrum) || i === 14 || i === 15) on = true;
+                if (i === 7 || i === 9 || (i === 10 && !isDrum) || i === 14
+                    || (i === 15 && S.activeBank !== 6)) on = true;
                 setLED(16 + i, on ? LightGrey : LED_OFF);
             }
             return;
