@@ -377,6 +377,15 @@ export const S = {
     confirmBakeSceneWrapPhase: false,   /* mirrors clip-bake wrap phase: after loop count selected, ask wrap yes/no */
     confirmBakeSceneWrapSel: 1,         /* 0=YES, 1=NO (default), 2=CANCEL */
     confirmBakeSceneLoops: 1,           /* held loop count while in wrap phase */
+    /* Transpose-on-key/scale-change: live preview override + commit confirm.
+     * xposePrevKey/Scale are null unless a preview is armed (browsing Key/Scale
+     * with a candidate ≠ committed); committed key/scale stay in padKey/padScale. */
+    xposePrevKey: null,
+    xposePrevScale: null,
+    confirmXpose: false,
+    confirmXposeSel: 0,                 /* 0=YES, 1=NO */
+    confirmXposeKey: 0,                 /* candidate key/scale captured at the commit click */
+    confirmXposeScale: 0,
     sampleHeld: false,
     sampleUsedAsModifier: false,
     pendingSceneBakeResync: 0,

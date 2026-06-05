@@ -141,6 +141,16 @@ The OLED shows a 1px box around the active track number (1–8).
 
 The menu starts with the active track's settings (**Track [N] Config**), followed by global settings below a separator. Pads, steps, and transport keep working while the menu is open.
 
+### Changing Key or Scale transposes your clips
+
+When you edit **Key** or **Scale**, all of your melodic clips move with it:
+
+- **While you turn the knob**, you get a live preview — the pads relayout and, if the sequencer is playing, you *hear* every melodic clip transposed to the candidate key/scale. Nothing is committed yet.
+- **Click the knob to commit.** If any melodic clip has notes, a **"Transpose clips?"** prompt appears (jog to pick **YES** / **NO**, click to confirm). YES bakes the transpose into every melodic clip; NO leaves everything where it was. If no clip has notes, the click just applies the new Key/Scale with no prompt.
+- **Backing out** (Note/Session, or turning back to the original value) cancels — nothing moves.
+
+How notes move: changing **Key** transposes by the shortest distance (C→D up a step; C→B down one). Changing **Scale** reshapes each note by scale degree when the two scales have the same number of notes (e.g. Major↔Minor — the 3rd stays the 3rd), or snaps to the nearest in-scale note when they differ (e.g. into a Pentatonic). Harmonies and arpeggios follow the new key/scale in the preview too. Drum tracks are unaffected. Transpose is not undoable — the prompt is the safeguard.
+
 ---
 
 # 3. Track View

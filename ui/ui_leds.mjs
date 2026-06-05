@@ -704,12 +704,17 @@ export function updateTrackLEDs() {
             const sounding = S.liveActiveNotes.has(pitch) || S.seqActiveNotes.has(pitch);
             const inHeld   = S.heldStep >= 0 && S.heldStepNotes.indexOf(pitch) >= 0;
             const inLatch  = _tarpHeld && _tarpHeld.has(pitch);
-            const semitone = ((S.padNoteMap[i] % 12) - S.padKey + 12) % 12;
+            /* During a transpose preview the pad map is laid out for the candidate
+             * key, so colour scale-membership/root against it too (padScaleSet is
+             * already candidate-based) — otherwise non-overlapping scales read as
+             * all-out-of-key and the pads go dark. */
+            const _effKey = S.xposePrevKey !== null ? S.xposePrevKey : S.padKey;
+            const semitone = ((S.padNoteMap[i] % 12) - _effKey + 12) % 12;
             const inScale  = S.padScaleSet.has(semitone);
             const chromatic = S.padLayoutChromatic[S.activeTrack];
             color = (sounding || inHeld || inLatch) ? (_autoGrey ? 120 : White)
                   : (chromatic && !inScale) ? LED_OFF
-                  : (S.padNoteMap[i] % 12 === S.padKey ? rootColor : nonRootColor);
+                  : (S.padNoteMap[i] % 12 === _effKey ? rootColor : nonRootColor);
             cachedSetLED(TRACK_PAD_BASE + i, color);
         }
         }

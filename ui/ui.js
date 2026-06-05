@@ -320,25 +320,20 @@ function buildGlobalMenuItems() {
         createAction('Tap Tempo', function() {
             openTapTempo();
         }),
+        /* Key/Scale: turning the knob previews a transpose of all melodic clips
+         * (live, uncommitted); the click commits behind a confirm (see the
+         * jog-click intercept + xpose* helpers). set() runs as the menu-edit
+         * live preview AND on edit-exit (set(get()) → candidate==committed →
+         * cancel), so back-out cleanly drops the preview. */
         createEnum('Key', {
             get: function() { return S.padKey; },
-            set: function(v) {
-                S.padKey = v;
-                if (typeof host_module_set_param === 'function')
-                    host_module_set_param('key', String(v));
-                computePadNoteMap();
-            },
+            set: function(v) { xposePreviewSet(v, S.padScale); },
             options: [0,1,2,3,4,5,6,7,8,9,10,11],
             format: function(v) { return NOTE_KEYS[((v | 0) % 12 + 12) % 12]; }
         }),
         createEnum('Scale', {
             get: function() { return S.padScale; },
-            set: function(v) {
-                S.padScale = v;
-                if (typeof host_module_set_param === 'function')
-                    host_module_set_param('scale', String(v));
-                computePadNoteMap();
-            },
+            set: function(v) { xposePreviewSet(S.padKey, v); },
             options: [0,1,2,3,4,5,6,7,8,9,10,11,12,13],
             format: function(v) { return SCALE_NAMES[v] || 'Major'; }
         }),
@@ -1730,6 +1725,29 @@ function drawBakeSceneConfirm() {
     }
 }
 
+function drawXposeConfirm() {
+    clear_screen();
+    function _btn(x, y, w, h, sel, label, labelOff) {
+        if (sel) {
+            fill_rect(x, y, w, h, 1);
+            print(x + labelOff, y + 3, label, 0);
+        } else {
+            fill_rect(x, y, w, 1, 1);
+            fill_rect(x, y + h - 1, w, 1, 1);
+            fill_rect(x, y, 1, h, 1);
+            fill_rect(x + w - 1, y, 1, h, 1);
+            print(x + labelOff, y + 3, label, 1);
+        }
+    }
+    drawMenuHeader('TRANSPOSE CLIPS?');
+    const tgt = NOTE_KEYS[S.confirmXposeKey] + ' ' + (SCALE_DISPLAY[S.confirmXposeScale] || '?');
+    print(4, 22, 'To ' + tgt, 1);
+    print(4, 33, 'All melodic clips', 1);
+    const mH = 11, bY = 50, bW = 50;
+    _btn(4,  bY, bW, mH, S.confirmXposeSel === 0, 'YES', 17);
+    _btn(74, bY, bW, mH, S.confirmXposeSel === 1, 'NO',  20);
+}
+
 function clipHasContent(t, c) {
     const s = S.clipSteps[t][c];
     for (let i = 0; i < NUM_STEPS; i++) if (s[i]) return true;
@@ -1759,6 +1777,61 @@ function _padDispatchMutedNow() {
     return false;
 }
 
+/* ---- Transpose all melodic clips on global Key/Scale change ----------
+ * Browsing the Key/Scale menu item arms a live preview (pads relayout +
+ * DSP plays clips transposed); the knob-click commits behind a confirm.
+ * Committed key/scale stay in S.padKey/S.padScale until commit; the
+ * candidate lives in S.xposePrev* while previewing. */
+
+/* Any melodic (non-drum) clip on any track with notes? */
+function anyMelodicClipHasContent() {
+    for (let t = 0; t < NUM_TRACKS; t++) {
+        if (S.trackPadMode[t] === PAD_MODE_DRUM) continue;
+        for (let c = 0; c < NUM_CLIPS; c++) if (S.clipNonEmpty[t][c]) return true;
+    }
+    return false;
+}
+
+/* Arm/refresh preview for candidate (candK,candS). Candidate == committed
+ * cancels instead (no-op change). Runs from the menu-edit tick driver. */
+function xposePreviewSet(candK, candS) {
+    if (candK === S.padKey && candS === S.padScale) { xposeCancelPreview(); return; }
+    S.xposePrevKey = candK; S.xposePrevScale = candS;
+    computePadNoteMap();   /* relayout pads to candidate (also pushes padmap) */
+    if (typeof host_module_set_param === 'function')
+        host_module_set_param('t0_xpose_prev',
+            S.padKey + ' ' + S.padScale + ' ' + candK + ' ' + candS);
+    S.screenDirty = true;
+}
+
+/* Drop the preview: DSP returns playback to true pitch; pads back to committed.
+ * The apply(flag=0) is queued (drained from tick) — set_param fired directly from
+ * the onMidi confirm-click path is unreliable/coalesced. */
+function xposeCancelPreview() {
+    if (S.xposePrevKey === null && S.xposePrevScale === null) return;
+    S.xposePrevKey = null; S.xposePrevScale = null;
+    S.pendingDefaultSetParams.push({ key: 't0_xpose_apply',
+        val: S.padKey + ' ' + S.padScale + ' ' + S.padKey + ' ' + S.padScale + ' 0' });
+    computePadNoteMap();
+    S.screenDirty = true;
+}
+
+/* Commit: bake the transpose into all melodic clips, adopt the new key/scale.
+ * The apply(flag=1) is queued (drained from tick — set_param from the onMidi
+ * confirm path is unreliable). The DSP bake skips empty clips; on the JS side a
+ * transpose changes only note PITCH — step occupancy, lengths, loops and config
+ * are unchanged and the pad layout is rebuilt here — so no clip resync is needed
+ * (held-step note pitches refresh on the next press). */
+function xposeCommit(candK, candS) {
+    S.pendingDefaultSetParams.push({ key: 't0_xpose_apply',
+        val: S.padKey + ' ' + S.padScale + ' ' + candK + ' ' + candS + ' 1' });
+    S.padKey = candK; S.padScale = candS;
+    S.xposePrevKey = null; S.xposePrevScale = null;
+    computePadNoteMap();
+    forceRedraw();
+    S.screenDirty = true;
+}
+
 function computePadNoteMap() {
     const t = S.activeTrack;
     if (S.trackPadMode[t] === PAD_MODE_DRUM) {
@@ -1779,8 +1852,12 @@ function computePadNoteMap() {
             S.padNoteMap[i] = note & 0xFF;
         }
     } else {
-        const root = S.padOctave[t] * 12 + S.padKey;
-        const intervals = SCALE_INTERVALS[S.padScale] || SCALE_INTERVALS[0];
+        /* While a transpose preview is armed, lay the pads out for the CANDIDATE
+         * key/scale (committed padKey/padScale stay put until commit). */
+        const effKey   = S.xposePrevKey   !== null ? S.xposePrevKey   : S.padKey;
+        const effScale = S.xposePrevScale !== null ? S.xposePrevScale : S.padScale;
+        const root = S.padOctave[t] * 12 + effKey;
+        const intervals = SCALE_INTERVALS[effScale] || SCALE_INTERVALS[0];
         S.padScaleSet.clear();
         for (let i = 0; i < intervals.length; i++) S.padScaleSet.add(intervals[i]);
         if (S.padLayoutChromatic[t]) {
@@ -3563,6 +3640,7 @@ function drawUI() {
     if (S.confirmStateWipe) { drawStateWipeConfirm(); return; }
     if (S.recordBlockedDialog) { drawRecordBlockedDialog(); return; }
     if (S.confirmLgto)         { drawLgtoConfirm();         return; }
+    if (S.confirmXpose) { drawXposeConfirm(); return; }
     if (S.confirmBakeScene) { drawBakeSceneConfirm(); return; }
     if (S.confirmBake) { drawBakeConfirm(); return; }
     if (S.globalMenuOpen || S.tapTempoOpen) { ensureGlobalMenuFresh(); drawGlobalMenu(); return; }
@@ -5929,6 +6007,22 @@ function _tickImpl() {
         }
     }
 
+    /* Transpose preview self-heal: cancel a stranded preview/dialog if we've left
+     * the Key/Scale edit by any path the edit-exit hook above doesn't cover (whole
+     * menu closed, navigated away). */
+    if (S.xposePrevKey !== null || S.confirmXpose) {
+        const _it = (S.globalMenuOpen && S.globalMenuState && S.globalMenuItems)
+                    ? S.globalMenuItems[S.globalMenuState.selectedIndex] : null;
+        const _onKeyScale = !!(_it && S.globalMenuState.editing &&
+                               (_it.label === 'Key' || _it.label === 'Scale'));
+        if (S.confirmXpose) {
+            /* dialog stranded by Back / menu close (Back isn't a jog-click) → cancel */
+            if (!_onKeyScale) { S.confirmXpose = false; xposeCancelPreview(); }
+        } else if (!_onKeyScale) {
+            xposeCancelPreview();
+        }
+    }
+
 
     if (!S.ledInitComplete) {
         drainLedInit();
@@ -6816,6 +6910,41 @@ function _onCC_jog(d1, d2) {
             S.screenDirty = true;
             return;
         }
+        if (S.confirmXpose) {                 /* "Transpose all clips?" Yes/No */
+            if (S.confirmXposeSel === 0) xposeCommit(S.confirmXposeKey, S.confirmXposeScale);
+            else                         xposeCancelPreview();
+            S.confirmXpose = false;
+            if (S.globalMenuState) { S.globalMenuState.editing = false; S.globalMenuState.editValue = null; }
+            S.lastSentMenuEditValue = null; S.bpmWasEditing = false;
+            S.screenDirty = true;
+            return;
+        }
+        /* Key/Scale: intercept the click that would finalize the enum edit.
+         * No change → exit. Has melodic notes → confirm. Empty → commit silently. */
+        {
+            const _it = (S.globalMenuState && S.globalMenuItems)
+                        ? S.globalMenuItems[S.globalMenuState.selectedIndex] : null;
+            if (_it && S.globalMenuState.editing && (_it.label === 'Key' || _it.label === 'Scale')) {
+                const ev    = S.globalMenuState.editValue !== null ? S.globalMenuState.editValue : _it.get();
+                const candK = _it.label === 'Key'   ? ev : S.padKey;
+                const candS = _it.label === 'Scale' ? ev : S.padScale;
+                if (candK === S.padKey && candS === S.padScale) {
+                    xposeCancelPreview();
+                    S.globalMenuState.editing = false; S.globalMenuState.editValue = null;
+                    S.lastSentMenuEditValue = null; S.bpmWasEditing = false;
+                } else if (anyMelodicClipHasContent()) {
+                    S.confirmXpose = true; S.confirmXposeSel = 0;
+                    S.confirmXposeKey = candK; S.confirmXposeScale = candS;
+                    /* keep editing + preview armed under the dialog */
+                } else {
+                    xposeCommit(candK, candS);
+                    S.globalMenuState.editing = false; S.globalMenuState.editValue = null;
+                    S.lastSentMenuEditValue = null; S.bpmWasEditing = false;
+                }
+                S.screenDirty = true;
+                return;
+            }
+        }
         handleMenuInput({
             cc: 3, value: d2,
             items: S.globalMenuItems, state: S.globalMenuState, stack: S.globalMenuStack,
@@ -7098,6 +7227,9 @@ function _onCC_jog(d1, d2) {
             } else if (S.confirmExport) {
                 const delta = decodeDelta(d2);
                 if (delta !== 0) { S.confirmExportSel = S.confirmExportSel === 0 ? 1 : 0; S.screenDirty = true; }
+            } else if (S.confirmXpose) {
+                const delta = decodeDelta(d2);
+                if (delta !== 0) { S.confirmXposeSel = S.confirmXposeSel === 0 ? 1 : 0; S.screenDirty = true; }
             } else if (S.globalMenuState.editing) {
                 const delta = decodeDelta(d2);
                 if (delta !== 0) {

@@ -797,6 +797,7 @@ static void set_param(void *instance, const char *key, const char *val) {
     }
 
     if (!strcmp(key, "save")) {
+        inst->xpose_preview_active = 0;  /* defensive: never persist/leave a preview stuck on suspend */
         if (!inst->state_version_mismatch)
             seq8_save_state(inst);
         return;
@@ -1904,6 +1905,39 @@ static void set_param(void *instance, const char *key, const char *val) {
         int tidx = key[1] - '0';
         const char *sub = key + 3;
         seq8_track_t *tr = &inst->tracks[tidx];
+
+        /* --- Transpose all melodic clips on Key/Scale change ---
+         * Global op (clips on all tracks); carried on a per-track key (t0_)
+         * because Schwung drops new global set_param keys. tr is ignored. */
+        if (!strcmp(sub, "xpose_prev")) {
+            /* "<oldK> <oldS> <newK> <newS>" — arm/refresh the live preview */
+            int ok = 9, os = 1, nk = 9, ns = 1;
+            sscanf(val, "%d %d %d %d", &ok, &os, &nk, &ns);
+            build_xpose_lut(inst, clamp_i(ok, 0, 11), clamp_i(os, 0, 13),
+                                  clamp_i(nk, 0, 11), clamp_i(ns, 0, 13));
+            inst->xpose_preview_key    = (uint8_t)clamp_i(nk, 0, 11);
+            inst->xpose_preview_scale  = (uint8_t)clamp_i(ns, 0, 13);
+            inst->xpose_preview_active = 1;
+            return;
+        }
+        if (!strcmp(sub, "xpose_apply")) {
+            /* "<oldK> <oldS> <newK> <newS> <flag>" — flag 1=commit, 0=cancel.
+             * Self-contained (rebuilds the LUT from the descriptor) so a commit
+             * can't ride a stale preview, and so notes + key/scale move atomically. */
+            int ok = 9, os = 1, nk = 9, ns = 1, flag = 0;
+            sscanf(val, "%d %d %d %d %d", &ok, &os, &nk, &ns, &flag);
+            inst->xpose_preview_active = 0;
+            if (flag) {
+                ok = clamp_i(ok, 0, 11); os = clamp_i(os, 0, 13);
+                nk = clamp_i(nk, 0, 11); ns = clamp_i(ns, 0, 13);
+                build_xpose_lut(inst, ok, os, nk, ns);
+                xpose_commit_all_clips(inst);
+                inst->pad_key     = (uint8_t)nk;
+                inst->pad_scale   = (uint8_t)ns;
+                inst->state_dirty = 1;
+            }
+            return;
+        }
 
         /* tN_launch_clip: Now=immediate, quantized=queue at next boundary */
         if (!strcmp(sub, "launch_clip")) {

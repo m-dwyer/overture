@@ -571,7 +571,7 @@ typedef struct {
     struct { uint8_t pitch; uint32_t tick_at_on; } rec_pending[10];
     uint8_t  rec_pending_count;
     /* Note-centric playback: per-note gate countdown (render state, not persisted) */
-    struct { uint8_t pitch; uint16_t ticks_remaining; uint8_t lane_idx; } play_pending[32];
+    struct { uint8_t pitch; uint16_t ticks_remaining; uint8_t lane_idx; uint8_t src_pitch; } play_pending[32];
     uint8_t  play_pending_count;
     /* v=34 Ratchet: deferred note-on schedule for step_ratchet sub-hits 1..r-1.
      * Each tick, ticks_until_fire decrements; at 0 the sub-hit fires (note-on +
@@ -818,6 +818,15 @@ typedef struct {
     /* Live pad input: global key/scale stored for state persistence */
     uint8_t  pad_key;               /* root key 0-11, default 9 (A) */
     uint8_t  pad_scale;             /* 0=Major (matches JS SCALE_NAMES index) */
+
+    /* Transpose-on-key/scale-change — live preview + commit. Transient: NOT
+     * serialized. preview_active gates both the note-emit LUT and the
+     * scale-aware tonality reads (eff_pad_key/eff_pad_scale) so harmonies/arps
+     * track the candidate while browsing. Cleared defensively on load + suspend. */
+    uint8_t  xpose_preview_active;  /* 1=apply xpose_lut at emit + use candidate tonality */
+    uint8_t  xpose_preview_key;     /* candidate root 0-11 during preview */
+    uint8_t  xpose_preview_scale;   /* candidate scale 0-13 during preview */
+    uint8_t  xpose_lut[128];        /* per-pitch remap, rebuilt from the 4-val descriptor */
     uint8_t  launch_quant;          /* 0=Now,1=1/16,2=1/8,3=1/4,4=1/2,5=1-bar; default 5 */
     uint8_t  swing_amt;             /* 0-100 UI; maps to 50%-75% of pair (0=straight, 100=75%) */
     uint8_t  swing_res;             /* 0=1/16 pairs, 1=1/8 pairs */
@@ -992,6 +1001,10 @@ typedef struct {
      * changes. 0xFF = unmapped (skip dispatch). */
     uint8_t  dsp_inbound_enabled;
     uint8_t  pad_note_map[NUM_TRACKS][32];
+    /* Pitch actually emitted at each pad's last note-on, so the note-off uses the
+     * same pitch even if pad_note_map was repushed mid-hold (e.g. a Key/Scale
+     * preview re-layout). 0xFF = no note held on that pad. */
+    uint8_t  pad_live_pitch[NUM_TRACKS][32];
 
     /* Phase 2: capability mirror for shim-side async ROUTE_EXTERNAL send.
      * When 1, pfx_emit / drum_pfx_emit call g_host->midi_send_external
@@ -2196,6 +2209,7 @@ static void seq8_load_state(seq8_instance_t *inst) {
     /* Global settings */
     inst->pad_key      = (uint8_t)clamp_i(json_get_int(buf, "key",   9), 0, 11);
     inst->pad_scale    = (uint8_t)clamp_i(json_get_int(buf, "scale", 1), 0, 13);
+    inst->xpose_preview_active = 0;  /* transient — never persisted; clear on (re)load */
     inst->launch_quant = (uint8_t)clamp_i(json_get_int(buf, "lq",    0), 0,  5);
     {
         int saved_bpm = json_get_int(buf, "bpm", BPM_DEFAULT);
@@ -3174,11 +3188,92 @@ static void pfx_q_fire(play_fx_t *fx, uint64_t now) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Effective tonality — committed key/scale, or the candidate while a    */
+/* transpose preview is active (so scale-aware harmonies/arps track it).  */
+/* Live note-generation reads these; serialization/get_param/load read    */
+/* the committed pad_key/pad_scale directly.                              */
+/* ------------------------------------------------------------------ */
+static inline int eff_pad_key(seq8_instance_t *inst) {
+    return inst->xpose_preview_active ? (int)inst->xpose_preview_key : (int)inst->pad_key;
+}
+static inline int eff_pad_scale(seq8_instance_t *inst) {
+    return inst->xpose_preview_active ? (int)inst->xpose_preview_scale : (int)inst->pad_scale;
+}
+
+/* ------------------------------------------------------------------ */
+/* Transpose remap — build per-pitch LUT for (oldK,oldS)->(newK,newS).   */
+/* Root shift by shortest signed distance, then reshape: degree-for-      */
+/* degree when both scales have the same interval count, else snap to the */
+/* nearest in-scale pitch (also used for off-scale source notes).         */
+/* ------------------------------------------------------------------ */
+static int xpose_pc_in_scale(int pitch, int root, int scale) {
+    int pc = (pitch - root) % 12; if (pc < 0) pc += 12;
+    int n = (int)SCALE_SIZES[scale];
+    const uint8_t *iv = SCALE_IVLS[scale];
+    int d; for (d = 0; d < n; d++) if ((int)iv[d] == pc) return 1;
+    return 0;
+}
+static int xpose_snap(int pitch, int root, int scale) {
+    int d;
+    for (d = 0; d <= 12; d++) {
+        if (pitch + d <= 127 && xpose_pc_in_scale(pitch + d, root, scale)) return pitch + d;
+        if (pitch - d >= 0   && xpose_pc_in_scale(pitch - d, root, scale)) return pitch - d;
+    }
+    return clamp_i(pitch, 0, 127);
+}
+static int xpose_remap_pitch(int p, int oldK, int oldS, int newK, int newS) {
+    /* shortest signed root distance, wrapped to (-6,+6] */
+    int kd = (newK - oldK) % 12; if (kd < 0) kd += 12; if (kd > 6) kd -= 12;
+    int p1 = p + kd;
+    int oldN = (int)SCALE_SIZES[oldS];
+    int newN = (int)SCALE_SIZES[newS];
+    const uint8_t *oldIv = SCALE_IVLS[oldS];
+    const uint8_t *newIv = SCALE_IVLS[newS];
+    /* decompose p1 relative to the new root (interval-from-root is preserved
+     * by the root shift, so the old-scale degree is the note's original degree) */
+    int rel = p1 - newK;
+    int oct = rel / 12, within = rel % 12;
+    if (within < 0) { within += 12; oct--; }
+    int deg = -1, d;
+    for (d = 0; d < oldN; d++) if ((int)oldIv[d] == within) { deg = d; break; }
+    if (deg < 0 || oldN != newN)           /* off-scale source, or size mismatch */
+        return clamp_i(xpose_snap(p1, newK, newS), 0, 127);
+    return clamp_i(newK + oct * 12 + (int)newIv[deg], 0, 127);
+}
+static void build_xpose_lut(seq8_instance_t *inst, int oldK, int oldS, int newK, int newS) {
+    int p;
+    for (p = 0; p < 128; p++)
+        inst->xpose_lut[p] = (uint8_t)xpose_remap_pitch(p, oldK, oldS, newK, newS);
+}
+
+/* Commit: rewrite every melodic clip's notes through xpose_lut and rebuild
+ * step arrays. Drum tracks and empty clips skipped. Mirrors the per-clip
+ * rescale pattern in tN_clip_resolution. */
+static void xpose_commit_all_clips(seq8_instance_t *inst) {
+    int t, c;
+    for (t = 0; t < NUM_TRACKS; t++) {
+        seq8_track_t *tr = &inst->tracks[t];
+        if (tr->pad_mode == PAD_MODE_DRUM) continue;
+        for (c = 0; c < NUM_CLIPS; c++) {
+            clip_t *cl = &tr->clips[c];
+            if (cl->note_count == 0) continue;
+            uint16_t ni;
+            for (ni = 0; ni < cl->note_count; ni++) {
+                note_t *n = &cl->notes[ni];
+                if (!n->active) continue;
+                n->pitch = inst->xpose_lut[n->pitch];
+            }
+            clip_build_steps_from_notes(cl);
+        }
+    }
+}
+
+/* ------------------------------------------------------------------ */
 /* Scale-degree to semitone conversion                                  */
 /* ------------------------------------------------------------------ */
 
 static int deg_to_semitones(seq8_instance_t *inst, int deg) {
-    int s = (int)inst->pad_scale;
+    int s = eff_pad_scale(inst);
     if (s < 0 || s >= 14) s = 0;
     int n = (int)SCALE_SIZES[s];
     const uint8_t *ivals = SCALE_IVLS[s];
@@ -3193,11 +3288,11 @@ static int deg_to_semitones(seq8_instance_t *inst, int deg) {
  * Correct for any starting note — not just the tonic. */
 static int scale_transpose(seq8_instance_t *inst, int note, int deg_offset) {
     if (deg_offset == 0) return clamp_i(note, 0, 127);
-    int s = (int)inst->pad_scale;
+    int s = eff_pad_scale(inst);
     if (s < 0 || s >= 14) s = 0;
     int n = (int)SCALE_SIZES[s];
     const uint8_t *ivals = SCALE_IVLS[s];
-    int key = (int)inst->pad_key;
+    int key = eff_pad_key(inst);
     /* note's octave and pitch class relative to key */
     int rel = note - key;
     int oct = rel / 12;
@@ -3233,7 +3328,7 @@ static int pfx_apply_notefx(seq8_instance_t *inst, int scale_aware,
         int rng = fx->note_random;
         int lim = rng;
         if (scale_aware) {
-            int sc = (int)SCALE_SIZES[inst->pad_scale < 14 ? inst->pad_scale : 0];
+            int sc = (int)SCALE_SIZES[eff_pad_scale(inst)];
             if (lim > sc) lim = sc;
         }
         switch (fx->note_random_mode) {
@@ -3333,7 +3428,7 @@ static void pfx_sched_delay_ons(seq8_instance_t *inst, int scale_aware,
                 int rng = fx->fb_note_random;
                 int lim = rng;
                 if (scale_aware) {
-                    int sc = (int)SCALE_SIZES[inst->pad_scale < 14 ? inst->pad_scale : 0];
+                    int sc = (int)SCALE_SIZES[eff_pad_scale(inst)];
                     if (lim > sc) lim = sc;
                 }
                 switch (fx->fb_note_random_mode) {
@@ -4977,6 +5072,7 @@ static void drum_repeat_tick(seq8_instance_t *inst, seq8_track_t *tr) {
             if (gate < 1) gate = 1;
             if (tr->play_pending_count < 32) {
                 tr->play_pending[tr->play_pending_count].pitch            = pitch;
+                tr->play_pending[tr->play_pending_count].src_pitch        = pitch;
                 tr->play_pending[tr->play_pending_count].ticks_remaining  = gate;
                 tr->play_pending[tr->play_pending_count].lane_idx         = lane;
                 tr->play_pending_count++;
@@ -5110,6 +5206,7 @@ static void drum_repeat2_tick(seq8_instance_t *inst, seq8_track_t *tr) {
             if (gate < 1) gate = 1;
             if (tr->play_pending_count < 32) {
                 tr->play_pending[tr->play_pending_count].pitch           = pitch;
+                tr->play_pending[tr->play_pending_count].src_pitch       = pitch;
                 tr->play_pending[tr->play_pending_count].ticks_remaining = gate;
                 tr->play_pending[tr->play_pending_count].lane_idx        = (uint8_t)l;
                 tr->play_pending_count++;
@@ -6088,6 +6185,7 @@ static void *create_instance(const char *module_dir, const char *json_defaults) 
     inst->looper_pending_silence = 0;
     memset(inst->perf_emitted_pitch, 0xFF, sizeof(inst->perf_emitted_pitch));
     memset(inst->pad_note_map, 0xFF, sizeof(inst->pad_note_map));
+    memset(inst->pad_live_pitch, 0xFF, sizeof(inst->pad_live_pitch));
     memset(inst->pad_source_scratch, 0, sizeof(inst->pad_source_scratch)); /* PAD_SRC_NORMAL */
     memset(inst->drum_vel_zone_armed, 0, sizeof(inst->drum_vel_zone_armed));
     memset(inst->drum_last_vel_zone, 0, sizeof(inst->drum_last_vel_zone));
@@ -6465,6 +6563,15 @@ static void on_midi(void *instance, const uint8_t *msg, int len, int source) {
 
     seq8_track_t *tr = &inst->tracks[t];
 
+    /* Note-off: release the pitch captured at this pad's press, not whatever
+     * pad_note_map currently says — a repush between press and release (e.g. a
+     * Key/Scale preview re-layout) would otherwise strand the held note on the
+     * old pitch. Done before the 0xFF check so a now-unmapped pad still releases. */
+    if (!is_on) {
+        uint8_t held = inst->pad_live_pitch[t][padIdx];
+        if (held != 0xFF) pitch = held;
+    }
+
     /* Bundle 2A: classify right-half drum pads (vel zones + Rpt). If
      * handled (returns 1), don't fall through to normal lane-note dispatch.
      * Left-half drum pads + all melodic pads → return 0, fall through.
@@ -6564,10 +6671,12 @@ static void on_midi(void *instance, const uint8_t *msg, int len, int source) {
     inst->pad_source_scratch[t] = (uint8_t)PAD_SRC_NORMAL;
     if (is_on) {
         if (inst->pad_dispatch_muted) { inst->pad_source_scratch[t] = (uint8_t)PAD_SRC_NORMAL; return; }
+        inst->pad_live_pitch[t][padIdx] = pitch;   /* remember for the matching release */
         live_note_on(inst, tr, pitch, (uint8_t)effective_vel(tr, (int)d2));
     } else {
         if (inst->pad_dispatch_muted) return;
         live_note_off(inst, tr, pitch);
+        inst->pad_live_pitch[t][padIdx] = 0xFF;    /* released */
     }
     inst->pad_source_scratch[t] = (uint8_t)PAD_SRC_NORMAL;
 }
@@ -9755,6 +9864,7 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         if (tr->play_pending_count < 32) {
                             int _pi = (int)tr->play_pending_count;
                             tr->play_pending[_pi].pitch           = _rp_pitch;
+                            tr->play_pending[_pi].src_pitch       = _rp_pitch;
                             tr->play_pending[_pi].ticks_remaining = _rp_gate;
                             tr->play_pending[_pi].lane_idx        = _rp_lane;
                             tr->play_pending_count++;
@@ -9928,6 +10038,7 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                             if (_sub_gate < 1) _sub_gate = 1;
                             if (tr->play_pending_count < 32) {
                                 tr->play_pending[tr->play_pending_count].pitch           = lane_note;
+                                tr->play_pending[tr->play_pending_count].src_pitch       = lane_note;
                                 tr->play_pending[tr->play_pending_count].ticks_remaining = _sub_gate;
                                 tr->play_pending[tr->play_pending_count].lane_idx        = (uint8_t)l;
                                 tr->play_pending_count++;
@@ -9961,9 +10072,21 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         /* v=34 trig conditions (Iter + Random) — per-note */
                         uint16_t _sidx = note_step(n->tick, cl->length, cl->ticks_per_step);
                         if (!step_trig_pass(cl, _sidx, (uint32_t)cl->loop_cycle, &tr->pfx.rng)) continue;
+                        /* Transpose preview: emit the remapped pitch, but key the
+                         * "kill the previous instance of this note" check on the RAW
+                         * source pitch (stable across LUT changes) and turn off the
+                         * note at its STORED emitted pitch. If we matched on emit_pitch
+                         * instead, a LUT change mid-sweep would orphan the old pending
+                         * (its mapped pitch no longer matches), accumulating un-killed
+                         * pendings until play_pending overflows → stuck notes. With raw
+                         * matching, each clip note kills its own prior instance on
+                         * re-fire; held notes ring at their old pitch until they
+                         * naturally re-trigger. When preview is off emit_pitch == raw,
+                         * so normal playback is unchanged. */
+                        uint8_t emit_pitch = inst->xpose_preview_active ? inst->xpose_lut[n->pitch] : n->pitch;
                         { int pp; for (pp = 0; pp < (int)tr->play_pending_count; pp++) {
-                            if (tr->play_pending[pp].pitch == n->pitch) {
-                                pfx_note_off(inst, tr, n->pitch);
+                            if (tr->play_pending[pp].src_pitch == n->pitch) {
+                                pfx_note_off(inst, tr, tr->play_pending[pp].pitch);
                                 tr->play_pending[pp] = tr->play_pending[tr->play_pending_count - 1];
                                 tr->play_pending_count--;
                                 break;
@@ -9986,21 +10109,22 @@ static void render_block(void *instance, int16_t *out_lr, int frames) {
                         if (_sub_gate < 1) _sub_gate = 1;
                         if (tr->play_pending_count < 32) {
                             int pp_idx = (int)tr->play_pending_count;
-                            tr->play_pending[pp_idx].pitch          = n->pitch;
+                            tr->play_pending[pp_idx].pitch          = emit_pitch;
+                            tr->play_pending[pp_idx].src_pitch       = n->pitch;
                             tr->play_pending[pp_idx].ticks_remaining = _sub_gate;
                             tr->play_pending[pp_idx].lane_idx        = 0xFF;
                             tr->play_pending_count++;
                             tr->note_active = 1;
                         }
-                        pfx_note_on(inst, tr, n->pitch, n->vel);
-                        tr->pfx.active_notes[n->pitch].gate_override_smp =
+                        pfx_note_on(inst, tr, emit_pitch, n->vel);
+                        tr->pfx.active_notes[emit_pitch].gate_override_smp =
                             pfx_ticks_to_smp(inst, tr, (uint32_t)_sub_gate);
                         if (_ratch > 1) {
                             int _k;
                             for (_k = 1; _k < _ratch; _k++) {
                                 if (tr->ratchet_pending_count >= 24) break;
                                 int _ri = (int)tr->ratchet_pending_count++;
-                                tr->ratchet_pending[_ri].pitch            = n->pitch;
+                                tr->ratchet_pending[_ri].pitch            = emit_pitch;
                                 tr->ratchet_pending[_ri].vel              = n->vel;
                                 tr->ratchet_pending[_ri].ticks_until_fire = (uint16_t)(_k * _sub_gate);
                                 tr->ratchet_pending[_ri].gate             = _sub_gate;
