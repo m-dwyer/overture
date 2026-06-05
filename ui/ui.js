@@ -6201,7 +6201,13 @@ function _tickImpl() {
 
         /* Transport LEDs */
         setButtonLED(MovePlay, S.playing ? Green : LED_OFF);
-        if (S.recordScheduledStop || S.recordPendingPage) {
+        if (S.schwungCoRunSlot >= 0 || S.moveCoRunTrack >= 0) {
+            /* Co-run: keep Rec dark — you can't record while a co-run target owns
+             * input, and in Move co-run Move firmware lights its own Record button
+             * (passes through under skip_led_clear). Force OFF every POLL_INTERVAL
+             * so our blanking re-asserts over that layer instead of being eaten. */
+            setButtonLED(MoveRec, LED_OFF, (S.tickCount % POLL_INTERVAL) === 0);
+        } else if (S.recordScheduledStop || S.recordPendingPage) {
             /* recordScheduledStop = waiting for end-of-page to stop; recordPendingPage =
              * waiting for next page boundary for DSP to flip recording=1. Both blink. */
             setButtonLED(MoveRec, Math.floor(S.tickCount / 8) % 2 === 0 ? Red : LED_OFF);
@@ -6266,8 +6272,13 @@ function _tickImpl() {
          * pass-through writes under skip_led_clear. (A non-changing value is
          * otherwise cache-gated, sent once then eaten.) Global Menu / Tap Tempo
          * keep the blink, since there's no competing LED layer there. */
-        if (S.schwungCoRunSlot >= 0 || S.moveCoRunTrack >= 0) {
+        if (S.schwungCoRunSlot >= 0) {
             setButtonLED(MoveNoteSession, White, (S.tickCount % POLL_INTERVAL) === 0);
+        } else if (S.moveCoRunTrack >= 0) {
+            /* Move co-run: the Menu button is disabled (Step 3 / Back are the
+             * exits), so keep its LED dark. Force OFF every POLL_INTERVAL to
+             * override Move firmware's pass-through writes. */
+            setButtonLED(MoveNoteSession, LED_OFF, (S.tickCount % POLL_INTERVAL) === 0);
         } else if (S.globalMenuOpen || S.tapTempoOpen) {
             const _exitBlink = (Math.floor(S.tickCount / 24) % 2) ? 16 : LED_OFF;
             setButtonLED(MoveNoteSession, _exitBlink);
@@ -7389,10 +7400,8 @@ function _onCC_buttons(d1, d2) {
      * existing muscle memory — outside co-run dAVEBOx ignores Menu (no other
      * handler exists), so this branch is dormant unless a session is active. */
     if (d1 === 50 && d2 === 127) {
-        if (S.moveCoRunTrack >= 0) {
-            exitMoveNativeCoRun();
-            return;
-        }
+        /* Schwung co-run exits on Menu. Move co-run disables Menu entirely —
+         * swallowed by the guard in the MoveNoteSession block below. */
         if (S.schwungCoRunSlot >= 0) {
             exitSchwungCoRun();
             forceRedraw();
@@ -7403,6 +7412,9 @@ function _onCC_buttons(d1, d2) {
     /* Note/Session view toggle: Shift+press = open global menu (Track View only);
      * tap = switch view; hold = session overview */
     if (d1 === MoveNoteSession) {
+        /* Move co-run: Menu button is disabled — swallow press and release so it
+         * neither exits co-run nor toggles the view. Step 3 / Back are the exits. */
+        if (S.moveCoRunTrack >= 0) return;
         if (d2 === 127) {
             /* Co-run exit is the framework's job now — the shim catches Back
              * during corun_active() and calls shadow_corun_end() itself, and
