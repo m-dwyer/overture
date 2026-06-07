@@ -1,0 +1,50 @@
+# Overture — root task surface. Run everything from the repo root (no cd):
+#   mise run dev | typecheck | wasm | dsp | smoke | build | setup
+#
+# The orchestration is polyglot: the web emulator is TS/Vite (pnpm), while the
+# `tool` submodule builds via Docker (aarch64 gcc for dsp.so, emscripten for wasm)
+# and Python. Tasks here are thin wrappers; the forks keep their own scripts so
+# they stay close to upstream (no node/workspace wiring leaks into the submodules).
+
+[tools]
+node = "lts"
+
+[tasks.setup]
+description = "Install web emulator dependencies"
+run = "pnpm -C web install"
+
+[tasks.dev]
+description = "Serve the Overture emulator (real tool UI + mock host)"
+run = "pnpm -C web dev"
+
+[tasks.typecheck]
+description = "Type-check the web harness"
+run = "pnpm -C web typecheck"
+
+[tasks.web-build]
+description = "Production build of the web emulator"
+run = "pnpm -C web build"
+
+[tasks.screenshot]
+description = "Render the emulator headless (Playwright) → web/shot.png + shot-oled.png"
+run = "pnpm -C web exec playwright test"
+
+[tasks.dsp]
+description = "Cross-compile the tool's device dsp.so (aarch64, GLIBC<=2.35) via Docker"
+run = "tool/scripts/build.sh"
+
+[tasks.wasm]
+description = "Build the tool's seq8 -> wasm target via emscripten Docker"
+run = "tool/scripts/build-wasm.sh"
+
+[tasks.smoke]
+description = "Run the seq8 wasm round-trip smoke test"
+run = "node tool/scripts/seq8-wasm-smoke.mjs"
+
+[tasks.build]
+description = "Build everything: device dsp.so + wasm + web"
+depends = ["dsp", "wasm", "web-build"]
+
+[tasks.install]
+description = "Deploy the full stack to the Move (delegates to ./install.sh)"
+run = "./install.sh"

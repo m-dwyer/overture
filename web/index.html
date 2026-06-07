@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Overture Emulator</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; background: #111; color: #ccc; font: 13px/1.4 ui-monospace, monospace; }
+      #app { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 24px; }
+      h1 { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; color: #888; margin: 0; }
+      #oled { image-rendering: pixelated; background: #001b14; border: 2px solid #333; border-radius: 4px; }
+      #status { white-space: pre; color: #6a6; min-height: 1.4em; }
+      #log { width: 520px; height: 160px; overflow: auto; background: #0a0a0a; border: 1px solid #222;
+             padding: 6px 8px; font-size: 11px; color: #777; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>OVERTURE — EMULATOR (layout tier)</h1>
+      <canvas id="oled" width="128" height="64" style="width: 512px; height: 256px;"></canvas>
+      <div id="status">booting…</div>
+      <div id="log"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
