@@ -1,0 +1,5 @@
+# build artifacts
+build/
+dist/
+*.so
+.DS_Store
