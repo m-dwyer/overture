@@ -81,6 +81,43 @@ Sequenced automation of Move's **real engine parameters** via **cable-0 encoder-
 **composes with co-run**: co-run targets Move's device page; the lane injects the encoder deltas. dAVEBOx
 doesn't do this — it's the additive capability.
 
+## Module authoring & the open-engine side (moveforge)
+
+`~/src/moveforge` is the **module factory** for the open-engine tracks — a dev-time authoring
+harness (you own it; *not* forked/mirrored, *not* a runtime dependency). One DSP source
+(Faust-first, or plain C) → both a device `dsp.so` and a browser `.wasm`, packaged with a
+**standardized** `module.json` (`capabilities.ui_hierarchy` params + `knobs` mapping), a generated
+`ui_chain.js` (preset-browser + knob-bank param editor), `presets.json`, golden render tests, and a
+browser dev loop. That standardization — every module exposing the same `ui_hierarchy`/`knobs`/
+`ui_chain` shape — **is** Overture's UX-consistency contract for the open side.
+
+Relationship:
+```
+moveforge (author) ──build──▶ standardized module (.so + module.json + ui_chain.js)
+                                   │ installed into Schwung
+                                   ▼
+Overture hosted track (ROUTE_SCHWUNG) loads it; editing rendered by Schwung's chain editor
+```
+- **Authoring:** keep building open sounds in moveforge as today. Overture just loads the output.
+- **`overture/modules/`** = a curated set of **moveforge `dist/` output** (bundle built artifacts;
+  optionally submodule moveforge only if you want Overture's build to rebuild from source).
+- **No impact on the `schwung`/`tool` forks** — the tool loads modules by `module.json`, agnostic to
+  how they were built.
+
+## Editing model: delegate to native editors via co-run (don't rebuild param UIs)
+The pragmatic, *more consistent* path (what dAVEBOx does) is **not** to re-render every track's params
+in Overture's own UI, but to **delegate sound editing to the editors that already render
+consistently**:
+- **Open tracks** → **chain-edit co-run** → Schwung's chain editor renders the module's standardized
+  `ui_chain` (the moveforge convention). *This is how moveforge's consistency reaches Overture.*
+- **Ableton tracks** → **Move-native co-run** → Move's own device-edit / preset UI.
+
+So Overture's *own* UI stays focused on the **sequencer**; sound/preset/param editing is delegated to
+the native, already-consistent editors. (The heavier "uniform `track_view` renders all params in-tool"
+described in `HYBRID-GROOVEBOX.md` remains an option for deeper unification, but delegate-via-co-run is
+the lower-code, lower-fragility default — and it's *why* chain-edit co-run is worth carrying in the
+`schwung` fork.)
+
 ## Build / install / device
 - **Build:** one `build.sh` → patched shim + shadow_ui + tool `dsp.so`/`ui.js` + bundled modules.
 - **Install:** one `install.sh` → deploys all to `move-em.local` (data partition only; never touch
