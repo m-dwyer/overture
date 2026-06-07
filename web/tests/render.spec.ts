@@ -19,6 +19,8 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
   await page.locator("#oled").screenshot({ path: "shot-oled.png" });
 
   await expect(page.locator("#status")).toHaveText("running");
+  // The real seq8 engine must load (not silently fall back to the mock).
+  expect(await page.locator("#log").textContent()).toContain("behavior tier");
   if (consoleErrors.length) console.log("console errors:\n" + consoleErrors.slice(0, 25).join("\n"));
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
 });

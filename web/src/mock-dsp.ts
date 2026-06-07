@@ -5,15 +5,11 @@
 //
 // Mirrors host semantics: get returns a string, or null when absent.
 
+import type { Dsp } from "./dsp.js";
+
 const EMPTY_STEPS = "0".repeat(256);
 
-export interface MockDsp {
-  get(key: string): string | null;
-  set(key: string, val: string | number): void;
-  readonly _store: Map<string, string>;
-}
-
-export function createMockDsp(): MockDsp {
+export function createMockDsp(): Dsp {
   const store = new Map<string, string>();
 
   return {
@@ -29,6 +25,7 @@ export function createMockDsp(): MockDsp {
     set(key, val) {
       store.set(key, String(val));
     },
-    _store: store,
+    render() { /* layout tier: no engine */ },
+    setBpm() { /* layout tier: no engine */ },
   };
 }

@@ -4,7 +4,9 @@
 // See ../HOST-API.md for the contract this mirrors.
 
 import { createMockDsp } from "./mock-dsp.js";
+import { createWasmDsp } from "./wasm-dsp.js";
 import { mountShell } from "./shell.js";
+import type { Dsp } from "./dsp.js";
 
 const TICK_HZ = 94; // device cadence (STEP_HOLD_TICKS is calibrated to this)
 
@@ -70,9 +72,12 @@ function setButtonLED(cc: number, color: number): void { buttonLeds.set(cc, colo
 function clearAllLEDs(): void { leds.clear(); }
 
 // ---- Param shims (DSP bridge → layout-tier mock) -----------------------
-const dsp = createMockDsp();
+let dsp: Dsp = createMockDsp(); // swapped for seq8-wasm in boot() unless ?mock is set
 function hostModuleGetParam(key: string): string | null { return dsp.get(key); }
-function hostModuleSetParam(key: string, val: string | number): void { dsp.set(key, val); }
+function hostModuleSetParam(key: string, val: string | number): void {
+  if (key === "bpm") dsp.setBpm(Number(val)); // keep host get_bpm in sync with the UI
+  dsp.set(key, val);
+}
 
 // ---- State persistence shims (→ localStorage) --------------------------
 function hostWriteFile(path: string, data: string): number {
@@ -121,6 +126,18 @@ Object.assign(globalThis, {
 // ---- Boot: load the REAL tool UI, then run the host loop ---------------
 async function boot(): Promise<void> {
   clearScreen();
+
+  // Behavior tier: load the real seq8 engine (wasm) unless ?mock is set. Must
+  // happen before the UI's init() reads params.
+  if (!new URLSearchParams(location.search).has("mock")) {
+    try {
+      dsp = await createWasmDsp((tag, b0, b1, b2, b3) => log(`dsp→midi [${tag}] ${b0} ${b1} ${b2} ${b3}`));
+      log("dsp: seq8-wasm (behavior tier)");
+    } catch (e) {
+      log("seq8-wasm load failed — using mock: " + ((e as Error)?.message || e));
+    }
+  }
+
   try {
     // Resolved by the Vite import-remap plugin to tool/ui/ui.js. The `as string`
     // cast keeps the literal for Vite (post-transpile) while telling TS this is a
@@ -143,7 +160,17 @@ async function boot(): Promise<void> {
 
   let ticks = 0;
   setStatus("running");
+  const BLOCK_MS = (1000 * 128) / 44100; // one audio block of real time (~2.9ms)
+  let lastRenderT = performance.now();
   setInterval(() => {
+    // Pump the engine at real-time block rate before the UI reads state, so
+    // playback/tempo advance correctly regardless of tick jitter.
+    const now = performance.now();
+    let blocks = Math.floor((now - lastRenderT) / BLOCK_MS);
+    if (blocks > 16) { blocks = 16; lastRenderT = now; } // cap after a stall
+    else { lastRenderT += blocks * BLOCK_MS; }
+    for (let i = 0; i < blocks; i++) dsp.render();
+
     try { globalThis.tick?.(); } catch (e) {
       if (ticks % 94 === 0) log("tick() threw: " + ((e as Error)?.message || e));
     }
