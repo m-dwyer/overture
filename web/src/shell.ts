@@ -61,16 +61,16 @@ export function mountShell(root: HTMLElement, send: Send): ShellLeds {
     return b;
   }
 
-  /** A pad: note-on (velocity) on press, note-off on release. */
-  function pad(idx: number): HTMLButtonElement {
-    const b = el("button", "pad", String(idx + 1));
-    const note = PAD_NOTE0 + idx;
-    const press = (e: Event) => { e.preventDefault(); b.classList.add("pressed"); send(NOTE_ON, note, PAD_VELOCITY); };
+  /** A note button (pads + step buttons): note-on on press, note-off on release.
+   *  Step buttons send NOTE 16..31 (not CC) — that's what _onStepButtons expects;
+   *  CC 16..31 is only the LED address. */
+  function noteButton(label: string, note: number, cls: string, vel = PAD_VELOCITY): HTMLButtonElement {
+    const b = el("button", cls, label);
+    const press = (e: Event) => { e.preventDefault(); b.classList.add("pressed"); send(NOTE_ON, note, vel); };
     const release = () => { if (b.classList.contains("pressed")) { b.classList.remove("pressed"); send(NOTE_OFF, note, 0); } };
     b.addEventListener("pointerdown", press);
     b.addEventListener("pointerup", release);
     b.addEventListener("pointerleave", release);
-    padEls[idx] = b;
     return b;
   }
 
@@ -115,11 +115,10 @@ export function mountShell(root: HTMLElement, send: Send): ShellLeds {
   trackRow.append(jogDec, jogInc, momentary("Jog ●", NAV.JogClick));
   root.appendChild(trackRow);
 
-  // Steps (16)
+  // Steps (16) — NOTE 16..31 on press; addressed by setLED(16..31) for LEDs.
   const stepRow = el("div", "row steps");
   for (let i = 0; i < 16; i++) {
-    const b = momentary(String(i + 1), STEP_CC0 + i, "ctl step");
-    buttonEls.delete(STEP_CC0 + i); // steps are addressed by setLED(16..31), not setButtonLED
+    const b = noteButton(String(i + 1), STEP_CC0 + i, "ctl step", 127);
     stepEls[i] = b;
     stepRow.appendChild(b);
   }
@@ -128,7 +127,12 @@ export function mountShell(root: HTMLElement, send: Send): ShellLeds {
   // Pads (4×8) — row 0 on top = indices 24..31, bottom row = 0..7
   const padGrid = el("div", "pads");
   for (let r = 3; r >= 0; r--) {
-    for (let c = 0; c < 8; c++) padGrid.appendChild(pad(r * 8 + c));
+    for (let c = 0; c < 8; c++) {
+      const idx = r * 8 + c;
+      const b = noteButton(String(idx + 1), PAD_NOTE0 + idx, "pad");
+      padEls[idx] = b;
+      padGrid.appendChild(b);
+    }
   }
   root.appendChild(padGrid);
 

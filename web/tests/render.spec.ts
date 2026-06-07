@@ -54,7 +54,7 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
   });
   await page.locator("#shell .step").first().click();
   const midi = await page.evaluate(() => (globalThis as AnyGlobal).__midi);
-  expect(midi).toEqual([[0xb0, 16, 127], [0xb0, 16, 0]]);
+  expect(midi).toEqual([[0x90, 16, 127], [0x80, 16, 0]]); // step = NOTE 16
 
   // (b) Shift+Menu opens the global menu → the OLED must change.
   const mi = (s: number, d1: number, d2: number) =>

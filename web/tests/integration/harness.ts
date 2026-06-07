@@ -58,6 +58,8 @@ export interface Harness {
   hold(cc: number): void;
   release(cc: number): void;
   pad(idx: number, vel?: number): void;
+  /** Tap a step button (NOTE 16..31): on, tick, off, tick. */
+  tapStep(i: number): void;
   encoder(k: number, dir: 1 | -1): void;
   get(key: string): string | null;
 }
@@ -82,6 +84,7 @@ export async function createHarness(): Promise<Harness> {
     hold(c) { emu.sendInternal(0xb0, c, 127); },
     release(c) { emu.sendInternal(0xb0, c, 0); },
     pad(idx, vel = 110) { emu.sendInternal(0x90, 68 + idx, vel); step(1); emu.sendInternal(0x80, 68 + idx, 0); step(1); },
+    tapStep(i) { emu.sendInternal(0x90, 16 + i, 127); step(1); emu.sendInternal(0x80, 16 + i, 0); step(1); },
     encoder(k, dir) { emu.sendInternal(0xb0, 71 + k, dir === 1 ? 1 : 127); step(1); },
     get(key) { return emu.dsp.get(key); },
   };
