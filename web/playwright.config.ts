@@ -7,13 +7,14 @@ const PORT = 5180;
 
 export default defineConfig({
   testDir: "./tests",
+  testMatch: "**/*.spec.ts", // *.test.ts are vitest (Node) integration tests — not Playwright's
   outputDir: "./test-results",
   fullyParallel: true,
   reporter: [["list"]],
   use: {
+    ...devices["Desktop Chrome"],
     baseURL: `http://localhost:${PORT}`,
     viewport: { width: 1100, height: 820 },
-    ...devices["Desktop Chrome"],
   },
   webServer: {
     command: `pnpm dev --port ${PORT} --strictPort`,
