@@ -5,7 +5,7 @@
 
 import { createMockDsp } from "./mock-dsp.js";
 import { createWasmDsp } from "./wasm-dsp.js";
-import { mountShell } from "./shell.js";
+import { mountShell, type ShellLeds } from "./shell.js";
 import type { Dsp } from "./dsp.js";
 
 const TICK_HZ = 94; // device cadence (STEP_HOLD_TICKS is calibrated to this)
@@ -67,9 +67,18 @@ function hostFlushDisplay(): void { /* drawn eagerly; nothing to present */ }
 // ---- LED shims (pad/step/button grid) ----------------------------------
 const leds = new Map<number, number>();       // idx -> color
 const buttonLeds = new Map<number, number>(); // cc  -> color
-function setLED(idx: number, color: number): void { leds.set(idx, color); }
-function setButtonLED(cc: number, color: number): void { buttonLeds.set(cc, color); }
-function clearAllLEDs(): void { leds.clear(); }
+let shellLeds: ShellLeds | null = null;       // set once the shell mounts
+function setLED(idx: number, color: number): void { leds.set(idx, color); shellLeds?.setLED(idx, color); }
+function setButtonLED(cc: number, color: number): void { buttonLeds.set(cc, color); shellLeds?.setButtonLED(cc, color); }
+function clearAllLEDs(): void { leds.clear(); shellLeds?.clearAll(); }
+// The tool drives LEDs through the shared input_filter.setLED/setButtonLED, which
+// emit USB-MIDI here: [0x09, NoteOn, note, color] = pad/step LED; [0x0b, CC, cc,
+// color] = button LED. (ui.js routes real MIDI via inject/send_midi_to_dsp.)
+function moveMidiInternalSend(pkt: number[]): void {
+  const status = (pkt[1] ?? 0) & 0xf0, idx = pkt[2] ?? 0, color = pkt[3] ?? 0;
+  if (status === 0x90) { leds.set(idx, color); shellLeds?.setLED(idx, color); }
+  else if (status === 0xb0) { buttonLeds.set(idx, color); shellLeds?.setButtonLED(idx, color); }
+}
 
 // ---- Param shims (DSP bridge → layout-tier mock) -----------------------
 let dsp: Dsp = createMockDsp(); // swapped for seq8-wasm in boot() unless ?mock is set
@@ -109,6 +118,7 @@ Object.assign(globalThis, {
   text_width: textWidth,
   host_flush_display: hostFlushDisplay,
   setLED, setButtonLED, clearAllLEDs,
+  move_midi_internal_send: moveMidiInternalSend,
   host_module_get_param: hostModuleGetParam,
   host_module_set_param: hostModuleSetParam,
   host_write_file: hostWriteFile,
@@ -156,7 +166,12 @@ async function boot(): Promise<void> {
   const sendInternal = (status: number, d1: number, d2: number) =>
     globalThis.onMidiMessageInternal?.([status, d1, d2]);
   const shellRoot = document.getElementById("shell");
-  if (shellRoot) mountShell(shellRoot, sendInternal);
+  if (shellRoot) {
+    shellLeds = mountShell(shellRoot, sendInternal);
+    // Replay LED state the tool set during init() (before the shell mounted).
+    for (const [i, c] of leds) shellLeds.setLED(i, c);
+    for (const [cc, c] of buttonLeds) shellLeds.setButtonLED(cc, c);
+  }
 
   let ticks = 0;
   setStatus("running");

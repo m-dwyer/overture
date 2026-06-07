@@ -21,6 +21,15 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
   await expect(page.locator("#status")).toHaveText("running");
   // The real seq8 engine must load (not silently fall back to the mock).
   expect(await page.locator("#log").textContent()).toContain("behavior tier");
+  // The tool must drive LEDs (via move_midi_internal_send) — at least some lit.
+  const litLeds = await page.evaluate(() => {
+    const o = (globalThis as { OVT: { leds: Map<number, number>; buttonLeds: Map<number, number> } }).OVT;
+    let n = 0;
+    for (const c of o.leds.values()) if (c > 0) n++;
+    for (const c of o.buttonLeds.values()) if (c > 0) n++;
+    return n;
+  });
+  expect(litLeds, "tool should light some LEDs").toBeGreaterThan(0);
   if (consoleErrors.length) console.log("console errors:\n" + consoleErrors.slice(0, 25).join("\n"));
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
 });

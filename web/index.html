@@ -20,7 +20,7 @@
       #shell button { font: 11px ui-monospace, monospace; color: #bbb; background: #1c1c1f;
         border: 1px solid #3a3a40; border-radius: 4px; padding: 6px 8px; cursor: pointer; user-select: none; }
       #shell button:hover { border-color: #555; }
-      #shell button.on { background: #19f0a8; color: #022; border-color: #19f0a8; }
+      #shell button.pressed { outline: 2px solid #fff; outline-offset: -2px; } /* press; LED sets background */
       #shell .step { width: 30px; padding: 8px 0; }
       #shell .track { background: #233; }
       #shell .enc { display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -28,8 +28,7 @@
       #shell .enc-row { display: flex; gap: 2px; }
       #shell .enc-btn { width: 26px; padding: 4px 0; }
       #shell .pads { display: grid; grid-template-columns: repeat(8, 40px); gap: 5px; margin-top: 4px; }
-      #shell .pad { height: 40px; background: #181820; border: 1px solid #333; color: #555; }
-      #shell .pad.on { background: #19f0a8; color: #022; }
+      #shell .pad { height: 40px; background: #181820; border: 1px solid #333; color: #888; }
     </style>
   </head>
   <body>

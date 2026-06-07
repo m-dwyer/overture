@@ -28,6 +28,7 @@ export interface HostApi {
   host_ensure_dir(path: string): number;
   host_remove_dir(path: string): number;
   // MIDI out
+  move_midi_internal_send(pkt: number[]): void; // also carries LED writes
   move_midi_inject_to_move(pkt: number[]): void;
   shadow_send_midi_to_dsp(...args: unknown[]): void;
   // co-run (native-editor delegation)
@@ -55,6 +56,7 @@ declare global {
   var setLED: HostApi["setLED"];
   var setButtonLED: HostApi["setButtonLED"];
   var clearAllLEDs: HostApi["clearAllLEDs"];
+  var move_midi_internal_send: HostApi["move_midi_internal_send"];
   var host_module_get_param: HostApi["host_module_get_param"];
   var host_module_set_param: HostApi["host_module_set_param"];
   var host_write_file: HostApi["host_write_file"];
