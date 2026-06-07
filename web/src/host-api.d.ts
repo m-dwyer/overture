@@ -40,8 +40,9 @@ declare global {
   // Entry points (host → tool): defined by the tool, called by the host loop.
   var init: (() => void) | undefined;
   var tick: (() => void) | undefined;
-  var onMidiMessageInternal: ((status: number, d1: number, d2: number) => void) | undefined;
-  var onMidiMessageExternal: ((status: number, d1: number, d2: number) => void) | undefined;
+  // Host delivers a [status, d1, d2] packet (single array arg).
+  var onMidiMessageInternal: ((data: number[]) => void) | undefined;
+  var onMidiMessageExternal: ((data: number[]) => void) | undefined;
 
   // Host shims (installed by main.ts).
   var clear_screen: HostApi["clear_screen"];

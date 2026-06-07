@@ -4,6 +4,7 @@
 // See ../HOST-API.md for the contract this mirrors.
 
 import { createMockDsp } from "./mock-dsp.js";
+import { mountShell } from "./shell.js";
 
 const TICK_HZ = 94; // device cadence (STEP_HOLD_TICKS is calibrated to this)
 
@@ -134,6 +135,12 @@ async function boot(): Promise<void> {
 
   try { globalThis.init?.(); } catch (e) { log("init() threw: " + ((e as Error)?.stack || e)); }
 
+  // Mount the clickable Move hardware shell → onMidiMessageInternal([s,d1,d2]).
+  const sendInternal = (status: number, d1: number, d2: number) =>
+    globalThis.onMidiMessageInternal?.([status, d1, d2]);
+  const shellRoot = document.getElementById("shell");
+  if (shellRoot) mountShell(shellRoot, sendInternal);
+
   let ticks = 0;
   setStatus("running");
   setInterval(() => {
@@ -146,8 +153,8 @@ async function boot(): Promise<void> {
   // Expose for console-driven input until the Move shell is wired.
   globalThis.OVT = {
     dsp, leds, buttonLeds,
-    midiIn: (s: number, d1: number, d2: number) => globalThis.onMidiMessageInternal?.(s, d1, d2),
-    midiExt: (s: number, d1: number, d2: number) => globalThis.onMidiMessageExternal?.(s, d1, d2),
+    midiIn: (s: number, d1: number, d2: number) => globalThis.onMidiMessageInternal?.([s, d1, d2]),
+    midiExt: (s: number, d1: number, d2: number) => globalThis.onMidiMessageExternal?.([s, d1, d2]),
   };
 }
 
