@@ -40,7 +40,14 @@ python3 scripts/bundle_ui.py
 # files in the module dir, so install.sh's `scp dist/davebox/*` carries them too.
 cp export/pack.py                          "dist/${MODULE_ID}/pack.py"
 cp export/ableton-master.json             "dist/${MODULE_ID}/ableton-master.json"
-cp notes/ableton-export-drift-dummy.json  "dist/${MODULE_ID}/drift-dummy.json"
+# drift-dummy lives under the gitignored notes/ (unpublished upstream). Skip when
+# absent so a clean checkout still builds; Ableton drift-track export degrades
+# gracefully without it. (Overture fork fix.)
+if [ -f notes/ableton-export-drift-dummy.json ]; then
+    cp notes/ableton-export-drift-dummy.json "dist/${MODULE_ID}/drift-dummy.json"
+else
+    echo "WARN: notes/ableton-export-drift-dummy.json absent — skipping drift-dummy (Ableton drift export degraded)"
+fi
 # Convert source (24-bit stereo 44100Hz) → normalized 16-bit mono 48000Hz for DSP render_block
 python3 - <<'PYEOF'
 import wave, struct, audioop, warnings
