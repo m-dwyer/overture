@@ -248,6 +248,12 @@ is where you approach the budget — measure and cap.
 
 ## Phasing — start as a module, graduate twice (both deferred)
 
+> ⚠️ **SUPERSEDED — see `ROADMAP.md` for the authoritative phase plan.** The phasing below is the
+> *build-from-scratch* alternative, written before we found dAVEBOx. The actual plan is the
+> **davebox-fork** path in `ROADMAP.md` (Phase 0 validate → 1 fork dAVEBOx → 2 p-lock lane → 3 reshape
+> UX → 4 bundle → 5 boot). Keep the phases below only as the fallback if you ever build fresh instead
+> of forking; the **Phase 0 validation detail here is still current** and referenced by ROADMAP Phase 0.
+
 ### Phase 0 — Validate the unknowns (overtake module, ~harness)
 Extend the `engine-probe` harness to answer, on-device, the questions that change the design:
 1. **Note routing — by-channel or selected-track-only?** Inject notes on ch 1–4 *simultaneously*;
