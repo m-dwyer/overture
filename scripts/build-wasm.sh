@@ -22,12 +22,12 @@ RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","stringToUTF8","lengthBytesUTF8
 read -r -d '' EMCC_CMD <<EOF || true
 emcc dsp/seq8.c dsp/seq8_wasm_glue.c \
   -O3 -I. \
-  -s MODULARIZE=1 -s EXPORT_NAME=Seq8Module \
+  -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORT_NAME=Seq8Module \
   -s ENVIRONMENT=web,worker,node \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s EXPORTED_FUNCTIONS='${EXPORTED_FUNCTIONS}' \
   -s EXPORTED_RUNTIME_METHODS='${RUNTIME_METHODS}' \
-  -o ${OUT_DIR}/seq8.js
+  -o ${OUT_DIR}/seq8.mjs
 EOF
 
 run_build() {
@@ -45,5 +45,5 @@ fi
 
 echo ""
 echo "=== Artifacts ==="
-ls -lh "${OUT_DIR}/seq8.js" "${OUT_DIR}/seq8.wasm"
-echo "Build complete: ${OUT_DIR}/seq8.{js,wasm}"
+ls -lh "${OUT_DIR}/seq8.mjs" "${OUT_DIR}/seq8.wasm"
+echo "Build complete: ${OUT_DIR}/seq8.{mjs,wasm}"

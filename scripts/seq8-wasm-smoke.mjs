@@ -1,13 +1,11 @@
 // Round-trip smoke test for the seq8 wasm target (built by scripts/build-wasm.sh).
 // Boots the plugin, creates an instance, exercises set/get_param + render through
 // the REAL DSP, and confirms a clean teardown. Run: node scripts/seq8-wasm-smoke.mjs
-import { createRequire } from "module";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const require = createRequire(root + "/");
-const Seq8Module = require("./dist/wasm/seq8.js");
+const { default: Seq8Module } = await import(resolve(root, "dist/wasm/seq8.mjs"));
 
 const midiOut = [];
 const Module = await Seq8Module({
