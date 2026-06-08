@@ -34,7 +34,7 @@ const NAMED: Record<number, string> = {
   114: "#4a1426", // DeepWine
   118: "#c2c2c2", // LightGrey
   120: "#ffffff", // White
-  124: "#5c5c5c", // DarkGrey
+  124: "#c8c8c8", // "DarkGrey" — but it glows bright-white through the translucent pads on device (A/B-confirmed); brightened to match.
   125: "#4f7bff", // Blue
   126: "#37d06a", // Green
   127: "#ff4d4d", // Red (softer)
