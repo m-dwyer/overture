@@ -88,7 +88,7 @@ export function Shell({ send, onReady }: { send: Send; onReady: (leds: LedSink) 
           <EncoderRow send={send} />
         </div>
         <div className="col-start-4 row-start-1 flex items-center justify-center">
-          <VolumeKnob />
+          <VolumeKnob send={send} />
         </div>
 
         {/* left controls: jog (top) / back+menu / play+record (bottom) */}

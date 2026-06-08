@@ -38,8 +38,17 @@ export const NAV = {
 export const ROW_CC = [43, 42, 41, 40] as const; // Track 1..4 buttons
 export const STEP_CC0 = 16; // Steps 1..16 -> NOTE/LED 16..31
 export const KNOB_CC0 = 71; // Encoders 1..8 -> CC 71..78 (relative)
+export const VOLUME_CC = 79; // master volume encoder -> CC 79 (relative)
 export const PAD_NOTE0 = 68; // Pads 0..31 -> notes 68..99
 export const PAD_VELOCITY = 110;
+
+// Capacitive knob-touch arrives as NOTE 0..9 (vel 127 = touch on, 0 = release):
+// knobs 1..8 = 0..7, master/volume knob = 8, jog wheel = 9. The device's knobs are
+// touch-sensitive and the tool gates gestures/LED hints on "is this knob touched";
+// in the emulator a knob is "touched" while the pointer is down (or mid-scroll).
+export const KNOB_TOUCH0 = 0;
+export const MASTER_TOUCH = 8;
+export const JOG_TOUCH = 9;
 
 /** Track-strip colours, top→bottom (Track 1..4): blue / magenta / orange / green. */
 export const TRACK_COLORS = ["#2840e0", "#ff20c0", "#c85a10", "#30ff50"] as const;

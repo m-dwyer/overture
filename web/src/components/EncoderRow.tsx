@@ -1,21 +1,31 @@
-// The 8 top encoders (relative CC 71..78). Turn an encoder by dragging up/down
-// (up = clockwise) or scrolling over it; the knob's tick mark rotates as you turn.
-// `EncoderRow` is the row of 8 (sits above the pads); `VolumeKnob` is the separate
-// master knob in the top-right corner (no CC in the device contract — decorative).
+// The 8 top encoders (relative CC 71..78) + the master volume knob (CC 79). Turn by
+// dragging up/down or scrolling; the knob's tick rotates. The device's knobs are
+// touch-sensitive — pressing/scrolling a knob emits its capacitive-touch note
+// (knobs 0..7, master = 8) so touch-gated gestures + Shift LED hints work.
 import { useCallback } from "react";
-import { CC, KNOB_CC0, type Send } from "@/lib/move-controls";
+import {
+  CC,
+  KNOB_CC0,
+  KNOB_TOUCH0,
+  MASTER_TOUCH,
+  NOTE_ON,
+  VOLUME_CC,
+  type Send,
+} from "@/lib/move-controls";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useTurn } from "./useTurn";
 
-const KNOB =
-  "h-12 w-12 rounded-full bg-gradient-to-b from-panel-2 to-bg border border-line shadow-inner " +
+const KNOB_BASE =
+  "rounded-full bg-gradient-to-b from-panel-2 to-bg border border-line shadow-inner " +
   "relative after:absolute after:left-1/2 after:top-1 after:h-3 after:w-1 after:-translate-x-1/2 " +
   "after:rounded-full after:bg-zinc-300 hover:border-muted cursor-ns-resize touch-none select-none";
 
 function Encoder({ idx, send }: { idx: number; send: Send }) {
   const cc = KNOB_CC0 + idx;
+  const touch = KNOB_TOUCH0 + idx;
   const emit = useCallback((dir: 1 | -1) => send(CC, cc, dir > 0 ? 1 : 127), [cc, send]);
-  const { angle, ref, handlers } = useTurn<HTMLButtonElement>(emit);
+  const onTouch = useCallback((on: boolean) => send(NOTE_ON, touch, on ? 127 : 0), [touch, send]);
+  const { angle, ref, handlers } = useTurn<HTMLButtonElement>(emit, onTouch);
 
   return (
     <Tooltip>
@@ -23,7 +33,7 @@ function Encoder({ idx, send }: { idx: number; send: Send }) {
         <button
           ref={ref}
           aria-label={`Encoder ${idx + 1}`}
-          className={KNOB}
+          className={`h-12 w-12 ${KNOB_BASE}`}
           style={{ transform: `rotate(${angle}deg)` }}
           {...handlers}
         />
@@ -52,16 +62,23 @@ export function EncoderRow({ send }: { send: Send }) {
   );
 }
 
-export function VolumeKnob() {
+export function VolumeKnob({ send }: { send: Send }) {
+  const emit = useCallback((dir: 1 | -1) => send(CC, VOLUME_CC, dir > 0 ? 1 : 127), [send]);
+  const onTouch = useCallback((on: boolean) => send(NOTE_ON, MASTER_TOUCH, on ? 127 : 0), [send]);
+  const { angle, ref, handlers } = useTurn<HTMLButtonElement>(emit, onTouch);
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
+          ref={ref}
           aria-label="Volume"
-          className="h-14 w-14 rounded-full bg-gradient-to-b from-panel-2 to-bg border border-line shadow-inner cursor-pointer hover:border-muted"
+          className={`h-14 w-14 ${KNOB_BASE}`}
+          style={{ transform: `rotate(${angle}deg)` }}
+          {...handlers}
         />
       </TooltipTrigger>
-      <TooltipContent>Output Volume</TooltipContent>
+      <TooltipContent>Output Volume — drag up/down or scroll</TooltipContent>
     </Tooltip>
   );
 }

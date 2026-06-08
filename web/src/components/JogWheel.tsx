@@ -2,14 +2,15 @@
 // a notch on the rim that turns as you go. The centre is a momentary press (CC 3);
 // its wrapper stops pointer events so pressing it doesn't start a wheel-drag.
 import { useCallback } from "react";
-import { CC, NAV, type Send } from "@/lib/move-controls";
+import { CC, JOG_TOUCH, NAV, NOTE_ON, type Send } from "@/lib/move-controls";
 import { MomentaryButton } from "./controls";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useTurn } from "./useTurn";
 
 export function JogWheel({ send }: { send: Send }) {
   const emit = useCallback((dir: 1 | -1) => send(CC, NAV.JogRotate, dir > 0 ? 1 : 127), [send]);
-  const { angle, ref, handlers } = useTurn<HTMLDivElement>(emit);
+  const onTouch = useCallback((on: boolean) => send(NOTE_ON, JOG_TOUCH, on ? 127 : 0), [send]);
+  const { angle, ref, handlers } = useTurn<HTMLDivElement>(emit, onTouch);
 
   return (
     <Tooltip>
@@ -17,6 +18,7 @@ export function JogWheel({ send }: { send: Send }) {
         <div
           ref={ref}
           {...handlers}
+          aria-label="Jog wheel"
           className="relative flex h-20 w-20 cursor-ns-resize touch-none select-none items-center justify-center rounded-full bg-gradient-to-b from-panel-2 to-bg border border-line shadow-inner"
         >
           {/* rotating rim notch — visual turn feedback */}
