@@ -110,24 +110,42 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     expect(h.ui().activeBank).toBe(b0);
   });
 
-  test("Side buttons switch clips (reversed: CC43=clip 0 … CC40=clip 3)", () => {
+  // Change #1: side buttons now SELECT TRACKS (was: switch clips). Reversed,
+  // same as Shift+bottom-pad: CC43=track 1 … CC40=track 4.
+  test("Side buttons select tracks 1–4 (reversed: CC43=track 0 … CC40=track 3)", () => {
     noteView();
-    const t = h.ui().activeTrack;
-    const clip = () => (h.ui().trackActiveClip as number[])[t];
     h.press(43);
     h.step(2);
-    expect(clip()).toBe(0);
+    expect(h.ui().activeTrack).toBe(0);
     h.press(42);
     h.step(2);
-    expect(clip()).toBe(1);
+    expect(h.ui().activeTrack).toBe(1);
     h.press(41);
     h.step(2);
-    expect(clip()).toBe(2);
+    expect(h.ui().activeTrack).toBe(2);
     h.press(40);
     h.step(2);
-    expect(clip()).toBe(3);
+    expect(h.ui().activeTrack).toBe(3);
     h.press(43);
-    h.step(2); // restore clip 0
+    h.step(2); // restore track 0
+  });
+
+  // Change #1: Shift+side banks to tracks 5–8 (CC43=track 5 … CC40=track 8).
+  test("Shift + side button selects tracks 5–8 (bank)", () => {
+    noteView();
+    h.hold(49);
+    h.press(43); // Shift+CC43 -> track 5 (index 4)
+    h.release(49);
+    h.step(2);
+    expect(h.ui().activeTrack).toBe(4);
+    h.hold(49);
+    h.press(40); // Shift+CC40 -> track 8 (index 7)
+    h.release(49);
+    h.step(2);
+    expect(h.ui().activeTrack).toBe(7);
+    h.press(43);
+    h.step(2); // plain CC43 -> back to track 0
+    expect(h.ui().activeTrack).toBe(0);
   });
 
   test("Shift + bottom-row pad switches the active track", () => {
