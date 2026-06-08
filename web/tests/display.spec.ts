@@ -85,3 +85,13 @@ test("shift+step 9", async ({ page }) => {
   await snap(page, "07-shift-step9");
   await shiftUp(page);
 });
+
+// Track-View resting overview with the bank position strip (Change: OLED bank
+// strip). Tapping Note/Session enters Track view; the header's right side shows
+// the "you are here in the bank chain" strip (active bank = tall block, others =
+// 2px stubs), replacing the old ad-hoc '>>' hints.
+test("track view bank strip", async ({ page }) => {
+  await boot(page);
+  await tap(page, 50); // Note/Session -> Track view (resting overview)
+  await snap(page, "08-track-bank-strip");
+});
