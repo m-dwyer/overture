@@ -22,7 +22,12 @@ const OLED_H = 64;
 // Real Move OLED: monochrome white pixels on black.
 const FG = "#f2f2f2";
 const BG = "#000000";
-const FONT = "12px ui-monospace, 'SF Mono', Menlo, monospace";
+// The device's `print` font is a 5×7 bitmap on a fixed 6px-wide grid; the tool
+// stacks menu rows only 9px apart (menu_layout LIST_LINE_HEIGHT) and right-aligns
+// values using text_width = chars × 6. Match that so text doesn't overlap and
+// alignment lands correctly. ~8px keeps glyphs inside the 9px line height.
+const CHAR_W = 6;
+const FONT = "8px ui-monospace, 'SF Mono', Menlo, monospace";
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -95,11 +100,15 @@ export function App() {
         ctx.font = FONT;
         ctx.textBaseline = "top";
         ctx.fillStyle = color === 0 ? BG : FG;
-        ctx.fillText(text, x | 0, y | 0);
+        // Draw on the device's fixed 6px-per-char grid (monospace, no kerning) so
+        // spacing and text_width-based alignment match the firmware font.
+        const s = String(text);
+        const baseX = x | 0;
+        const baseY = y | 0;
+        for (let i = 0; i < s.length; i++) ctx.fillText(s[i], baseX + i * CHAR_W, baseY);
       },
       textWidth(text) {
-        ctx.font = FONT;
-        return Math.ceil(ctx.measureText(text).width);
+        return String(text).length * CHAR_W;
       },
       flush() {
         /* drawn eagerly */
