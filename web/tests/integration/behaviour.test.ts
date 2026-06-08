@@ -130,6 +130,30 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2); // restore track 0
   });
 
+  // Change #1: holding a side button reveals that track's 16 clips on the
+  // steps; tapping a step selects (launches) that clip on the held track.
+  // This is the relocation home for the old side-button clip-switch.
+  test("Hold side button + tap step selects that track's clip", () => {
+    noteView();
+    // Select track 1 (CC43) and keep holding past the hold threshold.
+    h.hold(43);
+    h.step(25); // cross STEP_HOLD_TICKS (~19) -> reveal overlay engages
+    expect(h.ui().revealClipsTrack).toBe(0);
+    h.tapStep(2); // step 3 -> clip index 2 on track 0
+    h.step(2);
+    expect((h.ui().trackActiveClip as number[])[0]).toBe(2);
+    h.release(43);
+    h.step(2);
+    expect(h.ui().revealClipsTrack).toBe(-1); // overlay exits on release
+    // restore clip 0
+    h.hold(43);
+    h.step(25);
+    h.tapStep(0);
+    h.step(2);
+    h.release(43);
+    h.step(2);
+  });
+
   // Change #1: Shift+side banks to tracks 5–8 (CC43=track 5 … CC40=track 8).
   test("Shift + side button selects tracks 5–8 (bank)", () => {
     noteView();

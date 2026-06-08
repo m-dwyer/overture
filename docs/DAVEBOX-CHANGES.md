@@ -68,13 +68,13 @@ merge placement). The untangle is the bulk of the work — hence step 1 above.
 ## Function-preservation checklist (the at-risk items)
 Authoritative inventory: `tool/MANUAL.md` §15 Cheat Sheet. These are the items the redesign *touches* —
 each must keep a home before a change ships:
-- [ ] side-button clip **switch** → hold-track → steps
-- [ ] side-button clip **launch** (Session) → Session pads
-- [ ] **Copy+side / Shift+Copy+side** (copy/cut clip) → Session, or held-track+step+Copy
-- [ ] **Delete+side / Shift+Delete+side** (clear / hard-reset clip) → Session, or held-track+step+Delete
-- [ ] **Copy+side (drum)** = copy 32 lanes → Session
-- [ ] **Shift+jog / Shift+bottom-pad** (track switch) → side buttons (this *is* the change)
-- [ ] always-on per-clip **status LEDs** → hold-to-reveal (documented cost)
+- [x] side-button clip **switch** → hold-track → steps *(hold side button reveals the 16 clips on the steps)*
+- [x] side-button clip **launch** (Session) → Session pads *(Session side buttons unchanged)*
+- [x] **Copy+side / Shift+Copy+side** (copy/cut clip) → Session *(Option A: Session clip pads; Track-View branch removed)*
+- [x] **Delete+side / Shift+Delete+side** (clear / hard-reset clip) → Session *(Session clip pads)*
+- [x] **Copy+side (drum)** = copy 32 lanes → Session *(Session drum clip pads)*
+- [x] **Shift+jog / Shift+bottom-pad** (track switch) → side buttons *(side buttons now select tracks; jog/bottom-pad retained as fallbacks)*
+- [x] always-on per-clip **status LEDs** → hold-to-reveal *(side-button LEDs now show track identity; clips shown on steps while a side button is held — documented cost)*
 - [ ] (#5) DRUM LANE / NOTE FX / scale / swing menu pages → Shift+Step equivalents
 - [ ] (#6) every Loop overload → a clear home
 Everything else in the Cheat Sheet (Shift+Step shortcuts, step-edit trig params, automation lanes,
