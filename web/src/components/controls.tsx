@@ -3,7 +3,12 @@
 //   NoteButton      — pads + steps: note-on on press, note-off on release.
 // Press feedback is the `.pressed` class (toggled imperatively, no re-render) so it
 // composes with the LED background the host paints onto the same element.
-import type { PointerEvent, ReactNode, Ref } from "react";
+//
+// `latch` makes a control toggle-and-hold instead of momentary: the hardware does
+// chords by physically holding Shift while pressing another button, which is
+// impossible with a single mouse pointer — so latched buttons stay held (CC 127)
+// until clicked again (CC 0), letting you click other controls in between.
+import { useState, type PointerEvent, type ReactNode, type Ref } from "react";
 import { CC, NOTE_OFF, NOTE_ON, type Send } from "@/lib/move-controls";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -26,12 +31,31 @@ interface MomentaryProps {
   children?: ReactNode;
   tooltip?: ReactNode;
   refCb?: Ref<HTMLButtonElement>;
+  /** Toggle-and-hold instead of momentary (for modifier buttons like Shift). */
+  latch?: boolean;
   "aria-label"?: string;
 }
 
-/** A momentary CC button (127 down / 0 up). Wrapped in a tooltip when given one. */
-export function MomentaryButton({ cc, send, className, children, tooltip, refCb, ...rest }: MomentaryProps) {
-  const btn = (
+/** A CC button: momentary (127 down / 0 up) by default, or toggle-held when `latch`. */
+export function MomentaryButton({ cc, send, className, children, tooltip, refCb, latch, ...rest }: MomentaryProps) {
+  const [held, setHeld] = useState(false);
+  const toggle = (): void =>
+    setHeld((h) => {
+      send(CC, cc, h ? 0 : 127);
+      return !h;
+    });
+
+  const btn = latch ? (
+    <button
+      ref={refCb}
+      aria-pressed={held}
+      className={cn("select-none", held && "pressed", className)}
+      onClick={toggle}
+      {...rest}
+    >
+      {children}
+    </button>
+  ) : (
     <button
       ref={refCb}
       className={cn("select-none", className)}

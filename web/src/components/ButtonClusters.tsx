@@ -41,6 +41,8 @@ interface Ctl {
   label: string;
   Icon: ComponentType<{ size?: number | string; className?: string }>;
   className?: string;
+  tooltip?: string;
+  latch?: boolean;
 }
 
 function IconButton({ ctl, send, size = 16 }: { ctl: Ctl; send: Send; size?: number }) {
@@ -49,7 +51,8 @@ function IconButton({ ctl, send, size = 16 }: { ctl: Ctl; send: Send; size?: num
     <MomentaryButton
       cc={ctl.cc}
       send={send}
-      tooltip={ctl.label}
+      latch={ctl.latch}
+      tooltip={ctl.tooltip ?? ctl.label}
       aria-label={ctl.label}
       refCb={ledRef(reg.buttons, ctl.cc)}
       className={cn(ROUND, ctl.className)}
@@ -102,7 +105,13 @@ const RIGHT: Ctl[] = [
   { cc: NAV.Delete, label: "Delete", Icon: Trash2 },
   { cc: NAV.Copy, label: "Copy", Icon: Copy },
   { cc: NAV.Undo, label: "Undo", Icon: Undo2 },
-  { cc: NAV.Shift, label: "Shift", Icon: ArrowBigUp },
+  {
+    cc: NAV.Shift,
+    label: "Shift",
+    Icon: ArrowBigUp,
+    latch: true,
+    tooltip: "Shift — click to hold, click again to release (then click another button to chord)",
+  },
 ];
 
 export function RightCluster({ send }: { send: Send }) {
