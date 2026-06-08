@@ -54,14 +54,93 @@ describe("davebox §15 — track topology", () => {
   });
 });
 
-// ── Blocked on gesture-pinning (next increment) ──────────────────────────────
-// These function-preservation behaviours (the ones Change #1 touches) did NOT
-// reproduce from naive gestures in probing — they need the exact mechanics read
-// out of the handlers (decodeDelta encoding, view/pad-mode gating, deferred DSP
-// push), not the manual's one-line summaries:
-//   - Shift + jog rotate -> switch active track   (ui.js:7260; active_track unchanged on poke)
-//   - Side buttons CC40-43 -> switch clip          (_onCC_side; effect not yet observed)
-//   - Step tap -> toggle step                      (needs a melodic track active)
-//   - Mute -> toggle mute_state                    (single press did not change mute_state)
-// Pinning these (read the handlers + harness round-trip) is the next slice and
-// unlocks the bulk of the Track-View cheat sheet.
+// Track-View navigation — the function-preservation behaviours Change #1 will
+// repurpose (DAVEBOX-CHANGES.md). These assert UI-mode state via the davebox test
+// hook (h.ui() = S), which has no DSP get_param read-back. Boot is Session view, so
+// these enter Note/Track view first. NOTE: requires the tool fork's UI-state hook
+// (globalThis.daveboxUiState).
+describe("davebox §15 — Track View navigation (Change #1 targets)", () => {
+  let h: Harness;
+  beforeAll(async () => {
+    h = await createHarness();
+  }, 60_000);
+
+  const noteView = () => {
+    if (h.ui().sessionView) {
+      h.press(50);
+      h.step(2);
+    }
+  };
+
+  test("Menu toggles Session <-> Note view", () => {
+    const v0 = h.ui().sessionView;
+    h.press(50);
+    h.step(2);
+    expect(h.ui().sessionView).toBe(!v0);
+    h.press(50);
+    h.step(2);
+    expect(h.ui().sessionView).toBe(v0);
+  });
+
+  test("Shift + jog rotate switches the active track", () => {
+    noteView();
+    const start = h.ui().activeTrack;
+    h.hold(49);
+    h.cc(14, 1); // cw -> +1
+    h.step(2);
+    h.release(49);
+    h.step(1);
+    expect(h.ui().activeTrack).toBe(Math.min(7, start + 1));
+    h.hold(49);
+    h.cc(14, 127); // ccw -> -1 (restore)
+    h.step(2);
+    h.release(49);
+    h.step(1);
+    expect(h.ui().activeTrack).toBe(start);
+  });
+
+  test("Jog rotate cycles the active bank", () => {
+    noteView();
+    const b0 = h.ui().activeBank;
+    h.cc(14, 1);
+    h.step(2);
+    expect(h.ui().activeBank).not.toBe(b0);
+    h.cc(14, 127);
+    h.step(2);
+    expect(h.ui().activeBank).toBe(b0);
+  });
+
+  test("Side buttons switch clips (reversed: CC43=clip 0 … CC40=clip 3)", () => {
+    noteView();
+    const t = h.ui().activeTrack;
+    const clip = () => (h.ui().trackActiveClip as number[])[t];
+    h.press(43);
+    h.step(2);
+    expect(clip()).toBe(0);
+    h.press(42);
+    h.step(2);
+    expect(clip()).toBe(1);
+    h.press(41);
+    h.step(2);
+    expect(clip()).toBe(2);
+    h.press(40);
+    h.step(2);
+    expect(clip()).toBe(3);
+    h.press(43);
+    h.step(2); // restore clip 0
+  });
+
+  test("Shift + bottom-row pad switches the active track", () => {
+    noteView();
+    h.hold(49);
+    h.pad(2); // bottom pad 3 -> track index 2
+    h.release(49);
+    h.step(2);
+    expect(h.ui().activeTrack).toBe(2);
+    h.hold(49);
+    h.pad(0); // back to track 1
+    h.release(49);
+    h.step(2);
+    expect(h.ui().activeTrack).toBe(0);
+  });
+});
