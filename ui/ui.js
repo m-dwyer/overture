@@ -5316,6 +5316,11 @@ function captureError(where, e) {
 
 globalThis.init = function () {
     installConsoleOverride('SEQ8');
+    /* Emulator / headless-test hook: expose the live UI state object so the
+     * browser emulator + vitest harness can assert UI-mode behaviour (active
+     * track / bank / clip, view toggles) that has no DSP get_param read-back.
+     * Read-only inspection; a harmless extra global on device. */
+    if (typeof globalThis !== 'undefined') globalThis.daveboxUiState = S;
     /* Clear any lingering co-run flag from a prior session — shim's SHM
      * may still hold target/id if we were warm-restarted (Shift+Back +
      * relaunch does not reset shadow_control). */
