@@ -1320,6 +1320,36 @@ function _switchActiveTrack(newT) {
     }
 }
 
+/* Full active-track switch for a user navigation gesture (side button / bottom-pad).
+ * Wraps _switchActiveTrack with the surrounding ceremony every nav site needs:
+ * external note-off, recording handoff, drum-lane resync + bank fallback, padmap
+ * rebake, sequencer-LED reset and redraw. newT is clamped to 0..NUM_TRACKS-1; a
+ * no-op switch (same track) returns early. Mirrors the Shift+bottom-pad path
+ * (the most complete of the legacy sites) so drum tracks render their lanes. */
+function selectTrackGesture(newT) {
+    newT = Math.min(NUM_TRACKS - 1, Math.max(0, newT | 0));
+    if (newT === S.activeTrack) return;
+    extNoteOffAll();
+    handoffRecordingToTrack(newT);
+    _switchActiveTrack(newT);
+    if (S.trackPadMode[newT] === PAD_MODE_DRUM) {
+        /* Fall back from banks hidden on drum tracks */
+        if (S.activeBank === 2 || S.activeBank === 4) S.activeBank = 0;
+        syncDrumLanesMeta(newT);
+        syncDrumLaneSteps(newT, S.activeDrumLane[newT]);
+        syncDrumClipContent(newT);
+        refreshDrumLaneBankParams(newT, S.activeDrumLane[newT]);
+    } else {
+        if (S.activeBank === 7) S.activeBank = 0;
+    }
+    refreshPerClipBankParams(newT);
+    computePadNoteMap();
+    S.seqActiveNotes.clear();
+    S.seqLastStep = -1;
+    S.seqLastClip = -1;
+    forceRedraw();
+}
+
 function doDoubleFill() {
     const _t = S.activeTrack;
     if (S.trackPadMode[_t] === PAD_MODE_DRUM && S.activeBank === 7) {
@@ -8360,73 +8390,27 @@ function _onCC_side(d1, d2) {
                     showActionPopup('PASTED');
                 }
                 /* clip/cut_clip kinds: swallow — don't mix copy types */
-            } else if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM) {
-                /* Track View drum clip copy/cut via track button */
-                if (!S.copySrc) {
-                    S.copySrc = S.shiftHeld
-                        ? { kind: 'cut_drum_clip', track: S.activeTrack, clip: clipIdx }
-                        : { kind: 'drum_clip',     track: S.activeTrack, clip: clipIdx };
-                    invalidateLEDCache();
-                    showActionPopup(S.shiftHeld ? 'CUT' : 'COPIED');
-                } else if (S.copySrc.kind === 'drum_clip') {
-                    copyDrumClip(S.copySrc.track, S.copySrc.clip, S.activeTrack, clipIdx);
-                    invalidateLEDCache();
-                    forceRedraw();
-                    showActionPopup('PASTED');
-                } else if (S.copySrc.kind === 'cut_drum_clip') {
-                    cutDrumClip(S.copySrc.track, S.copySrc.clip, S.activeTrack, clipIdx);
-                    S.copySrc = { kind: 'drum_clip', track: S.activeTrack, clip: clipIdx };
-                    invalidateLEDCache();
-                    forceRedraw();
-                    showActionPopup('PASTED');
-                }
-                /* Other kinds: swallow — don't mix copy types */
-            } else {
-                /* Track View melodic clip copy/cut via track button */
-                if (!S.copySrc) {
-                    S.copySrc = S.shiftHeld
-                        ? { kind: 'cut_clip', track: S.activeTrack, clip: clipIdx }
-                        : { kind: 'clip', track: S.activeTrack, clip: clipIdx };
-                    invalidateLEDCache();
-                    showActionPopup(S.shiftHeld ? 'CUT' : 'COPIED');
-                } else if (S.copySrc.kind === 'clip') {
-                    copyClip(S.copySrc.track, S.copySrc.clip, S.activeTrack, clipIdx);
-                    invalidateLEDCache();
-                    forceRedraw();
-                    showActionPopup('PASTED');
-                } else if (S.copySrc.kind === 'cut_clip') {
-                    cutClip(S.copySrc.track, S.copySrc.clip, S.activeTrack, clipIdx);
-                    S.copySrc = { kind: 'clip', track: S.activeTrack, clip: clipIdx };
-                    invalidateLEDCache();
-                    forceRedraw();
-                    showActionPopup('PASTED');
-                }
-                /* row/cut_row kinds: swallow — don't mix copy types */
             }
+            /* Track View (Change #1): per-clip copy/cut moved to the Session
+             * clip pads (Copy / Shift+Copy + pad — see _onPadMsg). Side buttons
+             * now select tracks, so a held-Copy + side is swallowed here: it must
+             * not jump tracks mid-gesture, and clip copy lives in Session. */
         } else if (S.shiftHeld && S.deleteHeld) {
             if (S.sessionView) {
                 /* Shift+Delete+scene row (Session View): hard reset all 8 clips in row */
                 for (let t = 0; t < NUM_TRACKS; t++) hardResetClip(t, clipIdx);
                 forceRedraw();
                 showActionPopup('CLIPS', 'CLEARED');
-            } else {
-                /* Shift+Delete+clip (Track View): full factory reset */
-                hardResetClip(S.activeTrack, clipIdx);
-                forceRedraw();
-                showActionPopup('CLIP', 'CLEARED');
             }
+            /* Track View hard-reset moved to Session (Shift+Delete + clip pad). */
         } else if (S.deleteHeld) {
             if (S.sessionView) {
                 /* Delete + scene row button (Session View): clear all 8 clips in that row */
                 clearRow(clipIdx);
                 forceRedraw();
                 showActionPopup('SEQUENCES', 'CLEARED');
-            } else {
-                /* Delete + track button (Track View): clear the clip; keep S.playing if it's currently active */
-                clearClip(S.activeTrack, clipIdx, true);
-                forceRedraw();
-                showActionPopup('SEQUENCE', 'CLEARED');
             }
+            /* Track View clip-clear moved to Session (Delete + clip pad). */
         } else if (S.captureHeld) {
             /* Capture + scene row: copy each track's currently *playing* or
              * *queued* clip into this row. Inactive/focused-but-not-playing
@@ -8464,47 +8448,14 @@ function _onCC_side(d1, d2) {
             const _scKey = S.shiftHeld ? 'launch_scene_quant' : 'launch_scene';
             S.pendingDefaultSetParams.push({ key: _scKey, val: String(clipIdx) });
         } else {
-            const t            = S.activeTrack;
-            const isActiveClip = S.trackActiveClip[t] === clipIdx;
-            if (S.trackClipPlaying[t] && isActiveClip) {
-                if (S.trackPendingPageStop[t]) {
-                    /* Pending stop → cancel by re-launching legato */
-                    if (typeof host_module_set_param === 'function')
-                        host_module_set_param('t' + t + '_launch_clip', String(clipIdx));
-                } else {
-                    /* Playing → arm stop at next page boundary */
-                    if (typeof host_module_set_param === 'function')
-                        host_module_set_param('t' + t + '_stop_at_end', '1');
-                }
-            } else if (S.trackWillRelaunch[t] && isActiveClip) {
-                /* Transport stopped, clip primed to restart → cancel */
-                if (typeof host_module_set_param === 'function')
-                    host_module_set_param('t' + t + '_deactivate', '1');
-            } else if (S.trackQueuedClip[t] === clipIdx) {
-                /* Queued to launch → cancel */
-                if (typeof host_module_set_param === 'function')
-                    host_module_set_param('t' + t + '_deactivate', '1');
-            } else {
-                /* Focus immediately so pads/OLED show the selected clip even
-                 * while the prior clip is still playing toward its legato
-                 * switch boundary. pollDSP will keep trackActiveClip in sync
-                 * when DSP actually crosses the boundary.
-                 * Page snaps to the page containing the clip's loop_start so
-                 * a clip with a non-zero loop window doesn't briefly render
-                 * its OOB region on select. Drum tracks: leave at 0 (drum
-                 * loop_start is per-lane and refreshed by pendingDrumResync). */
-                S.trackActiveClip[t]  = clipIdx;
-                S.trackCurrentPage[t] = S.trackPadMode[t] === PAD_MODE_DRUM
-                    ? 0
-                    : Math.floor((S.clipLoopStart[t][clipIdx] | 0) / 16);
-                refreshPerClipBankParams(t);
-                if (S.trackPadMode[t] === PAD_MODE_DRUM) {
-                    S.pendingDrumResync      = 2;
-                    S.pendingDrumResyncTrack = t;
-                }
-                if (typeof host_module_set_param === 'function')
-                    host_module_set_param('t' + t + '_launch_clip', String(clipIdx));
-            }
+            /* Track View (Change #1): side button SELECTS THE ACTIVE TRACK
+             * (was: clip switch — relocated to the hold-reveal overlay + Session
+             * pads). Reversed mapping (CC43=track 1 … CC40=track 4), matching the
+             * Shift+bottom-pad legacy gesture: trackInBank = 3 - idx. Shift banks
+             * to the upper four (tracks 5–8). */
+            const trackInBank = 3 - idx;
+            const target      = trackInBank + (S.shiftHeld ? 4 : 0);
+            selectTrackGesture(target);
         }
     }
 
@@ -10073,26 +10024,9 @@ function _onPadPressTrackView(status, d1, d2) {
                 S.screenDirty = true;
             }
         } else if (S.shiftHeld && padIdx < NUM_TRACKS) {
-            /* Shift + bottom-row pad: select active track */
-            extNoteOffAll();
-            handoffRecordingToTrack(padIdx);
-            _switchActiveTrack(padIdx);
-            refreshPerClipBankParams(padIdx);
-            computePadNoteMap();
-            S.seqActiveNotes.clear();
-            S.seqLastStep = -1;
-            S.seqLastClip = -1;
-            /* Sync drum lane metadata for the new track */
-            if (S.trackPadMode[padIdx] === PAD_MODE_DRUM) {
-                /* Fall back from banks hidden on drum tracks */
-                if (S.activeBank === 2 || S.activeBank === 4) S.activeBank = 0;
-                syncDrumLanesMeta(padIdx);
-                syncDrumLaneSteps(padIdx, S.activeDrumLane[padIdx]);
-                syncDrumClipContent(padIdx);
-                refreshDrumLaneBankParams(padIdx, S.activeDrumLane[padIdx]);
-            } else {
-                if (S.activeBank === 7) S.activeBank = 0;
-            }
+            /* Shift + bottom-row pad: select active track (legacy fallback to the
+             * Change #1 side-button track-select; shares selectTrackGesture). */
+            selectTrackGesture(padIdx);
             S.screenDirty = true;
         } else if (!S.shiftHeld) {
             /* Live note — apply per-track octave shift; skip OOB to avoid ghost
