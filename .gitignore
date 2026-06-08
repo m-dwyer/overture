@@ -3,3 +3,6 @@ build/
 dist/
 *.so
 .DS_Store
+
+# Local developer env (MOVE_HOST etc.)
+.env

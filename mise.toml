@@ -9,6 +9,12 @@
 [tools]
 node = "lts"
 
+# Per-developer overrides live in a gitignored .env (e.g. MOVE_HOST=move-em.local).
+# The tool's install.sh falls back to move.local when MOVE_HOST is unset, so other
+# devs need no .env. See .env.example.
+[env]
+_.file = ".env"
+
 [tasks.setup]
 description = "Install web emulator dependencies"
 run = "pnpm -C web install"
@@ -56,3 +62,8 @@ depends = ["dsp", "wasm", "web-build"]
 [tasks.install]
 description = "Deploy the full stack to the Move (delegates to ./install.sh)"
 run = "./install.sh"
+
+[tasks.deploy]
+description = "Build + deploy the davebox tool module to the Move ($MOVE_HOST)"
+depends = ["dsp"]
+run = "tool/scripts/install.sh"
