@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from "vitest";
 import { createHarness, type Harness } from "./harness.js";
 
-// Behavioural spec derived from tool/MANUAL.md §15 Cheat Sheet — the davebox manual,
+// Behavioural spec derived from tool/MANUAL.md §15 Cheat Sheet — the Overture manual,
 // NOT the Move manual. Each test pins a documented behaviour by asserting ENGINE
 // TRUTH (get_param) or emitted MIDI, never how the OLED is drawn. These exist so
 // that when Overture changes a behaviour (docs/DAVEBOX-CHANGES.md), we update the
@@ -11,7 +11,7 @@ import { createHarness, type Harness } from "./harness.js";
 // One shared harness per describe (re-importing ui.js isn't isolated); tests either
 // read-only or return to a known state.
 
-describe("davebox §15 — transport & global", () => {
+describe("Overture §15 — transport & global", () => {
   let h: Harness;
   beforeAll(async () => {
     h = await createHarness();
@@ -42,7 +42,7 @@ describe("davebox §15 — transport & global", () => {
   });
 });
 
-describe("davebox §15 — track topology", () => {
+describe("Overture §15 — track topology", () => {
   let h: Harness;
   beforeAll(async () => {
     h = await createHarness();
@@ -55,11 +55,11 @@ describe("davebox §15 — track topology", () => {
 });
 
 // Track-View navigation — the function-preservation behaviours Change #1 will
-// repurpose (DAVEBOX-CHANGES.md). These assert UI-mode state via the davebox test
+// repurpose (DAVEBOX-CHANGES.md). These assert UI-mode state via the Overture test
 // hook (h.ui() = S), which has no DSP get_param read-back. Boot is Session view, so
 // these enter Note/Track view first. NOTE: requires the tool fork's UI-state hook
-// (globalThis.daveboxUiState).
-describe("davebox §15 — Track View navigation (Change #1 targets)", () => {
+// (globalThis.overtureUiState).
+describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
   let h: Harness;
   beforeAll(async () => {
     h = await createHarness();

@@ -82,7 +82,7 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   // Load the REAL tool UI. The literal lets Vite's remap plugin (and vitest)
   // rewrite the on-device path → tool/ui/ui.js; `as string` tells TS it's untyped
   // JS. Must stay an inline literal — a variable import can't be analyzed by Vite.
-  await import("/data/UserData/schwung/modules/tools/davebox/ui.js" as string);
+  await import("/data/UserData/schwung/modules/tools/overture/ui.js" as string);
 
   return {
     init() { globalThis.init?.(); },

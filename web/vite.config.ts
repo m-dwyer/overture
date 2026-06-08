@@ -20,7 +20,7 @@ const SCHWUNG_SHARED =
   resolve(here, "../../schwung/src/shared");
 
 const ON_DEVICE_SHARED = "/data/UserData/schwung/shared/";
-const ON_DEVICE_DAVEBOX = "/data/UserData/schwung/modules/tools/davebox/";
+const ON_DEVICE_OVERTURE = "/data/UserData/schwung/modules/tools/overture/";
 
 /** Rewrite the tool's absolute on-device import paths to local dev sources. */
 function moveDeviceImports() {
@@ -30,8 +30,8 @@ function moveDeviceImports() {
     resolveId(source: string) {
       if (source.startsWith(ON_DEVICE_SHARED))
         return resolve(SCHWUNG_SHARED, source.slice(ON_DEVICE_SHARED.length));
-      if (source.startsWith(ON_DEVICE_DAVEBOX))
-        return resolve(TOOL_UI, source.slice(ON_DEVICE_DAVEBOX.length));
+      if (source.startsWith(ON_DEVICE_OVERTURE))
+        return resolve(TOOL_UI, source.slice(ON_DEVICE_OVERTURE.length));
       return null;
     },
   };

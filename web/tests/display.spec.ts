@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-// Display-fidelity sweep: drive davebox to representative pages and lock a golden
+// Display-fidelity sweep: drive Overture to representative pages and lock a golden
 // OLED snapshot of each. Catches render-fidelity regressions (the font-overlap
 // class) systematically instead of by luck. OLED-only (the shell's LEDs blink, the
 // OLED is static), and we never press Play, so each page is deterministic.

@@ -11,7 +11,7 @@ describe("sequencer round-trips (real ui.js + seq8-wasm)", () => {
   // saw "no change". With realistic timing the toggle works, as asserted here.
   test("Menu changes the OLED view (Session ↔ Note)", () => {
     const before = h.rec.text();
-    expect(before).toContain("dAVEBOx");
+    expect(before).toContain("Overture");
     h.press(50); h.step(5);
     expect(h.rec.text(), "Menu should change the view").not.toBe(before);
     h.press(50); h.step(5); // restore

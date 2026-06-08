@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 // Input-completeness contract: the shell must be able to produce every input the
 // real device emits. Here we assert the capacitive knob-touch notes (0..9) and the
-// relative turn CCs the encoders/jog/volume send — the inputs davebox gates
+// relative turn CCs the encoders/jog/volume send — the inputs Overture gates
 // gestures + Shift LED hints on. This is the regression net for the I/O boundary.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
