@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,9 +39,14 @@ function moveDeviceImports() {
 
 export default defineConfig({
   root: here,
-  plugins: [moveDeviceImports()],
+  // react() handles JSX + Fast Refresh; moveDeviceImports keeps enforce:"pre" so it
+  // still wins on the tool's absolute on-device import specifiers.
+  plugins: [react(), moveDeviceImports()],
   resolve: {
-    alias: { "seq8-wasm": SEQ8_WASM },
+    alias: {
+      "seq8-wasm": SEQ8_WASM,
+      "@": resolve(here, "src"),
+    },
   },
   server: {
     fs: {

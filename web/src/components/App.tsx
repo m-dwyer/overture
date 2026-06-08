@@ -1,0 +1,262 @@
+// Root of the React emulator surface. Owns the boot/sink/render-loop logic ported
+// from the old main.ts: it builds the canvas display sink, the LED sink (records
+// maps + forwards to the shell controller), the localStorage file store, picks the
+// DSP (real seq8-wasm, or the JS mock via ?mock), boots the emulator core, runs the
+// ~94 Hz loop, and exposes globalThis.OVT. The host core stays untouched — this is
+// just the browser binding, now expressed as React + an imperative effect.
+import { useCallback, useEffect, useRef } from "react";
+import { createEmulator, type Emulator } from "@/host/emulator.js";
+import type { DisplaySink, FileStore, LedSink } from "@/host/sinks.js";
+import { createMockDsp } from "@/mock-dsp.js";
+import { createWasmDsp } from "@/wasm-dsp.js";
+import type { Dsp } from "@/dsp.js";
+import type { Send } from "@/lib/move-controls";
+import { OledScreen } from "./OledScreen";
+import { Shell } from "./Shell";
+import { TooltipProvider } from "./ui/tooltip";
+
+const TICK_HZ = 94;
+const BLOCK_MS = (1000 * 128) / 44100; // one audio block of real time (~2.9 ms)
+const OLED_W = 128;
+const OLED_H = 64;
+// Real Move OLED: monochrome white pixels on black.
+const FG = "#f2f2f2";
+const BG = "#000000";
+const FONT = "12px ui-monospace, 'SF Mono', Menlo, monospace";
+
+export function App() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const logRef = useRef<HTMLPreElement>(null);
+  const emuRef = useRef<Emulator | null>(null);
+  const shellLedsRef = useRef<LedSink | null>(null);
+
+  // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
+  const ledsMap = useRef(new Map<number, number>()).current;
+  const buttonLedsMap = useRef(new Map<number, number>()).current;
+
+  // Stable handle to the emulator for the shell's button clicks (emu boots async).
+  const send = useCallback<Send>((s, d1, d2) => emuRef.current?.sendInternal(s, d1, d2), []);
+
+  // The shell hands up its imperative LED controller once its refs are populated.
+  const onReady = useCallback(
+    (leds: LedSink) => {
+      shellLedsRef.current = leds;
+      for (const [i, c] of ledsMap) leds.setLED(i, c);
+      for (const [cc, c] of buttonLedsMap) leds.setButtonLED(cc, c);
+    },
+    [ledsMap, buttonLedsMap]
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    let logCount = 0;
+    const log = (msg: string): void => {
+      if (logCount++ > 500) return;
+      const el = logRef.current;
+      if (!el) return;
+      el.textContent += msg + "\n";
+      el.scrollTop = el.scrollHeight;
+    };
+    const setStatus = (m: string): void => {
+      if (statusRef.current) statusRef.current.textContent = m;
+    };
+
+    // ---- Canvas display sink (1-bit OLED; value 0=black, 1=white → BG/FG) -------
+    const shade = (v: number | boolean): string => (v ? FG : BG);
+    const display: DisplaySink = {
+      clearScreen() {
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, OLED_W, OLED_H);
+      },
+      fillRect(x, y, w, h, v) {
+        ctx.fillStyle = shade(v);
+        ctx.fillRect(x | 0, y | 0, Math.max(0, w | 0), Math.max(0, h | 0));
+      },
+      drawRect(x, y, w, h, v) {
+        ctx.fillStyle = shade(v);
+        const X = x | 0,
+          Y = y | 0,
+          W = Math.max(0, w | 0),
+          H = Math.max(0, h | 0);
+        ctx.fillRect(X, Y, W, 1);
+        ctx.fillRect(X, Y + H - 1, W, 1);
+        ctx.fillRect(X, Y, 1, H);
+        ctx.fillRect(X + W - 1, Y, 1, H);
+      },
+      setPixel(x, y, v) {
+        ctx.fillStyle = shade(v);
+        ctx.fillRect(x | 0, y | 0, 1, 1);
+      },
+      print(x, y, text, color) {
+        ctx.font = FONT;
+        ctx.textBaseline = "top";
+        ctx.fillStyle = color === 0 ? BG : FG;
+        ctx.fillText(text, x | 0, y | 0);
+      },
+      textWidth(text) {
+        ctx.font = FONT;
+        return Math.ceil(ctx.measureText(text).width);
+      },
+      flush() {
+        /* drawn eagerly */
+      },
+    };
+
+    // ---- LED sink → shell (records maps; forwards live once the shell is ready) -
+    const ledSink: LedSink = {
+      setLED(i, c) {
+        ledsMap.set(i, c);
+        shellLedsRef.current?.setLED(i, c);
+      },
+      setButtonLED(cc, c) {
+        buttonLedsMap.set(cc, c);
+        shellLedsRef.current?.setButtonLED(cc, c);
+      },
+      clearAll() {
+        ledsMap.clear();
+        buttonLedsMap.clear();
+        shellLedsRef.current?.clearAll();
+      },
+    };
+
+    // ---- File store → localStorage ---------------------------------------------
+    const files: FileStore = {
+      read: (p) => localStorage.getItem("ovt:" + p),
+      write: (p, d) => {
+        try {
+          localStorage.setItem("ovt:" + p, String(d));
+          return 1;
+        } catch {
+          return 0;
+        }
+      },
+      exists: (p) => localStorage.getItem("ovt:" + p) !== null,
+    };
+
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let cancelled = false;
+    display.clearScreen();
+
+    void (async () => {
+      // Behavior tier: real seq8 engine unless ?mock is set.
+      let dsp: Dsp = createMockDsp();
+      if (!new URLSearchParams(location.search).has("mock")) {
+        try {
+          dsp = await createWasmDsp((tag, b0, b1, b2, b3) => log(`dsp→midi [${tag}] ${b0} ${b1} ${b2} ${b3}`));
+          log("dsp: seq8-wasm (behavior tier)");
+        } catch (e) {
+          log("seq8-wasm load failed — using mock: " + ((e as Error)?.message || e));
+        }
+      }
+      if (cancelled) return;
+
+      let emu: Emulator;
+      try {
+        emu = await createEmulator({
+          dsp,
+          display,
+          leds: ledSink,
+          log,
+          midi: {
+            inject: (p) => log("inject_to_move " + JSON.stringify(p)),
+            toChain: (a) => log("send_midi_to_dsp " + JSON.stringify(a)),
+          },
+          files,
+        });
+      } catch (e) {
+        setStatus("FAILED to load tool ui.js");
+        log("import error: " + ((e as Error)?.stack || e));
+        return;
+      }
+      if (cancelled) return;
+      emuRef.current = emu;
+
+      try {
+        emu.init();
+      } catch (e) {
+        log("init() threw: " + ((e as Error)?.stack || e));
+      }
+
+      // Replay any LEDs the tool set during init() into the shell controller.
+      for (const [i, c] of ledsMap) shellLedsRef.current?.setLED(i, c);
+      for (const [cc, c] of buttonLedsMap) shellLedsRef.current?.setButtonLED(cc, c);
+
+      setStatus("running");
+      let ticks = 0,
+        lastRenderT = performance.now();
+      interval = setInterval(() => {
+        const now = performance.now();
+        let blocks = Math.floor((now - lastRenderT) / BLOCK_MS);
+        if (blocks > 16) {
+          blocks = 16;
+          lastRenderT = now;
+        } else {
+          lastRenderT += blocks * BLOCK_MS;
+        }
+        emu.renderBlocks(blocks);
+        try {
+          emu.tick();
+        } catch (e) {
+          if (ticks % 94 === 0) log("tick() threw: " + ((e as Error)?.message || e));
+        }
+        ticks++;
+      }, 1000 / TICK_HZ);
+
+      // Console-driven input handle (parity with the old shell).
+      globalThis.OVT = {
+        dsp,
+        leds: ledsMap,
+        buttonLeds: buttonLedsMap,
+        midiIn: (s: number, d1: number, d2: number) => emu.sendInternal(s, d1, d2),
+        midiExt: (s: number, d1: number, d2: number) => emu.sendExternal(s, d1, d2),
+      };
+    })();
+
+    return () => {
+      cancelled = true;
+      if (interval) clearInterval(interval);
+    };
+    // Mount-once boot; all referenced values are stable refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="flex min-h-[100dvh] w-full flex-col gap-3 p-4 font-mono">
+        <h1 className="shrink-0 text-center text-xs font-semibold tracking-[0.2em] text-muted">
+          OVERTURE — EMULATOR
+        </h1>
+        {/* Centring wrapper fills the viewport; the inner row stays the panel's
+            natural height so only the left column is stretched to match it. On wide
+            screens the screen + log sit beside the panel; they stack when narrow. */}
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex w-full flex-col items-center gap-6 min-[1360px]:w-auto min-[1360px]:flex-row min-[1360px]:items-stretch">
+            {/* Screen pinned at the top, log grows to fill so its bottom lines up
+                with the bottom of the panel. */}
+            <div className="flex w-[min(92vw,440px)] flex-col items-center gap-2">
+              <OledScreen canvasRef={canvasRef} />
+              <div id="status" ref={statusRef} className="min-h-[1.4em] shrink-0 text-xs text-accent">
+                booting…
+              </div>
+              {/* The log is absolutely positioned inside a flex-filled wrapper so
+                  its growing content can never inflate the column (which would
+                  otherwise drag the panel taller via items-stretch) — it scrolls. */}
+              <div className="relative min-h-[180px] w-full flex-1">
+                <pre
+                  id="log"
+                  ref={logRef}
+                  className="absolute inset-0 overflow-auto rounded border border-line bg-black/60 p-2 text-[11px] leading-snug text-muted"
+                />
+              </div>
+            </div>
+            <Shell send={send} onReady={onReady} />
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
