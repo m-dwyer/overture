@@ -92,6 +92,26 @@ export function updateStepLEDs() {
         return;
     }
 
+    /* Change #1 hold-reveal overlay: while a side button is held, the 16 step
+     * buttons show the held track's 16 clips (the relocated clip-switch surface).
+     * Active clip solid in track colour, playing clip flashes, clips with content
+     * dim, empty clips dark. Mirrors the old side-button clip-status scheme.
+     * Returns early so the normal step grid stands down. */
+    if (S.revealClipsTrack >= 0) {
+        const t       = S.revealClipsTrack;
+        const focused = effectiveClip(t);
+        for (let i = 0; i < 16; i++) {
+            const isPlaying = S.trackClipPlaying[t] && S.trackActiveClip[t] === i;
+            let color;
+            if (isPlaying)                          color = S.flashEighth ? TRACK_COLORS[t] : TRACK_DIM_COLORS[t];
+            else if (i === focused)                 color = TRACK_COLORS[t];
+            else if (!trackClipHasContent(t, i))    color = DarkGrey;
+            else                                    color = TRACK_DIM_COLORS[t];
+            setLED(16 + i, color);
+        }
+        return;
+    }
+
     const ac = effectiveClip(S.activeTrack);
 
     /* Loop-held pages view (no jog active): 16 step buttons = 16 possible 16-step pages.
@@ -735,30 +755,26 @@ export function updateTrackLEDs() {
             const sincePress = S.sceneBtnFlashTick[idx] >= 0 ? (S.tickCount - S.sceneBtnFlashTick[idx]) : 999;
             color = sincePress < SCENE_BTN_FLASH_TICKS ? White : LED_OFF;
         } else {
-            const t         = S.activeTrack;
-            const focused   = effectiveClip(t);
-            const isFocused = sceneIdx === focused;
-            const isPlaying = S.trackClipPlaying[t] && S.trackActiveClip[t] === sceneIdx;
-            const slowPulse = Math.floor(S.tickCount / 98) % 2;
-            const isWillRelaunch = S.trackWillRelaunch[t] && S.trackActiveClip[t] === sceneIdx;
-            if (isPlaying) {
-                color = S.flashEighth ? TRACK_COLORS[t] : TRACK_DIM_COLORS[t];
-            } else if (isFocused && isWillRelaunch && S.playing) {
-                color = slowPulse ? TRACK_COLORS[t] : TRACK_DIM_COLORS[t];
-            } else if (isFocused) {
-                color = TRACK_COLORS[t];
-            } else if (!trackClipHasContent(t, sceneIdx)) {
-                color = DarkGrey;
+            /* Change #1: Track View side buttons render TRACK IDENTITY (not clip
+             * status). Each button maps to a track in the current bank, derived
+             * from the active track (0-3 → lower bank, 4-7 → upper). The active
+             * track is solid in its colour; the other three in the bank are dim.
+             * The held button (while the clips-reveal overlay is up) flashes white. */
+            const bank  = S.activeTrack >= 4 ? 1 : 0;
+            const track = (3 - idx) + bank * 4;
+            if (S.sideHeldBtn === idx && S.revealClipsTrack >= 0) {
+                color = (Math.floor(S.tickCount / 24) % 2) ? White : TRACK_COLORS[track];
+            } else if (track === S.activeTrack) {
+                color = TRACK_COLORS[track];
             } else {
-                color = TRACK_DIM_COLORS[t];
+                color = TRACK_DIM_COLORS[track];
             }
         }
-        /* Copy source blink: JS-side timer (transport-independent) */
-        if (S.copySrc) {
-            const isSrcRow      = (S.copySrc.kind === 'row'       || S.copySrc.kind === 'cut_row')       && S.copySrc.row === sceneIdx;
-            const isSrcClip     = (S.copySrc.kind === 'clip'      || S.copySrc.kind === 'cut_clip')      && S.copySrc.track === S.activeTrack && S.copySrc.clip === sceneIdx;
-            const isSrcDrumClip = (S.copySrc.kind === 'drum_clip' || S.copySrc.kind === 'cut_drum_clip') && S.copySrc.track === S.activeTrack && S.copySrc.clip === sceneIdx;
-            if (isSrcRow || isSrcClip || isSrcDrumClip) color = (Math.floor(S.tickCount / 24) % 2) ? White : LED_OFF;
+        /* Copy source blink (Session row copy only; Track-View side-button clip
+         * copy was removed in Change #1 — clip copy lives on the Session pads). */
+        if (S.sessionView && S.copySrc) {
+            const isSrcRow = (S.copySrc.kind === 'row' || S.copySrc.kind === 'cut_row') && S.copySrc.row === sceneIdx;
+            if (isSrcRow) color = (Math.floor(S.tickCount / 24) % 2) ? White : LED_OFF;
         }
         cachedSetButtonLED(40 + idx, color);
     }

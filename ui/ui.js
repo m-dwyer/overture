@@ -1350,6 +1350,51 @@ function selectTrackGesture(newT) {
     forceRedraw();
 }
 
+/* Track-View clip select/launch/toggle for the Change #1 hold-reveal overlay.
+ * This is the exact state machine that used to live inline in _onCC_side's
+ * Track-View else-branch (before side buttons became track-select): re-launch a
+ * pending-stop clip, arm stop-at-end on a playing active clip, cancel a queued/
+ * relaunch clip, else focus + launch. Now reached by tapping a step while a side
+ * button is held (S.revealClipsTrack). */
+function selectClipOnTrack(t, clipIdx) {
+    const isActiveClip = S.trackActiveClip[t] === clipIdx;
+    if (S.trackClipPlaying[t] && isActiveClip) {
+        if (S.trackPendingPageStop[t]) {
+            /* Pending stop → cancel by re-launching legato */
+            if (typeof host_module_set_param === 'function')
+                host_module_set_param('t' + t + '_launch_clip', String(clipIdx));
+        } else {
+            /* Playing → arm stop at next page boundary */
+            if (typeof host_module_set_param === 'function')
+                host_module_set_param('t' + t + '_stop_at_end', '1');
+        }
+    } else if (S.trackWillRelaunch[t] && isActiveClip) {
+        /* Transport stopped, clip primed to restart → cancel */
+        if (typeof host_module_set_param === 'function')
+            host_module_set_param('t' + t + '_deactivate', '1');
+    } else if (S.trackQueuedClip[t] === clipIdx) {
+        /* Queued to launch → cancel */
+        if (typeof host_module_set_param === 'function')
+            host_module_set_param('t' + t + '_deactivate', '1');
+    } else {
+        /* Focus immediately so pads/OLED show the selected clip even while the
+         * prior clip is still playing toward its legato switch boundary; pollDSP
+         * keeps trackActiveClip in sync when DSP crosses the boundary. Page snaps
+         * to the clip's loop_start page (drum: 0, refreshed by pendingDrumResync). */
+        S.trackActiveClip[t]  = clipIdx;
+        S.trackCurrentPage[t] = S.trackPadMode[t] === PAD_MODE_DRUM
+            ? 0
+            : Math.floor((S.clipLoopStart[t][clipIdx] | 0) / 16);
+        refreshPerClipBankParams(t);
+        if (S.trackPadMode[t] === PAD_MODE_DRUM) {
+            S.pendingDrumResync      = 2;
+            S.pendingDrumResyncTrack = t;
+        }
+        if (typeof host_module_set_param === 'function')
+            host_module_set_param('t' + t + '_launch_clip', String(clipIdx));
+    }
+}
+
 function doDoubleFill() {
     const _t = S.activeTrack;
     if (S.trackPadMode[_t] === PAD_MODE_DRUM && S.activeBank === 7) {
@@ -6185,6 +6230,16 @@ function _tickImpl() {
             }
         }
 
+        /* Side-button hold threshold (Change #1): once a side button has been held
+         * past STEP_HOLD_TICKS without releasing, promote to the clips-reveal
+         * overlay. revealClipsTrack = the active track (already switched on press),
+         * so the steps render and select that track's 16 clips. */
+        if (S.sideHeldBtn >= 0 && S.revealClipsTrack < 0 && S.sideBtnPressedTick >= 0 &&
+                (S.tickCount - S.sideBtnPressedTick) >= STEP_HOLD_TICKS) {
+            S.revealClipsTrack = S.activeTrack;
+            forceRedraw();
+        }
+
         /* Step hold threshold: once elapsed, close the tap window so release won't toggle.
          * Also auto-assign empty step now so knobs work immediately in step edit. */
         if (S.heldStep >= 0 && S.heldStepBtn >= 0 && S.stepBtnPressedTick[S.heldStepBtn] >= 0 &&
@@ -8341,6 +8396,16 @@ function _onCC_transport(d1, d2) {
 }
 
 function _onCC_side(d1, d2) {
+    /* Side button RELEASE (Change #1): exit the hold-reveal clips overlay and
+     * clear the hold-tracking state. Matched on the button that armed it. */
+    if (d1 >= 40 && d1 <= 43 && d2 === 0) {
+        if (S.sideHeldBtn === d1 - 40) {
+            S.sideHeldBtn        = -1;
+            S.sideBtnPressedTick = -1;
+            if (S.revealClipsTrack >= 0) { S.revealClipsTrack = -1; forceRedraw(); }
+        }
+        return;
+    }
     /* Track buttons CC40-43 */
     if (d1 >= 40 && d1 <= 43 && d2 === 127) {
         const idx     = d1 - 40;
@@ -8456,6 +8521,11 @@ function _onCC_side(d1, d2) {
             const trackInBank = 3 - idx;
             const target      = trackInBank + (S.shiftHeld ? 4 : 0);
             selectTrackGesture(target);
+            /* Arm hold detection: a sustained hold promotes to the clips-reveal
+             * overlay in tick() (revealClipsTrack = the now-active track). A quick
+             * tap releases before the threshold and just leaves the track selected. */
+            S.sideHeldBtn        = idx;
+            S.sideBtnPressedTick = S.tickCount;
         }
     }
 
@@ -10553,6 +10623,14 @@ function _onStepButtons(d1, d2) {
     if (d2 > 0 && S.shiftTrackLEDActive) { S.shiftTrackLEDActive = false; S.screenDirty = true; }
     S.stepOpTick = S.tickCount;
     const idx = d1 - 16;
+    /* Change #1 hold-reveal overlay: while a side button is held, the steps show
+     * the held track's 16 clips — a step press selects/launches that clip instead
+     * of editing the pattern. Intercept before any other step semantics. */
+    if (S.revealClipsTrack >= 0) {
+        selectClipOnTrack(S.revealClipsTrack, idx);
+        forceRedraw();
+        return;
+    }
     /* Delete+step in session view: clear perf preset or mute snapshot slot immediately. */
     if (S.sessionView && S.deleteHeld) {
         if (S.loopHeld || S.perfViewLocked) {

@@ -198,6 +198,13 @@ export const S = {
     trackWillRelaunch: new Array(8).fill(false),
     trackPendingPageStop: new Array(8).fill(false),
     sceneBtnFlashTick: new Array(4).fill(-1),
+    /* Change #1 side-button hold-reveal overlay. sideHeldBtn = physical side
+     * button index 0-3 currently held (-1 = none); sideBtnPressedTick = tick it
+     * was pressed (for the tap-vs-hold threshold); revealClipsTrack = track whose
+     * 16 clips are shown on the steps while held (-1 = overlay off). Transient. */
+    sideHeldBtn: -1,
+    sideBtnPressedTick: -1,
+    revealClipsTrack: -1,
     playing: false,
     activeTrack: 0,
     sessionView: false,
