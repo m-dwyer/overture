@@ -5,6 +5,42 @@ and risk live in the **UX** — which iterates fastest in a browser emulator, no
 front-load the emulator + UX, fork dAVEBOx early as the substrate, and reserve the device for the few
 things only it can validate. Authoritative phase plan (supersedes the phasing in `HYBRID-GROOVEBOX.md`).
 
+---
+
+## Status & current focus (updated 2026-06-09) — READ FIRST
+
+**Done:** P1 (fork builds + runs on `move-em.local`), P2 (emulator runs the real UI + `seq8`-wasm).
+**P3 in progress.** Shipped + device-verified (live status in `DAVEBOX-CHANGES.md`): **#1** side-buttons→
+track-select + hold-reveal clips + track-identity LEDs · the **OLED bank-position strip** · **#3 Phase A**
+(hold-step + jog = step length, + a jog-cycles-banks bug fix). **Co-run is DONE** — Edit Synth/Slot works
+on device (was P3's "co-run zoom"; see memory `corun-on-v0917`). #2 ~already done (React shell). Deferred:
+**#3B** velocity, **#5**, **#6**.
+
+### ⚠ Strategic reframe — supersedes the "p-lock = the novel cherry" premise below
+Verified against the Move manual: **Move ALREADY has native per-step parameter automation (p-locks)** —
+§14.2.4, hold-step + encoder in its Device View. So the **motion lane is NOT a capability Move lacks** —
+it's *demoted* from "the differentiator." And **co-run now closes the sound-design seam.** The honest
+wedge is **depth + UNIFICATION**: Overture's 8 tracks / per-step trig-conditions / polyrhythmic automation
+/ bake-to-Live, sequencing **Move's 4 engines AND N open Schwung tracks in one timeline** — the open-tracks
+story we've barely exercised. (Three-bucket model: Overture is (1) deeper than Move [keep], (2) missing a
+few Move conveniences [#4 per-track vol], (3) different controls [the reconcile — mostly done].) See memory
+`davebox-prior-art` (corrected) + `move-live-engine-seams`.
+
+### Next up — re-prioritised (start here)
+1. **The wedge experiment = the inject spike** (formerly P0 #2, reframed). `move_midi_inject_to_move` is
+   confirmed on-device; inject CC7 / encoder-CC on a Move-routed channel and **map what the engines
+   actually respond to**. Answers **#4 per-track volume** AND tells us whether engine-param sequencing is
+   worth building *given Move already does p-locks natively*. Highest-leverage "find the real wedge."
+2. **Exercise the open-tracks story** — sequence ≥1 Schwung-routed (open-engine) track alongside Move's 4
+   in one Overture timeline. The genuine unification differentiator.
+3. **#3B** velocity (Shift+jog) — cheap warm-up if you want momentum.
+4. **#5 / #6** reconcile polish — lowest value now; don't lead with these.
+
+Housekeeping: merged branches (change-1-track-nav, oled-bank-strip, change-3-perstep, corun-tooling-and-docs)
+are safe to delete.
+
+---
+
 ## Phase 0 — Device spike (cheap, parallel; NOT a gate)
 Validate the device-only things the emulator can't — using the existing `engine-probe` harness:
 1. **By-channel routing to 4 Move tracks** (dAVEBOx implies yes; confirm).
@@ -38,8 +74,12 @@ Edit *down* for immediacy/legibility — don't pile onto dAVEBOx's depth.
 - **Done when:** the instrument's surface feels like *Overture*, validated in-emulator.
 
 ## Phase 4 — p-lock lane (on device)
+> ⚠ **Re-evaluate before building** — see the Status reframe up top: Move already has native per-step
+> automation, so this is no longer a unique-capability differentiator. Gate it on the inject spike +
+> the wedge question (is engine-param sequencing from Overture worth more than Move's own + co-run?).
+
 Implement the `ROUTE_MOVE` device-param **motion/automation lane** (cable-0 encoder CC, delta,
-composed with co-run targeting) — the novel capability, designed in P3, made real here.
+composed with co-run targeting), designed in P3, made real here.
 - **Done when:** a Move engine param automates per-step from a clip lane while the pattern plays.
 
 ## Phase 5 — Finalize UX on device + rebrand to Overture
