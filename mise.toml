@@ -67,3 +67,31 @@ run = "./install.sh"
 description = "Build + deploy the davebox tool module to the Move ($MOVE_HOST)"
 depends = ["dsp"]
 run = "tool/scripts/install.sh"
+
+# --- co-run Schwung-host bridge (temporary, until upstream PR #94 lands) -------
+# Overlays joshgaine's co-run onto the device's stock Schwung via a targeted
+# 3-file swap. Source of truth = the `corun` branch on m-dwyer/schwung (our
+# private snapshot; upstream=charlesvestal stays wired for when PR #94 lands).
+# $SCHWUNG_FORK_DIR is just the build workspace (default below). corun-on-v0917.
+[tasks.corun-build]
+description = "Build the co-run Schwung bridge (Docker aarch64); clones m-dwyer/schwung@corun if absent"
+run = '''
+set -e
+DIR="${SCHWUNG_FORK_DIR:-$HOME/src/move-spike/legsmechanical-schwung}"
+if [ ! -d "$DIR/.git" ]; then
+  echo "Cloning m-dwyer/schwung (corun) -> $DIR"
+  git clone -b corun git@github.com:m-dwyer/schwung.git "$DIR"
+fi
+cd "$DIR"
+git fetch origin corun --tags --quiet
+git checkout --quiet corun
+./scripts/build.sh
+'''
+
+[tasks.corun-deploy]
+description = "Deploy the co-run Schwung bridge to $MOVE_HOST (targeted 3-file swap; version-guarded)"
+run = "bash scripts/deploy-corun-schwung.sh"
+
+[tasks.corun-revert]
+description = "Restore stock Schwung from the *.pre-corun backups on $MOVE_HOST"
+run = "bash scripts/revert-corun-schwung.sh"
