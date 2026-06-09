@@ -65,7 +65,15 @@ merge placement). The untangle is the bulk of the work — hence step 1 above.
   `button_passthrough`-owned by Move firmware (master vol), so it needs a hold-step exception / JS
   volume-takeover; leaning **Shift+jog = velocity** instead. Velocity already editable on the Step-Edit
   knobs (K2 drum / K4 melodic) meanwhile.
-- **#4 Per-track volume** — hold-track + Volume → route to Move mixer (inject) or Schwung chain level.
+- **#4 Per-track volume** — **FULLY MAPPED ON DEVICE (2026-06-10): no clean route, deprioritize.**
+  Track CC7 (cable 2) = flat (§4.1.3). CC79 + hold-track (cable 0) moves Move's track-volume overlay
+  but **CC79 is the master encoder → bleeds into master**, and needs Move foreground (the overtake shim
+  filters the track-button CC while Overture's UI is up), so it can't be driven from inside Overture.
+  D-Bus exposes no mixer/volume set method (only a read-only "Track Volume" announcement). The only
+  in-Overture path = scale the track in schwung's audio composite (`chain_slots[t].volume`, Link-Audio
+  rebuild) — a future build, and schwung's mix gain, not Move's fader. Matches `tool/MANUAL.md:976`
+  ("per-track volume not available; adjust on the destination"). Detail: `WEDGE-EXPERIMENT.md`,
+  `INJECT-PROBE.md`, memory `move-live-engine-seams`.
 - **#5 Demote jog-dive** — move DRUM LANE / NOTE FX / etc. menu pages onto Shift+Step where Move has
   an equivalent; keep the Global Menu for genuinely deep/rare settings.
 - **#6 Un-overload Loop** — audit Loop's many meanings; split by clearer context/gesture.
