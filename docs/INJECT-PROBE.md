@@ -1,6 +1,6 @@
 # Inject Probe — the reusable JS injection harness
 
-`schwung/src/modules/tools/inject-probe/` — a **pure-JS**, parametric MIDI-injection
+`overture/tool/tools/inject-probe/` (in the `m-dwyer/schwung-davebox` submodule) — a **pure-JS**, parametric MIDI-injection
 probe for mapping Move's live engine/control seams. It replaces the slow DSP loop of the older
 `engine-probe`: there's **no `dsp.so`, no docker, no aarch64 cross-compile**. Inject runs straight
 from `ui.js` via the host's `move_midi_inject_to_move()` global, so the dev loop is just:
@@ -48,12 +48,11 @@ the engine-probe work).
 
 ## Deploy
 ```
-cd schwung
-mkdir -p build/pkg/inject-probe && cp src/modules/tools/inject-probe/{module.json,ui.js} build/pkg/inject-probe/
-COPYFILE_DISABLE=1 tar czf build/inject-probe-module.tar.gz -C build/pkg inject-probe
-./scripts/install.sh install-module ./build/inject-probe-module.tar.gz --host=move-em.local --skip-confirmation
+cd overture/tool
+MOVE_HOST=move-em.local ./scripts/install_inject.sh
 ```
-On device: open **Tools → Inject Probe**. Plain **Back** = suspend + keep injecting (return to Move to
+(scps `module.json` + `ui.js` to `/data/UserData/schwung/modules/tools/inject-probe`, mirroring
+`install_palette.sh`.) On device: open **Tools → Inject Probe**. Plain **Back** = suspend + keep injecting (return to Move to
 watch); **Shift + Back** = fully unload (needed before a redeploy takes effect, else the suspended
 instance is resumed instead of reloaded).
 
