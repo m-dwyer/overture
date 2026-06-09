@@ -7475,6 +7475,34 @@ function _onCC_jog(d1, d2) {
                         forceRedraw();
                     }
                     }
+                } else if (S.heldStep >= 0) {
+                    /* Change #3: a held step reserves the jog for step LENGTH
+                     * (Move's "hold step + wheel = length"), so it no longer
+                     * silently falls through to bank-cycling underneath the Step
+                     * Edit overlay. Only writes when the held step has content; on
+                     * an empty step the jog is simply inert (but never cycles banks). */
+                    const _t    = S.activeTrack;
+                    const _drm  = S.trackPadMode[_t] === PAD_MODE_DRUM;
+                    const _ac   = effectiveClip(_t);
+                    const _lane = S.activeDrumLane[_t];
+                    const _hasContent = _drm
+                        ? (S.drumLaneSteps[_t][_lane][S.heldStep] !== '0')
+                        : (S.heldStepNotes.length > 0);
+                    if (_hasContent) {
+                        const _tps  = (_drm ? S.drumLaneTPS[_t] : S.clipTPS[_t][_ac]) || 24;
+                        const _gmax = Math.min(65535, 256 * _tps);
+                        const _stps = S.stepEditGate / _tps;
+                        const _inc  = _stps <= 16 ? Math.round(_tps / 4) : _stps <= 64 ? _tps : _tps * 8;
+                        let _nv = S.stepEditGate + delta * _inc;
+                        if (_inc > 1) _nv = Math.round(_nv / _inc) * _inc;
+                        S.stepEditGate = Math.max(1, Math.min(_gmax, _nv));
+                        const _key = _drm
+                            ? 't' + _t + '_l' + _lane + '_step_' + S.heldStep + '_gate'
+                            : 't' + _t + '_c' + _ac + '_step_' + S.heldStep + '_gate';
+                        if (typeof host_module_set_param === 'function')
+                            host_module_set_param(_key, String(S.stepEditGate));
+                        forceRedraw();
+                    }
                 } else {
                     const cur = S.activeBank;
                     const isDrumJog = S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM;
