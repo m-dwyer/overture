@@ -185,4 +185,39 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
     expect(h.ui().activeTrack).toBe(0);
   });
+
+  // Change #3: while a step is held the jog wheel is reserved for step length —
+  // it must NOT silently cycle banks. Previously _onCC_jog ignored heldStep and
+  // changed S.activeBank underneath the step-edit overlay (visible only on release).
+  test("holding a step, the jog wheel does not cycle banks", () => {
+    noteView();
+    const bank0 = h.ui().activeBank;
+    h.emu.sendInternal(0x90, 16, 127); // press step 1 (note 16)
+    h.step(25); // hold past STEP_HOLD_TICKS -> Step Edit
+    h.cc(14, 1); // jog cw
+    h.step(2);
+    h.cc(14, 1); // jog cw again
+    h.step(2);
+    const bankHeld = h.ui().activeBank;
+    h.emu.sendInternal(0x80, 16, 0); // release step 1
+    h.step(2);
+    expect(bankHeld).toBe(bank0);
+  });
+
+  // Change #3: holding a step WITH content, the jog adjusts that step's length
+  // (gate). Track 0 is drum; tap step 2 to lay a hit, then hold + jog.
+  test("holding a step with content, the jog changes that step's length", () => {
+    noteView();
+    h.tapStep(1); // toggle a hit on step 2 (drum lane 0)
+    h.step(2);
+    const gateBefore = h.get("t0_l0_step_1_gate");
+    h.emu.sendInternal(0x90, 17, 127); // hold step 2 (note 17)
+    h.step(25); // -> Step Edit
+    h.cc(14, 1); // jog cw -> longer
+    h.step(2);
+    const gateAfter = h.get("t0_l0_step_1_gate");
+    h.emu.sendInternal(0x80, 17, 0); // release
+    h.step(2);
+    expect(gateAfter).not.toBe(gateBefore);
+  });
 });
