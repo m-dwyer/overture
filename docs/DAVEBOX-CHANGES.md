@@ -15,7 +15,8 @@ Only the controls that change. Everything not listed is unchanged.
 | **Shift+bottom-pad** | switch track 1–8 | keep as a fallback, or retire | #1 |
 | **Step buttons (Track)** | pattern | pattern; **while a side button is held → clips** | #1 |
 | **Menu/Note-Session btn** | view toggle + Shift=Global Menu | same; relabel shell "Menu"→**Note/Session** | #2 |
-| **Hold step + Volume / Wheel** | (K-overlay only) | **+Volume = velocity, +Wheel = length** (Move meta-gesture) | #3 |
+| **Hold step + Wheel** | silently cycled banks (bug) | **= step length** ✅ done | #3 |
+| **Hold step + Volume** | (K-overlay only) | **= velocity** (deferred — CC 79 passthrough) | #3 |
 | **Hold track + Volume** | (no per-track vol) | **track level** | #4 |
 | **Jog-dive Global Menu** | DRUM LANE / NOTE FX etc. | **Shift+Step** shortcuts where Move has them; menu = deep/rare only | #5 |
 | **Loop button** | heavily overloaded | un-overload where possible | #6 |
@@ -58,8 +59,12 @@ merge placement). The untangle is the bulk of the work — hence step 1 above.
 
 ## Changes #2–#6 (touch points; spec each when scheduled)
 - **#2 Relabel/align** — `web/src/shell.ts` labels; confirm Note/Session stays a pure toggle.
-- **#3 Per-step immediate layer** — step-hold handler + `host_module_set_param` for vel/length; Volume
-  encoder routing (CC 79 is currently dropped — see `ui.js:11353`; needs a hold-step exception).
+- **#3 Per-step immediate layer** — **Phase A DONE + device-verified** (merged): hold step + **jog =
+  step length** (`_onCC_jog` heldStep branch), which also fixed a real bug (jog silently cycled banks
+  under the Step Edit overlay). **Phase B deferred**: hold step + **Volume = velocity** — CC 79 is
+  `button_passthrough`-owned by Move firmware (master vol), so it needs a hold-step exception / JS
+  volume-takeover; leaning **Shift+jog = velocity** instead. Velocity already editable on the Step-Edit
+  knobs (K2 drum / K4 melodic) meanwhile.
 - **#4 Per-track volume** — hold-track + Volume → route to Move mixer (inject) or Schwung chain level.
 - **#5 Demote jog-dive** — move DRUM LANE / NOTE FX / etc. menu pages onto Shift+Step where Move has
   an equivalent; keep the Global Menu for genuinely deep/rare settings.

@@ -28,6 +28,8 @@ Only the controls Overture changes. Everything else is unchanged — see `tool/M
 | **Copy / Cut / Delete clip** (Track View) | Copy/Delete + side button | **moved to Session view** (Copy/Delete + clip pad) |
 | Side buttons (Session View) | scene launchers | scene launchers *(unchanged)* |
 | Shift + jog, Shift + bottom-pad | switch tracks | switch tracks *(retained as fallbacks)* |
+| **Jog** (while holding a step) | silently cycled parameter banks (a bug) | **adjusts that step's length**; never changes banks |
+| **Track-View header** | bank name + ad-hoc `>>` hints | bank name + a **bank-position strip** |
 
 ---
 
@@ -87,12 +89,38 @@ next bar boundary**).
 
 ---
 
+## Bank position strip (Track View header)
+
+The Track-View header now shows a compact **bank-position strip** on the right — a
+short tick per bank in the jog chain, the **active bank a tall block**. It tells you
+*where you are* in the bank chain and *how many banks exist* as you turn the jog
+(like Move's Device View). Replaces dAVEBOx's inconsistent `>>` name hints.
+Display-only — the jog still cycles banks exactly as before.
+
+---
+
+## Change #3 — Per-step length on the jog (Phase A)
+
+**Hold a step, then turn the jog wheel → adjust that step's length** (Move's "hold
+step + wheel = length" gesture). On an empty step the jog does nothing.
+
+This also **fixes a bug**: previously, turning the jog while holding a step *silently
+cycled the parameter banks* underneath the Step Edit screen — you'd only discover the
+bank had moved (e.g. DELAY → NOTE FX) when you released the step. The jog is now
+reserved for step length during a hold and never changes banks.
+
+*Deferred (Phase B):* Move's "hold step + **Volume** = velocity" — the Volume knob
+(CC 79) is owned by Move firmware, so routing it to step velocity needs more work.
+Velocity stays editable meanwhile on the Step-Edit knobs (K2 drum / K4 melodic).
+
+---
+
 ## Planned (not yet implemented)
 
 Tracked in `DAVEBOX-CHANGES.md`; each lands a section here when shipped.
 
-- **#2** Relabel Menu/Note-Session; confirm it stays a pure view toggle.
-- **#3** Per-step immediate layer — hold step + Volume = velocity, + Wheel = length.
+- **#2** Relabel Menu/Note-Session; confirm it stays a pure toggle *(largely already done by the React shell)*.
+- **#3 (Phase B)** Per-step **velocity** on the Volume knob — the jog/length half shipped (above).
 - **#4** Per-track volume — hold track + Volume.
 - **#5** Demote jog-dive Global Menu pages onto Shift+Step where Move has equivalents.
 - **#6** Un-overload the Loop button.
