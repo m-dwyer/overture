@@ -34,9 +34,9 @@ few Move conveniences [#4 per-track vol], (3) different controls [the reconcile 
 2. **Exercise the open-tracks story** — sequence ≥1 Schwung-routed (open-engine) track alongside Move's 4
    in one Overture timeline. The genuine unification differentiator. *(In progress — validation findings in
    "Backlog — fidelity findings" below.)*
-3. ✅ **DONE (2026-06-10) — Note-length default quick win.** New melodic/keys steps now default to a
-   full-step gate; new drum-lane steps keep the tighter half-step gate. Existing clips keep stored gates.
-   Covered by real `seq8`-wasm integration tests.
+3. ✅ **DONE + DEVICE-VERIFIED (2026-06-10) — Note-length default quick win.** New melodic/keys steps now
+   default to a full-step gate; new drum-lane steps keep the tighter half-step gate. Existing clips keep
+   stored gates. Covered by real `seq8`-wasm integration tests and verified on Move.
 4. **Phase 3 / param discoverability — now a top priority** (see Phase 3). "Hunting down params" is the core
    legibility problem and the flagship UX work.
 5. **#3B** velocity (Shift+jog) — cheap warm-up if you want momentum.
@@ -129,12 +129,14 @@ Own the launch entrypoint so power-on lands in Overture (after the engine is up)
 ---
 
 ## Backlog — fidelity findings (from #2 open-tracks validation, 2026-06-10, device-confirmed)
-- ✅ **Fixed (2026-06-10) — Note-length default.** Move stamps new steps at **1.0 / full step** (device-confirmed on a
+- ✅ **Fixed + device-verified (2026-06-10) — Note-length default.** Move stamps new steps at **1.0 / full step** (device-confirmed on a
   fresh set, every track); Overture/davebox stamps **0.5** (`GATE_TICKS 12 / TICKS_PER_STEP 24` in
   `dsp/seq8.c`; `stepEditGate: 12` in `ui/ui_state.mjs`) → sustained/pad/keys presets sound clipped vs native
   Move. Overture *replaces Move's sequencing but plays Move's sounds*, which are voiced for full-step, so the
   default should be **sound-correct, not a 50% groovebox default**. Implemented as **Keys 1.0 / Drum 0.5**,
-  mode-aware, for newly placed steps only. Existing patterns keep their stored gate.
+  mode-aware, for newly placed steps only. Existing patterns keep their stored gate. Device check: drum-mode
+  step sequencing creates 0.5-step notes; switching to keys preserves those existing 0.5-step notes; newly
+  sequenced keys notes are 1.0-step.
 - **Track Mode must match the Move instrument (minor).** A davebox **Drum**-mode track on a *melodic* Move
   preset (e.g. Choir Pad) plays fixed lane notes instead of the scale layout → sounds wrong. No code bug; a
   setup/feedback gap (consider a warning, or a smarter default when Route=Move + preset category is known).

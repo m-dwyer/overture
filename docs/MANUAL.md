@@ -130,6 +130,10 @@ This applies only when a step is newly created. Existing clips keep their stored
 gate lengths, and explicitly edited step lengths are preserved when you add more
 notes to the same step.
 
+Device check, 2026-06-10: drum-mode step sequencing creates 1/2-step notes;
+switching that track to keys keeps the existing 1/2-step notes; newly sequenced
+keys notes are 1 full step.
+
 You can still override a step's length by holding the step and turning the jog
 wheel, or by using the Step Edit length control described in `tool/MANUAL.md`.
 
