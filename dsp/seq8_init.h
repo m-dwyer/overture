@@ -257,4 +257,43 @@ static void seq8_reset_after_clear(seq8_instance_t *inst) {
     inst->arp_master_tick     = 0;
 }
 
+static void seq8_track_init_defaults(seq8_instance_t *inst, int t) {
+    int c;
+    seq8_track_t *tr = &inst->tracks[t];
+    tr->channel     = (uint8_t)t;
+    tr->queued_clip = -1;
+    tr->pad_octave  = 3;
+    tr->pad_mode    = PAD_MODE_MELODIC_SCALE;
+    for (c = 0; c < NUM_CLIPS; c++)
+        clip_init(&tr->clips[c]);
+    drum_track_init(tr, t);
+    pfx_init_defaults(&tr->pfx);
+    tarp_init_defaults(tr);
+    drum_repeat_init_defaults(tr);
+    tr->drum_repeat_sync = 1;
+    { int _k; for (_k = 0; _k < 8; _k++) tr->cc_assign[_k] = CC_ASSIGN_DEFAULT[_k]; }
+    memset(tr->cc_type, 0, 8);
+    memset(tr->cc_auto_last_sent, 0xFF, 8);
+    memset(tr->cc_auto_cur_val, 0xFF, 8);
+    tr->cc_latched       = 0;
+    tr->cc_was_recording = 0;
+    tr->cc_prev_ct       = 0;
+    memset(tr->cc_latch_last_snap, 0xFF, sizeof(tr->cc_latch_last_snap));
+    for (c = 0; c < NUM_CLIPS; c++)
+        memset(tr->clip_cc_auto[c].rest_val, 0xFF, 8);
+    /* AT automation: free all lanes (pitch=254; a zeroed pitch would alias
+     * note 0). at_last_clip=0xFF forces a playback cache reset on first tick. */
+    for (c = 0; c < NUM_CLIPS; c++)
+        at_auto_reset(&tr->clip_at_auto[c]);
+    memset(tr->at_last_sent, 0xFF, AT_MAX_LANES);
+    tr->at_last_clip = 0xFF;
+    tr->pfx.looper_on = 1;
+    tr->pfx.track_idx = (uint8_t)t;
+    /* Default routing: tracks 1-4 → Move (ch 1-4), tracks 5-8 → Schwung (ch 5-8) */
+    if (t < 4) {
+        tr->pfx.route = ROUTE_MOVE;
+        { int _rl; for (_rl = 0; _rl < DRUM_LANES; _rl++) tr->drum_lane_pfx[_rl].route = ROUTE_MOVE; }
+    }
+}
+
 #endif /* SEQ8_INIT_H */

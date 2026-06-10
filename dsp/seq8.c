@@ -4970,43 +4970,9 @@ static void *create_instance(const char *module_dir, const char *json_defaults) 
     /* Unique nonce: JS polls this to detect DSP hot-reload */
     inst->instance_nonce = (uint32_t)time(NULL) ^ (uint32_t)((uintptr_t)inst >> 3);
 
-    int t, c;
-    for (t = 0; t < NUM_TRACKS; t++) {
-        inst->tracks[t].channel     = (uint8_t)t;
-        inst->tracks[t].queued_clip = -1;
-        inst->tracks[t].pad_octave  = 3;
-        inst->tracks[t].pad_mode    = PAD_MODE_MELODIC_SCALE;
-        for (c = 0; c < NUM_CLIPS; c++)
-            clip_init(&inst->tracks[t].clips[c]);
-        drum_track_init(&inst->tracks[t], t);
-        pfx_init_defaults(&inst->tracks[t].pfx);
-        tarp_init_defaults(&inst->tracks[t]);
-        drum_repeat_init_defaults(&inst->tracks[t]);
-        inst->tracks[t].drum_repeat_sync = 1;
-        { int _k; for (_k = 0; _k < 8; _k++) inst->tracks[t].cc_assign[_k] = CC_ASSIGN_DEFAULT[_k]; }
-        memset(inst->tracks[t].cc_type, 0, 8);
-        memset(inst->tracks[t].cc_auto_last_sent, 0xFF, 8);
-        memset(inst->tracks[t].cc_auto_cur_val, 0xFF, 8);
-        inst->tracks[t].cc_latched       = 0;
-        inst->tracks[t].cc_was_recording = 0;
-        inst->tracks[t].cc_prev_ct       = 0;
-        memset(inst->tracks[t].cc_latch_last_snap, 0xFF, sizeof(inst->tracks[t].cc_latch_last_snap));
-        for (c = 0; c < NUM_CLIPS; c++)
-            memset(inst->tracks[t].clip_cc_auto[c].rest_val, 0xFF, 8);
-        /* AT automation: free all lanes (pitch=254; a zeroed pitch would alias
-         * note 0). at_last_clip=0xFF forces a playback cache reset on first tick. */
-        for (c = 0; c < NUM_CLIPS; c++)
-            at_auto_reset(&inst->tracks[t].clip_at_auto[c]);
-        memset(inst->tracks[t].at_last_sent, 0xFF, AT_MAX_LANES);
-        inst->tracks[t].at_last_clip = 0xFF;
-        inst->tracks[t].pfx.looper_on = 1;
-        inst->tracks[t].pfx.track_idx = (uint8_t)t;
-        /* Default routing: tracks 1-4 → Move (ch 1-4), tracks 5-8 → Schwung (ch 5-8) */
-        if (t < 4) {
-            inst->tracks[t].pfx.route = ROUTE_MOVE;
-            { int _rl; for (_rl = 0; _rl < DRUM_LANES; _rl++) inst->tracks[t].drum_lane_pfx[_rl].route = ROUTE_MOVE; }
-        }
-    }
+    int t;
+    for (t = 0; t < NUM_TRACKS; t++)
+        seq8_track_init_defaults(inst, t);
 
     inst->tick_threshold = (uint32_t)(inst->sample_rate * 60.0f);
     {
