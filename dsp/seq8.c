@@ -29,12 +29,7 @@
 
 #include "host/plugin_api_v1.h"
 #include "seq8_constants.h"
-
-/* ------------------------------------------------------------------ */
-/* Core transport/message types                                          */
-/* ------------------------------------------------------------------ */
-
-typedef struct { uint8_t s; uint8_t d1; uint8_t d2; } ext_msg_t;
+#include "seq8_types.h"
 
 
 /* ------------------------------------------------------------------ */
