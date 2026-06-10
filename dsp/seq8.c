@@ -678,6 +678,8 @@ typedef struct {
     uint8_t  on_midi_drum_release_active[NUM_TRACKS][DRUM_LANES];
 } seq8_instance_t;
 
+#include "seq8_layout_asserts.h"
+
 static const host_api_v1_t *g_host = NULL;
 static seq8_instance_t     *g_inst = NULL;
 
