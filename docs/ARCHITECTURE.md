@@ -48,6 +48,13 @@ branding) — *not* Schwung or tool source; it references your forks at specific
 **Why asymmetric:** every line in `schwung` is rebased forever; lines in `tool` are just yours.
 Concentrate ownership in code you *want* to own; touch the host as little as possible.
 
+## Versioning and upstream lineage
+Overture package versions are independent from upstream dAVEBOx versions. The
+installed module advertises Overture's version through `tool/module.json` and
+`tool/release.json`; dAVEBOx catch-up status is tracked in `docs/UPSTREAM.md`.
+Do not bump the DSP state version for upstream-port bookkeeping or UI-only
+changes.
+
 ## How you modify each layer
 - **Modify the tool:** edit in `tool/` → commit → push your fork → bump the pointer in `overture`.
   Normal git; this is most of your work.
