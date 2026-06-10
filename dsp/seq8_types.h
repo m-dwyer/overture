@@ -50,4 +50,59 @@ typedef struct {
     uint8_t  pad[2];
 } note_t;
 
+typedef struct {
+    uint16_t count[8];
+    uint16_t ticks[8][CC_AUTO_MAX_POINTS];
+    uint8_t  vals[8][CC_AUTO_MAX_POINTS];
+    uint8_t  rest_val[8];
+    uint16_t lane_loop_start[8];
+    uint16_t lane_length[8];
+    uint16_t lane_tps[8];
+    uint16_t lane_res_tps[8];
+} cc_auto_t;
+
+typedef struct {
+    uint8_t  pitch[AT_MAX_LANES];
+    uint16_t count[AT_MAX_LANES];
+    uint16_t ticks[AT_MAX_LANES][AT_MAX_POINTS];
+    uint8_t  vals [AT_MAX_LANES][AT_MAX_POINTS];
+} at_auto_t;
+
+typedef struct {
+    uint8_t  style;
+    uint8_t  rate_idx;
+    int8_t   octaves;
+    uint16_t gate_pct;
+    uint8_t  steps_mode;
+    uint8_t  retrigger;
+    uint8_t  step_vel[8];
+    int8_t   step_int[8];
+    uint8_t  step_loop_len;
+    uint32_t master_anchor;
+
+    uint8_t  held_pitch[ARP_MAX_HELD];
+    uint8_t  held_vel[ARP_MAX_HELD];
+    uint8_t  held_order[ARP_MAX_HELD];
+    uint8_t  held_physical[ARP_MAX_HELD];
+    uint8_t  held_count;
+    uint8_t  next_order;
+
+    int16_t  cyc_pos;
+    int8_t   ud_dir;
+    uint16_t cycle_step_count;
+    uint64_t random_used;
+
+    uint8_t  step_pos;
+
+    int32_t  ticks_until_next;
+    uint8_t  pending_first_note;
+    uint8_t  pending_retrigger;
+
+    uint8_t  sounding_active;
+    uint8_t  sounding_pitch;
+    uint32_t gate_remaining;
+
+    uint16_t fire_count;
+} arp_engine_t;
+
 #endif /* SEQ8_TYPES_H */

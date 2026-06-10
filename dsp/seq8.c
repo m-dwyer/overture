@@ -38,89 +38,9 @@
 
 #define PFX_EV_BYPASS_SWING 0x01  /* event already swing-deferred; route directly, skip pfx_send */
 
-/* SEQ ARP runtime engine state (per-track). Sits between NOTE FX and HARMZ in
- * the chain: when on=1, pfx_note_on funnels orig_note into held_pitch[] and the
- * render-tick-driven arp emits one note at a time, which is then passed through
- * NOTE FX + HARMZ + DELAY just like a normal sequenced note.
- *
- * Sole emit path while on=1: arp owns active_notes[primary] keying. */
-/* Per-clip CC automation: up to CC_AUTO_MAX_POINTS sorted {tick, val} points per knob.
- * Playback interpolates linearly between adjacent points (see cc_auto_eval).
- * rest_val[k] = per-clip resting value (0..127), or 0xFF = unset ("—", send nothing). */
-typedef struct {
-    uint16_t count[8];   /* points per knob; uint16 so the 1024 cap fits (was uint8 → silent overflow) */
-    uint16_t ticks[8][CC_AUTO_MAX_POINTS];
-    uint8_t  vals[8][CC_AUTO_MAX_POINTS];
-    uint8_t  rest_val[8];
-    uint16_t lane_loop_start[8]; /* per-lane loop start in steps; 0 = default */
-    uint16_t lane_length[8];     /* per-lane loop length in steps; 0 = inherit clip */
-    uint16_t lane_tps[8];        /* per-lane zoom ticks_per_step (display grid); 0 = inherit clip tps */
-    uint16_t lane_res_tps[8];    /* per-lane playback speed tps; 0 = inherit lane_tps/clip tps */
-} cc_auto_t;
-
-/* Per-clip pad-pressure (aftertouch) automation. Interpolated breakpoints like
- * cc_auto, but lanes are keyed by pitch (poly) rather than fixed knobs:
- * pitch[lane] = 0..127 poly note, 255 = channel-wide, 254 = free slot.
- * 1/32-snapped on record, linear-interpolated + hold on playback. */
-typedef struct {
-    uint8_t  pitch[AT_MAX_LANES];
-    uint16_t count[AT_MAX_LANES];
-    uint16_t ticks[AT_MAX_LANES][AT_MAX_POINTS];
-    uint8_t  vals [AT_MAX_LANES][AT_MAX_POINTS];
-} at_auto_t;
 /* Forward decl: at_auto_reset is used in create_instance + seq8_load_state, both
  * defined above the helper bodies. */
 static void at_auto_reset(at_auto_t *a);
-
-typedef struct {
-    /* Live params mirrored from clip_pfx_params_t via pfx_apply_params */
-    uint8_t  style;        /* 0=Off (bypass), 1..9=Up/Dn/U-D/D-U/Cnv/Div/Ord/Rnd/RnO */
-    uint8_t  rate_idx;     /* 0..9 (index into ARP_RATE_TICKS) */
-    int8_t   octaves;      /* -4..-1 or +1..+4 (signed; 0 skipped). Negative = descend by 12 per oct. */
-    uint16_t gate_pct;     /* 1..200 percent of rate */
-    uint8_t  steps_mode;   /* 0=Off, 1=Mute, 2=Skip */
-    uint8_t  retrigger;    /* 0/1 — reset cycle/step on new note + clip wrap */
-    uint8_t  step_vel[8];  /* level 0..4 (0=off, 1..4=row 0..3) */
-    int8_t   step_int[8];  /* per-step scale-degree offset -24..+24; default 0 */
-    uint8_t  step_loop_len; /* 1..8, default 8 — step pattern loop length */
-    uint32_t master_anchor; /* arp_master_tick at last retrigger; step_pos = ((master-anchor)/rate) % step_loop_len */
-
-    /* Held input notes (insertion-ordered; index 0..held_count-1 valid) */
-    uint8_t  held_pitch[ARP_MAX_HELD];
-    uint8_t  held_vel[ARP_MAX_HELD];
-    uint8_t  held_order[ARP_MAX_HELD];
-    /* TARP only: 1 = pad still physically held; 0 = latched (pad released, kept
-     * in buffer because latch is on). Used by the tarp_latch off handler to drop
-     * latched entries while preserving still-held ones. Unused by SEQ ARP. */
-    uint8_t  held_physical[ARP_MAX_HELD];
-    uint8_t  held_count;
-    uint8_t  next_order;
-
-    /* Cycle iteration */
-    int16_t  cyc_pos;            /* index into ordered/expanded sequence */
-    int8_t   ud_dir;             /* +1 / -1 for up_down / down_up */
-    uint16_t cycle_step_count;   /* for vel_decay */
-    uint64_t random_used;        /* bitmask of cycle indices used this round (Random Other) */
-
-    /* Step pattern position */
-    uint8_t  step_pos;           /* 0..7 */
-
-    /* Clock — units: master 96-PPQN ticks */
-    int32_t  ticks_until_next;
-    uint8_t  pending_first_note;
-    uint8_t  pending_retrigger;       /* set by arp_add_note + clip-wrap; consumed by arp_tick */
-
-    /* Currently sounding emitted note */
-    uint8_t  sounding_active;
-    uint8_t  sounding_pitch;     /* primary pitch sent into NOTE FX */
-    uint32_t gate_remaining;     /* in master ticks */
-
-    /* Monotonic counter of step-fire events. Incremented at the end of each
-     * arp_fire_step / tarp_fire_step. JS polls per-track via tN_tarp_fc to
-     * derive a blink phase synced to the arp's pulse (Loop button indicator
-     * while TARP is latched). Wraps freely — only parity is consumed. */
-    uint16_t fire_count;
-} arp_engine_t;
 
 typedef struct {
     /* Note FX (stages 1+3 from NoteTwist: octave + note page) */
