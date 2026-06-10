@@ -81,4 +81,21 @@ describe("seq8 state round-trip guards (real seq8-wasm)", () => {
     expect(get("t0_l0_repeat_state")).toBe(expected.drumRepeat);
     expect(get("t0_l0_pfx_snapshot")).toBe(expected.drumPfx);
   });
+
+  test("new step gate defaults are mode-aware", () => {
+    h.set("t1_pad_mode", "0");
+    h.set("t1_c0_step_31_toggle", "64 100");
+    expect(get("t1_c0_step_31_gate")).toBe("24");
+
+    h.set("t1_c0_step_32_add", "67 0 96");
+    expect(get("t1_c0_step_32_gate")).toBe("24");
+
+    h.set("t1_c0_step_31_gate", "7");
+    h.set("t1_c0_step_31_toggle", "67 88");
+    expect(get("t1_c0_step_31_gate")).toBe("7");
+
+    h.set("t0_pad_mode", "1");
+    h.set("t0_l0_step_31_toggle", "104");
+    expect(get("t0_l0_step_31_gate")).toBe("12");
+  });
 });
