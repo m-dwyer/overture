@@ -76,6 +76,7 @@ export interface Harness {
   tapStep(i: number): void;
   encoder(k: number, dir: 1 | -1): void;
   get(key: string): string | null;
+  set(key: string, val: string | number): void;
   /** Live Overture UI state (S) — see UiState. */
   ui(): UiState;
 }
@@ -103,6 +104,7 @@ export async function createHarness(): Promise<Harness> {
     tapStep(i) { emu.sendInternal(0x90, 16 + i, 127); step(1); emu.sendInternal(0x80, 16 + i, 0); step(1); },
     encoder(k, dir) { emu.sendInternal(0xb0, 71 + k, dir === 1 ? 1 : 127); step(1); },
     get(key) { return emu.dsp.get(key); },
+    set(key, val) { emu.dsp.set(key, val); },
     ui() { return (globalThis as { overtureUiState?: UiState }).overtureUiState as UiState; },
   };
 }
