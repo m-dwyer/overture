@@ -147,6 +147,7 @@ Tests:
 
 **Priority:** P1
 **Branch:** `feature/param-peek`
+**Status:** Done - local implementation
 
 Make parameter state legible without requiring users to already know the bank or
 gesture.

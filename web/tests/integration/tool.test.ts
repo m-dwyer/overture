@@ -49,6 +49,11 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(1); // close Global Menu
   }
 
+  function touchKnob(k: number, on: boolean): void {
+    h.emu.sendInternal(on ? 0x90 : 0x80, k, on ? 127 : 0);
+    h.step(2);
+  }
+
   test("boots into the main view and the engine is queryable", () => {
     // Real UI printed the track strip (digits 1..8) to the OLED.
     expect(h.rec.text()).toMatch(/[1-8]/);
@@ -255,6 +260,88 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       expect(ui.moveCoRunTrack).toBe(-1);
     } finally {
       Reflect.set(globalThis, "shadow_corun_begin", originalBegin);
+    }
+  });
+
+  test("AUTO knob touch shows Param Peek with lane label, value, and scope without mutating", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    ui.activeBank = 6;
+    ui.sessionView = false;
+    ui.trackPadMode[0] = 0;
+    ui.knobTouched = -1;
+    ui.trackCCType[0] = [1, 0, 2, 0, 0, 0, 0, 0];
+    ui.trackCCAssign[0] = [7, 74, 5, -1, 72, 91, 93, 10];
+    ui.clipCCVal[0][0][1] = 64;
+    const before = h.get("t0_cc_assigns");
+
+    try {
+      touchKnob(1, true);
+
+      const text = h.rec.text();
+      expect(text).toMatch(/AUTO T1 CA/);
+      expect(text).toMatch(/K2 L2 CC74/);
+      expect(text).toMatch(/Move K2 current/);
+      expect(text).toMatch(/Value 64/);
+      expect(text).toMatch(/Clip A lane/);
+      expect(h.get("t0_cc_assigns")).toBe(before);
+    } finally {
+      touchKnob(1, false);
+    }
+  });
+
+  test("AUTO labels distinguish AT, CC, Sch, and unassigned lanes", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    ui.activeBank = 6;
+    ui.sessionView = false;
+    ui.trackPadMode[0] = 0;
+    ui.knobTouched = -1;
+    ui.trackCCType[0] = [1, 0, 2, 0, 0, 0, 0, 0];
+    ui.trackCCAssign[0] = [7, 74, 5, -1, 72, 91, 93, 10];
+    ui.clipCCVal[0][0][0] = 10;
+    ui.clipCCVal[0][0][1] = 64;
+    ui.clipCCVal[0][0][2] = 99;
+    ui.clipCCVal[0][0][3] = -1;
+
+    try {
+      touchKnob(0, true);
+      expect(h.rec.text()).toMatch(/K1 L1 AT/);
+      touchKnob(0, false);
+
+      touchKnob(2, true);
+      expect(h.rec.text()).toMatch(/K3 L3 Sch5/);
+      touchKnob(2, false);
+
+      touchKnob(3, true);
+      expect(h.rec.text()).toMatch(/K4 L4 --/);
+    } finally {
+      touchKnob(3, false);
+    }
+  });
+
+  test("Shift held in Track View shows compact shortcut help", () => {
+    const ui = h.ui();
+    ui.sessionView = false;
+    ui.activeBank = 0;
+    ui.knobTouched = -1;
+    ui.deleteHeld = false;
+    ui.copyHeld = false;
+    ui.muteHeld = false;
+    ui.loopHeld = false;
+
+    try {
+      h.hold(49);
+      h.step(2);
+
+      const text = h.rec.text();
+      expect(text).toMatch(/SHIFT SHORTCUTS/);
+      expect(text).toMatch(/S2 Global/);
+      expect(text).toMatch(/S3 Edit/);
+      expect(text).toMatch(/S15 x2/);
+    } finally {
+      h.release(49);
+      h.step(2);
     }
   });
 });

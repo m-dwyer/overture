@@ -66,6 +66,9 @@ export interface UiState {
   trackQueuedClip: number[];
   drumClipNonEmpty: boolean[][];
   activeDrumLane: number[];
+  trackCCType: number[][];
+  trackCCAssign: number[][];
+  clipCCVal: number[][][];
   [key: string]: unknown;
 }
 
