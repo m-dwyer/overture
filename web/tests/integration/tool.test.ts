@@ -279,11 +279,11 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       touchKnob(1, true);
 
       const text = h.rec.text();
-      expect(text).toMatch(/AUTO T1 CA/);
+      expect(text).toMatch(/AUTO T1 Clip A/);
       expect(text).toMatch(/K2 L2 CC74/);
       expect(text).toMatch(/Move K2 current/);
       expect(text).toMatch(/Value 64/);
-      expect(text).toMatch(/Clip A lane/);
+      expect(text).toMatch(/Lane \/ T1 Move Ch1/);
       expect(h.get("t0_cc_assigns")).toBe(before);
     } finally {
       touchKnob(1, false);
