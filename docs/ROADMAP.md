@@ -36,6 +36,7 @@ Earlier phases have higher priority.
 
 **Priority:** P0
 **Branch:** `docs/ux-roadmap-reframe`
+**Status:** Done — parent `4c8d180`, tool `f728d28`
 
 Rewrite planning docs around the current product reality.
 
@@ -57,6 +58,7 @@ Tests:
 
 **Priority:** P0
 **Branch:** `feature/route-check`
+**Status:** Done — parent `084e546` + `e0c651d`, tool `4c1c72b` + `668723c`
 
 Add a diagnostic Route Check screen without consuming normal Track View header
 space.
