@@ -29,6 +29,8 @@ Only the controls Overture changes. Everything else is unchanged — see `tool/M
 | Side buttons (Session View) | scene launchers | scene launchers *(unchanged)* |
 | Shift + jog, Shift + bottom-pad | switch tracks | switch tracks *(retained as fallbacks)* |
 | **Jog** (while holding a step) | silently cycled parameter banks (a bug) | **adjusts that step's length**; never changes banks |
+| **New melodic step length** | half step | **full step** |
+| **New drum step length** | half step | half step *(unchanged)* |
 | **Track-View header** | bank name + ad-hoc `>>` hints | bank name + a **bank-position strip** |
 
 ---
@@ -115,12 +117,29 @@ Velocity stays editable meanwhile on the Step-Edit knobs (K2 drum / K4 melodic).
 
 ---
 
+## New-step length defaults
+
+Overture now stamps new steps with defaults that match the sound engine better:
+
+| Track mode | New step default | Why |
+|---|---:|---|
+| **Melodic / keys** | **1 full step** | Move's keys/pad presets are voiced for sustained notes; half-step defaults sounded clipped. |
+| **Drum** | **1/2 step** | Keeps drum hits tight and matches the existing drum workflow. |
+
+This applies only when a step is newly created. Existing clips keep their stored
+gate lengths, and explicitly edited step lengths are preserved when you add more
+notes to the same step.
+
+You can still override a step's length by holding the step and turning the jog
+wheel, or by using the Step Edit length control described in `tool/MANUAL.md`.
+
+---
+
 ## Planned (not yet implemented)
 
 Tracked in `DAVEBOX-CHANGES.md`; each lands a section here when shipped.
 
 - **#2** Relabel Menu/Note-Session; confirm it stays a pure toggle *(largely already done by the React shell)*.
 - **#3 (Phase B)** Per-step **velocity** on the Volume knob — the jog/length half shipped (above).
-- **#4** Per-track volume — hold track + Volume.
 - **#5** Demote jog-dive Global Menu pages onto Shift+Step where Move has equivalents.
 - **#6** Un-overload the Loop button.
