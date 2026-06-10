@@ -224,4 +224,37 @@ static void at_auto_reset(at_auto_t *a) {
     memset(a->pitch, AT_LANE_FREE, AT_MAX_LANES);
 }
 
+static void seq8_reset_after_clear(seq8_instance_t *inst) {
+    int t, c;
+    inst->playing        = 0;
+    inst->count_in_ticks = 0;
+    for (t = 0; t < NUM_TRACKS; t++) {
+        seq8_track_t *tr = &inst->tracks[t];
+        tr->note_active         = 0;
+        tr->pending_note_count  = 0;
+        tr->play_pending_count  = 0;
+        tr->rec_pending_count   = 0;
+        tr->pfx.event_count     = 0;
+        memset(tr->pfx.active_notes, 0, sizeof(tr->pfx.active_notes));
+        tr->clip_playing        = 0;
+        tr->will_relaunch       = 0;
+        tr->pending_page_stop   = 0;
+        tr->recording_pending_page = 0;
+        tr->recording_adaptive_arm = 0;
+        tr->record_armed        = 0;
+        tr->recording           = 0;
+        tr->queued_clip         = -1;
+        tr->active_clip         = 0;
+        tr->current_step        = 0;
+        tr->tick_in_step        = 0;
+        tr->step_dispatch_mask  = 0;
+        tr->next_early_mask     = 0;
+        tr->current_clip_tick   = 0;
+        for (c = 0; c < NUM_CLIPS; c++)
+            clip_init(&tr->clips[c]);
+    }
+    inst->master_tick_in_step = 0;
+    inst->arp_master_tick     = 0;
+}
+
 #endif /* SEQ8_INIT_H */

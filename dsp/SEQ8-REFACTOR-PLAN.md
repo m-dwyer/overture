@@ -66,6 +66,8 @@ Completed slices:
 
 - `seq8_init.h` owns pfx, clip, drum lane, track, drum repeat, TARP, and
   automation full-reset helpers.
+- `seq8_clear_state` keeps panic/output behavior in `seq8.c` and delegates the
+  post-panic field reset to `seq8_init.h`.
 - `seq8.c` still owns lifecycle, file I/O, dispatch, render scheduling, and
   behavior-heavy reset paths.
 
