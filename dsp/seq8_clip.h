@@ -19,6 +19,19 @@ static uint16_t note_step(uint32_t tick, uint16_t clip_len, uint16_t tps) {
     return (uint16_t)((shifted / (uint32_t)tps) % (uint32_t)SEQ_STEPS);
 }
 
+static uint16_t clip_full_step_gate_ticks(const clip_t *cl) {
+    return cl->ticks_per_step ? cl->ticks_per_step : (uint16_t)TICKS_PER_STEP;
+}
+
+static uint16_t clip_half_step_gate_ticks(const clip_t *cl) {
+    uint16_t tps = clip_full_step_gate_ticks(cl);
+    return (uint16_t)(tps > 1 ? tps / 2u : 1u);
+}
+
+static uint16_t clip_default_step_gate_ticks(const clip_t *cl, int is_drum) {
+    return is_drum ? clip_half_step_gate_ticks(cl) : clip_full_step_gate_ticks(cl);
+}
+
 /* Find all active note indices in step S; returns count. */
 static int notes_in_step(clip_t *cl, uint16_t s, uint16_t *idxs, int max_out) {
     int count = 0;

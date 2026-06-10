@@ -6318,7 +6318,7 @@ function _tickImpl() {
                         const rr = host_module_get_param('t' + t + '_l' + lane + '_step_' + S.heldStep + '_rand');
                         const rx = host_module_get_param('t' + t + '_l' + lane + '_step_' + S.heldStep + '_ratch');
                         S.stepEditVel   = rv !== null ? parseInt(rv, 10) : S.stepEditVel;
-                        S.stepEditGate  = rg !== null ? parseInt(rg, 10) : (S.drumLaneTPS[t] || 24);
+                        S.stepEditGate  = rg !== null ? parseInt(rg, 10) : Math.max(1, Math.floor((S.drumLaneTPS[t] || 24) / 2));
                         S.stepEditNudge = rn !== null ? parseInt(rn, 10) : 0;
                         S.stepEditIter  = ri !== null ? parseInt(ri, 10) : 0;
                         S.stepEditRand  = rr !== null ? parseInt(rr, 10) : 0;
@@ -6348,7 +6348,7 @@ function _tickImpl() {
                 const rx2 = typeof host_module_get_param === 'function'
                     ? host_module_get_param('t' + S.activeTrack + '_c' + ac_h2 + '_step_' + S.heldStep + '_ratch') : null;
                 S.stepEditVel   = rv2 !== null ? parseInt(rv2, 10) : 100;
-                S.stepEditGate  = rg2 !== null ? parseInt(rg2, 10) : 12;
+                S.stepEditGate  = rg2 !== null ? parseInt(rg2, 10) : (S.clipTPS[S.activeTrack][ac_h2] || 24);
                 S.stepEditNudge = rn2 !== null ? parseInt(rn2, 10) : 0;
                 S.stepEditIter  = ri2 !== null ? parseInt(ri2, 10) : 0;
                 S.stepEditRand  = rr2 !== null ? parseInt(rr2, 10) : 0;
@@ -10917,7 +10917,7 @@ function _onStepButtons(d1, d2) {
                 const rn = typeof host_module_get_param === 'function'
                     ? host_module_get_param('t' + t + '_l' + lane + '_step_' + absStep + '_nudge') : null;
                 S.stepEditVel   = rv !== null ? parseInt(rv, 10) : 100;
-                S.stepEditGate  = rg !== null ? parseInt(rg, 10) : (S.drumLaneTPS[t] || 24);
+                S.stepEditGate  = rg !== null ? parseInt(rg, 10) : Math.max(1, Math.floor((S.drumLaneTPS[t] || 24) / 2));
                 S.stepEditNudge = rn !== null ? parseInt(rn, 10) : 0;
                 const ri = typeof host_module_get_param === 'function'
                     ? host_module_get_param('t' + t + '_l' + lane + '_step_' + absStep + '_iter') : null;
@@ -10932,7 +10932,7 @@ function _onStepButtons(d1, d2) {
                 S.stepWasEmpty  = true;
                 S.heldStepNotes = [];
                 S.stepEditVel   = stepEntryVelocity(t, -1, true);
-                S.stepEditGate  = S.drumLaneTPS[t] || 24;
+                S.stepEditGate  = Math.max(1, Math.floor((S.drumLaneTPS[t] || 24) / 2));
                 S.stepEditNudge = 0;
                 S.stepEditIter  = 0;
                 S.stepEditRand  = 0;
@@ -10997,7 +10997,7 @@ function _onStepButtons(d1, d2) {
                     S.ccStepEditActive = true;
                 } else {
                     S.stepEditVel   = 100;
-                    S.stepEditGate  = 12;
+                    S.stepEditGate  = (S.clipTPS[S.activeTrack][ac_p] || 24);
                     S.stepEditNudge = 0;
                     S.stepEditIter  = 0;
                     S.stepEditRand  = 0;
@@ -11010,7 +11010,7 @@ function _onStepButtons(d1, d2) {
                     S.ccStepEditActive = true;
                 } else {
                     S.stepEditVel   = 100;
-                    S.stepEditGate  = 12;
+                    S.stepEditGate  = (S.clipTPS[S.activeTrack][ac_p] || 24);
                     S.stepEditNudge = 0;
                     S.stepEditIter  = 0;
                     S.stepEditRand  = 0;

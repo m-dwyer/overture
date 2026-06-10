@@ -109,7 +109,7 @@ static int effective_drum_mute(seq8_track_t *tr, int l) {
 
 /* silence_muted_tracks defined after pfx_note_off below */
 
-/* Forward declarations for note-centric helpers (defined after clip_init) */
+/* Forward declarations for note-centric helpers. */
 static int  clip_insert_note(clip_t *cl, uint32_t tick, uint16_t gate, uint8_t pitch, uint8_t vel);
 static void clip_migrate_to_notes(clip_t *cl);
 static void clip_build_steps_from_notes(clip_t *cl);
@@ -162,6 +162,8 @@ static void seq8_ilog(seq8_instance_t *inst, const char *msg) {
 #ifndef SEQ8_DEBUG_PROBES
 #define SEQ8_DEBUG_PROBES 0
 #endif
+
+#include "seq8_clip.h"
 
 /* --- State persistence (Option C: cold-boot recovery) ------------------- */
 
@@ -3907,7 +3909,7 @@ static void drum_repeat_tick(seq8_instance_t *inst, seq8_track_t *tr) {
                         rlc->note_tick_offset[rs][slot] = off;
                         if (slot == 0) {
                             rlc->step_vel[rs]  = (uint8_t)vel;
-                            rlc->step_gate[rs] = (uint16_t)GATE_TICKS;
+                            rlc->step_gate[rs] = clip_default_step_gate_ticks(rlc, 1);
                         }
                         rlc->step_note_count[rs]++;
                         rlc->steps[rs] = 1;
@@ -4042,7 +4044,7 @@ static void drum_repeat2_tick(seq8_instance_t *inst, seq8_track_t *tr) {
                         rlc->note_tick_offset[rs][slot] = off;
                         if (slot == 0) {
                             rlc->step_vel[rs]  = (uint8_t)vel;
-                            rlc->step_gate[rs] = (uint16_t)GATE_TICKS;
+                            rlc->step_gate[rs] = clip_default_step_gate_ticks(rlc, 1);
                         }
                         rlc->step_note_count[rs]++;
                         rlc->steps[rs] = 1;
@@ -4558,8 +4560,6 @@ static inline void melodic_anchor_playhead(seq8_instance_t *inst,
 /* ------------------------------------------------------------------ */
 /* Note-centric helpers (Stage B+)                                     */
 /* ------------------------------------------------------------------ */
-
-#include "seq8_clip.h"
 
 static void seq8_clear_state(seq8_instance_t *inst) {
     send_panic(inst);

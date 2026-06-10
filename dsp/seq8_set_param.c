@@ -2107,8 +2107,11 @@ static void set_param(void *instance, const char *key, const char *val) {
                         cl->step_note_count[sidx]++;
                         if (cl->step_note_count[sidx] == 1)
                             cl->steps[sidx] = 1;
-                        if (was_empty && has_tvel)
-                            cl->step_vel[sidx] = (uint8_t)tvel;
+                        if (was_empty) {
+                            cl->step_gate[sidx] = clip_default_step_gate_ticks(cl, 0);
+                            if (has_tvel)
+                                cl->step_vel[sidx] = (uint8_t)tvel;
+                        }
                     }
                     /* else: 8-note limit reached — silent no-op */
                     {
@@ -2154,7 +2157,10 @@ static void set_param(void *instance, const char *key, const char *val) {
                             cl->note_tick_offset[sidx][ni2] = (int16_t)offset_val;
                             cl->step_note_count[sidx]++;
                             if (cl->step_note_count[sidx] == 1) cl->steps[sidx] = 1;
-                            if (was_empty && has_vel) cl->step_vel[sidx] = (uint8_t)vel_val;
+                            if (was_empty) {
+                                cl->step_gate[sidx] = clip_default_step_gate_ticks(cl, 0);
+                                if (has_vel) cl->step_vel[sidx] = (uint8_t)vel_val;
+                            }
                             any_added = 1;
                         }
                     }
@@ -3865,7 +3871,7 @@ static void set_param(void *instance, const char *key, const char *val) {
                             dlc->step_notes[s][0]      = dlane->midi_note;
                             dlc->step_note_count[s]     = 1;
                             dlc->step_vel[s]            = (uint8_t)vel;
-                            dlc->step_gate[s]           = (uint16_t)GATE_TICKS;
+                            dlc->step_gate[s]           = clip_default_step_gate_ticks(dlc, 1);
                             dlc->note_tick_offset[s][0] = 0;
                             dlc->steps[s]               = 1;
                         } else {
@@ -3897,7 +3903,7 @@ static void set_param(void *instance, const char *key, const char *val) {
                         dlc->step_notes[sidx][0]       = dlane->midi_note;
                         dlc->step_note_count[sidx]      = 1;
                         dlc->step_vel[sidx]             = (uint8_t)vel;
-                        dlc->step_gate[sidx]            = (uint16_t)GATE_TICKS;
+                        dlc->step_gate[sidx]            = clip_default_step_gate_ticks(dlc, 1);
                         dlc->note_tick_offset[sidx][0]  = 0;
                         dlc->steps[sidx]                = 1;
                     } else {
@@ -4292,7 +4298,8 @@ static void set_param(void *instance, const char *key, const char *val) {
                     continue;
                 }
 
-                int ni = clip_insert_note(cl, abs_tick, (uint16_t)GATE_TICKS,
+                uint16_t default_gate = clip_default_step_gate_ticks(cl, 0);
+                int ni = clip_insert_note(cl, abs_tick, default_gate,
                                           (uint8_t)pitch, (uint8_t)vel);
                 if (ni >= 0) {
                     cl->notes[ni].suppress_until_wrap = 1;
@@ -4321,13 +4328,13 @@ static void set_param(void *instance, const char *key, const char *val) {
                             }
                             cl->step_note_count[sidx] = 0;
                             cl->step_vel[sidx]  = (uint8_t)SEQ_VEL;
-                            cl->step_gate[sidx] = (uint16_t)GATE_TICKS;
+                            cl->step_gate[sidx] = default_gate;
                         }
                         if (cl->step_note_count[sidx] < 8) {
                             int ni2 = (int)cl->step_note_count[sidx];
                             if (ni2 == 0) {
                                 cl->step_vel[sidx]  = (uint8_t)vel;
-                                cl->step_gate[sidx] = (uint16_t)GATE_TICKS;
+                                cl->step_gate[sidx] = default_gate;
                             }
                             cl->step_notes[sidx][ni2]          = (uint8_t)pitch;
                             cl->note_tick_offset[sidx][ni2]    = off;
@@ -5250,7 +5257,7 @@ static void set_param(void *instance, const char *key, const char *val) {
                         dlc->step_notes[step][0]       = (uint8_t)pitch;
                         dlc->step_note_count[step]     = 1;
                         dlc->step_vel[step]            = (uint8_t)vel;
-                        dlc->step_gate[step]           = (uint16_t)GATE_TICKS;
+                        dlc->step_gate[step]           = clip_default_step_gate_ticks(dlc, 1);
                         /* Timing snap: per-track InQ takes priority over global inp_quant.
                          * InQ: nearest quant boundary within step (rounds to nearest multiple).
                          * global inp_quant ON: snap to step boundary (offset=0).
@@ -5892,4 +5899,3 @@ static void set_param(void *instance, const char *key, const char *val) {
         return;
     }
 }
-

@@ -294,7 +294,7 @@ export const S = {
     stepWasEmpty: false,
     stepWasHeld: false,
     stepEditVel: 100,
-    stepEditGate: 12,
+    stepEditGate: 24,
     stepEditNudge: 0,
     /* Per-step trig conditions (v=34). All zero = defaults (always play, 100%, no ratchet).
      * stepEditIter:  raw byte 0 or (cycle_len<<4) | cycle_idx
