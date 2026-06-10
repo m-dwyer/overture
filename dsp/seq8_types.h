@@ -105,4 +105,114 @@ typedef struct {
     uint16_t fire_count;
 } arp_engine_t;
 
+typedef struct {
+    int octave_shift;
+    int note_offset;
+    int gate_time;
+    int velocity_offset;
+    int quantize;
+    int octaver;
+    int harmonize_1;
+    int harmonize_2;
+    int harmonize_3;
+    int delay_time_idx;
+    int delay_level;
+    int repeat_times;
+    int fb_velocity;
+    int fb_note;
+    int fb_note_random;
+    int fb_note_random_mode;
+    int fb_gate_time;
+    int fb_clock;
+    int delay_retrig;
+    int note_random;
+    int note_random_mode;
+    int note_random_walk;
+    arp_engine_t arp;
+    uint8_t      arp_emitting;
+    uint8_t      seq_arp_sync;
+    uint64_t     sample_counter;
+    double       cached_bpm;
+    uint32_t     rng;
+    pfx_event_t  events[MAX_PFX_EVENTS];
+    int          event_count;
+    pfx_active_t active_notes[128];
+    uint8_t      route;
+    uint8_t      looper_on;
+    uint8_t      track_idx;
+    uint8_t      pitch_refcount[128];
+} play_fx_t;
+
+typedef struct {
+    int octave_shift;
+    int note_offset;
+    int gate_time;
+    int velocity_offset;
+    int quantize;
+    int octaver;
+    int harmonize_1;
+    int harmonize_2;
+    int harmonize_3;
+    int delay_time_idx;
+    int delay_level;
+    int repeat_times;
+    int fb_velocity;
+    int fb_note;
+    int fb_note_random;
+    int fb_note_random_mode;
+    int fb_gate_time;
+    int fb_clock;
+    int delay_retrig;
+    int note_random;
+    int note_random_mode;
+    int seq_arp_style;
+    int seq_arp_rate;
+    int seq_arp_octaves;
+    int seq_arp_gate;
+    int seq_arp_steps_mode;
+    int seq_arp_retrigger;
+    int seq_arp_sync;
+    uint8_t seq_arp_step_vel[8];
+    int8_t  seq_arp_step_int[8];
+    uint8_t seq_arp_step_loop_len;
+    uint8_t note_length_mode;
+} clip_pfx_params_t;
+
+typedef struct {
+    int gate_time;
+    int velocity_offset;
+    int quantize;
+    int delay_time_idx;
+    int delay_level;
+    int repeat_times;
+    int fb_velocity;
+    int fb_gate_time;
+    int fb_clock;
+    int delay_retrig;
+    uint8_t note_length_mode;
+} drum_pfx_params_t;
+
+typedef struct {
+    int gate_time;
+    int velocity_offset;
+    int quantize;
+    int delay_time_idx;
+    int delay_level;
+    int repeat_times;
+    int fb_velocity;
+    int fb_gate_time;
+    int fb_clock;
+    int delay_retrig;
+    uint64_t     sample_counter;
+    double       cached_bpm;
+    uint32_t     rng;
+    pfx_event_t  events[DRUM_PFX_MAX_EVENTS];
+    int          event_count;
+    pfx_active_t active_note;
+    uint8_t      route;
+    uint8_t      looper_on;
+    uint8_t      track_idx;
+    uint8_t      lane_idx;
+} drum_pfx_t;
+
 #endif /* SEQ8_TYPES_H */
