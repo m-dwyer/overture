@@ -296,4 +296,26 @@ static void seq8_track_init_defaults(seq8_instance_t *inst, int t) {
     }
 }
 
+static void seq8_instance_init_defaults(seq8_instance_t *inst) {
+    inst->pad_key      = 9;   /* A */
+    inst->pad_scale    = 1;   /* Minor */
+    inst->launch_quant = 0;   /* Now */
+    inst->metro_on     = 1;    /* default: Count (count-in only) */
+    inst->metro_vol    = 80;
+    inst->metro_wav_fd    = -1;
+    inst->metro_wav_map   = NULL;
+    inst->metro_wav_data  = NULL;
+    inst->metro_wav_frames = 0;
+    inst->metro_click_pos  = UINT32_MAX;
+    inst->looper_sync            = 1;
+    inst->looper_pending_silence = 0;
+    memset(inst->perf_emitted_pitch, 0xFF, sizeof(inst->perf_emitted_pitch));
+    memset(inst->pad_note_map, 0xFF, sizeof(inst->pad_note_map));
+    memset(inst->pad_live_pitch, 0xFF, sizeof(inst->pad_live_pitch));
+    memset(inst->pad_source_scratch, 0, sizeof(inst->pad_source_scratch)); /* PAD_SRC_NORMAL */
+    memset(inst->drum_vel_zone_armed, 0, sizeof(inst->drum_vel_zone_armed));
+    memset(inst->drum_last_vel_zone, 0, sizeof(inst->drum_last_vel_zone));
+    strncpy(inst->state_path, SEQ8_STATE_PATH_FALLBACK, sizeof(inst->state_path) - 1);
+}
+
 #endif /* SEQ8_INIT_H */
