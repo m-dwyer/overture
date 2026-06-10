@@ -446,6 +446,7 @@ function buildGlobalMenuItems() {
         }),
         createAction('Route Check', function() {
             S.routeCheckOpen = true;
+            S.routeCheckSelected = 0;
             S.screenDirty = true;
         }),
         createAction('Export to Ableton', function() {
@@ -7074,6 +7075,13 @@ function _onCC_jog(d1, d2) {
         {
             const _it = (S.globalMenuState && S.globalMenuItems)
                         ? S.globalMenuItems[S.globalMenuState.selectedIndex] : null;
+            if (_it && _it.type === 'action' && _it.onAction) {
+                S.globalMenuState.editing = false;
+                S.globalMenuState.editValue = null;
+                _it.onAction();
+                S.screenDirty = true;
+                return;
+            }
             if (_it && S.globalMenuState.editing && (_it.label === 'Key' || _it.label === 'Scale')) {
                 const ev    = S.globalMenuState.editValue !== null ? S.globalMenuState.editValue : _it.get();
                 const candK = _it.label === 'Key'   ? ev : S.padKey;
@@ -7364,9 +7372,15 @@ function _onCC_jog(d1, d2) {
             }
             return;
         }
-        if (S.globalMenuOpen && !S.shiftHeld) {
+        if (S.globalMenuOpen) {
             ensureGlobalMenuFresh();
-            if (S.exportDoneDialog) {
+            if (S.routeCheckOpen) {
+                const delta = decodeDelta(d2);
+                if (delta !== 0) {
+                    S.routeCheckSelected = Math.max(0, Math.min(7, (S.routeCheckSelected | 0) + delta));
+                    S.screenDirty = true;
+                }
+            } else if (S.exportDoneDialog) {
                 /* single OK button — jog does nothing */
             } else if (S.confirmClearSession) {
                 const delta = decodeDelta(d2);

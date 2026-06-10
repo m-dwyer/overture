@@ -179,21 +179,29 @@ function routeCheckSchwungStatus(ch, slots) {
             break;
         }
     }
-    if (first >= 0) return 'OK Slot' + (first + 1);
+    if (first >= 0) return 'OK S' + (first + 1);
     return thru ? 'THRU!' : 'NO SLOT';
 }
 
 function drawRouteCheck() {
     clear_screen();
-    drawMenuHeader('ROUTE CHECK');
+    const selected = Math.max(0, Math.min(7, S.routeCheckSelected | 0));
+    const start = selected < 4 ? 0 : 4;
+    drawMenuHeader('ROUTE CHECK', (start + 1) + '-' + (start + 4) + '/8');
     const slots = routeCheckSlots();
-    for (let row = 0; row < 8; row++) {
-        const y = 13 + row * 6;
-        const n = row + 1;
-        const move = row < 4;
-        print(1, y, 'T' + n + ' ' + (move ? 'Move Ch' : 'Schwung Ch') + n, 1);
-        print(84, y, move ? 'MANUAL' : routeCheckSchwungStatus(n, slots), 1);
+    for (let row = 0; row < 4; row++) {
+        const t = start + row;
+        const y = 15 + row * 11;
+        const n = t + 1;
+        const move = t < 4;
+        const route = move ? ('Move Ch' + n) : ('Schw Ch' + n);
+        const status = move ? 'MANUAL' : routeCheckSchwungStatus(n, slots);
+        const active = t === selected;
+        if (active) fill_rect(0, y - 1, 128, 10, 1);
+        print(2, y, 'T' + n + ' ' + route, active ? 0 : 1);
+        print(86, y, status, active ? 0 : 1);
     }
+    print(2, 59, 'Jog scroll  Back/Menu', 1);
 }
 
 export function drawGlobalMenu() {
