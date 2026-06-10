@@ -38,30 +38,6 @@
 
 #define PFX_EV_BYPASS_SWING 0x01  /* event already swing-deferred; route directly, skip pfx_send */
 
-typedef struct {
-    uint64_t fire_at;
-    uint8_t  msg[3];
-    uint8_t  flags;
-} pfx_event_t;
-
-typedef struct {
-    uint8_t  active;
-    uint8_t  channel;
-    uint64_t on_time;
-    uint64_t gate_override_smp; /* sequenced note: Len-aware gate in samples; 0 = use pfx_gate_smp() */
-    uint8_t  orig_velocity;
-    uint8_t  gen_notes[MAX_GEN_NOTES];
-    int      gen_count;
-    double   spc;
-    int      stored_repeat_count;
-    struct {
-        uint64_t cumul_delay;
-        int8_t   pitch_offset;
-        uint8_t  velocity;
-        double   gate_factor;
-    } reps[MAX_REPEATS];
-} pfx_active_t;
-
 /* SEQ ARP runtime engine state (per-track). Sits between NOTE FX and HARMZ in
  * the chain: when on=1, pfx_note_on funnels orig_note into held_pitch[] and the
  * render-tick-driven arp emits one note at a time, which is then passed through
@@ -206,16 +182,6 @@ typedef struct {
 /* ------------------------------------------------------------------ */
 /* Note-centric model (v10+)                                           */
 /* ------------------------------------------------------------------ */
-
-typedef struct {
-    uint32_t tick;               /* absolute clip tick 0..clip_len*TPS-1 */
-    uint16_t gate;               /* gate duration in ticks */
-    uint8_t  pitch;              /* MIDI note 0..127 */
-    uint8_t  vel;                /* velocity 0..127 */
-    uint8_t  active;             /* 1=in use, 0=tombstoned */
-    uint8_t  suppress_until_wrap; /* 1=skip playback until clip wraps (recording suppressor) */
-    uint8_t  pad[2];
-} note_t; /* 12 bytes */
 
 /* ------------------------------------------------------------------ */
 /* Per-clip play-effect params (17 fields, ~68 bytes)                  */
