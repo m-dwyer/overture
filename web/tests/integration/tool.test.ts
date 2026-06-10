@@ -119,4 +119,53 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       closeRouteCheckAndMenu();
     }
   });
+
+  test("Route Check shows no slot for an unmatched custom Schwung channel", () => {
+    const ui = h.ui() as unknown as { trackChannel: number[] };
+    h.set("t5_channel", 16);
+    ui.trackChannel[5] = 16;
+    try {
+      openRouteCheck();
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(3);
+      const text = h.rec.text();
+      expect(text).toMatch(/T6 Schw Ch16/);
+      expect(text).toMatch(/NO SLOT/);
+      expect(text).not.toMatch(/OK S2/);
+    } finally {
+      h.set("t5_channel", 6);
+      ui.trackChannel[5] = 6;
+      closeRouteCheckAndMenu();
+    }
+  });
+
+  test("Route Check follows custom Schwung channel when a slot matches", () => {
+    const ui = h.ui() as unknown as { trackChannel: number[] };
+    const originalSlots = globalThis.shadow_get_slots;
+    globalThis.shadow_get_slots = () => [
+      { channel: 5, name: "Slot1" },
+      { channel: 16, name: "Slot2" },
+      { channel: 7, name: "Slot3" },
+      { channel: 8, name: "Slot4" },
+    ];
+    h.set("t5_channel", 16);
+    ui.trackChannel[5] = 16;
+    try {
+      openRouteCheck();
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(3);
+      const text = h.rec.text();
+      expect(text).toMatch(/T6 Schw Ch16/);
+      expect(text).toMatch(/OK S2/);
+    } finally {
+      globalThis.shadow_get_slots = originalSlots;
+      h.set("t5_channel", 6);
+      ui.trackChannel[5] = 6;
+      closeRouteCheckAndMenu();
+    }
+  });
 });
