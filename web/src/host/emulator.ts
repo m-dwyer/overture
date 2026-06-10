@@ -11,6 +11,7 @@ export interface EmulatorOptions {
   leds: LedSink;
   midi?: MidiSink;
   files?: FileStore;
+  slots?: Array<Record<string, unknown>>;
   log?: (msg: string) => void;
 }
 
@@ -29,6 +30,12 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const log = opts.log ?? (() => {});
   const files = opts.files ?? memFiles();
   const midi: MidiSink = opts.midi ?? { inject: () => {}, toChain: () => {} };
+  const slots = opts.slots ?? [
+    { channel: 5, name: "Slot1" },
+    { channel: 6, name: "Slot2" },
+    { channel: 7, name: "Slot3" },
+    { channel: 8, name: "Slot4" },
+  ];
 
   // Display (1-bit OLED) → sink.
   const clear_screen = (): void => display.clearScreen();
@@ -68,6 +75,7 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const shadow_send_midi_to_dsp = (...a: unknown[]): void => midi.toChain(a);
   const shadow_corun_begin = (...a: unknown[]): void => log("corun_begin " + JSON.stringify(a));
   const shadow_corun_end = (): void => log("corun_end");
+  const shadow_get_slots = (): Array<Record<string, unknown>> => slots;
   const shadow_get_ui_flags = (): Record<string, unknown> => ({});
 
   Object.assign(globalThis, {
@@ -76,7 +84,7 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     host_module_get_param, host_module_set_param,
     host_write_file, host_read_file, host_file_exists, host_ensure_dir, host_remove_dir,
     move_midi_inject_to_move, shadow_send_midi_to_dsp,
-    shadow_corun_begin, shadow_corun_end, shadow_get_ui_flags,
+    shadow_corun_begin, shadow_corun_end, shadow_get_slots, shadow_get_ui_flags,
   });
 
   // Load the REAL tool UI. The literal lets Vite's remap plugin (and vitest)

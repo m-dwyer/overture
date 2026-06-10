@@ -34,6 +34,7 @@ export interface HostApi {
   // co-run (native-editor delegation)
   shadow_corun_begin(...args: unknown[]): void;
   shadow_corun_end(...args: unknown[]): void;
+  shadow_get_slots(): Array<Record<string, unknown>>;
   shadow_get_ui_flags(): Record<string, unknown>;
 }
 
@@ -68,6 +69,7 @@ declare global {
   var shadow_send_midi_to_dsp: HostApi["shadow_send_midi_to_dsp"];
   var shadow_corun_begin: HostApi["shadow_corun_begin"];
   var shadow_corun_end: HostApi["shadow_corun_end"];
+  var shadow_get_slots: HostApi["shadow_get_slots"];
   var shadow_get_ui_flags: HostApi["shadow_get_ui_flags"];
 
   // Console-driven input handle until the Move shell is wired.
