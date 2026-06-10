@@ -54,6 +54,28 @@ describe("Overture §15 — track topology", () => {
   });
 });
 
+describe("Overture Phase 4 — clips left off stay off", () => {
+  test("focused clip with notes does not auto-launch just because Play starts", async () => {
+    const h = await createHarness();
+    if (h.ui().sessionView) {
+      h.press(50);
+      h.step(2);
+    }
+
+    h.tapStep(0);
+    h.step(3);
+    expect(h.ui().drumClipNonEmpty[0][0]).toBe(true);
+    expect(h.ui().trackClipPlaying[0]).toBe(false);
+
+    h.press(85);
+    h.step(8);
+
+    expect(h.get("playing")).toBe("1");
+    expect(h.ui().trackClipPlaying[0]).toBe(false);
+    expect(h.ui().trackQueuedClip[0]).toBe(-1);
+  }, 60_000);
+});
+
 // Track-View navigation — the function-preservation behaviours Change #1 will
 // repurpose (DAVEBOX-CHANGES.md). These assert UI-mode state via the Overture test
 // hook (h.ui() = S), which has no DSP get_param read-back. Boot is Session view, so

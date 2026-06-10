@@ -116,6 +116,7 @@ Tests:
 
 **Priority:** P1
 **Branch:** `upstream/port-low-risk-fixes`
+**Status:** Done — local implementation
 
 Port low-risk upstream improvements while preserving Overture divergences.
 

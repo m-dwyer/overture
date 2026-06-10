@@ -65,9 +65,10 @@ Clips no longer live on the side buttons. To switch the active clip of a track:
    side buttons used to have — re-tapping the playing clip arms a stop, etc.).
 3. **Release** the side button to exit the overlay and return to the step pattern.
 
-A quick tap (released before the overlay appears) just selects the track. Switching
-to a track with nothing playing auto-launches its focused clip while the transport
-runs *(unchanged)*.
+A quick tap (released before the overlay appears) just selects the track. While the
+transport runs, switching to a track with nothing playing only auto-launches its
+focused clip when that clip is empty; clips with notes or drum hits stay off until
+explicitly launched.
 
 ### Copy / Cut / Delete a clip — in Session view
 Per-clip operations move to **Session view**, on the clip pads (where Move keeps clip
