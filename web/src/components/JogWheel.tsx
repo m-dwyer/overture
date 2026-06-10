@@ -22,10 +22,10 @@ export function JogWheel({ send }: { send: Send }) {
           className="relative flex h-20 w-20 cursor-ns-resize touch-none select-none items-center justify-center rounded-full bg-gradient-to-b from-panel-2 to-bg border border-line shadow-inner"
         >
           {/* rotating rim notch — visual turn feedback */}
-          <div className="absolute inset-0" style={{ transform: `rotate(${angle}deg)` }}>
+          <div className="pointer-events-none absolute inset-0" style={{ transform: `rotate(${angle}deg)` }}>
             <span className="absolute left-1/2 top-1.5 h-3 w-1 -translate-x-1/2 rounded-full bg-zinc-300" />
           </div>
-          <div onPointerDown={(e) => e.stopPropagation()}>
+          <div className="relative z-10" onPointerDown={(e) => e.stopPropagation()}>
             <MomentaryButton
               cc={NAV.JogClick}
               send={send}

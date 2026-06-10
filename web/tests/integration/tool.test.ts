@@ -60,16 +60,41 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.cc(50, 127); h.step(2); h.cc(50, 0); h.step(3);
   });
 
+  test("Global Menu jog navigation still works while Shift is held", () => {
+    h.hold(49);
+    h.cc(50, 127); h.step(2); h.cc(50, 0); h.step(3);
+    const ui = h.ui();
+    const beforeTrack = ui.activeTrack;
+    const beforeText = h.rec.text();
+
+    h.cc(14, 1); h.step(3);
+
+    expect(h.ui().activeTrack).toBe(beforeTrack);
+    expect(h.rec.text()).not.toBe(beforeText);
+
+    h.release(49); h.step(1);
+    h.cc(50, 127); h.step(2); h.cc(50, 0); h.step(3);
+  });
+
   test("Route Check shows expected routes and detected Schwung slots", () => {
     openRouteCheck();
-    const text = h.rec.text();
+    let text = h.rec.text();
     expect(text).toMatch(/ROUTE CHECK/);
+    expect(text).toMatch(/1-4\/8/);
     expect(text).toMatch(/T1 Move Ch1/);
+    expect(text).toMatch(/T4 Move Ch4/);
     expect(text).toMatch(/MANUAL/);
-    expect(text).toMatch(/T5 Schwung Ch5/);
-    expect(text).toMatch(/OK Slot1/);
-    expect(text).toMatch(/T8 Schwung Ch8/);
-    expect(text).toMatch(/OK Slot4/);
+
+    h.cc(14, 1); h.step(1);
+    h.cc(14, 1); h.step(1);
+    h.cc(14, 1); h.step(1);
+    h.cc(14, 1); h.step(3);
+    text = h.rec.text();
+    expect(text).toMatch(/5-8\/8/);
+    expect(text).toMatch(/T5 Schw Ch5/);
+    expect(text).toMatch(/OK S1/);
+    expect(text).toMatch(/T8 Schw Ch8/);
+    expect(text).toMatch(/OK S4/);
     closeRouteCheckAndMenu();
   });
 
@@ -82,8 +107,12 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     ];
     try {
       openRouteCheck();
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(1);
+      h.cc(14, 1); h.step(3);
       const text = h.rec.text();
-      expect(text).toMatch(/T7 Schwung Ch7/);
+      expect(text).toMatch(/T7 Schw Ch7/);
       expect(text).toMatch(/NO SLOT/);
     } finally {
       globalThis.shadow_get_slots = originalSlots;
