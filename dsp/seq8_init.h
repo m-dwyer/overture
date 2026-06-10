@@ -210,4 +210,18 @@ static void drum_track_init(seq8_track_t *tr, int track_idx) {
     tr->drum_perform_mode = 0;  /* Bundle 2A: JS pushes via tN_drum_perform_mode */
 }
 
+/* Full reset of a cc_auto_t: drops all points AND clears resting values to
+ * "—" (0xFF). Use instead of memset(...,0,...) — a raw zero would leave
+ * rest_val[]=0, which means "rest = 0", not "unset". */
+static void cc_auto_reset(cc_auto_t *a) {
+    memset(a, 0, sizeof(cc_auto_t));
+    memset(a->rest_val, 0xFF, 8);
+}
+
+/* Reset: drop all lanes (free slots = AT_LANE_FREE, counts 0). */
+static void at_auto_reset(at_auto_t *a) {
+    memset(a, 0, sizeof(at_auto_t));
+    memset(a->pitch, AT_LANE_FREE, AT_MAX_LANES);
+}
+
 #endif /* SEQ8_INIT_H */

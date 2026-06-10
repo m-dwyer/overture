@@ -5713,14 +5713,6 @@ static void apply_clip_restore(seq8_instance_t *inst,
     }
 }
 
-/* Full reset of a cc_auto_t: drops all points AND clears resting values to
- * "—" (0xFF). Use instead of memset(...,0,...) — a raw zero would leave
- * rest_val[]=0, which means "rest = 0", not "unset". */
-static void cc_auto_reset(cc_auto_t *a) {
-    memset(a, 0, sizeof(cc_auto_t));
-    memset(a->rest_val, 0xFF, 8);
-}
-
 /* Drop all automation points for knob k in [t1,t2] (inclusive). Keeps points
  * outside the range and the resting value. Used by step-edit to make a clean
  * flat hold and by single-step clears. */
@@ -5871,12 +5863,6 @@ static int cc_auto_eval(const cc_auto_t *a, int k, uint32_t t,
 }
 
 /* ---- Pad-pressure aftertouch automation (at_auto_t) ---- */
-
-/* Reset: drop all lanes (free slots = AT_LANE_FREE, counts 0). */
-static void at_auto_reset(at_auto_t *a) {
-    memset(a, 0, sizeof(at_auto_t));
-    memset(a->pitch, AT_LANE_FREE, AT_MAX_LANES);
-}
 
 /* True if the clip has any recorded AT data. */
 static int at_auto_has_data(const at_auto_t *a) {
