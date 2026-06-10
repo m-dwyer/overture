@@ -64,9 +64,16 @@ description = "Deploy the full stack to the Move (delegates to ./install.sh)"
 run = "./install.sh"
 
 [tasks.deploy]
-description = "Build + deploy the davebox tool module to the Move ($MOVE_HOST)"
+description = "Build + deploy the Overture tool module via Schwung's install-module path ($MOVE_HOST)"
 depends = ["dsp"]
-run = "tool/scripts/install.sh"
+run = '''
+set -euo pipefail
+SCHWUNG_INSTALL="${SCHWUNG_INSTALL_SCRIPT:-../schwung/scripts/install.sh}"
+TARBALL="tool/dist/overture-module.tar.gz"
+[ -f "$SCHWUNG_INSTALL" ] || { echo "Missing Schwung installer: $SCHWUNG_INSTALL"; exit 1; }
+[ -f "$TARBALL" ] || { echo "Missing module tarball: $TARBALL"; exit 1; }
+bash "$SCHWUNG_INSTALL" install-module "$TARBALL"
+'''
 
 # --- co-run Schwung-host bridge (temporary, until upstream PR #94 lands) -------
 # Overlays joshgaine's co-run onto the device's stock Schwung via a targeted
