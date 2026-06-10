@@ -176,7 +176,7 @@ The OLED shows all 8 knob parameters and values. Touching a knob highlights its 
 
 ## Switching tracks while playing
 
-Switching to a track that has nothing playing or queued auto-launches that track's focused clip, so you get sound immediately.
+While the transport is running, switching to a track with nothing playing or queued only auto-launches the focused clip when that clip is empty. A clip with notes or drum hits stays off until you explicitly launch it.
 
 ## Shift + step shortcuts
 
@@ -1053,14 +1053,14 @@ Edit Sound edits the active track's sound source from within Overture: Schwung-r
 | Swing Res | 1/16, 1/8 | 1/16 | Which positions are affected |
 | Beat Markers | On, Off | On | Dim markers on steps 1, 5, 9, 13 |
 | Clear Session | — | — | Resets entire instance (confirm dialog) |
-| Save | — | — | Immediate save |
+| Save state | — | — | Confirm, then write a snapshot |
 | Quit | — | — | Save and exit |
 
 ## Save states (snapshots)
 
 Up to **16 snapshots** per set — full state backups stamped with date/time.
 
-- **Save state** (Global Menu) writes a new snapshot. When 16 exist, a picker opens to choose which to overwrite.
+- **Save state** (Global Menu) asks for confirmation, then writes a new snapshot. When 16 exist, a picker opens to choose which to overwrite.
 - **Load state** opens a list (newest first). Jog to select, click to confirm. Loading discards unsaved changes.
 - Snapshots belong to the set. **Clear Session does not delete snapshots.**
 - After a format-changing update, old snapshots are marked `(old)` and can be removed.

@@ -184,7 +184,7 @@ export const S = {
     _coRunChanSlots: 0,                       /* Schwung co-run: bitmask (bits 0-3) of slots whose receive channel matches the active track; blinked on the side buttons. 0 = none. Refreshed on poll cadence. */
     pendingEditSoundEntry: null,              /* {track, route, slot, delay}: brief visible preflight before co-run handoff */
     moveCoRunTrack: -1,                       /* -1 = off; 0-3 = Move firmware is co-running on this track (Overture skips OLED; shim filters nav CCs + touch 0-9 from tool, lets them reach Move) */
-    moveCoRunDrumHeld: -1,                    /* d1 note of drum lane pad held in co-run (Shift still active); -1 = none. note-off + Shift-off sent on physical release */
+    moveCoRunDrumHeld: -1,                    /* d1 note of drum lane pad held in co-run; -1 = none. Plain note-off sent on physical release */
     trackPadMode: new Array(8).fill(0),
     trackVelOverride: new Array(8).fill(0),
     trackLooper: new Array(8).fill(1),
@@ -360,6 +360,7 @@ export const S = {
     bpmWasEditing: false,
     lastSentMenuEditValue: null,
     confirmClearSession: false,
+    confirmSaveState: false,
     /* State version mismatch confirm dialog — shown when DSP detects an
      * old-format state file. Yes = wipe + clean start; No = exit module. */
     confirmStateWipe: false,
@@ -404,6 +405,8 @@ export const S = {
     tapTempoFlashTick: -1,
     tapTempoFlashPad: -1,
     confirmClearSel: 1,
+    confirmSaveSel: 1,
+    confirmSaveCount: 0,
     confirmExport: false,          /* Ableton export Yes/No dialog open */
     confirmExportSel: 1,           /* 0 = Yes, 1 = No (default) */
     exportDoneDialog: false,       /* persistent "Exported to <path>" dialog (OK to dismiss) */
@@ -466,6 +469,7 @@ export const S = {
      * { id, label } (id reused = overwrite). */
     pendingSnapshotCopy: null,
     pendingEditEntryTrack: -1,  /* Shift+Step3: deferred co-run entry. -1 = none; track idx = fire on Shift release so Shift state doesn't leak into Move/Schwung */
+    pendingPadNoteMapRecompute: false,
     pendingUndoSync: 0,
     pendingDefaultSetParams: [],
     clearDrainHold: 0,       /* clearClip sets this so the next pendingDefaultSetParams drain skips one tick — keeps the queued _clear out of the same buffer as the sync set_param fan-out from clearClip's call site */

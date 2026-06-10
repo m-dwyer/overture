@@ -438,7 +438,9 @@ function buildGlobalMenuItems() {
             requestExport();
         }),
         createAction('Save state', function() {
-            openSaveSnapshot();
+            S.confirmSaveCount = loadSnapshotManifest(S.currentSetUuid).length;
+            S.confirmSaveState = true;
+            S.confirmSaveSel   = 1;   /* default No */
         }),
         createAction('Load state', function() {
             openLoadSnapshot();
@@ -1144,7 +1146,8 @@ function copyDrumLane(t, srcLane, dstLane) {
     S.drumLaneHasNotes[t][dstLane] = S.drumLaneHasNotes[t][srcLane];
     if (S.drumLaneHasNotes[t][srcLane]) S.drumClipNonEmpty[t][S.trackActiveClip[t]] = true;
     /* Copy repeat groove JS state */
-    S.drumRepeatGate[t][dstLane] = S.drumRepeatGate[t][srcLane];
+    S.drumRepeatGate[t][dstLane]    = S.drumRepeatGate[t][srcLane];
+    S.drumRepeatGateLen[t][dstLane] = S.drumRepeatGateLen[t][srcLane];
     for (let s = 0; s < 8; s++) {
         S.drumRepeatVelScale[t][dstLane][s] = S.drumRepeatVelScale[t][srcLane][s];
         S.drumRepeatNudge[t][dstLane][s]    = S.drumRepeatNudge[t][srcLane][s];
@@ -1166,12 +1169,14 @@ function cutDrumLane(t, srcLane, dstLane) {
     for (let l = 0; l < DRUM_LANES; l++) if (S.drumLaneHasNotes[t][l]) { anyHits = true; break; }
     S.drumClipNonEmpty[t][S.trackActiveClip[t]] = anyHits;
     /* Move repeat groove JS state */
-    S.drumRepeatGate[t][dstLane] = S.drumRepeatGate[t][srcLane];
+    S.drumRepeatGate[t][dstLane]    = S.drumRepeatGate[t][srcLane];
+    S.drumRepeatGateLen[t][dstLane] = S.drumRepeatGateLen[t][srcLane];
     for (let s = 0; s < 8; s++) {
         S.drumRepeatVelScale[t][dstLane][s] = S.drumRepeatVelScale[t][srcLane][s];
         S.drumRepeatNudge[t][dstLane][s]    = S.drumRepeatNudge[t][srcLane][s];
     }
-    S.drumRepeatGate[t][srcLane] = 0xFF;
+    S.drumRepeatGate[t][srcLane]    = 0xFF;
+    S.drumRepeatGateLen[t][srcLane] = 8;
     for (let s = 0; s < 8; s++) { S.drumRepeatVelScale[t][srcLane][s] = 100; S.drumRepeatNudge[t][srcLane][s] = 0; }
     S.pendingDrumLaneResync = 2; S.pendingDrumLaneResyncTrack = t; S.pendingDrumLaneResyncLane = dstLane;
 }
@@ -1392,6 +1397,18 @@ function registerTapTempo(padNote) {
     S.screenDirty = true;
 }
 
+/* True when a clip has no note/hit data. CC-only automation does not count:
+ * this gates implicit focused-clip launches so clips intentionally left off
+ * stay off when browsing tracks or starting transport. */
+function _clipIsEmpty(t, c) {
+    return (S.trackPadMode[t] === PAD_MODE_DRUM)
+        ? !S.drumClipNonEmpty[t][c]
+        : !S.clipNonEmpty[t][c];
+}
+
+function _focusedClipIsEmpty(t) {
+    return _clipIsEmpty(t, S.trackActiveClip[t]);
+}
 
 /* Save the current S.activeBank into the outgoing track's per-track slot,
  * switch to newT, then restore the new track's stored bank into S.activeBank.
@@ -1406,11 +1423,13 @@ function _switchActiveTrack(newT) {
      * launches its focused clip so it's live. While stopped we do NOT arm (passive
      * track-scrolling must not queue clips for the next transport start); the
      * displayed clip is instead armed at transport start (see _onCC_transport).
-     * Skip if already live or in Session View. */
+     * Skip if already live, in Session View, or if the focused clip has note
+     * data (a clip intentionally left off must not be re-launched by scroll). */
     if (S.playing && !S.sessionView
             && !S.trackClipPlaying[S.activeTrack]
             && !S.trackWillRelaunch[S.activeTrack]
-            && S.trackQueuedClip[S.activeTrack] === -1) {
+            && S.trackQueuedClip[S.activeTrack] === -1
+            && _focusedClipIsEmpty(S.activeTrack)) {
         const _ac = S.trackActiveClip[S.activeTrack];
         if (typeof host_module_set_param === 'function')
             host_module_set_param('t' + S.activeTrack + '_launch_clip', String(_ac));
@@ -1433,14 +1452,11 @@ function selectTrackGesture(newT) {
     if (S.trackPadMode[newT] === PAD_MODE_DRUM) {
         /* Fall back from banks hidden on drum tracks */
         if (S.activeBank === 2 || S.activeBank === 4) S.activeBank = 0;
-        syncDrumLanesMeta(newT);
-        syncDrumLaneSteps(newT, S.activeDrumLane[newT]);
-        syncDrumClipContent(newT);
-        refreshDrumLaneBankParams(newT, S.activeDrumLane[newT]);
+        resyncDrumTrack(newT);
     } else {
         if (S.activeBank === 7) S.activeBank = 0;
+        refreshPerClipBankParams(newT);
     }
-    refreshPerClipBankParams(newT);
     computePadNoteMap();
     S.seqActiveNotes.clear();
     S.seqLastStep = -1;
@@ -2025,9 +2041,11 @@ function computePadNoteMap() {
          * for velocity-zone slots so DSP on_midi skips dispatch (JS still
          * handles vel-zone arming as state, independent of note routing). */
         const page = S.drumLanePage[t] | 0;
+        const coRunSilentLeft = (S.moveCoRunTrack >= 0);
         for (let i = 0; i < 32; i++) {
             const col = i % 8;
             if (col >= 4) { S.padNoteMap[i] = 0xFF; continue; }
+            if (coRunSilentLeft) { S.padNoteMap[i] = 0xFF; continue; }
             const row = Math.floor(i / 8);
             const lane = page * 16 + row * 4 + col;
             const note = (lane >= 0 && lane < DRUM_LANES)
@@ -2419,6 +2437,16 @@ function syncDrumRepeatState(t, lane) {
     if (v.length >= 19) S.drumRepeatGateLen[t][lane] = parseInt(v[18], 10) || 8;
 }
 
+/* Full drum-track resync after track switches. Side-button selection,
+ * Shift+pad, and Shift+jog all need the same lane metadata, active-lane
+ * steps, clip-content dots, and bank params. */
+function resyncDrumTrack(t) {
+    syncDrumLanesMeta(t);
+    syncDrumLaneSteps(t, S.activeDrumLane[t]);
+    syncDrumClipContent(t);
+    refreshDrumLaneBankParams(t, S.activeDrumLane[t]);
+}
+
 function refreshPerClipBankParams(t) {
     if (typeof host_module_get_param !== 'function') return;
     if (S.trackPadMode[t] === PAD_MODE_DRUM) {
@@ -2756,7 +2784,8 @@ function pollDSP() {
             const _at = S.activeTrack;
             if (!S.trackClipPlaying[_at]
                     && !S.trackWillRelaunch[_at]
-                    && S.trackQueuedClip[_at] === -1) {
+                    && S.trackQueuedClip[_at] === -1
+                    && _focusedClipIsEmpty(_at)) {
                 const _tac = S.trackActiveClip[_at];
                 S.pendingDefaultSetParams.push({ key: 't' + _at + '_launch_clip', val: String(_tac) });
                 S.trackQueuedClip[_at] = _tac;
@@ -5090,6 +5119,8 @@ function enterMoveNativeCoRun(t) {
     const ch = S.trackChannel[t] | 0;
     if (ch < 1 || ch > 4) showActionPopup('MOVE CH>4', 'CH ' + ch);
     S.moveCoRunTrack = t;
+    computePadNoteMap();
+    S.pendingPadNoteMapRecompute = true;
     shadow_corun_begin(CORUN_TARGET_MOVE_NATIVE, t, OVERTURE_CORUN_KEEP_MASK);
     /* Let Move firmware's own LED writes (track buttons, knob rings, transport)
      * reach hardware while it drives the device-edit UI. skip_led_clear makes the
@@ -5121,6 +5152,8 @@ function exitMoveNativeCoRun() {
     S.moveCoRunTrack = -1;
     S.pendingMoveCoRunInject = 0;  /* cancel any pending entry inject */
     S.moveCoRunPressQueue = null;  /* cancel any in-flight track-row press sequence */
+    computePadNoteMap();
+    S.pendingPadNoteMapRecompute = true;
     if (typeof shadow_corun_end === 'function')
         shadow_corun_end();
     /* Resume the shim's overtake LED-strip loop so Overture owns the LEDs again
@@ -5129,8 +5162,7 @@ function exitMoveNativeCoRun() {
     /* If a drum pad hold inject was in flight, send the note-off before the
      * co-run session ends so Move doesn't get a stuck note. */
     if (S.moveCoRunDrumHeld >= 0 && typeof move_midi_inject_to_move === 'function') {
-        move_midi_inject_to_move([0x08, 0x80, S.moveCoRunDrumHeld, 0]);  /* pad off */
-        move_midi_inject_to_move([0x0B, 0xB0, 49, 0]);                   /* Shift off */
+        move_midi_inject_to_move([0x08, 0x80, S.moveCoRunDrumHeld, 0]);  /* plain pad off */
     }
     S.moveCoRunDrumHeld = -1;
     /* Modifier-key release CCs the user pressed inside Move firmware never
@@ -5246,6 +5278,10 @@ function restoreUiSidecar(applyDefaultsNow) {
                 const _m = us.am[_t];
                 S.trackAtMode[_t] = (typeof _m === 'number' && _m >= 0 && _m <= 2) ? (_m | 0) : 0;
             }
+        }
+        if (Array.isArray(us.pchr)) {
+            for (let _t = 0; _t < NUM_TRACKS; _t++)
+                S.padLayoutChromatic[_t] = !!us.pchr[_t];
         }
     } else {
         S.scaleAware   = 1;
@@ -7059,6 +7095,13 @@ function _onCC_jog(d1, d2) {
             S.screenDirty = true;
             return;
         }
+        if (S.confirmSaveState) {
+            const _yes = S.confirmSaveSel === 0;
+            S.confirmSaveState = false;
+            if (_yes) openSaveSnapshot();
+            S.screenDirty = true;
+            return;
+        }
         if (S.confirmConvertToDrum) {
             const _ct = S.confirmConvertTrack;
             const _yes = S.confirmConvertToDrumSel === 0;
@@ -7399,6 +7442,9 @@ function _onCC_jog(d1, d2) {
             } else if (S.confirmClearSession) {
                 const delta = decodeDelta(d2);
                 if (delta !== 0) { S.confirmClearSel = S.confirmClearSel === 0 ? 1 : 0; S.screenDirty = true; }
+            } else if (S.confirmSaveState) {
+                const delta = decodeDelta(d2);
+                if (delta !== 0) { S.confirmSaveSel = S.confirmSaveSel === 0 ? 1 : 0; S.screenDirty = true; }
             } else if (S.confirmConvertToDrum) {
                 const delta = decodeDelta(d2);
                 if (delta !== 0) { S.confirmConvertToDrumSel = S.confirmConvertToDrumSel === 0 ? 1 : 0; S.screenDirty = true; }
@@ -7444,10 +7490,11 @@ function _onCC_jog(d1, d2) {
                         _switchActiveTrack(next);
                         if (S.trackPadMode[next] === PAD_MODE_DRUM) {
                             if (S.activeBank === 2 || S.activeBank === 4) S.activeBank = 0;
+                            resyncDrumTrack(next);
                         } else {
                             if (S.activeBank === 7) S.activeBank = 0;
+                            refreshPerClipBankParams(next);
                         }
-                        refreshPerClipBankParams(next);
                         computePadNoteMap();
                         S.seqActiveNotes.clear();
                         S.seqLastStep = -1;
@@ -7769,6 +7816,9 @@ function _onCC_buttons(d1, d2) {
             } else if (S.globalMenuOpen && S.confirmClearSession) {
                 S.confirmClearSession = false;
                 forceRedraw();
+            } else if (S.globalMenuOpen && S.confirmSaveState) {
+                S.confirmSaveState = false;
+                forceRedraw();
             } else if (S.globalMenuOpen && S.confirmConvertToDrum) {
                 closeConvertConfirm();
                 forceRedraw();
@@ -8073,6 +8123,9 @@ function _onCC_transport(d1, d2) {
         } else if (S.globalMenuOpen && S.confirmClearSession) {
             S.confirmClearSession = false;
             forceRedraw();
+        } else if (S.globalMenuOpen && S.confirmSaveState) {
+            S.confirmSaveState = false;
+            forceRedraw();
         } else if (S.globalMenuOpen && S.confirmConvertToDrum) {
             closeConvertConfirm();
             forceRedraw();
@@ -8206,7 +8259,8 @@ function _onCC_transport(d1, d2) {
                  * clear (since clear leaves will_relaunch=0). */
                 if (!S.playing && !S.sessionView
                         && !S.trackClipPlaying[S.activeTrack]
-                        && !S.trackWillRelaunch[S.activeTrack]) {
+                        && !S.trackWillRelaunch[S.activeTrack]
+                        && _focusedClipIsEmpty(S.activeTrack)) {
                     const _at = S.activeTrack;
                     const _ac = S.trackActiveClip[_at];
                     host_module_set_param('transport', 'play_focus:' + _at + ':' + _ac);
@@ -10115,6 +10169,10 @@ function _onPadPressTrackView(status, d1, d2) {
                     setActiveDrumLane(t, lane);
                     syncDrumLaneSteps(t, lane);
                     refreshDrumLaneBankParams(t, lane);
+                    if (S.moveCoRunTrack >= 0) {
+                        padPitch[padIdx] = 0xFF;
+                        forceRedraw();
+                    } else {
                     /* Preview lane note at actual pad velocity */
                     const vel = effectiveVelocity(d2);
                     const laneNote = S.drumLaneNote[t][lane];
@@ -10151,6 +10209,7 @@ function _onPadPressTrackView(status, d1, d2) {
                             host_module_set_param('t' + t + '_drum_repeat_lane', String(lane));
                     }
                     forceRedraw();
+                    }
                 }
             }
         } else if (S.heldStep >= 0 && !S.shiftHeld) {
@@ -10242,29 +10301,16 @@ function _onPadPressTrackView(status, d1, d2) {
 }
 
 function _onPadPress(status, d1, d2) {
-        /* Move-native co-run + drum-mode active track: synthesize the
-         * native Move "Shift + drum pad" gesture on cable-0 so Move
-         * firmware silently selects the cell for editing. Overture keeps
-         * its normal pad handling below (the sequencer still fires the
-         * drum from this track), so the pad tap = audible Overture drum
-         * + silent Move-side cell change. Mask: left 4 columns of each
-         * pad row, where notes 68-99 are laid out bottom-to-top as
-         * 68-75 / 76-83 / 84-91 / 92-99 — left-4x4 is (d1 - 68) % 8 < 4.
-         * Note-on (status 0x9_) with d2 > 0 only; note-off doesn't need
-         * a re-select. Velocity 100 is arbitrary — Move's cell-select
-         * is gesture-driven, not velocity-driven. */
+        /* Move-native co-run + drum-mode active track: inject a plain pad-on
+         * on cable 0 so Move firmware both plays the drum and focuses that
+         * cell for editing. Overture suppresses its own monitor note for this
+         * pad, so the tap is one Move-native hit at the real pad velocity. */
         if (S.moveCoRunTrack >= 0 &&
                 S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM &&
                 d1 >= 68 && d1 <= 99 && ((d1 - 68) % 8) < 4 &&
                 (status & 0xF0) === 0x90 && d2 > 0 &&
                 typeof move_midi_inject_to_move === 'function') {
-            /* Shift + noteOn, no immediate noteOff. Note stays open until the pad is
-             * physically released (_onPadRelease sends noteOff + ShiftOff). Move sees a
-             * genuine held Shift+pad: selects the drum cell for editing AND detects a hold
-             * naturally for its per-drum volume/tuning editor. No deferred threshold needed.
-             * Still causes one Overture drum hit (double-hit fix TBD). */
-            move_midi_inject_to_move([0x0B, 0xB0, 49, 127]);  /* Shift on */
-            move_midi_inject_to_move([0x09, 0x90, d1, 100]);  /* pad on — held until release */
+            move_midi_inject_to_move([0x09, 0x90, d1, d2 & 0x7F]);  /* plain pad on */
             S.moveCoRunDrumHeld = d1;
         }
         if (S.tapTempoOpen && d1 >= 68 && d1 <= 99) {
@@ -10479,7 +10525,9 @@ function _onPadPress(status, d1, d2) {
                         const clipIdx      = S.sceneRow + row;
                         const isActiveClip = S.trackActiveClip[t] === clipIdx;
                         if (S.shiftHeld) {
-                            /* Shift+pad: focus clip in Track View; launch only if not already active */
+                            /* Shift+pad opens a clip for editing. A stopped clip
+                             * with notes must stay off, so launch only while
+                             * playing or when the selected clip is empty. */
                             const isPlaying = S.trackClipPlaying[t] && isActiveClip;
                             const isWR      = S.trackWillRelaunch[t] && isActiveClip;
                             const isQueued  = S.trackQueuedClip[t] === clipIdx;
@@ -10499,7 +10547,8 @@ function _onPadPress(status, d1, d2) {
                                         S.pendingDrumResyncTrack = t;
                                     }
                                 }
-                                if (typeof host_module_set_param === 'function')
+                                if ((S.playing || _clipIsEmpty(t, clipIdx))
+                                        && typeof host_module_set_param === 'function')
                                     host_module_set_param('t' + t + '_launch_clip', String(clipIdx));
                             }
                             handoffRecordingToTrack(t);
@@ -11147,8 +11196,7 @@ function _onPadRelease(status, d1, d2) {
      * release of the tracked pad, even if the threshold hadn't fired yet. */
     if (S.moveCoRunTrack >= 0 && S.moveCoRunDrumHeld === d1 &&
             typeof move_midi_inject_to_move === 'function') {
-        move_midi_inject_to_move([0x08, 0x80, d1, 0]);    /* pad off */
-        move_midi_inject_to_move([0x0B, 0xB0, 49, 0]);    /* Shift off */
+        move_midi_inject_to_move([0x08, 0x80, d1, 0]);    /* plain pad off */
         S.moveCoRunDrumHeld = -1;
     }
     /* Step buttons (notes 16-31): if a Loop+step gesture is in flight and
