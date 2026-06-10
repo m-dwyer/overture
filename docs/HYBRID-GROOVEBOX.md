@@ -33,14 +33,15 @@ most of our open questions:
   Live), pad-drop self-heal. Treat the limitations doc as the field guide.
 - **Poly-AT already done:** davebox sequences per-clip **pad-pressure (aftertouch) automation** to Move.
 
-**What's still uniquely ours:** davebox sends notes/velocity/poly-AT to Move and edits Move params
-*manually* via co-run — but **does NOT sequence-automate Move's device parameters** (no cable-0
-encoder-CC injection anywhere). **Our discovery — the cable-0 encoder-CC p-lock — turns that manual
-knob-edit into an automatable lane for `ROUTE_MOVE` tracks.** That is the novel, additive feature.
+**What's still ours:** dAVEBOx provides the substrate: notes/velocity/poly-AT to Move, Schwung/open
+tracks, co-run editing, persistence, and export. Move itself already has native per-step parameter
+automation, so Overture's wedge is not "Move lacks p-locks." The wedge is unified depth: one
+8-track timeline for Move engines plus Schwung/open tracks, with dAVEBOx sequencing depth and a
+Move-like surface.
 
 **Revised strategy:** build **on / fork dAVEBOx** (check its `LICENSE` first), and focus effort on the
-**Move-engine parameter-automation lane** (the p-lock discovery) plus whatever UX you want that it
-lacks — rather than rebuilding the sequencer, routing, co-run editing, and persistence it already has.
+hybrid UX, route clarity, parameter discoverability, and Move-like editing shortcuts rather than
+rebuilding the sequencer, routing, co-run editing, and persistence it already has.
 The sections below remain the design reference (and apply if you build fresh), but reuse is the smart
 default. Note: davebox targets `move.local` (systemd/Armbian deploy); our device is `move-em.local` —
 reconcile environments.
@@ -246,13 +247,12 @@ Rules:
 Rule of thumb: "4 Ableton + a few hosted" ≈ what schwung does today → fine; "many heavy hosted synths"
 is where you approach the budget — measure and cap.
 
-## Phasing — start as a module, graduate twice (both deferred)
+## Phasing — start as a module, graduate twice (superseded)
 
 > ⚠️ **SUPERSEDED — see `ROADMAP.md` for the authoritative phase plan.** The phasing below is the
 > *build-from-scratch* alternative, written before we found dAVEBOx. The actual plan is the
-> **davebox-fork** path in `ROADMAP.md` (Phase 0 validate → 1 fork dAVEBOx → 2 p-lock lane → 3 reshape
-> UX → 4 bundle → 5 boot). Keep the phases below only as the fallback if you ever build fresh instead
-> of forking; the **Phase 0 validation detail here is still current** and referenced by ROADMAP Phase 0.
+> **davebox-fork** path in `ROADMAP.md`, now reframed around unified hybrid sequencing. Keep the
+> phases below only as the fallback if you ever build fresh instead of forking.
 
 ### Phase 0 — Validate the unknowns (overtake module, ~harness)
 Extend the `engine-probe` harness to answer, on-device, the questions that change the design:

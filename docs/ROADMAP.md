@@ -1,143 +1,314 @@
-# Overture — Roadmap
+# Overture UX Roadmap Implementation Plan
 
-**Emulator-first.** The augment base is already proven (dAVEBOx ships it), so the project's value
-and risk live in the **UX** — which iterates fastest in a browser emulator, not on device. So we
-front-load the emulator + UX, fork dAVEBOx early as the substrate, and reserve the device for the few
-things only it can validate. Authoritative phase plan (supersedes the phasing in `HYBRID-GROOVEBOX.md`).
+## Summary
 
----
+Overture is an 8-track hybrid sequencer for Ableton Move: Move engines on tracks
+1-4, Schwung/open engines on tracks 5-8, Move-native controls on the surface, and
+dAVEBOx sequencing depth preserved underneath.
 
-## Status & current focus (updated 2026-06-10) — READ FIRST
+This roadmap replaces the older phase plan. Earlier work proved the substrate:
+the fork builds, the emulator runs the real UI with `seq8`-wasm, side-button
+track navigation is implemented, hold-side clip reveal is implemented, co-run
+works on device, and melodic note defaults now match Move better. The remaining
+product risk is UX: setup clarity, route diagnosis, sound-edit entry, parameter
+discoverability, Move-like step editing, and careful upstream catch-up.
 
-**Done:** P1 (fork builds + runs on `move-em.local`), P2 (emulator runs the real UI + `seq8`-wasm).
-**P3 in progress.** Shipped + device-verified (live status in `DAVEBOX-CHANGES.md`): **#1** side-buttons→
-track-select + hold-reveal clips + track-identity LEDs · the **OLED bank-position strip** · **#3 Phase A**
-(hold-step + jog = step length, + a jog-cycles-banks bug fix). **Co-run is DONE** — Edit Synth/Slot works
-on device (was P3's "co-run zoom"; see memory `corun-on-v0917`). #2 ~already done (React shell). Deferred:
-**#3B** velocity, **#5**, **#6**.
+Each phase below is intended to be implemented independently on its own branch.
+Earlier phases have higher priority.
 
-### ⚠ Strategic reframe — supersedes the "p-lock = the novel cherry" premise below
-Verified against the Move manual: **Move ALREADY has native per-step parameter automation (p-locks)** —
-§14.2.4, hold-step + encoder in its Device View. So the **motion lane is NOT a capability Move lacks** —
-it's *demoted* from "the differentiator." And **co-run now closes the sound-design seam.** The honest
-wedge is **depth + UNIFICATION**: Overture's 8 tracks / per-step trig-conditions / polyrhythmic automation
-/ bake-to-Live, sequencing **Move's 4 engines AND N open Schwung tracks in one timeline** — the open-tracks
-story we've barely exercised. (Three-bucket model: Overture is (1) deeper than Move [keep], (2) missing a
-few Move conveniences [#4 per-track vol], (3) different controls [the reconcile — mostly done].) See memory
-`davebox-prior-art` (corrected) + `move-live-engine-seams`.
+## Current Product Facts
 
-### Next up — re-prioritised (start here)
-1. ✅ **DONE (2026-06-10) — the wedge experiment / inject spike.** Verdict: **#4 per-track volume has no
-   clean route** (CC7 flat §4.1.3; CC79 = master encoder, bleeds to master; D-Bus has no set method).
-   Detail: `WEDGE-EXPERIMENT.md`, `INJECT-PROBE.md`, memory `move-live-engine-seams`. Probe is now pure-JS
-   (`overture/tool/tools/inject-probe`).
-2. **Exercise the open-tracks story** — sequence ≥1 Schwung-routed (open-engine) track alongside Move's 4
-   in one Overture timeline. The genuine unification differentiator. *(In progress — validation findings in
-   "Backlog — fidelity findings" below.)*
-3. ✅ **DONE + DEVICE-VERIFIED (2026-06-10) — Note-length default quick win.** New melodic/keys steps now
-   default to a full-step gate; new drum-lane steps keep the tighter half-step gate. Existing clips keep
-   stored gates. Covered by real `seq8`-wasm integration tests and verified on Move.
-4. **Phase 3 / param discoverability — now a top priority** (see Phase 3). "Hunting down params" is the core
-   legibility problem and the flagship UX work.
-5. **#3B** velocity (Shift+jog) — cheap warm-up if you want momentum.
-6. **#5 / #6** reconcile polish — lowest value now; don't lead with these.
+- Overture is a thick fork of dAVEBOx's `tool/`.
+- Side buttons already select tracks in Track View.
+- Hold a side button already reveals that track's 16 clips on the step buttons.
+- The OLED bank-position strip is implemented.
+- Hold step + jog already edits step length.
+- Co-run is implemented and device-verified for Move-native and Schwung-chain
+  sound editing.
+- Move already has native per-step parameter automation, so Overture's automation
+  story is not "Move lacks p-locks." The wedge is unified depth: 8 tracks,
+  trig conditions, polyrhythmic automation, bake/export, and one timeline for
+  Move engines plus Schwung/open tracks.
+- Per-track volume is deprioritized: current probes found no clean route to
+  Move's native faders from Overture.
 
-Housekeeping: merged branches (change-1-track-nav, oled-bank-strip, change-3-perstep, corun-tooling-and-docs)
-are safe to delete.
+## Phase 1: Documentation Reframe And Quick Start
 
----
+**Priority:** P0
+**Branch:** `docs/ux-roadmap-reframe`
 
-## Phase 0 — Device spike (cheap, parallel; NOT a gate)
-Validate the device-only things the emulator can't — using the existing `engine-probe` harness:
-1. **By-channel routing to 4 Move tracks** (dAVEBOx implies yes; confirm).
-2. **The p-lock lane is real** — inject cable-0 encoder CC to move a Move device param *in time*
-   while sequencing (compose with co-run for device-page targeting). Our one genuinely novel risk.
-3. Latency parity, note-off/hung-note safety, state read (`Song.abl` + `saveSongIfDirty`).
-> Not a project gate: p-lock is the *cherry*; the cake (notes + velocity + poly-AT + open tracks +
-> sequencer) is proven. But validate p-lock before building a whole UX around it. Detail:
-> `HYBRID-GROOVEBOX.md` "Phase 0".
+Rewrite planning docs around the current product reality.
 
-## Phase 1 — Fork dAVEBOx + get it building (the substrate)
-- Private-mirror `legsmechanical/schwung-davebox` → `m-dwyer/schwung-davebox` (the `tool`).
-- Build the **device** target (`dsp.so`) and confirm it runs on your stock Schwung (`move-em.local`).
-- Stand up a **wasm** build of `seq8.c` (emscripten — new target; shim its host deps) for the
-  behavior-tier emulator later.
-- **Done when:** the 8-track sequencer runs on device, and `seq8` compiles to wasm locally.
+Changes:
+- Rewrite this roadmap around unified hybrid sequencing as the wedge.
+- Mark side-button track navigation, hold-side clip reveal, and co-run as already
+  implemented.
+- Reframe motion/p-locks as unified automation across Move and Schwung, not as
+  "Move lacks p-locks."
+- Add or update an Overture Quick Start covering Move MIDI setup, Schwung slot
+  setup, side-button tracks, clip reveal, and Edit Sound.
+- Update `UX.md` with current-vs-target behavior.
 
-## Phase 2 — Overture emulator (`overture/web/`)
-Build the UX-iteration harness by **reusing moveforge's emulator bones** (hardware shell, OLED canvas,
-wasm-DSP loader, input engine) — *not* by absorbing moveforge. See `EMULATOR.md`.
-- Host-API shims (display→canvas, LED→grid, `get/set_param`, MIDI, lifecycle); Move hardware shell;
-  ~94 Hz tick loop.
-- **Fidelity ladder:** start **layout-tier** (real UI JS + JS-mock DSP), add **behavior-tier** (real
-  `seq8`-wasm) once layout settles.
-- **Done when:** the real tool UI renders + responds in the browser, fast iteration with no device.
+Tests:
+- Documentation review.
+- Verify no doc still describes implemented work as future work.
 
-## Phase 3 — UX design + iteration (the bulk)
-Design Overture's surface in the emulator (see `UX.md`): mode/navigation model, the **motion lane**
-(flagship), the **co-run "zoom into sound"** gesture, track navigation, the **color/feedback language**.
-Edit *down* for immediacy/legibility — don't pile onto dAVEBOx's depth.
-- **First concrete target (raised by #2 validation): param discoverability.** Per-step/per-track params are
-  scattered across modal contexts (hold-step Step Edit, the 7 Global-Menu banks, Track Config, automation
-  lanes) with positional, unlabeled encoders — you must already know the gesture+bank before you can see a
-  param. Candidate experiments: param search, persistent labels, fewer modes.
-- **Done when:** the instrument's surface feels like *Overture*, validated in-emulator.
+## Phase 2: Route Check Menu
 
-## Phase 4 — p-lock lane (on device)
-> ⚠ **Re-evaluate before building** — see the Status reframe up top: Move already has native per-step
-> automation, so this is no longer a unique-capability differentiator. Gate it on the inject spike +
-> the wedge question (is engine-param sequencing from Overture worth more than Move's own + co-run?).
+**Priority:** P0
+**Branch:** `feature/route-check`
 
-Implement the `ROUTE_MOVE` device-param **motion/automation lane** (cable-0 encoder CC, delta,
-composed with co-run targeting), designed in P3, made real here.
-- **Done when:** a Move engine param automates per-step from a clip lane while the pattern plays.
+Add a diagnostic Route Check screen without consuming normal Track View header
+space.
 
-## Phase 5 — Finalize UX on device + rebrand to Overture
-Bring the emulator-designed UX to hardware; reconcile device-only feel (timing, LEDs, co-run); rename.
-- **Done when:** it's *your* instrument on real hardware, not a dAVEBOx reskin.
+Changes:
+- Add Global Menu item: `Route Check`.
+- Show 8 expected routes:
+  - `T1 Move Ch1`
+  - `T2 Move Ch2`
+  - `T3 Move Ch3`
+  - `T4 Move Ch4`
+  - `T5 Schwung Ch5`
+  - `T6 Schwung Ch6`
+  - `T7 Schwung Ch7`
+  - `T8 Schwung Ch8`
+- For Schwung tracks, show detected slot status where possible: `OK Slot1`,
+  `NO SLOT`, `THRU!`.
+- For Move tracks, show expected channel/manual-check status only unless real
+  verification is available.
+- Show route warnings contextually during co-run entry or route changes.
+- Keep the Track View resting header focused on musical/editing state; do not
+  add persistent route identity there.
 
-## Phase 6 — Bundle into the single-install product
-Stand up the monorepo glue: `schwung` (thin fork + co-run), `tool`, `modules` (curated moveforge
-output), one `build.sh` + `install.sh`. Co-run pre-patched at build; user installs *one* thing.
-- **Done when:** `git clone --recursive && ./install.sh` deploys the whole stack; user never sees "Schwung."
+Tests:
+- Emulator tests for Route Check formatting.
+- Device check with default routing and at least one mismatch/no-slot case.
 
-## Phase 7 — Boot-to-Overture (last, optional)
-Own the launch entrypoint so power-on lands in Overture (after the engine is up). **Brick risk** —
-`schwung-heal` + `/data` backup + reflash path. Only when everything else is solid.
+## Phase 3: Edit Sound Unification
 
----
+**Priority:** P0
+**Branch:** `feature/edit-sound-unified`
 
-## Repo / fork setup (when starting P1 / P6)
-- `overture/` = private integrator monorepo (`m-dwyer/overture`) — exists.
-- Submodules are **private mirrors**, not GitHub forks (can't privately fork a public repo):
-  `gh repo create m-dwyer/<name> --private`, push upstream in, add `upstream` remote.
-- `schwung` thin + upstream-tracked; `tool` thick + owned. **moveforge stays independent** (not a
-  submodule of the runtime; its emulator bones are reused into `overture/web/`). See `ARCHITECTURE.md`.
+Make co-run feel like one command regardless of route.
 
-## Maintenance strategy (the integrator tax)
-- Keep `schwung` changes **minimal + capability-gated**; rebase onto releases deliberately. **Upstream
-  co-run** → the fork shrinks toward stock.
-- Diverge freely in `tool`. Pull dAVEBOx improvements early; stop tracking once fully diverged.
+Changes:
+- Rename user-facing `Edit Slot...` / `Edit Synth...` to `Edit Sound...`.
+- Keep route-specific internals:
+  - Move route -> Move-native co-run.
+  - Schwung route -> Schwung chain editor co-run.
+- Add preflight overlays:
+  - `EDIT SOUND / T3 Move Ch3`
+  - `EDIT SOUND / T5 Schwung Slot1`
+  - `NO SLOT / Ch5`
+  - `MOVE CH>4`
+  - `CO-RUN UNAVAILABLE`
+- Preserve Shift+Step 3 as the fast path.
+- Update manual entries that still describe co-run as forthcoming.
 
-## Open decisions
-- p-lock view-targeting: co-run vs self-puppeteer (P0 decides).
-- How much dAVEBOx UX to keep vs replace (reshape > greenfield; decided in emulator, P3).
-- Emulator fidelity: how far to push behavior-tier (real `seq8`-wasm) vs mock.
-- Default module set to bundle (lean; rest via Schwung store).
-- Whether to upstream the p-lock capability to dAVEBOx/Schwung (collaboration vs own product).
+Tests:
+- Emulator tests for menu label, route dispatch, and failure overlays.
+- Device test for both co-run targets.
 
----
+## Phase 4: Upstream dAVEBOx Bug-Fix Port
 
-## Backlog — fidelity findings (from #2 open-tracks validation, 2026-06-10, device-confirmed)
-- ✅ **Fixed + device-verified (2026-06-10) — Note-length default.** Move stamps new steps at **1.0 / full step** (device-confirmed on a
-  fresh set, every track); Overture/davebox stamps **0.5** (`GATE_TICKS 12 / TICKS_PER_STEP 24` in
-  `dsp/seq8.c`; `stepEditGate: 12` in `ui/ui_state.mjs`) → sustained/pad/keys presets sound clipped vs native
-  Move. Overture *replaces Move's sequencing but plays Move's sounds*, which are voiced for full-step, so the
-  default should be **sound-correct, not a 50% groovebox default**. Implemented as **Keys 1.0 / Drum 0.5**,
-  mode-aware, for newly placed steps only. Existing patterns keep their stored gate. Device check: drum-mode
-  step sequencing creates 0.5-step notes; switching to keys preserves those existing 0.5-step notes; newly
-  sequenced keys notes are 1.0-step.
-- **Track Mode must match the Move instrument (minor).** A davebox **Drum**-mode track on a *melodic* Move
-  preset (e.g. Choir Pad) plays fixed lane notes instead of the scale layout → sounds wrong. No code bug; a
-  setup/feedback gap (consider a warning, or a smarter default when Route=Move + preset category is known).
-- **Param discoverability** — promoted into **Phase 3** as its first concrete target (see above).
+**Priority:** P1
+**Branch:** `upstream/port-low-risk-fixes`
+
+Port low-risk upstream improvements while preserving Overture divergences.
+
+Must port:
+- "Clips you left off stay off."
+- Save confirmation.
+- Chromatic layout persistence fix, if absent.
+- Drum lane copy gate-length fix, if absent.
+- Drum resync on Shift+jog track switch, if absent.
+- Co-run drum pad single-hit/velocity fix, if absent.
+- Manual/Quick Start corrections adapted to Overture.
+
+Preserve:
+- Side buttons select tracks.
+- Hold-side reveals clips.
+- Overture branding/import paths.
+- WASM/emulator additions.
+- DSP refactor layout.
+
+Tests:
+- Native build.
+- WASM build.
+- Emulator integration tests.
+- Regression for "focused clip with notes does not auto-launch just because the
+  user browsed to it."
+
+## Phase 5: Parameter Discoverability
+
+**Priority:** P1
+**Branch:** `feature/param-peek`
+
+Make parameter state legible without requiring users to already know the bank or
+gesture.
+
+Changes:
+- Add Param Peek on knob touch:
+  - bank/context;
+  - full label;
+  - current value;
+  - clip/lane/track/automation/route scope.
+- Improve AUTO lane labels: `L1 AT`, `L2 CC74`, `L3 Sch5`, `L4 --`.
+- For Move positional automation, use conservative labels like
+  `Move K3 current param`.
+- Add a compact shortcut/help overlay for major Shift+Step destinations.
+
+Tests:
+- Emulator tests for knob-touch rendering.
+- Snapshot tests for AUTO labels.
+- Regression that knob touch does not mutate values.
+
+## Phase 6: Move-Grammar Step Editing Shortcuts
+
+**Priority:** P1
+**Branch:** `feature/move-step-edit-shortcuts`
+
+Add Move-like held-step shortcuts while keeping the K-knob deep editor.
+
+Changes:
+- Keep existing Step Edit K controls.
+- Add held-step shortcuts:
+  - `Shift+jog` = velocity.
+  - `Plus/Minus` = melodic pitch transpose.
+  - `Left/Right` = nudge.
+- Avoid Volume for velocity unless a separate device spike proves no master-volume
+  bleed.
+
+Tests:
+- Emulator tests for each shortcut.
+- Real `seq8.wasm` integration tests for persisted velocity, pitch, and nudge.
+- Device test for Shift+jog conflicts.
+
+## Phase 7: AUTO Overview Refinement
+
+**Priority:** P2
+**Branch:** `feature/auto-overview-readable`
+
+Improve the existing AUTO bank rather than adding another automation page.
+
+Changes:
+- Make AUTO resting view an overview:
+  - active track/clip;
+  - 8 lanes;
+  - assignment label;
+  - activity/armed/resting state.
+- In AUTO bank, step LEDs show automation for the active lane:
+  - off = none;
+  - dim = automation exists;
+  - bright/pulse = current playhead step.
+- Keep normal Track View step LEDs note-focused outside AUTO.
+- Add target-confirm wording for future Move positional automation.
+
+Tests:
+- Snapshot tests for AUTO overview.
+- LED-state tests for active lane automation points.
+- Device LED-budget check during playback.
+
+## Phase 8: Hold-Reveal Clip LED Polish
+
+**Priority:** P2
+**Branch:** `polish/clip-reveal-leds`
+
+Refine already-implemented hold-side clip reveal.
+
+Changes:
+- Make blink timing consistent.
+- Ensure states are distinguishable:
+  - focused/active;
+  - playing;
+  - queued/pending stop if represented;
+  - has content;
+  - empty.
+- Prefer fewer clear states over many ambiguous colors.
+- Avoid increasing LED traffic beyond budget.
+
+Tests:
+- Snapshot tests for reveal states.
+- Device test with playing, queued, empty, and content clips.
+- Regression that step buttons return to normal after side release.
+
+## Phase 9: Overture Template Set Spike
+
+**Priority:** P3
+**Branch:** `spike/overture-template-set`
+
+Investigate whether a preconfigured Move Set can reduce setup friction.
+
+Questions:
+- Can install tooling create/copy a Set under `UserLibrary/Sets` that Move
+  recognizes?
+- Is a database/index update required?
+- Can `Song.abl` encode per-track MIDI In channels?
+- Can MIDI Out off be encoded?
+- Can this be done safely without corrupting user Sets?
+
+Acceptance:
+- If reliable, later add install-time template deployment.
+- If MIDI channel state is fragile or stored elsewhere, document and abandon
+  in-product creation.
+
+## Phase 10: Conductor Evaluation
+
+**Priority:** P3
+**Branch:** `research/conductor-fit`
+
+Evaluate upstream dAVEBOx Conductor before porting.
+
+Questions:
+- What workflow does Conductor solve?
+- Does it fit Overture's hybrid-track simplicity?
+- Is it a track type, performance tool, or harmonic lane?
+- Can it be documented without burdening first-run UX?
+
+Deliverable:
+- Short design note in `overture/docs/`.
+- Recommendation to port, reshape, or defer.
+
+## Phase 11: Targeted DSP Maintainability
+
+**Priority:** P3
+**Branch:** `refactor/param-dispatch-boundary`
+
+Continue DSP refactoring only where it reduces real change risk.
+
+Changes:
+- Implement the parameter dispatch boundary from `SEQ8-REFACTOR-PLAN.md`.
+- Keep `seq8.c` as the single compiled translation unit.
+- Separate read-only get handlers from mutating set handlers by behavior area.
+- Preserve atomic multi-field commands.
+- Avoid runtime engine extraction unless required by a concrete feature or bug.
+
+Tests:
+- Native build.
+- WASM build.
+- Emulator integration tests.
+- Focused regression for each moved dispatch family.
+
+## Implementation Order
+
+1. `docs/ux-roadmap-reframe`
+2. `feature/route-check`
+3. `feature/edit-sound-unified`
+4. `upstream/port-low-risk-fixes`
+5. `feature/param-peek`
+6. `feature/move-step-edit-shortcuts`
+7. `feature/auto-overview-readable`
+8. `polish/clip-reveal-leds`
+9. `spike/overture-template-set`
+10. `research/conductor-fit`
+11. `refactor/param-dispatch-boundary`
+
+## Global Acceptance Criteria
+
+- A new user can configure Move tracks 1-4 and Schwung tracks 5-8 from Overture
+  docs.
+- Route/setup problems are visible without consuming normal editing screen space.
+- Track selection, clip selection, and sound editing feel coherent.
+- Common step edits match Move muscle memory.
+- dAVEBOx depth remains available but easier to discover.
+- Upstream bug fixes are ported without losing Overture's intentional divergences.

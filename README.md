@@ -14,6 +14,7 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 > (which already implements ~80% of this) — see `docs/ROADMAP.md` and `docs/MANUAL.md`.
 
 ## Docs
+- `docs/QUICK-START.md` — first-run setup for Move channels, Schwung slots, track selection, clip reveal, and sound editing.
 - `docs/PHILOSOPHY.md` — what Overture is, what it isn't, the principles behind it.
 - `docs/ARCHITECTURE.md` — the runtime stack, the monorepo + fork strategy, moveforge, how to modify it.
 - `docs/ROADMAP.md` — the phased build plan (emulator-first) ← start here.

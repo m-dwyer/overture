@@ -11,13 +11,13 @@ Only the controls that change. Everything not listed is unchanged.
 |---|---|---|---|
 | **Side buttons (CC 40–43)** | clip switch (Track) + clip launch (Session) + clip copy/cut/del | **track-select 1–4**; **Shift+side = 5–8** | #1 |
 | **Hold a side button** | (n/a) | **reveal that track's 16 clips on the steps** → tap to jump | #1 |
-| **Shift+jog (Track)** | switch track | *(freed)* — spare for a later gesture | #1 |
+| **Shift+jog (Track)** | switch track | retained as a fallback; candidate velocity shortcut later | #1 / roadmap Phase 6 |
 | **Shift+bottom-pad** | switch track 1–8 | keep as a fallback, or retire | #1 |
 | **Step buttons (Track)** | pattern | pattern; **while a side button is held → clips** | #1 |
 | **Menu/Note-Session btn** | view toggle + Shift=Global Menu | same; relabel shell "Menu"→**Note/Session** | #2 |
 | **Hold step + Wheel** | silently cycled banks (bug) | **= step length** ✅ done | #3 |
 | **Hold step + Volume** | (K-overlay only) | **= velocity** (deferred — CC 79 passthrough) | #3 |
-| **Hold track + Volume** | (no per-track vol) | **track level** | #4 |
+| **Hold track + Volume** | (no per-track vol) | deprioritized; no clean route to Move native faders | #4 |
 | **Jog-dive Global Menu** | DRUM LANE / NOTE FX etc. | **Shift+Step** shortcuts where Move has them; menu = deep/rare only | #5 |
 | **Loop button** | heavily overloaded | un-overload where possible | #6 |
 
@@ -98,10 +98,10 @@ Performance Mode, Loop View, drum lanes/repeats, ARP, mutes/solos/snapshots) is 
 per-track volume · track-level copy/delete/duplicate · scene = column-swipe · Capture-detects-tempo ·
 sampling (out of scope — no audio) · always-armed-capture (dAVEBOx is close).
 
-**dAVEBOx depth beyond Move (must preserve — this is the product):**
+**dAVEBOx depth plus hybrid unification (must preserve — this is the product):**
 8 tracks (vs 4) · per-step trig conditions (Iter/Prob/Ratch) · automation lanes (8, polyrhythmic) ·
 Performance Mode mod-grid + snapshots · drum repeats/Euclid/per-lane loops · ARP · scene/clip bake +
-live merge + Ableton export · **the p-lock motion lane (Overture's own novel add).**
+live merge + Ableton export · one timeline for Move engines plus Schwung/open tracks.
 
 ## Cross-cutting "other things" to do here
 1. **Pin the LED & colour language** (`UX.md` flags it "unconfirmed"). #1 changes what the side buttons'

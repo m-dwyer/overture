@@ -11,8 +11,8 @@ rest play **open Schwung/moveforge modules** — under one sequencer, one pad/kn
   the hardware, and so could never use Ableton's engines. Different product; see
   `ABLETON-ENGINE-ACCESS.md`.)
 - **Not a Schwung replacement.** It's *built on* Schwung and *ships with* it.
-- **Not dAVEBOx.** It starts as a fork of dAVEBOx (which already does ~80% of this) and diverges
-  into its own product with its own UX + a capability dAVEBOx lacks (see below).
+- **Not dAVEBOx.** It starts as a fork of dAVEBOx (which already does most of the substrate) and
+  diverges into its own product with its own hybrid-first UX.
 
 ## Core principles
 
@@ -34,11 +34,10 @@ rest play **open Schwung/moveforge modules** — under one sequencer, one pad/kn
    plus open-module tracks) rides robust seams. The cherries (live param p-locks, preset switching)
    are best-effort and degrade gracefully. Never let a fragile feature be load-bearing.
 
-5. **Differentiate on UX + one unique capability.** Two things make Overture *Overture*:
-   - a **cohesive groovebox UX** (you design it; the Ableton/open seam disappears for the user);
-   - **sequenced parameter automation of Move's real engines** — the cable-0 encoder-CC "p-lock
-     lane" (our discovery; dAVEBOx edits Move params only *manually* via co-run, doesn't sequence
-     them). This is the novel, additive thing.
+5. **Differentiate on unified depth.** Move already has native per-step parameter automation, so
+   Overture does not win by claiming Move lacks p-locks. It wins by making one deeper timeline for
+   Move engines and Schwung/open tracks: 8 tracks, trig conditions, polyrhythmic automation,
+   bake/export, and a cohesive groovebox UX where the Ableton/open seam disappears for the user.
 
 6. **Minimal divergence from upstreams.** Keep Schwung changes tiny + capability-gated + tracked to
    upstream (and upstream what you can — e.g. co-run). Diverge freely only in the *tool* (your code).

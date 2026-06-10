@@ -49,13 +49,15 @@ held track button. Everything else is preserved or improved, and live performanc
 Session surface, so flow for *making songs and performing* is intact.
 
 ## Reconciliation matrix (the big divergences)
-| Area | Move-native | dAVEBOx today | Overture proposal |
+Some rows are already shipped in Overture; remaining target work is tracked in `ROADMAP.md`.
+
+| Area | Move-native | dAVEBOx today | Overture current / target |
 |---|---|---|---|
-| **Clips** | Session pad-grid launches/selects; scene = vertical finger-swipe | Side buttons (both views) **+** Session grid **+** steps-as-scenes | Launch/arrange on the **Session grid** (Move-native); **edit-clip flip → hold-track → 16 clips on steps** (see flagship). Scenes: keep steps-as-scene **or** adopt column-swipe (open). |
+| **Clips** | Session pad-grid launches/selects; scene = vertical finger-swipe | Side buttons (both views) **+** Session grid **+** steps-as-scenes | **Shipped:** launch/arrange on the **Session grid**; **edit-clip flip → hold-track → 16 clips on steps**. Scenes: keep steps-as-scene **or** adopt column-swipe (open). |
 | **View toggle** | Dedicated **Note/Session** button; **track buttons enter Note** | "Menu / Note-Session" button (tap=toggle, Shift=Global Menu) | Keep it a **pure view toggle**; relabel our shell "Menu" → **Note/Session**. Track buttons select track *and* land in Track View (Move-like). |
 | **Menus** | **Shift+Step = 16 named menus** (one button → 16 shortcuts) | Shift+Step shortcuts (**already Move-aligned!**) **+** a jog-dive Global Menu | Keep/extend **Shift+Step** (fast, Move-native). **Demote the jog-dive Global Menu** to deep/rare settings only. Your DRUM-LANE / NOTE-FX confusion was the jog-dive — Move puts those on Shift+Step. |
-| **Per-step edit** | hold step → **Volume=vel, Wheel=length, ±=transpose, arrows=nudge, Device-enc=automation, pads=chord** (the meta-gesture) | hold step → **K1–K8 overlay** (Oct/Pit/Leng/Vel/Nudg/Iter/Prob/Ratch) | **Hybrid:** adopt Move's hold-step → Volume=vel / Wheel=length / pads=chord as the **immediate layer** (muscle memory); keep the K-overlay for the **deep trig params** (Iter/Prob/Ratch). Preserves dAVEBOx depth, gains Move immediacy. |
-| **Per-track level** | hold **track + Volume** = track volume | **none** (master only — a documented Limitation) | **Add** hold-track + Volume → track level (route to Move mixer / Schwung chain). Closes a Move gap; satisfies the `UX.md` "unified levels" item. |
+| **Per-step edit** | hold step → **Volume=vel, Wheel=length, ±=transpose, arrows=nudge, Device-enc=automation, pads=chord** (the meta-gesture) | hold step → **K1–K8 overlay** (Oct/Pit/Leng/Vel/Nudg/Iter/Prob/Ratch) | **Partly shipped:** hold-step + Wheel edits length; K-overlay remains. Target: add velocity, transpose, and nudge shortcuts. |
+| **Per-track level** | hold **track + Volume** = track volume | **none** (master only — a documented Limitation) | **Deprioritized:** current probes found no clean route to Move's native faders from inside Overture. |
 | **Modifier density** | some 3-key chords (Shift+Mute+track=solo) but mostly 2-key | **many 3-key chords** (Shift+Delete+side, Shift+Mute+lane, Mute+Delete+step…) and a **heavily overloaded Loop** | Trim 3-key chords where a 2-key/contextual gesture suffices; un-overload **Loop** where possible. |
 | **Modes** | **3 top-level** (Overview / Note / Session) + 1 toggle | Track / Session **+** Global menu / Loop / Performance / alt-param / Arp-steps | Keep the depth but make **entry/exit consistent + LED-signposted**; fold alt-param/arp-steps behind clearer gestures. |
 
@@ -92,16 +94,12 @@ Everything keeps a home (full inventory + per-item destination in `DAVEBOX-CHANG
 - **Gained:** per-track volume (Move has it, dAVEBOx doesn't); track-level copy/delete (Copy+track).
 - **The one real cost:** clips lose their *always-on* button strip → hold-to-reveal (see flagship).
 
-## Phased change list (proposed order)
-1. **Track-nav** — 4 side buttons → track-select (1–4) + **Shift = 5–8**, with LED state; relocate
-   side-button clip ops to Session. *(the flagship; the friction you found)*
-2. **Relabel + align** the Note/Session button and the shell labels.
-3. **Per-step immediate layer** — hold-step + Volume=vel, + Wheel=length, + pads=chord.
-4. **Per-track volume** — hold-track + Volume.
-5. **Demote jog-dive menus** → Shift+Step where Move has them.
-6. **Trim** gratuitous 3-key chords / un-overload Loop.
-
-Each lands as a `tool/` fork commit, prototyped + regression-tested in the emulator first.
+## Current status
+- **Shipped:** side buttons select tracks 1-4, Shift + side selects 5-8, clip switching moved to
+  hold-side reveal on the steps, and hold-step + jog edits step length.
+- **Deprioritized:** hold-track + Volume for Move-native faders, because no clean route was found.
+- **Tracked in `ROADMAP.md`:** Route Check, Edit Sound unification, parameter peek, Move-like step
+  editing shortcuts, AUTO overview refinement, and clip-reveal LED polish.
 
 ## Open decisions (need a call before coding)
 - **Track banking:** Shift+side for 5–8, or a dedicated bank toggle with a persistent LED?

@@ -74,12 +74,13 @@ Two resource pools: **≤4 Ableton-engine slots** (`ROUTE_MOVE`, inject cable 2 
 be Ableton *or* hosted; tracks 5+ are hosted-only. One uniform `track_view` + param descriptor → one
 renderer for both kinds.
 
-## The p-lock lane (Overture's novel feature)
-Sequenced automation of Move's **real engine parameters** via **cable-0 encoder-CC injection** →
-`MidiSurface` → `GetMappedParameter` → `SetManualValue` (proven on device; see
-`ABLETON-ENGINE-ACCESS.md`). Positional addressing (knob N = current device view's mapping), so it
-**composes with co-run**: co-run targets Move's device page; the lane injects the encoder deltas. dAVEBOx
-doesn't do this — it's the additive capability.
+## Unified automation
+Move already has native per-step parameter automation. Overture's automation work is about making a
+single deeper timeline for Move engines and Schwung/open tracks, not claiming Move lacks p-locks.
+For Move-routed tracks, the measured route is **cable-0 encoder-CC injection** →
+`MidiSurface` → `GetMappedParameter` → `SetManualValue` (see `ABLETON-ENGINE-ACCESS.md`). Positional
+addressing means knob N controls the current device view's mapping, so it composes with co-run when
+Move's native device page is the target.
 
 ## Module authoring & the open-engine side (moveforge)
 
