@@ -90,6 +90,7 @@ Tests:
 
 **Priority:** P0
 **Branch:** `feature/edit-sound-unified`
+**Status:** Done — local implementation
 
 Make co-run feel like one command regardless of route.
 
@@ -291,6 +292,59 @@ Tests:
 - Emulator integration tests.
 - Focused regression for each moved dispatch family.
 
+## Phase 12: Web Lint Hardening
+
+**Priority:** P4
+**Branch:** `quality/web-lint-hardening`
+
+Tighten the emulator/web TypeScript lint gate after the main UX work settles.
+
+Changes:
+- Keep `tsc --noEmit` as the primary type gate.
+- Expand ESLint beyond the initial double-assertion guard where signal is high.
+- Prefer rules that prevent real maintenance problems:
+  - unsafe `any` usage at module boundaries;
+  - stale React hook dependencies;
+  - unhandled promises;
+  - unused eslint-disable comments;
+  - accidental floating `void`/timer work in tests.
+- Add typed helper modules for browser/test globals instead of inline casts.
+- Keep generated assets, screenshots, build output, and vendored host shims out
+  of lint scope.
+
+Tests:
+- `pnpm lint`.
+- `pnpm typecheck`.
+- `pnpm test:node`.
+- At least one negative lint fixture or documented command proving the custom
+  smell rule catches nested type assertions.
+
+## Phase 13: C Static Analysis Spike
+
+**Priority:** P4
+**Branch:** `quality/c-static-analysis-spike`
+
+Evaluate low-noise C analysis for `tool/dsp` and native glue without disrupting
+the single-translation-unit DSP build.
+
+Questions:
+- Can `clang-tidy` run against `seq8.c` with the same include paths and defines
+  used by native and WASM builds?
+- Does `cppcheck` find useful issues with less setup noise?
+- Can compiler warnings be tightened (`-Wall -Wextra` subsets, conversion checks)
+  without fighting intentional DSP patterns?
+- Which warnings are real bugs/readability wins versus embedded/QuickJS/host
+  integration noise?
+- Should analysis run in CI by default, or remain an explicit maintainer command?
+
+Acceptance:
+- Document the chosen tool, command, suppressions, and expected noise level.
+- Add a non-blocking script first if findings are noisy.
+- Promote to a blocking check only after the current tree is clean under the
+  selected rule set.
+- Do not require restructuring `seq8.c` or changing the release build topology
+  just to satisfy tooling.
+
 ## Implementation Order
 
 1. `docs/ux-roadmap-reframe`
@@ -304,6 +358,8 @@ Tests:
 9. `spike/overture-template-set`
 10. `research/conductor-fit`
 11. `refactor/param-dispatch-boundary`
+12. `quality/web-lint-hardening`
+13. `quality/c-static-analysis-spike`
 
 ## Global Acceptance Criteria
 

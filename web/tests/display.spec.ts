@@ -5,12 +5,15 @@ import { test, expect } from "@playwright/test";
 // class) systematically instead of by luck. OLED-only (the shell's LEDs blink, the
 // OLED is static), and we never press Play, so each page is deterministic.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyGlobal = any;
+type DisplayPageGlobal = typeof globalThis & {
+  OVT: {
+    midiIn(status: number, d1: number, d2: number): void;
+  };
+};
 type Page = import("@playwright/test").Page;
 
 const mi = (page: Page, s: number, d1: number, d2: number) =>
-  page.evaluate(([a, b, c]) => (globalThis as AnyGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
+  page.evaluate(([a, b, c]) => (globalThis as DisplayPageGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
 
 // momentary CC press (down+up)
 const tap = async (page: Page, cc: number) => {

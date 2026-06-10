@@ -22,8 +22,26 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(ui.globalMenuState).toBeTruthy();
     ui.globalMenuState!.selectedIndex = idx;
     h.step(1);
-    h.cc(3, 127);
-    h.step(3);
+    h.press(3);
+    h.step(2);
+  }
+
+  function openEditSoundFromGlobalMenu(): void {
+    openGlobalMenu();
+    const ui = h.ui() as {
+      globalMenuItems?: Array<{ label?: string }>;
+      globalMenuState?: { selectedIndex: number };
+    };
+    const labels = ui.globalMenuItems?.map((item) => item?.label) ?? [];
+    expect(labels).toContain("Edit Sound...");
+    expect(labels).not.toContain("Edit Slot...");
+    expect(labels).not.toContain("Edit Synth...");
+    const idx = labels.findIndex((label) => label === "Edit Sound...");
+    expect(ui.globalMenuState).toBeTruthy();
+    ui.globalMenuState!.selectedIndex = idx;
+    h.step(1);
+    h.press(3);
+    h.step(2);
   }
 
   function closeRouteCheckAndMenu(): void {
@@ -121,7 +139,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
   });
 
   test("Route Check shows no slot for an unmatched custom Schwung channel", () => {
-    const ui = h.ui() as unknown as { trackChannel: number[] };
+    const ui = h.ui();
     h.set("t5_channel", 16);
     ui.trackChannel[5] = 16;
     try {
@@ -142,7 +160,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
   });
 
   test("Route Check follows custom Schwung channel when a slot matches", () => {
-    const ui = h.ui() as unknown as { trackChannel: number[] };
+    const ui = h.ui();
     const originalSlots = globalThis.shadow_get_slots;
     globalThis.shadow_get_slots = () => [
       { channel: 5, name: "Slot1" },
@@ -166,6 +184,77 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.set("t5_channel", 6);
       ui.trackChannel[5] = 6;
       closeRouteCheckAndMenu();
+    }
+  });
+
+  test("Edit Sound menu action preflights Move route then enters Move co-run", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    openEditSoundFromGlobalMenu();
+    expect(ui.pendingEditSoundEntry).toBeTruthy();
+    expect(h.rec.text()).toMatch(/EDIT SOUND/);
+    expect(h.rec.text()).toMatch(/T1 Move Ch1/);
+    h.step(30);
+    expect(ui.moveCoRunTrack).toBe(0);
+    h.tapStep(2);
+    h.step(3);
+    expect(ui.moveCoRunTrack).toBe(-1);
+  });
+
+  test("Shift+Step 3 preflights Schwung route then enters chain co-run", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    h.hold(49);
+    h.tapStep(2);
+    h.release(49);
+    h.step(3);
+    expect(ui.pendingEditSoundEntry).toBeTruthy();
+    expect(h.rec.text()).toMatch(/EDIT SOUND/);
+    expect(h.rec.text()).toMatch(/T5 Schwung Slot1/);
+    h.step(30);
+    expect(ui.schwungCoRunSlot).toBe(0);
+    h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
+    expect(ui.schwungCoRunSlot).toBe(-1);
+  });
+
+  test("Edit Sound shows NO SLOT preflight for unmatched Schwung route", () => {
+    const ui = h.ui();
+    const originalSlots = globalThis.shadow_get_slots;
+    globalThis.shadow_get_slots = () => [
+      { channel: 6, name: "Slot2" },
+      { channel: 7, name: "Slot3" },
+      { channel: 8, name: "Slot4" },
+    ];
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    try {
+      openEditSoundFromGlobalMenu();
+      expect(h.rec.text()).toMatch(/NO SLOT/);
+      expect(h.rec.text()).toMatch(/Ch5/);
+      h.step(30);
+      expect(ui.schwungCoRunSlot).toBe(0);
+      h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
+      expect(ui.schwungCoRunSlot).toBe(-1);
+    } finally {
+      globalThis.shadow_get_slots = originalSlots;
+    }
+  });
+
+  test("Edit Sound reports unavailable when co-run host API is missing", () => {
+    const ui = h.ui();
+    const originalBegin = globalThis.shadow_corun_begin;
+    Reflect.set(globalThis, "shadow_corun_begin", undefined);
+    ui.activeTrack = 0;
+    try {
+      openEditSoundFromGlobalMenu();
+      expect(h.rec.text()).toMatch(/CO-RUN/);
+      expect(h.rec.text()).toMatch(/UNAVAILABLE/);
+      expect(ui.pendingEditSoundEntry).toBeNull();
+      h.step(30);
+      expect(ui.moveCoRunTrack).toBe(-1);
+    } finally {
+      Reflect.set(globalThis, "shadow_corun_begin", originalBegin);
     }
   });
 });

@@ -55,11 +55,19 @@ export interface UiState {
   activeTrack: number;
   activeBank: number;
   sessionView: boolean;
+  moveCoRunTrack: number;
+  schwungCoRunSlot: number;
+  pendingEditSoundEntry: unknown | null;
   trackActiveBank: number[];
   trackActiveClip: number[];
+  trackChannel: number[];
   trackPadMode: number[];
   activeDrumLane: number[];
   [key: string]: unknown;
+}
+
+declare global {
+  var overtureUiState: UiState | undefined;
 }
 
 export interface Harness {
@@ -105,6 +113,10 @@ export async function createHarness(): Promise<Harness> {
     encoder(k, dir) { emu.sendInternal(0xb0, 71 + k, dir === 1 ? 1 : 127); step(1); },
     get(key) { return emu.dsp.get(key); },
     set(key, val) { emu.dsp.set(key, val); },
-    ui() { return (globalThis as { overtureUiState?: UiState }).overtureUiState as UiState; },
+    ui() {
+      const state = globalThis.overtureUiState;
+      if (!state) throw new Error("overtureUiState is not initialized");
+      return state;
+    },
   };
 }

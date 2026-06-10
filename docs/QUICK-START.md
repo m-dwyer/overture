@@ -14,8 +14,7 @@ sequence.
 - Track 4 receives MIDI channel 4.
 - Leave Move's own transport stopped when sequencing from Overture.
 - Pick the Move presets/devices in Move's native UI first; Overture can enter
-  native sound editing with Edit Sound, but route diagnosis is still manual until
-  the Route Check phase lands.
+  native sound editing with Edit Sound and diagnose routing with Route Check.
 
 Overture drives these tracks by MIDI injection into the running Move engine. It
 does not replace MoveOriginal.
@@ -71,9 +70,9 @@ Use Edit Sound when you want the native editor for the active route.
   controls.
 - Exit back to Overture with the normal co-run exit gesture.
 
-Current builds may still expose the route-specific labels `Edit Synth...` and
-`Edit Slot...`. The roadmap's target label is `Edit Sound...`; the behavior is
-already the co-run sound-edit flow.
+Before handoff, Overture briefly shows the target route, for example
+`EDIT SOUND / T3 Move Ch3` or `EDIT SOUND / T5 Schwung Slot1`. Route problems
+show as short notices such as `NO SLOT`, `MOVE CH>4`, or `CO-RUN UNAVAILABLE`.
 
 ## 6. Sequence and automate
 

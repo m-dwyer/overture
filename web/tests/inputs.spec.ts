@@ -5,12 +5,14 @@ import { test, expect } from "@playwright/test";
 // relative turn CCs the encoders/jog/volume send — the inputs Overture gates
 // gestures + Shift LED hints on. This is the regression net for the I/O boundary.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyGlobal = any;
+type MidiCaptureGlobal = typeof globalThis & {
+  __midi: number[][];
+  onMidiMessageInternal?: (data: number[]) => unknown;
+};
 
 async function startCapture(page: import("@playwright/test").Page) {
   await page.evaluate(() => {
-    const g = globalThis as AnyGlobal;
+    const g = globalThis as MidiCaptureGlobal;
     const orig = g.onMidiMessageInternal;
     g.__midi = [];
     g.onMidiMessageInternal = (d: number[]) => {
@@ -20,7 +22,10 @@ async function startCapture(page: import("@playwright/test").Page) {
   });
 }
 const drain = (page: import("@playwright/test").Page) =>
-  page.evaluate(() => (globalThis as AnyGlobal).__midi.splice(0) as number[][]);
+  page.evaluate(() => {
+    const g = globalThis as MidiCaptureGlobal;
+    return g.__midi.splice(0);
+  });
 
 async function center(page: import("@playwright/test").Page, label: string) {
   const box = (await page.getByLabel(label).boundingBox())!;

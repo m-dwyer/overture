@@ -1,8 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- in-page globals are untyped
-type AnyGlobal = any;
+type PageGlobal = typeof globalThis & {
+  OVT: {
+    leds: Map<number, number>;
+    buttonLeds: Map<number, number>;
+    midiIn(status: number, d1: number, d2: number): void;
+  };
+  __midi: number[][];
+  onMidiMessageInternal?: (data: number[]) => unknown;
+};
 
 // Smoke + screenshot: the real tool UI should boot and render to the OLED canvas
 // without throwing. Captures shot.png (full page) + shot-oled.png (crop) for review.
@@ -23,7 +30,7 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
   expect(await page.locator("#log").textContent()).toContain("behavior tier");
   // The tool must drive LEDs (via move_midi_internal_send) — at least some lit.
   const litLeds = await page.evaluate(() => {
-    const o = (globalThis as { OVT: { leds: Map<number, number>; buttonLeds: Map<number, number> } }).OVT;
+    const o = (globalThis as PageGlobal).OVT;
     let n = 0;
     for (const c of o.leds.values()) if (c > 0) n++;
     for (const c of o.buttonLeds.values()) if (c > 0) n++;
@@ -47,18 +54,18 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
   // (a) A DOM shell button delivers the exact device MIDI. Use Step 1 (CC16) —
   // a non-view-changing control so it doesn't disturb (b).
   await page.evaluate(() => {
-    const g = globalThis as AnyGlobal;
+    const g = globalThis as PageGlobal;
     const orig = g.onMidiMessageInternal;
     g.__midi = [];
     g.onMidiMessageInternal = (d: number[]) => { g.__midi.push([...d]); return orig?.(d); };
   });
   await page.locator("#shell .step").first().click();
-  const midi = await page.evaluate(() => (globalThis as AnyGlobal).__midi);
+  const midi = await page.evaluate(() => (globalThis as PageGlobal).__midi);
   expect(midi).toEqual([[0x90, 16, 127], [0x80, 16, 0]]); // step = NOTE 16
 
   // (b) Shift+Menu opens the global menu → the OLED must change.
   const mi = (s: number, d1: number, d2: number) =>
-    page.evaluate(([a, b, c]) => (globalThis as AnyGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
+    page.evaluate(([a, b, c]) => (globalThis as PageGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
   await mi(0xb0, 49, 127); // Shift down
   await mi(0xb0, 50, 127); // Menu down → openGlobalMenu
   await mi(0xb0, 50, 0);

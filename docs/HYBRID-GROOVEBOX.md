@@ -23,7 +23,7 @@ most of our open questions:
   channel). Our #1 make-or-break Phase-0 question is answered *yes* by a shipping product.
 - **Editing/browsing solved by "co-run"** (`schwung/docs/CORUN.md`, `shadow_corun_begin/end`): hand
   the OLED + nav controls to **Move's own native device-edit / preset-browser** inside the tool while
-  the sequencer keeps playing (`Edit Synth...`). This **replaces our shadow-scrape/puppeteer plan for
+  the sequencer keeps playing (`Edit Sound...`). This **replaces our shadow-scrape/puppeteer plan for
   the *editing* case** — cleaner and far less fragile (it *is* Move's UI).
 - **Audio is MIDI-only → route to Schwung slots.** Don't host engines/mix audio yourself; open synths
   live in Schwung slots (now 4 audio-FX + send buses A/B + master FX). Drops the "fork host for audio"
