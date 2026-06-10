@@ -27,14 +27,20 @@ few Move conveniences [#4 per-track vol], (3) different controls [the reconcile 
 `davebox-prior-art` (corrected) + `move-live-engine-seams`.
 
 ### Next up — re-prioritised (start here)
-1. **The wedge experiment = the inject spike** (formerly P0 #2, reframed). `move_midi_inject_to_move` is
-   confirmed on-device; inject CC7 / encoder-CC on a Move-routed channel and **map what the engines
-   actually respond to**. Answers **#4 per-track volume** AND tells us whether engine-param sequencing is
-   worth building *given Move already does p-locks natively*. Highest-leverage "find the real wedge."
+1. ✅ **DONE (2026-06-10) — the wedge experiment / inject spike.** Verdict: **#4 per-track volume has no
+   clean route** (CC7 flat §4.1.3; CC79 = master encoder, bleeds to master; D-Bus has no set method).
+   Detail: `WEDGE-EXPERIMENT.md`, `INJECT-PROBE.md`, memory `move-live-engine-seams`. Probe is now pure-JS
+   (`overture/tool/tools/inject-probe`).
 2. **Exercise the open-tracks story** — sequence ≥1 Schwung-routed (open-engine) track alongside Move's 4
-   in one Overture timeline. The genuine unification differentiator.
-3. **#3B** velocity (Shift+jog) — cheap warm-up if you want momentum.
-4. **#5 / #6** reconcile polish — lowest value now; don't lead with these.
+   in one Overture timeline. The genuine unification differentiator. *(In progress — validation findings in
+   "Backlog — fidelity findings" below.)*
+3. **Note-length default → quick win.** Change the default per-step gate to be **sound-correct** (Move plays
+   its presets full-step; 0.5 clips pads/keys): **Keys 1.0 / Drum 0.5**, Mode-aware. Low effort, high
+   fidelity payoff. Detail in Backlog.
+4. **Phase 3 / param discoverability — now a top priority** (see Phase 3). "Hunting down params" is the core
+   legibility problem and the flagship UX work.
+5. **#3B** velocity (Shift+jog) — cheap warm-up if you want momentum.
+6. **#5 / #6** reconcile polish — lowest value now; don't lead with these.
 
 Housekeeping: merged branches (change-1-track-nav, oled-bank-strip, change-3-perstep, corun-tooling-and-docs)
 are safe to delete.
@@ -71,6 +77,10 @@ wasm-DSP loader, input engine) — *not* by absorbing moveforge. See `EMULATOR.m
 Design Overture's surface in the emulator (see `UX.md`): mode/navigation model, the **motion lane**
 (flagship), the **co-run "zoom into sound"** gesture, track navigation, the **color/feedback language**.
 Edit *down* for immediacy/legibility — don't pile onto dAVEBOx's depth.
+- **First concrete target (raised by #2 validation): param discoverability.** Per-step/per-track params are
+  scattered across modal contexts (hold-step Step Edit, the 7 Global-Menu banks, Track Config, automation
+  lanes) with positional, unlabeled encoders — you must already know the gesture+bank before you can see a
+  param. Candidate experiments: param search, persistent labels, fewer modes.
 - **Done when:** the instrument's surface feels like *Overture*, validated in-emulator.
 
 ## Phase 4 — p-lock lane (on device)
@@ -115,3 +125,18 @@ Own the launch entrypoint so power-on lands in Overture (after the engine is up)
 - Emulator fidelity: how far to push behavior-tier (real `seq8`-wasm) vs mock.
 - Default module set to bundle (lean; rest via Schwung store).
 - Whether to upstream the p-lock capability to dAVEBOx/Schwung (collaboration vs own product).
+
+---
+
+## Backlog — fidelity findings (from #2 open-tracks validation, 2026-06-10, device-confirmed)
+- **Note-length default → "Next up" #3.** Move stamps new steps at **1.0 / full step** (device-confirmed on a
+  fresh set, every track); Overture/davebox stamps **0.5** (`GATE_TICKS 12 / TICKS_PER_STEP 24` in
+  `dsp/seq8.c`; `stepEditGate: 12` in `ui/ui_state.mjs`) → sustained/pad/keys presets sound clipped vs native
+  Move. Overture *replaces Move's sequencing but plays Move's sounds*, which are voiced for full-step, so the
+  default should be **sound-correct, not a 50% groovebox default**. Fix: **Keys 1.0 / Drum 0.5** (Mode-aware,
+  using the Drum/Keys mode davebox already tracks) — or flat 1.0. Only affects newly-placed steps; existing
+  patterns keep their stored gate. DSP rebuild required.
+- **Track Mode must match the Move instrument (minor).** A davebox **Drum**-mode track on a *melodic* Move
+  preset (e.g. Choir Pad) plays fixed lane notes instead of the scale layout → sounds wrong. No code bug; a
+  setup/feedback gap (consider a warning, or a smarter default when Route=Move + preset category is known).
+- **Param discoverability** — promoted into **Phase 3** as its first concrete target (see above).
