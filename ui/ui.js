@@ -790,7 +790,7 @@ function autoLaneFullLabel(t, k) {
         return name ? ('Schwung K' + assign + ' ' + name) : ('Schwung chain knob ' + assign);
     }
     if (assign < 0) return 'Unassigned automation lane';
-    if ((S.trackRoute[t] | 0) === 1) return 'Move K' + (k + 1) + ' current param';
+    if ((S.trackRoute[t] | 0) === 1) return 'Move K' + (k + 1) + ' target';
     return 'Control Change ' + fmtCCLabel(assign);
 }
 
@@ -805,6 +805,15 @@ function paramPeekInfo() {
     const k = S.knobTouched;
     const ac = effectiveClip(t);
     const clipLabel = SCENE_LETTERS[ac] || String(ac + 1);
+    if (bank === 6 && S.trackPadMode[t] === PAD_MODE_DRUM) {
+        return {
+            header: 'AUTO T' + (t + 1) + ' Drum',
+            knob: 'K' + (k + 1) + ' --',
+            full: 'Melodic AUTO only',
+            value: 'Use DRUM/NOTE banks',
+            scope: routeScopeShortLabel(t)
+        };
+    }
     if (bank === 6 && S.trackPadMode[t] !== PAD_MODE_DRUM) {
         return {
             header: 'AUTO T' + (t + 1) + ' Clip ' + clipLabel,
