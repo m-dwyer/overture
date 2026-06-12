@@ -383,6 +383,42 @@ Acceptance:
 - Do not require restructuring `seq8.c` or changing the release build topology
   just to satisfy tooling.
 
+## Phase 14: Move Parameter Name Discovery Spike
+
+**Priority:** P3
+**Branch:** `spike/move-param-name-discovery`
+
+Find out whether Overture can replace generic Move-routed AUTO labels such as
+`Move target` with the actual parameter name currently controlled by the Move
+encoder, for example `Filter Cutoff`, `Delay Feedback`, or another device
+parameter label.
+
+Goal:
+- Prefer a live or project-derived lookup from Move itself over a hand-maintained
+  table.
+- Keep Param Peek honest: only show parameter names when they come from a
+  reliable source of truth.
+- Fall back to `Move target` when the current Move-side parameter cannot be
+  identified.
+
+Questions:
+- Does Move expose active device/parameter names over MIDI, USB, display
+  feedback, sysex, logs, project/session files, or another observable channel?
+- Can Overture correlate the touched encoder/lane with the Move-side parameter
+  name without disrupting normal Move control?
+- Are parameter mappings stable enough for stock Move instruments/effects to
+  support a static fallback table?
+- If live lookup is unavailable, is a user-editable alias table worthwhile, or
+  would it create too much maintenance friction?
+
+Acceptance:
+- Document every discovery path tested and the observed result.
+- If a reliable source exists, add a follow-up implementation phase with the
+  proposed data model, cache invalidation rules, and device-test plan.
+- If no reliable source exists, document the best fallback (`Move target`, static
+  lookup, or user aliases) and the reason.
+- Do not ship guessed Move parameter names as facts.
+
 ## Implementation Order
 
 1. `docs/ux-roadmap-reframe`
@@ -398,6 +434,7 @@ Acceptance:
 11. `refactor/param-dispatch-boundary`
 12. `quality/web-lint-hardening`
 13. `quality/c-static-analysis-spike`
+14. `spike/move-param-name-discovery`
 
 ## Global Acceptance Criteria
 
