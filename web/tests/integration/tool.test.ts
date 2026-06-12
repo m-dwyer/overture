@@ -281,7 +281,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       const text = h.rec.text();
       expect(text).toMatch(/AUTO T1 Clip A/);
       expect(text).toMatch(/K2 L2 CC74/);
-      expect(text).toMatch(/Move K2 current/);
+      expect(text).toMatch(/Move K2 target/);
       expect(text).toMatch(/Value 64/);
       expect(text).toMatch(/Lane \/ T1 Move Ch1/);
       expect(h.get("t0_cc_assigns")).toBe(before);
@@ -317,6 +317,26 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       expect(h.rec.text()).toMatch(/K4 L4 --/);
     } finally {
       touchKnob(3, false);
+    }
+  });
+
+  test("AUTO Param Peek gives a readable drum-mode fallback", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    ui.activeBank = 6;
+    ui.sessionView = false;
+    ui.trackPadMode[0] = 1;
+    ui.knobTouched = -1;
+
+    try {
+      touchKnob(0, true);
+      const text = h.rec.text();
+      expect(text).toMatch(/AUTO T1 Drum/);
+      expect(text).toMatch(/Melodic AUTO only/);
+      expect(text).toMatch(/Use DRUM\/NOTE banks/);
+      expect(text).toMatch(/T1 Move Ch1/);
+    } finally {
+      touchKnob(0, false);
     }
   });
 
