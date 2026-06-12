@@ -177,7 +177,7 @@ Make Param Peek feel like a musical editing surface instead of a debug readout,
 while staying compact enough for the 128x64 OLED.
 
 Changes:
-- Add a common CC-name lookup for semantic short labels:
+- [x] Add a common CC-name lookup for semantic short labels:
   - `CC1 Mod Wheel`
   - `CC7 Volume`
   - `CC10 Pan`
@@ -186,23 +186,23 @@ Changes:
   - `CC74 Filter`
   - `CC91 Reverb`
   - `CC93 Chorus`
-- Use semantic short labels in Param Peek:
-  - `K2 CC74 Filter`
-  - `K1 Aftertouch`
-  - `K3 Schw K5 Cutoff`
-  - unknown CCs fall back to `K4 CC22`.
-- Add progressive detail:
+- [x] Use semantic short labels in Param Peek:
+  - `CC74 Filter`
+  - `Aftertouch`
+  - `Schwung knob 5`
+  - unknown CCs fall back to `CC22`.
+- [x] Add progressive detail:
   - knob touch = compact identity, value, clip/scope;
   - hold touch = lane number, route, loop length, resolution/zoom where relevant;
   - turn while touched = edit-focused value display.
-- Prefer `Track 5`, `Clip A`, and `Slot 1` only when they fit; use `T5`, `Clip A`,
+- [x] Prefer `Track 5`, `Clip A`, and `Slot 1` only when they fit; use `T5`, `Clip A`,
   and `Sch S1` when the compact OLED row requires it.
 
 Tests:
-- Emulator tests for known CC labels and unknown CC fallback.
-- Emulator tests for Aftertouch and Schwung labels.
-- Touch-duration tests for summary vs detail mode.
-- Regression that progressive detail does not mutate automation values.
+- [x] Emulator tests for known CC labels and unknown CC fallback.
+- [x] Emulator tests for Aftertouch and Schwung labels.
+- [x] Touch-duration tests for summary vs detail mode.
+- [x] Regression that progressive detail does not mutate automation values.
 
 ## Phase 6: Move-Grammar Step Editing Shortcuts
 

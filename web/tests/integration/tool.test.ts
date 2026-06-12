@@ -280,10 +280,10 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
 
       const text = h.rec.text();
       expect(text).toMatch(/AUTO T1 Clip A/);
-      expect(text).toMatch(/K2 L2 CC74/);
-      expect(text).toMatch(/Move K2 target/);
+      expect(text).toMatch(/Move target/);
       expect(text).toMatch(/Value 64/);
-      expect(text).toMatch(/Lane \/ T1 Move Ch1/);
+      expect(text).toMatch(/Clip A, Lane 2/);
+      expect(text).toMatch(/Route: Move Ch1/);
       expect(h.get("t0_cc_assigns")).toBe(before);
     } finally {
       touchKnob(1, false);
@@ -306,17 +306,82 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
 
     try {
       touchKnob(0, true);
-      expect(h.rec.text()).toMatch(/K1 L1 AT/);
+      expect(h.rec.text()).toMatch(/Aftertouch/);
       touchKnob(0, false);
 
       touchKnob(2, true);
-      expect(h.rec.text()).toMatch(/K3 L3 Sch5/);
+      expect(h.rec.text()).toMatch(/Schwung knob 5/);
       touchKnob(2, false);
 
       touchKnob(3, true);
-      expect(h.rec.text()).toMatch(/K4 L4 --/);
+      expect(h.rec.text()).toMatch(/No target assigned/);
     } finally {
       touchKnob(3, false);
+    }
+  });
+
+  test("AUTO Param Peek names common CC targets outside Move routing", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    ui.activeBank = 6;
+    ui.sessionView = false;
+    ui.trackPadMode[0] = 0;
+    ui.knobTouched = -1;
+    const oldRoute = ui.trackRoute[0];
+    ui.trackRoute[0] = 2;
+    ui.trackCCType[0] = [0, 0, 0, 0, 0, 0, 0, 0];
+    ui.trackCCAssign[0] = [7, 74, 22, 10, 11, 91, 93, 64];
+
+    try {
+      touchKnob(1, true);
+      expect(h.rec.text()).toMatch(/CC74 Filter/);
+      touchKnob(1, false);
+
+      touchKnob(2, true);
+      expect(h.rec.text()).toMatch(/CC22/);
+      touchKnob(2, false);
+
+      touchKnob(0, true);
+      expect(h.rec.text()).toMatch(/CC7 Volume/);
+    } finally {
+      touchKnob(0, false);
+      ui.trackRoute[0] = oldRoute;
+    }
+  });
+
+  test("AUTO Param Peek reveals lane timing detail when held", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    ui.activeBank = 6;
+    ui.sessionView = false;
+    ui.trackPadMode[0] = 0;
+    ui.knobTouched = -1;
+    ui.trackCCType[0] = [0, 0, 0, 0, 0, 0, 0, 0];
+    ui.trackCCAssign[0] = [7, 74, 22, 10, 11, 91, 93, 64];
+    ui.clipCCVal[0][0][1] = 64;
+    ui.ccLaneLength[0][0][1] = 32;
+    ui.ccLaneTps[0][0][1] = 12;
+    ui.ccLaneResTps[0][0][1] = 24;
+
+    try {
+      touchKnob(1, true);
+      let text = h.rec.text();
+      expect(text).toMatch(/AUTO T1 Clip A/);
+      expect(text).toMatch(/Move target/);
+      expect(text).toMatch(/Value 64/);
+
+      h.step(50);
+      text = h.rec.text();
+      expect(text).toMatch(/Move target/);
+      expect(text).toMatch(/Lane 2 \/ Clip A/);
+      expect(text).toMatch(/Route: Move Ch1/);
+      expect(text).toMatch(/Loop 32 steps/);
+      expect(text).toMatch(/Res 1\/16 Zoom 1\/32/);
+    } finally {
+      ui.ccLaneLength[0][0][1] = 0;
+      ui.ccLaneTps[0][0][1] = 0;
+      ui.ccLaneResTps[0][0][1] = 0;
+      touchKnob(1, false);
     }
   });
 
@@ -334,7 +399,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       expect(text).toMatch(/AUTO T1 Drum/);
       expect(text).toMatch(/Melodic AUTO only/);
       expect(text).toMatch(/Use DRUM\/NOTE banks/);
-      expect(text).toMatch(/T1 Move Ch1/);
+      expect(text).toMatch(/Route: Move Ch1/);
     } finally {
       touchKnob(0, false);
     }

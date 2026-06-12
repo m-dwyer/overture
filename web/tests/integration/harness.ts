@@ -61,6 +61,7 @@ export interface UiState {
   trackActiveBank: number[];
   trackActiveClip: number[];
   trackChannel: number[];
+  trackRoute: number[];
   trackPadMode: number[];
   trackClipPlaying: boolean[];
   trackQueuedClip: number[];
@@ -69,6 +70,9 @@ export interface UiState {
   trackCCType: number[][];
   trackCCAssign: number[][];
   clipCCVal: number[][][];
+  ccLaneLength: number[][][];
+  ccLaneTps: number[][][];
+  ccLaneResTps: number[][][];
   [key: string]: unknown;
 }
 
