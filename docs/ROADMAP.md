@@ -91,6 +91,7 @@ Acceptance:
 
 **Priority:** P0
 **Branch:** `refactor/overture-ui-product-seams`
+**Execution notes:** `docs/REFACTOR_ROADMAP.md`
 
 Refactor only where it creates leverage for the Overture-native UX. The goal is
 not more files; the goal is deeper modules with smaller interfaces.
