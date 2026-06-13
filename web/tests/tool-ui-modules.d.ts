@@ -21,5 +21,7 @@ declare module "@tool-ui/ui_sound_edit.mjs" {
 declare module "@tool-ui/ui_motion.mjs" {
   export const PARAM_PEEK_DETAIL_TICKS: number;
   export function autoLaneLabel(track: number, lane: number, includeLane: boolean): string;
+  export function motionIdleModel(track: number, clip: number): any;
+  export function motionOverviewModel(track: number, clip: number): any;
   export function paramPeekInfo(): unknown;
 }

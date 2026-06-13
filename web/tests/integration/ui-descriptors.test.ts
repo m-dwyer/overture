@@ -3,7 +3,7 @@ import { S } from "@tool-ui/ui_state.mjs";
 import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@tool-ui/ui_routes.mjs";
 import { routeCheckStatus, routeCheckViewModel } from "@tool-ui/ui_route_check.mjs";
 import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "@tool-ui/ui_sound_edit.mjs";
-import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, paramPeekInfo } from "@tool-ui/ui_motion.mjs";
+import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@tool-ui/ui_motion.mjs";
 
 describe("UI descriptor seams", () => {
   beforeEach(() => {
@@ -13,6 +13,7 @@ describe("UI descriptor seams", () => {
     S.tickCount = 100;
     S.knobTouched = 1;
     S.knobTouchStartTick = 100;
+    S.altMode = false;
     S.pendingEditSoundEntry = null;
     S._coRunChanSlots = 0;
     S.trackRoute[0] = 1;
@@ -26,9 +27,14 @@ describe("UI descriptor seams", () => {
     S.trackPadMode[0] = 0;
     S.trackActiveClip[0] = 0;
     S.trackQueuedClip[0] = -1;
+    S.ccActiveLane[0] = 1;
     S.trackCCType[0] = [1, 0, 2, 0, 0, 0, 0, 0];
     S.trackCCAssign[0] = [7, 74, 5, -1, 72, 91, 93, 10];
+    S.schLabel[0] = [null, null, "Cutoff", null, null, null, null, null];
+    S.trackCCAutoBits[0][0] = 0b00000101;
+    S.clipAtHas[0][0] = true;
     S.clipCCVal[0][0][1] = 64;
+    S.clipCCVal[0][0][2] = 99;
     S.clipLength[0][0] = 16;
     S.clipTPS[0][0] = 24;
     S.ccLaneLength[0][0][1] = 0;
@@ -176,6 +182,57 @@ describe("UI descriptor seams", () => {
       value: "Route: Move Ch1",
       detail: "Loop 32 steps",
       route: "Res 1/16 Zoom 1/32",
+    });
+  });
+
+  test("motion overview model preserves AUTO bank badges, lane cells, and footer", () => {
+    expect(motionOverviewModel(0, 0)).toMatchObject({
+      heading: "AUTO",
+      badges: ["Sch", "AT", "CC"],
+      footer: "",
+    });
+    expect(motionOverviewModel(0, 0).lanes.slice(0, 4)).toEqual([
+      { lane: 0, label: "AT", value: "--", touched: false, labelInverted: false, valueInverted: false },
+      { lane: 1, label: "CC74", value: "64", touched: true, labelInverted: true, valueInverted: true },
+      { lane: 2, label: "Sch5", value: "99", touched: false, labelInverted: false, valueInverted: false },
+      { lane: 3, label: "--", value: "--", touched: false, labelInverted: false, valueInverted: false },
+    ]);
+    S.knobTouched = 2;
+    expect(motionOverviewModel(0, 0).footer).toBe("Cutoff");
+
+    S.altMode = true;
+    const assignModel = motionOverviewModel(0, 0);
+    expect(assignModel.lanes[0]).toMatchObject({ labelInverted: true, valueInverted: false });
+    expect(assignModel.lanes[1]).toMatchObject({ labelInverted: true, valueInverted: true });
+  });
+
+  test("motion idle model preserves active-lane summary text", () => {
+    S.ccLaneLength[0][0][1] = 32;
+    S.ccLaneTps[0][0][1] = 12;
+    S.ccLaneResTps[0][0][1] = 24;
+
+    expect(motionIdleModel(0, 0)).toEqual({
+      heading: "AUTO",
+      badges: ["Sch", "AT", "CC"],
+      lane: 1,
+      laneLabel: "L2 CC74",
+      value: "64",
+      valueUnderline: true,
+      param: "",
+      paramText: "",
+      resText: "Res: 1/16",
+      zoomText: "Zoom: 1/32",
+      effectiveLength: 32,
+      graphKey: "g_0_0_1",
+      graphPages: 2,
+    });
+
+    S.ccActiveLane[0] = 2;
+    expect(motionIdleModel(0, 0)).toMatchObject({
+      laneLabel: "L3 Sch5",
+      value: "99",
+      param: "Cutoff",
+      paramText: "Cutoff",
     });
   });
 });
