@@ -65,6 +65,24 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(h.rec.litLeds()).toBeGreaterThan(0);
   });
 
+  test("tick drains pending default set params into the real DSP one tick after clearDrainHold", () => {
+    const ui = h.ui();
+    h.set("t0_delay_retrig", "0");
+    ui.pendingDefaultSetParams = [{ key: "t0_delay_retrig", val: "1" }];
+    ui.clearDrainHold = 1;
+    ui.pendingSetLoad = false;
+    ui.pendingDspSync = 0;
+
+    h.step(1);
+    expect(ui.clearDrainHold).toBe(0);
+    expect(ui.pendingDefaultSetParams).toHaveLength(1);
+    expect(h.get("t0_delay_retrig")).toBe("0");
+
+    h.step(1);
+    expect(ui.pendingDefaultSetParams).toHaveLength(0);
+    expect(h.get("t0_delay_retrig")).toBe("1");
+  });
+
   test("Shift+Menu opens the global menu; the jog navigates it (not the K-encoders)", () => {
     // Open: Shift held while Menu is pressed.
     openGlobalMenu();

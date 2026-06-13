@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  runDefaultSetParamDrain,
   runDeferredContentResyncTasks,
   runEndOfTickPersistenceTasks,
   runMoveCoRunTickTasks,
@@ -16,6 +17,56 @@ function calls() {
 }
 
 describe("tick task drains", () => {
+  test("default set-param drain honors hold, load/sync gates, host availability, and FIFO order", () => {
+    const c = calls();
+    const deps = { host_module_set_param: c.fn("set") };
+    const S = {
+      clearDrainHold: 2,
+      pendingDefaultSetParams: [
+        { key: "first", val: "1" },
+        { key: "second", val: "2" },
+      ],
+      pendingSetLoad: false,
+      pendingDspSync: 0,
+    };
+
+    runDefaultSetParamDrain(S, deps);
+    expect(S.clearDrainHold).toBe(1);
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "first", val: "1" },
+      { key: "second", val: "2" },
+    ]);
+    expect(c.log).toEqual([]);
+
+    S.clearDrainHold = 0;
+    S.pendingSetLoad = true;
+    runDefaultSetParamDrain(S, deps);
+    expect(S.pendingDefaultSetParams.map((p: { key: string }) => p.key)).toEqual(["first", "second"]);
+    expect(c.log).toEqual([]);
+
+    S.pendingSetLoad = false;
+    S.pendingDspSync = 3;
+    runDefaultSetParamDrain(S, deps);
+    expect(S.pendingDefaultSetParams.map((p: { key: string }) => p.key)).toEqual(["first", "second"]);
+    expect(c.log).toEqual([]);
+
+    S.pendingDspSync = 0;
+    runDefaultSetParamDrain(S, {});
+    expect(S.pendingDefaultSetParams.map((p: { key: string }) => p.key)).toEqual(["first", "second"]);
+    expect(c.log).toEqual([]);
+
+    runDefaultSetParamDrain(S, deps);
+    expect(S.pendingDefaultSetParams.map((p: { key: string }) => p.key)).toEqual(["second"]);
+    expect(c.log).toEqual([["set", "first", "1"]]);
+
+    runDefaultSetParamDrain(S, deps);
+    expect(S.pendingDefaultSetParams).toEqual([]);
+    expect(c.log).toEqual([
+      ["set", "first", "1"],
+      ["set", "second", "2"],
+    ]);
+  });
+
   test("Move co-run inject arms the same track-button press queue and drains with defensive Shift-off", () => {
     const c = calls();
     const S = {

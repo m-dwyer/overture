@@ -27,6 +27,7 @@ declare module "@tool-ui/ui_motion.mjs" {
 }
 
 declare module "@tool-ui/ui_tick_tasks.mjs" {
+  export function runDefaultSetParamDrain(S: any, deps: any): void;
   export function runMoveCoRunTickTasks(S: any, deps: any): void;
   export function runDeferredContentResyncTasks(S: any, deps: any): void;
   export function runEndOfTickPersistenceTasks(S: any, deps: any): void;
