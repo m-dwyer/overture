@@ -2,7 +2,7 @@
 
 A browser harness that runs Overture's **real UI** (and, later, real DSP) against a **mock of the
 Schwung host + Move hardware**, so UX iterates in seconds instead of build→deploy→device. Lives in
-`overture/web/`. The single highest-leverage early build — it unblocks all UX work (`ROADMAP.md` P2).
+`overture/web/`. It is the first design loop for Overture-native UX work in `ROADMAP.md`.
 
 ## Why this, not the real stack
 The real stack can't run locally: **MoveOriginal is a closed aarch64 binary bound to the SPI
@@ -28,8 +28,8 @@ fidelity for UX design.
 ## Fidelity ladder (start cheap)
 1. **Layout tier** — real UI JS + **JS-mock DSP** (just enough clip/step/playhead state). Enough to
    design modes, navigation, the motion lane, the co-run "zoom" gesture. *Start here.*
-2. **Behavior tier** — real UI JS + **real `seq8`-wasm**. Add once layout settles (depends on P1's wasm
-   build). Real sequencer/automation behavior.
+2. **Behavior tier** — real UI JS + **real `seq8`-wasm**. This is the default test path for behavior
+   that touches sequencing, routing, automation, or persistence.
 
 ## Host-API shim list (the mock surface)
 Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Representative set:
@@ -54,8 +54,9 @@ moveforge's emulator already provides — copy/adapt these (your repo, free), ke
 moveforge's emulator is *module-focused*; Overture's hosts the **tool** + renders the **real OLED UI**.
 
 ## What it can't validate (device-only — don't over-trust)
-Real Ableton-engine sound, the p-lock effect on real engines, device timing/coalescing/jitter, inject
-latency, latency parity, co-run's real behavior, the exact LED budget. → `ROADMAP.md` P0/P4/P5.
+Real Ableton-engine sound, the motion effect on real engines, device timing/coalescing/jitter, inject
+latency, latency parity, co-run's real behavior, and the exact LED budget. Use the emulator first;
+confirm those items on device for the relevant `ROADMAP.md` phase.
 
 ## Build / run
 Reuse moveforge's Vite + wasm toolchain. Target: `mise run dev` (or equivalent) → browser at a local

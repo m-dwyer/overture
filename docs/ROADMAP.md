@@ -1,447 +1,399 @@
-# Overture UX Roadmap Implementation Plan
+# Overture Roadmap
 
-## Summary
+## Product Direction
 
-Overture is an 8-track hybrid sequencer for Ableton Move: Move engines on tracks
-1-4, Schwung/open engines on tracks 5-8, Move-native controls on the surface, and
-dAVEBOx sequencing depth preserved underneath.
+Overture is an Overture-native groovebox for Ableton Move: one fast, cohesive
+surface for sequencing Move engines on tracks 1-4 and Schwung/open engines on
+tracks 5-8, with dAVEBOx depth preserved underneath.
 
-This roadmap replaces the older phase plan. Earlier work proved the substrate:
-the fork builds, the emulator runs the real UI with `seq8`-wasm, side-button
-track navigation is implemented, hold-side clip reveal is implemented, co-run
-works on device, and melodic note defaults now match Move better. The remaining
-product risk is UX: setup clarity, route diagnosis, sound-edit entry, parameter
-discoverability, Move-like step editing, and careful upstream catch-up.
+Overture should not feel like vanilla dAVEBOx with a few renamed menus, and it
+does not need to clone vanilla Move when a different choice is clearer or
+faster. Use Move gestures where they are already good, but optimize for:
 
-Each phase below is intended to be implemented independently on its own branch.
-Earlier phases have higher priority.
+- beginner-friendly first session;
+- fast daily music-making;
+- readable OLED and LED context;
+- fewer menu dives;
+- power features that reveal themselves from track, clip, step, sound, and
+  motion contexts.
 
-## Current Product Facts
+The working mental model is:
+
+- **Perform:** play clips, select tracks, mute/solo, record, use variations.
+- **Shape:** edit steps, clip length, probability, ratchets, automation/motion.
+- **System:** routing, Schwung slots, templates, export, diagnostics, state.
+
+Menus are for setup and deep settings. Musical actions should be reachable from
+the object they affect.
+
+## Completed Baseline
+
+The following work is already part of the baseline and should not remain as
+active roadmap phases:
 
 - Overture is a thick fork of dAVEBOx's `tool/`.
-- Side buttons already select tracks in Track View.
-- Hold a side button already reveals that track's 16 clips on the step buttons.
+- The browser emulator runs the real tool UI with `seq8.wasm`.
+- Side buttons select tracks in Track View.
+- Shift + side buttons select tracks 5-8.
+- Holding a side button reveals that track's 16 clips on the step buttons.
 - The OLED bank-position strip is implemented.
-- Hold step + jog already edits step length.
-- Co-run is implemented and device-verified for Move-native and Schwung-chain
-  sound editing.
-- Move already has native per-step parameter automation, so Overture's automation
-  story is not "Move lacks p-locks." The wedge is unified depth: 8 tracks,
-  trig conditions, polyrhythmic automation, bake/export, and one timeline for
-  Move engines plus Schwung/open tracks.
-- Per-track volume is deprioritized: current probes found no clean route to
-  Move's native faders from Overture.
+- Hold step + jog edits step length.
+- Route Check exists.
+- Edit Sound exists and unifies Move-native and Schwung-chain co-run entry.
+- Param Peek exists, including human-readable CC/AT/Schwung labels.
+- Low-risk upstream dAVEBOx fixes have been ported.
+- Emulator integration tests cover the current track, route, co-run, and Param
+  Peek behavior.
 
-## Phase 1: Documentation Reframe And Quick Start
+Per-track Move volume remains deprioritized. Current probes found no clean route
+to Move's native faders from inside Overture without master-volume bleed or
+foreground-control problems.
 
-**Priority:** P0
-**Branch:** `docs/ux-roadmap-reframe`
-**Status:** Done — parent `4c8d180`, tool `f728d28`
-
-Rewrite planning docs around the current product reality.
-
-Changes:
-- Rewrite this roadmap around unified hybrid sequencing as the wedge.
-- Mark side-button track navigation, hold-side clip reveal, and co-run as already
-  implemented.
-- Reframe motion/p-locks as unified automation across Move and Schwung, not as
-  "Move lacks p-locks."
-- Add or update an Overture Quick Start covering Move MIDI setup, Schwung slot
-  setup, side-button tracks, clip reveal, and Edit Sound.
-- Update `UX.md` with current-vs-target behavior.
-
-Tests:
-- Documentation review.
-- Verify no doc still describes implemented work as future work.
-
-## Phase 2: Route Check Menu
+## Phase 0: Upstream Schwung v0.9.18 Migration
 
 **Priority:** P0
-**Branch:** `feature/route-check`
-**Status:** Done — parent `084e546` + `e0c651d`, tool `4c1c72b` + `668723c`
+**Branch:** `infra/upstream-schwung-0.9.18`
 
-Add a diagnostic Route Check screen without consuming normal Track View header
-space.
+Replace the temporary co-run-patched Schwung path with upstream Schwung
+`v0.9.18` or newer. Co-run is now upstream, so Overture should not keep carrying
+a Schwung fork solely for co-run.
 
 Changes:
-- Add Global Menu item: `Route Check`.
-- Show 8 expected routes:
-  - `T1 Move Ch1`
-  - `T2 Move Ch2`
-  - `T3 Move Ch3`
-  - `T4 Move Ch4`
-  - `T5 Schwung Ch5`
-  - `T6 Schwung Ch6`
-  - `T7 Schwung Ch7`
-  - `T8 Schwung Ch8`
-- For Schwung tracks, show detected slot status where possible: `OK Slot1`,
-  `NO SLOT`, `THRU!`.
-- For Move tracks, show expected channel/manual-check status only unless real
-  verification is available.
-- Show route warnings contextually during co-run entry or route changes.
-- Keep the Track View resting header focused on musical/editing state; do not
-  add persistent route identity there.
 
-Tests:
-- Emulator tests for Route Check formatting.
-- Device check with default routing and at least one mismatch/no-slot case.
+- Update the integrator repo to prefer upstream Schwung for the host/shim layer.
+- Remove or mark legacy temporary co-run bridge tasks and scripts.
+- Keep Overture capability-gated for older or stock hosts:
+  `typeof shadow_corun_begin === 'function'`.
+- Verify `shadow_corun_begin`, `shadow_corun_end`, and
+  `shadow_corun_state` behavior against the upstream host.
+- Preserve the current `tool/` fork as the main product divergence.
 
-## Phase 3: Edit Sound Unification
+Acceptance:
+
+- Overture launches against upstream Schwung `v0.9.18` or newer.
+- Edit Sound works for Move-routed tracks and Schwung-routed tracks.
+- Route Check still detects Schwung slots.
+- Emulator tests pass.
+- Device smoke test confirms co-run entry and exit for both targets.
+
+## Phase 1: Overture UI Product Seams
 
 **Priority:** P0
-**Branch:** `feature/edit-sound-unified`
-**Status:** Done — local implementation
+**Branch:** `refactor/overture-ui-product-seams`
 
-Make co-run feel like one command regardless of route.
+Refactor only where it creates leverage for the Overture-native UX. The goal is
+not more files; the goal is deeper modules with smaller interfaces.
 
-Changes:
-- Rename user-facing `Edit Slot...` / `Edit Synth...` to `Edit Sound...`.
-- Keep route-specific internals:
-  - Move route -> Move-native co-run.
-  - Schwung route -> Schwung chain editor co-run.
-- Add preflight overlays:
-  - `EDIT SOUND / T3 Move Ch3`
-  - `EDIT SOUND / T5 Schwung Slot1`
-  - `NO SLOT / Ch5`
-  - `MOVE CH>4`
-  - `CO-RUN UNAVAILABLE`
-- Preserve Shift+Step 3 as the fast path.
-- Update manual entries that still describe co-run as forthcoming.
+Create focused modules around these product concepts:
 
-Tests:
-- Emulator tests for menu label, route dispatch, and failure overlays.
-- Device test for both co-run targets.
+- **track surface:** active track, track bank, hold-side clip reveal, track
+  labels.
+- **sound edit:** route-specific Edit Sound dispatch, preflight wording, co-run
+  state.
+- **route health:** Move/Schwung channel and slot checks.
+- **motion:** AUTO lane labels, Param Peek, automation context.
+- **shortcut layer:** Shift+Step commands and discoverability.
+- **LED language:** shared track, clip, route, co-run, and automation meanings.
 
-## Phase 4: Upstream dAVEBOx Bug-Fix Port
+Rules:
 
-**Priority:** P1
-**Branch:** `upstream/port-low-risk-fixes`
-**Status:** Done — local implementation
+- Preserve behavior while extracting.
+- Keep `S` as the backing state for now; do not attempt a full state rewrite.
+- Do not split code unless the new module hides real complexity behind a smaller
+  interface.
+- Add or move tests with each extracted behavior.
+- Avoid touching DSP unless a refactor exposes a real DSP contract bug.
 
-Port low-risk upstream improvements while preserving Overture divergences.
+Acceptance:
 
-Must port:
-- "Clips you left off stay off."
-- Save confirmation.
-- Chromatic layout persistence fix, if absent.
-- Drum lane copy gate-length fix, if absent.
-- Drum resync on Shift+jog track switch, if absent.
-- Co-run drum pad single-hit/velocity fix, if absent.
-- Manual/Quick Start corrections adapted to Overture.
+- No intentional user-visible behavior changes.
+- Existing integration tests pass.
+- New tests cover `sound edit`, `route health`, and `motion` formatting through
+  the same interfaces the UI uses.
+- Future UX work should not need to modify unrelated areas of `ui.js`.
 
-Preserve:
-- Side buttons select tracks.
-- Hold-side reveals clips.
-- Overture branding/import paths.
-- WASM/emulator additions.
-- DSP refactor layout.
-
-Tests:
-- Native build.
-- WASM build.
-- Emulator integration tests.
-- Regression for "focused clip with notes does not auto-launch just because the
-  user browsed to it."
-
-## Phase 5: Parameter Discoverability
+## Phase 2: Setup Health And Template Spike
 
 **Priority:** P1
-**Branch:** `feature/param-peek`
-**Status:** Done - local implementation
+**Branch:** `feature/setup-health-template-spike`
 
-Make parameter state legible without requiring users to already know the bank or
-gesture.
-
-Changes:
-- Add Param Peek on knob touch:
-  - bank/context;
-  - full label;
-  - current value;
-  - clip/lane/track/automation/route scope.
-- Improve AUTO lane labels: `L1 AT`, `L2 CC74`, `L3 Sch5`, `L4 --`.
-- For Move positional automation, use conservative labels like
-  `Move K3 current param`.
-- Add a compact shortcut/help overlay for major Shift+Step destinations.
-
-Tests:
-- Emulator tests for knob-touch rendering.
-- Snapshot tests for AUTO labels.
-- Regression that knob touch does not mutate values.
-
-## Phase 5b: Human-Readable Param Peek
-
-**Priority:** P1
-**Branch:** `feature/param-peek-human-labels`
-
-Make Param Peek feel like a musical editing surface instead of a debug readout,
-while staying compact enough for the 128x64 OLED.
+Reduce first-run confusion. A beginner should be able to tell whether Overture
+is ready to make sound and what to fix when it is not.
 
 Changes:
-- [x] Add a common CC-name lookup for semantic short labels:
-  - `CC1 Mod Wheel`
-  - `CC7 Volume`
-  - `CC10 Pan`
-  - `CC11 Expression`
-  - `CC64 Sustain`
-  - `CC74 Filter`
-  - `CC91 Reverb`
-  - `CC93 Chorus`
-- [x] Use semantic short labels in Param Peek:
-  - `CC74 Filter`
-  - `Aftertouch`
-  - `Schwung knob 5`
-  - unknown CCs fall back to `CC22`.
-- [x] Add progressive detail:
-  - knob touch = compact identity, value, clip/scope;
-  - hold touch = lane number, route, loop length, resolution/zoom where relevant;
-  - turn while touched = edit-focused value display.
-- [x] Prefer `Track 5`, `Clip A`, and `Slot 1` only when they fit; use `T5`, `Clip A`,
-  and `Sch S1` when the compact OLED row requires it.
 
-Tests:
-- [x] Emulator tests for known CC labels and unknown CC fallback.
-- [x] Emulator tests for Aftertouch and Schwung labels.
-- [x] Touch-duration tests for summary vs detail mode.
-- [x] Regression that progressive detail does not mutate automation values.
+- Evolve Route Check into Setup Health.
+- Check Schwung version and co-run capability.
+- Check Move track route/channel expectations for tracks 1-4.
+- Check Schwung slots/channels for tracks 5-8.
+- Detect obvious thru, missing-slot, and channel-mismatch cases.
+- Investigate install-time template deployment using `Song.abl`, Schwung set
+  state, and Track Presets.
+- Keep all template probing read-only until the exact write path is proven safe.
 
-## Phase 6: Move-Grammar Step Editing Shortcuts
+Questions:
+
+- Can install tooling create or copy a Set under `UserLibrary/Sets` that Move
+  recognizes?
+- Is a database/index update required?
+- Can `Song.abl` encode the needed track MIDI setup, or is that state elsewhere?
+- Can the Schwung slot state be safely associated with a template Set?
+- Can this be done without corrupting user Sets?
+
+Acceptance:
+
+- Setup Health gives actionable user messages, not debug labels.
+- No user Set is modified during the spike.
+- Findings are documented with exact files and paths tested.
+- If reliable, add a follow-up implementation phase for template deployment.
+- If fragile, document the manual setup path and keep Setup Health as the guide.
+
+## Phase 3: Move-Style Step Editing Shortcuts
 
 **Priority:** P1
 **Branch:** `feature/move-step-edit-shortcuts`
 
-Add Move-like held-step shortcuts while keeping the K-knob deep editor.
+Make common step edits fast without removing dAVEBOx depth.
 
 Changes:
-- Keep existing Step Edit K controls.
+
+- Keep the existing Step Edit K controls.
 - Add held-step shortcuts:
   - `Shift+jog` = velocity.
   - `Plus/Minus` = melodic pitch transpose.
   - `Left/Right` = nudge.
-- Avoid Volume for velocity unless a separate device spike proves no master-volume
-  bleed.
+- Avoid Volume for velocity unless a device spike proves no master-volume bleed.
+- Make OLED feedback clear while each shortcut is active.
 
-Tests:
-- Emulator tests for each shortcut.
-- Real `seq8.wasm` integration tests for persisted velocity, pitch, and nudge.
-- Device test for Shift+jog conflicts.
+Acceptance:
 
-## Phase 7: AUTO Overview Refinement
+- Real `seq8.wasm` tests confirm velocity, pitch, and nudge persist.
+- Existing step-edit trig controls still work.
+- No accidental bank cycling while holding a step.
+- Device test confirms shortcut conflicts are acceptable.
 
-**Priority:** P2
-**Branch:** `feature/auto-overview-readable`
+## Phase 4: Motion Layer Readability
 
-Improve the existing AUTO bank rather than adding another automation page.
+**Priority:** P1
+**Branch:** `feature/motion-layer-readable`
+
+Make AUTO feel like musical motion, not a debug bank. Keep the existing AUTO
+power, but make lane assignment, scope, and activity easier to read.
 
 Changes:
-- Make AUTO resting view an overview:
-  - active track/clip;
-  - 8 lanes;
-  - assignment label;
-  - activity/armed/resting state.
-- In AUTO bank, step LEDs show automation for the active lane:
+
+- Reframe AUTO docs and UI copy as `Motion` where possible without breaking
+  current muscle memory.
+- Improve the resting AUTO/Motion overview:
+  - active track and clip;
+  - lane assignments;
+  - activity, armed, and resting state;
+  - route and scope.
+- In AUTO/Motion bank, step LEDs show automation for the active lane:
   - off = none;
   - dim = automation exists;
-  - bright/pulse = current playhead step.
-- Keep normal Track View step LEDs note-focused outside AUTO.
-- Add target-confirm wording for future Move positional automation.
+  - bright or pulse = current playhead step.
+- Keep Param Peek honest:
+  - known CC names and Schwung labels are allowed;
+  - Move-routed lanes fall back to `Move target` until actual Move parameter
+    names are proven.
 
-Tests:
-- Snapshot tests for AUTO overview.
-- LED-state tests for active lane automation points.
-- Device LED-budget check during playback.
+Acceptance:
 
-## Phase 8: Hold-Reveal Clip LED Polish
+- Snapshot tests cover overview screens.
+- LED tests cover lane activity states.
+- Device test checks LED traffic during playback.
+- Knob touch and turn remain fast and do not require menu navigation.
+
+## Phase 5: Shortcut Layer And Menu Demotion
 
 **Priority:** P2
-**Branch:** `polish/clip-reveal-leds`
+**Branch:** `feature/shortcut-layer-menu-demotion`
 
-Refine already-implemented hold-side clip reveal.
+Make Overture less menu-divey. The Global Menu should become a system/deep
+settings surface, not the main way to make music.
 
 Changes:
-- Make blink timing consistent.
-- Ensure states are distinguishable:
-  - focused/active;
-  - playing;
-  - queued/pending stop if represented;
-  - has content;
-  - empty.
-- Prefer fewer clear states over many ambiguous colors.
-- Avoid increasing LED traffic beyond budget.
 
-Tests:
-- Snapshot tests for reveal states.
-- Device test with playing, queued, empty, and content clips.
-- Regression that step buttons return to normal after side release.
-
-## Phase 9: Overture Template Set Spike
-
-**Priority:** P3
-**Branch:** `spike/overture-template-set`
-
-Investigate whether a preconfigured Move Set can reduce setup friction.
-
-Questions:
-- Can install tooling create/copy a Set under `UserLibrary/Sets` that Move
-  recognizes?
-- Is a database/index update required?
-- Can `Song.abl` encode per-track MIDI In channels?
-- Can MIDI Out off be encoded?
-- Can this be done safely without corrupting user Sets?
+- Define the active command map for Perform, Shape, and System.
+- Audit Global Menu items and move common musical actions to Shift+Step or
+  context gestures where appropriate.
+- Keep Global Menu for deep, rare, or setup actions.
+- Update the Shift+Step help overlay with the current command map.
+- Keep any moved command available somewhere discoverable until the replacement
+  gesture is tested.
 
 Acceptance:
-- If reliable, later add install-time template deployment.
-- If MIDI channel state is fragile or stored elsewhere, document and abandon
-  in-product creation.
 
-## Phase 10: Conductor Evaluation
+- A command map exists in docs.
+- Global Menu is shorter and grouped by purpose.
+- Common musical actions have direct gestures.
+- Tests cover command routing for moved actions.
 
-**Priority:** P3
-**Branch:** `research/conductor-fit`
+## Phase 6: LED Language And Clip Reveal Polish
 
-Evaluate upstream dAVEBOx Conductor before porting.
+**Priority:** P2
+**Branch:** `polish/led-language-and-clip-reveal`
 
-Questions:
-- What workflow does Conductor solve?
-- Does it fit Overture's hybrid-track simplicity?
-- Is it a track type, performance tool, or harmonic lane?
-- Can it be documented without burdening first-run UX?
-
-Deliverable:
-- Short design note in `overture/docs/`.
-- Recommendation to port, reshape, or defer.
-
-## Phase 11: Targeted DSP Maintainability
-
-**Priority:** P3
-**Branch:** `refactor/param-dispatch-boundary`
-
-Continue DSP refactoring only where it reduces real change risk.
+Make the hardware surface readable at a glance.
 
 Changes:
-- Implement the parameter dispatch boundary from `SEQ8-REFACTOR-PLAN.md`.
-- Keep `seq8.c` as the single compiled translation unit.
-- Separate read-only get handlers from mutating set handlers by behavior area.
-- Preserve atomic multi-field commands.
-- Avoid runtime engine extraction unless required by a concrete feature or bug.
 
-Tests:
-- Native build.
-- WASM build.
-- Emulator integration tests.
-- Focused regression for each moved dispatch family.
-
-## Phase 12: Web Lint Hardening
-
-**Priority:** P4
-**Branch:** `quality/web-lint-hardening`
-
-Tighten the emulator/web TypeScript lint gate after the main UX work settles.
-
-Changes:
-- Keep `tsc --noEmit` as the primary type gate.
-- Expand ESLint beyond the initial double-assertion guard where signal is high.
-- Prefer rules that prevent real maintenance problems:
-  - unsafe `any` usage at module boundaries;
-  - stale React hook dependencies;
-  - unhandled promises;
-  - unused eslint-disable comments;
-  - accidental floating `void`/timer work in tests.
-- Add typed helper modules for browser/test globals instead of inline casts.
-- Keep generated assets, screenshots, build output, and vendored host shims out
-  of lint scope.
-
-Tests:
-- `pnpm lint`.
-- `pnpm typecheck`.
-- `pnpm test:node`.
-- At least one negative lint fixture or documented command proving the custom
-  smell rule catches nested type assertions.
-
-## Phase 13: C Static Analysis Spike
-
-**Priority:** P4
-**Branch:** `quality/c-static-analysis-spike`
-
-Evaluate low-noise C analysis for `tool/dsp` and native glue without disrupting
-the single-translation-unit DSP build.
-
-Questions:
-- Can `clang-tidy` run against `seq8.c` with the same include paths and defines
-  used by native and WASM builds?
-- Does `cppcheck` find useful issues with less setup noise?
-- Can compiler warnings be tightened (`-Wall -Wextra` subsets, conversion checks)
-  without fighting intentional DSP patterns?
-- Which warnings are real bugs/readability wins versus embedded/QuickJS/host
-  integration noise?
-- Should analysis run in CI by default, or remain an explicit maintainer command?
+- Document a shared LED language:
+  - track identity;
+  - active track;
+  - playing, queued, content, and empty clip;
+  - muted and soloed;
+  - recording and armed;
+  - motion present or recording;
+  - co-run active;
+  - setup warning.
+- Polish hold-side clip reveal using that language.
+- Prefer fewer unmistakable states over many subtle states.
+- Respect the LED write budget.
 
 Acceptance:
-- Document the chosen tool, command, suppressions, and expected noise level.
-- Add a non-blocking script first if findings are noisy.
-- Promote to a blocking check only after the current tree is clean under the
-  selected rule set.
-- Do not require restructuring `seq8.c` or changing the release build topology
-  just to satisfy tooling.
 
-## Phase 14: Move Parameter Name Discovery Spike
+- LED language is documented.
+- Clip reveal has distinct states for focused/active, playing, queued, content,
+  and empty.
+- Step LEDs return correctly after side release.
+- Device test checks readability and LED budget.
+
+## Phase 7: Move Parameter Name Discovery Spike
 
 **Priority:** P3
 **Branch:** `spike/move-param-name-discovery`
 
-Find out whether Overture can replace generic Move-routed AUTO labels such as
-`Move target` with the actual parameter name currently controlled by the Move
-encoder, for example `Filter Cutoff`, `Delay Feedback`, or another device
-parameter label.
-
-Goal:
-- Prefer a live or project-derived lookup from Move itself over a hand-maintained
-  table.
-- Keep Param Peek honest: only show parameter names when they come from a
-  reliable source of truth.
-- Fall back to `Move target` when the current Move-side parameter cannot be
-  identified.
+Determine whether Move-routed Motion lanes can show actual Move parameter names.
 
 Questions:
-- Does Move expose active device/parameter names over MIDI, USB, display
-  feedback, sysex, logs, project/session files, or another observable channel?
-- Can Overture correlate the touched encoder/lane with the Move-side parameter
-  name without disrupting normal Move control?
-- Are parameter mappings stable enough for stock Move instruments/effects to
-  support a static fallback table?
-- If live lookup is unavailable, is a user-editable alias table worthwhile, or
-  would it create too much maintenance friction?
+
+- Can parameter names be derived live from Move UI, display text, logs, runtime
+  state, or another observable channel?
+- Can they be read from `Song.abl` reliably enough?
+- Are stock device parameter maps stable enough for a fallback table?
+- Would user aliases help or create maintenance burden?
 
 Acceptance:
-- Document every discovery path tested and the observed result.
-- If a reliable source exists, add a follow-up implementation phase with the
-  proposed data model, cache invalidation rules, and device-test plan.
-- If no reliable source exists, document the best fallback (`Move target`, static
-  lookup, or user aliases) and the reason.
+
+- Document every discovery path tested.
+- If reliable, add a follow-up implementation phase with data model and
+  invalidation rules.
+- If not reliable, keep fallback wording honest.
 - Do not ship guessed Move parameter names as facts.
+
+## Phase 8: Performance / Variations Reframe
+
+**Priority:** P3
+**Branch:** `research/performance-variations-reframe`
+
+Make dAVEBOx Performance Mode easier to understand and fun to use without
+removing its power.
+
+Changes:
+
+- Evaluate whether Performance Mode should be reframed as `Variations`,
+  `Perform`, or another musical concept.
+- Keep the existing mod-grid power.
+- Improve OLED and pad feedback so pressing a pad clearly communicates the
+  result.
+- Decide whether factory presets should be beginner-facing.
+
+Acceptance:
+
+- Design note explains the chosen mental model.
+- Existing performance behavior is preserved.
+- Tests cover mode entry/exit and preset recall.
+
+## Phase 9: Conductor Evaluation
+
+**Priority:** P3
+**Branch:** `research/conductor-fit`
+
+Decide whether upstream dAVEBOx Conductor belongs in Overture.
+
+Acceptance:
+
+- Short design note recommends port, reshape, or defer.
+- The recommendation explains where Conductor fits in Perform, Shape, or System.
+- Do not port it if it steepens the beginner path without a clear payoff.
+
+## Phase 10: Targeted DSP Maintainability
+
+**Priority:** P3
+**Branch:** `refactor/param-dispatch-boundary`
+
+Continue DSP refactors only where they reduce real change risk.
+
+Changes:
+
+- Implement the parameter dispatch boundary from `SEQ8-REFACTOR-PLAN.md` if it
+  is needed by active UX work or bug fixes.
+- Keep `seq8.c` as the single compiled translation unit unless a later phase
+  explicitly changes that.
+- Separate read-only get handlers from mutating set handlers by behavior area.
+- Preserve atomic multi-field commands.
+- Avoid runtime engine extraction unless required by a concrete feature or bug.
+
+Acceptance:
+
+- Native build passes.
+- WASM build passes.
+- Emulator integration tests pass.
+- Focused regression exists for each moved dispatch family.
+- DSP state version is unchanged unless persisted format changes.
+
+## Phase 11: Quality Gates
+
+**Priority:** P4
+**Branch:** `quality/lint-static-analysis`
+
+Add lint and static analysis only where signal is high.
+
+Changes:
+
+- Keep `tsc --noEmit`, `pnpm test:node`, and emulator tests as primary gates.
+- Tighten ESLint around real risks:
+  - unsafe `any` at module interfaces;
+  - stale React hook dependencies;
+  - unhandled promises;
+  - unused eslint-disable comments.
+- Spike C static analysis only after UX-facing work stabilizes.
+- Keep noisy tools non-blocking until the tree is clean under the chosen rules.
+
+Acceptance:
+
+- Checks are documented.
+- No noisy blocking tools are added.
+- Quality work does not force unrelated refactors.
 
 ## Implementation Order
 
-1. `docs/ux-roadmap-reframe`
-2. `feature/route-check`
-3. `feature/edit-sound-unified`
-4. `upstream/port-low-risk-fixes`
-5. `feature/param-peek`
-6. `feature/move-step-edit-shortcuts`
-7. `feature/auto-overview-readable`
-8. `polish/clip-reveal-leds`
-9. `spike/overture-template-set`
+1. `infra/upstream-schwung-0.9.18`
+2. `refactor/overture-ui-product-seams`
+3. `feature/setup-health-template-spike`
+4. `feature/move-step-edit-shortcuts`
+5. `feature/motion-layer-readable`
+6. `feature/shortcut-layer-menu-demotion`
+7. `polish/led-language-and-clip-reveal`
+8. `spike/move-param-name-discovery`
+9. `research/performance-variations-reframe`
 10. `research/conductor-fit`
 11. `refactor/param-dispatch-boundary`
-12. `quality/web-lint-hardening`
-13. `quality/c-static-analysis-spike`
-14. `spike/move-param-name-discovery`
+12. `quality/lint-static-analysis`
 
 ## Global Acceptance Criteria
 
-- A new user can configure Move tracks 1-4 and Schwung tracks 5-8 from Overture
-  docs.
-- Route/setup problems are visible without consuming normal editing screen space.
-- Track selection, clip selection, and sound editing feel coherent.
-- Common step edits match Move muscle memory.
-- dAVEBOx depth remains available but easier to discover.
-- Upstream bug fixes are ported without losing Overture's intentional divergences.
+- A new user can get to a working hybrid setup without understanding Schwung
+  internals first.
+- Route/setup problems are visible and actionable without consuming the normal
+  playing/editing screen.
+- Track selection, clip selection, sound editing, and motion feel like one
+  instrument.
+- Common edits are fast and do not require menu diving.
+- The OLED always answers: what track/clip am I on, what am I editing, and what
+  happens if I turn or press something?
+- dAVEBOx depth remains available and easier to grow into.
+- Schwung divergence is minimized; Overture product divergence lives primarily
+  in `tool/`.

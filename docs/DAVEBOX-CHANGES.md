@@ -1,8 +1,16 @@
-# DAVEBOX-CHANGES — implementation plan (how we modify the tool fork)
+# DAVEBOX-CHANGES — historical implementation notes
 
-The *how* for the *what/why* in `MOVE-RECONCILE.md`. Each change is a `tool/` (schwung-davebox)
-fork edit, **prototyped in the emulator + regression-tested (vitest) before committing**. Names like
-`_onCC_side` / `S.activeTrack` refer to `tool/ui/ui.js`; LED work is `tool/ui/ui_leds.mjs`.
+This file records how Overture originally diverged from vanilla dAVEBOx. It is
+useful for understanding shipped changes and preserving behavior during rebases.
+
+`ROADMAP.md` is now the active implementation plan. In particular, future work
+should be organized around Overture product seams such as track surface, sound
+edit, route health, motion, shortcut layer, and LED language rather than adding
+more one-off branches to the old dAVEBOx structure.
+
+The notes below are still relevant when touching `tool/` code. Names like
+`_onCC_side` / `S.activeTrack` refer to `tool/ui/ui.js`; LED work is
+`tool/ui/ui_leds.mjs`.
 
 ## Master control map (current → Overture)
 Only the controls that change. Everything not listed is unchanged.
@@ -11,7 +19,7 @@ Only the controls that change. Everything not listed is unchanged.
 |---|---|---|---|
 | **Side buttons (CC 40–43)** | clip switch (Track) + clip launch (Session) + clip copy/cut/del | **track-select 1–4**; **Shift+side = 5–8** | #1 |
 | **Hold a side button** | (n/a) | **reveal that track's 16 clips on the steps** → tap to jump | #1 |
-| **Shift+jog (Track)** | switch track | retained as a fallback; candidate velocity shortcut later | #1 / roadmap Phase 6 |
+| **Shift+jog (Track)** | switch track | retained as a fallback; candidate velocity shortcut later | #1 / active roadmap step shortcuts |
 | **Shift+bottom-pad** | switch track 1–8 | keep as a fallback, or retire | #1 |
 | **Step buttons (Track)** | pattern | pattern; **while a side button is held → clips** | #1 |
 | **Menu/Note-Session btn** | view toggle + Shift=Global Menu | same; relabel shell "Menu"→**Note/Session** | #2 |

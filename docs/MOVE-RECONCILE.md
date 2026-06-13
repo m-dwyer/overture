@@ -5,8 +5,9 @@ and the **dAVEBOx manual** (`tool/MANUAL.md`). This is a *design plan* (intent),
 each item becomes `tool/` fork work later. Feeds `UX.md`.
 
 ## North star + principles
-1. **Move-native is the default.** A Move user should reach for a control and have it do the
-   Move thing. Zero relearning for the muscle memory they already have.
+1. **Overture-native coherence.** Move is an important reference, but not a law.
+   Use Move behavior where it improves speed and learnability; diverge where
+   Overture can be clearer, more discoverable, or more cohesive.
 2. **One meta-gesture.** Move's real secret is *"hold the thing you're editing, turn the obvious
    control"* (hold step → Volume = velocity, Wheel = length; hold track → Volume = level; hold
    pad → Volume = gain). It's *one* mental model that covers most edits. Overture should obey it
@@ -49,7 +50,8 @@ held track button. Everything else is preserved or improved, and live performanc
 Session surface, so flow for *making songs and performing* is intact.
 
 ## Reconciliation matrix (the big divergences)
-Some rows are already shipped in Overture; remaining target work is tracked in `ROADMAP.md`.
+Some rows are already shipped in Overture; active priorities are tracked in
+`ROADMAP.md`.
 
 | Area | Move-native | dAVEBOx today | Overture current / target |
 |---|---|---|---|
@@ -98,8 +100,9 @@ Everything keeps a home (full inventory + per-item destination in `DAVEBOX-CHANG
 - **Shipped:** side buttons select tracks 1-4, Shift + side selects 5-8, clip switching moved to
   hold-side reveal on the steps, and hold-step + jog edits step length.
 - **Deprioritized:** hold-track + Volume for Move-native faders, because no clean route was found.
-- **Tracked in `ROADMAP.md`:** Route Check, Edit Sound unification, parameter peek, Move-like step
-  editing shortcuts, AUTO overview refinement, and clip-reveal LED polish.
+- **Tracked in `ROADMAP.md`:** upstream Schwung migration, Overture UI product seams, Setup Health,
+  Move-style step shortcuts, Motion readability, shortcut/menu demotion, LED language, and later
+  performance/Conductor research.
 
 ## Open decisions (need a call before coding)
 - **Track banking:** Shift+side for 5–8, or a dedicated bank toggle with a persistent LED?

@@ -9,17 +9,18 @@ sequencer with a co-run editing mode for the Ableton sounds and the full Schwung
 ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) engine.
 
 > **Status:** early build. The browser emulator runs the real tool UI, and the first
-> Move-native changes (track navigation, the bank-position strip, per-step length) are
-> shipped and **device-verified** on hardware. The tool is a fork of [dAVEBOx](https://github.com/legsmechanical/schwung-davebox)
-> (which already implements ~80% of this) — see `docs/ROADMAP.md` and `docs/MANUAL.md`.
+> Overture-native changes (track navigation, clip reveal, Route Check, Edit Sound,
+> Param Peek, and per-step length) are implemented. The tool is a fork of
+> [dAVEBOx](https://github.com/legsmechanical/schwung-davebox), but the active roadmap
+> is now focused on making Overture cohesive, discoverable, fast, and less menu-driven.
 
 ## Docs
 - `docs/QUICK-START.md` — first-run setup for Move channels, Schwung slots, track selection, clip reveal, and sound editing.
 - `docs/PHILOSOPHY.md` — what Overture is, what it isn't, the principles behind it.
 - `docs/ARCHITECTURE.md` — the runtime stack, the monorepo + fork strategy, moveforge, how to modify it.
-- `docs/ROADMAP.md` — the phased build plan (emulator-first) ← start here.
+- `docs/ROADMAP.md` — the active prioritized build plan ← start here.
 - `docs/MANUAL.md` — the Overture manual: what diverges from dAVEBOx, per shipped change.
-- `docs/UX.md` — the UX brief: principles, mode/navigation model, the motion-lane flagship, co-run "zoom".
+- `docs/UX.md` — the UX brief: Overture-native principles, Perform/Shape/System, Motion, co-run, LED language.
 - `docs/EMULATOR.md` — the browser UX-dev harness (real UI + mocked host/hardware); the first build target.
 - `docs/HYBRID-GROOVEBOX.md` — the deep in-tool design reference (track model, routing, display, FX, perf, fragility).
 - `docs/ABLETON-ENGINE-ACCESS.md` — the empirical findings on what's reachable in Move's real engines (the foundation).

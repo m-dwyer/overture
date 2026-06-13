@@ -18,10 +18,21 @@ Everything is **MIDI-routed**: Overture sequences notes/expression to (a) Move's
 inject (cable 2, by channel) and (b) Schwung slots; the slots and Move produce the audio.
 Overture itself renders **no audio** (like dAVEBOx).
 
-## Repo shape — monorepo + submodules
+## Repo shape — current and target
+
+Current repo shape:
+```
+overture/                         ← integrator repo
+├── tool/      submodule → m-dwyer/schwung-davebox  (THICK fork = the Overture tool)
+├── scripts/   integration/deploy helpers
+├── web/       emulator and tests for the real tool UI
+└── docs/
+```
+
+Target packaging shape:
 ```
 overture/                         ← integrator repo (m-dwyer/overture, PRIVATE)
-├── schwung/   submodule → m-dwyer/schwung          (THIN fork; remote upstream=charlesvestal/schwung)
+├── schwung/   optional submodule or pinned checkout → upstream charlesvestal/schwung
 ├── tool/      submodule → m-dwyer/schwung-davebox  (THICK fork = the Overture tool; upstream=legsmechanical/…)
 ├── modules/   submodule(s) → curated default open modules to ship
 ├── build.sh   builds patched shim + shadow_ui + the tool + bundles modules
@@ -38,12 +49,14 @@ branding) — *not* Schwung or tool source; it references your forks at specific
 > remote for pulls), not `gh repo fork`s.
 
 ## Fork strategy (asymmetric on purpose)
-- **`schwung` = THIN fork.** Carry only what you must: **co-run** + tiny capability-gated host
-  hooks. Track upstream releases (rebase your commits onto new tags — the dAVEBOx
-  `SCHWUNG_PATCHES.md` is the playbook). **Upstream what you can** (co-run is heading upstream via
-  PR #94); as it lands, this fork shrinks toward a plain pinned stock checkout.
-- **`tool` = THICK fork.** This is your product. Diverge freely (UI reshape, the p-lock lane). Over
-  time it stops tracking dAVEBOx and is simply yours.
+- **Schwung = upstream-first.** Co-run exists in upstream Schwung as of `v0.9.18`.
+  Prefer a plain upstream pin unless Overture needs a tiny capability-gated host
+  hook. Any host fork should be thin, tracked to upstream releases, and treated
+  as integrator tax.
+- **`tool` = THICK fork.** This is your product. Diverge freely for Overture-native
+  UX: track surface, sound edit, route health, motion, shortcut layer, LED
+  language, setup, and performance flow. Over time it stops tracking dAVEBOx
+  closely and becomes simply Overture.
 
 **Why asymmetric:** every line in `schwung` is rebased forever; lines in `tool` are just yours.
 Concentrate ownership in code you *want* to own; touch the host as little as possible.
@@ -58,7 +71,7 @@ changes.
 ## How you modify each layer
 - **Modify the tool:** edit in `tool/` → commit → push your fork → bump the pointer in `overture`.
   Normal git; this is most of your work.
-- **Modify Schwung (e.g. extend co-run, add a host capability):**
+- **Modify Schwung only when a host capability is genuinely required:**
   1. edit in `schwung/` → commit → push your fork;
   2. **rebuild *both* the shim *and* shadow_ui** (host changes need both — the capability gate checks
      the running `shadow_ui` binary, not the shim);
@@ -69,11 +82,11 @@ changes.
   onto the new tag → rebuild → bump pointer. The recurring "integrator tax."
 
 ## Co-run (the Ableton-editing UX)
-Co-run is **host code** (`schwung_shim.c` + `shadow_ui.c/.js` + `shadow_constants.h`) — it lives in
-the `schwung` fork, **pre-patched at *your* build time** (you ship already-patched binaries; the user
-never patches). It hands Move's OLED + nav controls to Move's *native* device-edit / preset-browser
-UI while the tool keeps pads/steps/transport and the sequencer keeps playing. The tool calls
-`shadow_corun_begin/end` behind a capability gate. See `schwung/docs/CORUN.md` (upstream framework).
+Co-run is **host code** (`schwung_shim.c` + `shadow_ui.c/.js` + `shadow_constants.h`) and is now an
+upstream Schwung capability. It hands Move's OLED + nav controls to Move's *native* device-edit /
+preset-browser UI while the tool keeps pads/steps/transport and the sequencer keeps playing. The tool
+calls `shadow_corun_begin/end` behind a capability gate. See `schwung/docs/CORUN.md` in upstream
+Schwung.
 
 ## Track model (summary; full detail in HYBRID-GROOVEBOX.md)
 Two resource pools: **≤4 Ableton-engine slots** (`ROUTE_MOVE`, inject cable 2 by channel) +
@@ -131,4 +144,5 @@ the lower-code, lower-fragility default — and it's *why* chain-edit co-run is 
 - **Install:** one `install.sh` → deploys all to `move-em.local` (data partition only; never touch
   `/usr/lib/...` symlinks — recreated by `schwung-heal`). Restart Move to load.
 - **Boot-to-Overture** (last, optional): own the launch entrypoint so power-on lands in Overture.
-  Brick risk — rely on `schwung-heal`; keep `/data` backup + reflash path. Defer to the end.
+  This is host-level and should happen only after the Overture UI is coherent. Rely on
+  `schwung-heal`; keep `/data` backup + reflash path. Defer to the end.

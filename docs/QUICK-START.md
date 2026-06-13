@@ -32,8 +32,10 @@ slots.
 - Avoid leaving a slot in thru mode if you expect Overture to own that track's
   sound.
 
-The exact slot-status screen is a later roadmap phase. For now, confirm the slot
-manually in Schwung's chain editor if a track is silent.
+Use Route Check from Overture's Global Menu if a track is silent. It shows the
+expected Move/Schwung route and the detected Schwung slot status where the host
+can report it. Setup Health in `ROADMAP.md` will expand this into a fuller
+first-run check.
 
 ## 3. Select tracks with the side buttons
 

@@ -1,74 +1,120 @@
-# Overture — UX Brief
+# Overture UX Brief
 
-The UX *is* the product (the augment base is proven; see `PHILOSOPHY.md`). This is the design home —
-keep it current as the surface evolves. Prototype everything here in the **emulator** (`EMULATOR.md`)
-before device.
+The UX is the product. The technical substrate is proven enough to focus on
+cohesion: Overture should feel like one groovebox, not a collection of Move,
+Schwung, and dAVEBOx modes.
 
-## Design principles
-1. **One instrument, not two.** The 4-Ableton / N-open seam is **invisible** for play/sequence/automate
-   — uniform 8-track surface, consistent identity. Surface the distinction only where it *matters*.
-2. **Unified automation, not "Move lacks p-locks."** Move already has native per-step parameter
-   automation. Overture's job is to make automation legible across Move engines and Schwung/open
-   tracks in the same deeper timeline.
-3. **Delegate editing; don't rebuild it.** Sound/preset/param editing dips into the *native* editor via
-   co-run (Schwung chain editor for open modules, Move device UI for Ableton) — Overture's own UI stays
-   focused on the **sequencer + motion**. (See `ARCHITECTURE.md` "Editing model".)
-4. **Immediacy + legibility over depth.** dAVEBOx errs toward modality; Overture should **edit down** —
-   flatter, more discoverable, a coherent feedback language. More ≠ better.
-5. **Design in the emulator.** Every flow is prototyped in the browser harness first.
+Prototype UX in the browser emulator first, then confirm timing, co-run, LED
+budget, and real-engine behavior on device.
 
-## The two differentiators (where to spend design energy)
-- **Cohesive hybrid surface** — the seam disappears.
-- **Unified depth** — 8 tracks, trig conditions, polyrhythmic automation, bake/export, and one
-  timeline for Move engines plus Schwung/open tracks.
+## Design Principles
 
-## Current vs target behavior
+1. **Overture-native coherence.** Use Move gestures where they help, but do not
+   copy vanilla Move or vanilla dAVEBOx when a different Overture behavior is
+   clearer, faster, or easier to learn.
+2. **One instrument, not two.** The Ableton/open seam should be invisible during
+   play, sequencing, and automation. Surface route differences only when they
+   matter for setup, sound editing, or troubleshooting.
+3. **Beginner first, power later.** A new user should quickly select tracks,
+   launch clips, edit sounds, record notes, and automate. Deeper dAVEBOx power
+   should be reachable from the musical object it affects.
+4. **Less menu diving.** Menus are for System work and deep settings. Perform
+   and Shape actions should live on pads, steps, encoders, Shift+Step, or
+   hold-context gestures.
+5. **Delegate sound editing.** Move-routed tracks enter Move's native editor via
+   co-run. Schwung-routed tracks enter Schwung's chain editor via co-run.
+   Overture's own UI stays focused on sequencing, motion, setup, and performance.
+6. **Readable feedback beats density.** The OLED and LEDs should always explain
+   the current track/clip/context and the next useful action.
+
+## Experience Layers
+
+- **Perform:** play clips, select tracks, mute/solo, record, use variations.
+- **Shape:** edit steps, clip length, probability, ratchets, automation/motion.
+- **System:** routing, Schwung slots, templates, export, diagnostics, state.
+
+Every feature should have a home in one of these layers. If a feature needs a
+menu, ask whether it is really System work or whether a track/clip/step/sound
+gesture would be faster.
+
+## Current Vs Target Behavior
 
 | Area | Current behavior | Target behavior |
 |---|---|---|
-| Track navigation | Side buttons select tracks 1-4; Shift + side selects tracks 5-8. Shift+jog and Shift+bottom-pad remain fallbacks. | Keep this as the primary track model; polish labels and LEDs only where needed. |
-| Clip selection | Hold a side button to reveal that track's 16 clips on the step buttons; tap a step to select/launch. Session View keeps clip performance and clip operations. | Polish reveal LED states and blink timing without making clips always consume the side buttons again. |
-| Sound editing | Co-run is implemented for Move-native and Schwung-chain editing, with route-specific entry labels in current builds. | Present one `Edit Sound...` command with route-specific preflight/status overlays. |
-| Route setup | Users configure Move MIDI channels and Schwung slots manually. | Add a Route Check screen for expected routes and obvious slot/channel problems. |
-| Parameter state | dAVEBOx depth is available but labels and scopes require prior knowledge. | Add param peek and clearer automation-lane labels. |
-| Step editing | Hold step + jog edits length; K controls keep the deep editor. | Add Move-like velocity, transpose, and nudge shortcuts while preserving trig-depth controls. |
+| Track navigation | Side buttons select tracks 1-4; Shift + side selects tracks 5-8. Shift+jog and Shift+bottom-pad remain fallbacks. | Keep side buttons as the primary track model; polish labels and LEDs. |
+| Clip selection | Hold a side button to reveal that track's 16 clips on the step buttons; Session View keeps clip performance and clip operations. | Polish reveal LED states and preserve direct performance flow. |
+| Sound editing | `Edit Sound...` dispatches to Move-native or Schwung-chain co-run with preflight/failure overlays. | Deepen this into a stable sound-edit module and make return/exit behavior feel seamless. |
+| Setup | Route Check shows expected Move/Schwung routes and slot status. | Evolve into Setup Health: version, co-run, slots, channels, template state, and repair guidance. |
+| Motion | Param Peek and AUTO lane labels make automation more legible. | Make AUTO feel like musical Motion: lane overview, activity LEDs, and honest target names. |
+| Step editing | Hold step + jog edits length; K controls keep the deep editor. | Add fast velocity, transpose, and nudge shortcuts while preserving trig-depth controls. |
+| Menus | Global Menu still carries common and deep actions together. | Demote Global Menu to System/deep work; use Shift+Step and context gestures for common actions. |
+| Performance | dAVEBOx Performance Mode exists but is conceptually dense. | Reframe as Variations/Perform if that makes the pad behavior easier to understand. |
 
-## Automation layer
-- **Motion-record:** while a clip plays, turn a knob → captures into that track's automation lane
-  (Elektron/MPC feel). Ableton tracks → cable-0 encoder CC; open tracks → existing CC/AT lanes.
-- **Automation view:** see which params have motion; edit per-step or as a curve; clear/clone; clear
-  OLED + LED feedback for what's automating and what's recording.
-- **One gesture in, one gesture out** — automation is a *layer* over the normal sequencer, not a
-  separate app.
+## Motion Layer
 
-## The co-run "zoom into sound" gesture
-- Co-run is implemented: Move-routed tracks can enter Move's device UI, and Schwung-routed tracks can
-  enter Schwung's chain editor while Overture keeps sequencing.
-- **One consistent command for both track kinds** (`Edit Sound...`) → dips into the right native
-  editor (Move device UI / Schwung chain) → returns you exactly where you were.
-- No mode whiplash; the transition is where it feels polished or clunky — design it deliberately.
+Motion is Overture's unified automation story. Move already has native per-step
+parameter automation; Overture wins by making one deeper, readable timeline for
+Move engines and Schwung/open tracks.
 
-## Color / feedback language (define once, legibly)
-- Track identity colors; playhead; **automation-active**; mute/solo; recording/armed.
-- Respect the **LED per-tick budget** (later writes drop — `HYBRID-GROOVEBOX.md` notes this); don't
-  write the same LED from two paths in a tick.
-- Pin the LED color map (currently "unconfirmed") as part of this.
+Targets:
 
-## OLED (128×64, 1-bit)
-- Clear state-at-a-glance: active track, clip, transport, automation-armed, current mode.
-- Information hierarchy over density; legibility on a tiny mono screen is a real constraint.
+- Touch a knob to see what lane/parameter/context it controls.
+- Record motion while playing without leaving the musical flow.
+- Edit motion per step or lane where needed.
+- Show whether a lane is empty, has motion, is armed, or is currently playing.
+- Use actual parameter names only when they come from a reliable source of
+  truth. Fall back to honest labels like `Move target`.
 
-## Lower-priority opportunities
-- **Unified levels/mix overview** (the audio side is currently split across tool/Move/Schwung).
-- **Performance focus:** scene morphs, the mod-snapshot idea (dAVEBOx has it), motion-as-performance.
+## Co-run: Zoom Into Sound
 
-## Honest boundary
-The emulator validates *layout, flow, interaction, feedback* — **not** real-engine sound, device
-timing/latency, the LED budget exactly, or co-run's real behavior. Those are device checks
-(`ROADMAP.md` P0 / P4 / P5). Design here; confirm there.
+`Edit Sound...` is one command with route-specific internals:
 
-## Open UX questions
-- How visible is the Ableton/open distinction (invisible vs subtle badge)?
-- Automation-record interaction (live-capture vs step-draw vs both); how it reads on the OLED/LEDs.
-- The exact `Edit Sound...` preflight/return wording and how route failures should read.
-- How much of dAVEBOx's mode depth to keep vs cut.
+- Move route: enter Move's native device/preset UI.
+- Schwung route: enter Schwung's chain editor.
+- External route: show route/config status, not a fake editor.
+
+The sequencer should keep running. Overture should return to the same musical
+context when co-run exits.
+
+## OLED
+
+The 128x64 OLED should prioritize hierarchy over density. At any moment, it
+should answer:
+
+- What track and clip am I on?
+- What layer am I in: Perform, Shape, or System?
+- What object am I editing?
+- What does the touched knob or held modifier affect?
+- Is there a route/setup problem I need to fix?
+
+## LED Language
+
+Define LED meaning once and reuse it:
+
+- track identity;
+- active track;
+- clip content, playing, queued, and empty;
+- muted and soloed;
+- recording and armed;
+- motion present or recording;
+- co-run active;
+- setup warning.
+
+Prefer fewer unmistakable states over many subtle colors. Respect the LED
+per-tick budget; avoid writing the same LED from multiple paths in one tick.
+
+## Emulator Boundary
+
+The emulator validates layout, flow, interaction, text, and most UI state. It
+does not prove real-engine sound, device timing/latency, the exact LED budget,
+or real co-run behavior. Those remain device checks in `ROADMAP.md`.
+
+## Open UX Questions
+
+- How visible should the Ableton/open distinction be outside setup and sound
+  editing?
+- Should AUTO be renamed visibly to Motion, or introduced gradually in docs and
+  overlays first?
+- Which Global Menu actions deserve Shift+Step or context gestures?
+- Should Performance Mode be reframed as Variations?
+- How much dAVEBOx mode depth should remain visible to beginners by default?
