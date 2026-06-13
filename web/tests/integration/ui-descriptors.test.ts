@@ -4,6 +4,8 @@ import { S } from "/data/UserData/schwung/modules/tools/overture/ui_state.mjs";
 // @ts-expect-error Vite remaps the on-device module path to tool/ui during tests.
 import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "/data/UserData/schwung/modules/tools/overture/ui_routes.mjs";
 // @ts-expect-error Vite remaps the on-device module path to tool/ui during tests.
+import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "/data/UserData/schwung/modules/tools/overture/ui_sound_edit.mjs";
+// @ts-expect-error Vite remaps the on-device module path to tool/ui during tests.
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, paramPeekInfo } from "/data/UserData/schwung/modules/tools/overture/ui_motion.mjs";
 
 describe("UI descriptor seams", () => {
@@ -14,6 +16,8 @@ describe("UI descriptor seams", () => {
     S.tickCount = 100;
     S.knobTouched = 1;
     S.knobTouchStartTick = 100;
+    S.pendingEditSoundEntry = null;
+    S._coRunChanSlots = 0;
     S.trackRoute[0] = 1;
     S.trackChannel[0] = 1;
     S.trackRoute[4] = 0;
@@ -72,6 +76,28 @@ describe("UI descriptor seams", () => {
       body: "Ch5",
       queue: { track: 4, route: 0, slot: 0 },
     });
+  });
+
+  test("sound edit lifecycle queues, cancels, and advances pending handoff", () => {
+    expect(requestEditSoundForTrack(0, { hasCoRun: true, hasMoveInject: true })).toEqual({
+      title: "EDIT SOUND",
+      body: "T1 Move Ch1",
+    });
+    expect(S.pendingEditSoundEntry).toMatchObject({ track: 0, route: 1, slot: -1 });
+    expect(advancePendingEditSoundEntry(1)).toBeNull();
+    expect(S.pendingEditSoundEntry).toBeNull();
+
+    requestEditSoundForTrack(0, { hasCoRun: true, hasMoveInject: true });
+    let action = null;
+    for (let i = 0; i < 24; i++) action = advancePendingEditSoundEntry(0);
+    expect(action).toEqual({ kind: "move", track: 0 });
+    expect(S.pendingEditSoundEntry).toBeNull();
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    action = null;
+    for (let i = 0; i < 24; i++) action = advancePendingEditSoundEntry(4);
+    expect(action).toEqual({ kind: "schwung", track: 4, slot: 0 });
+    expect(S._coRunChanSlots).toBe(0b0101);
   });
 
   test("route labels distinguish Move, External, Schwung slot, and Schwung channel fallback", () => {
