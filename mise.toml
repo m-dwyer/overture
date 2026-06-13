@@ -55,6 +55,15 @@ run = "tool/scripts/build-wasm.sh"
 description = "Run the seq8 wasm round-trip smoke test"
 run = "node tool/scripts/seq8-wasm-smoke.mjs"
 
+[tasks.restart]
+description = "Restart Move + Schwung stack on $MOVE_HOST"
+run = '''
+set -euo pipefail
+HOST="${MOVE_HOST:-move.local}"
+USER="${MOVE_USER:-ableton}"
+ssh "$USER@$HOST" 'sh /data/UserData/schwung/restart-move.sh'
+'''
+
 [tasks.build]
 description = "Build everything: device dsp.so + wasm + web"
 depends = ["dsp", "wasm", "web-build"]
