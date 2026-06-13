@@ -9,6 +9,9 @@ describe("UI descriptor seams", () => {
   beforeEach(() => {
     S.activeTrack = 0;
     S.activeBank = 6;
+    S.bankParams = Array.from({ length: 8 }, () =>
+      Array.from({ length: 8 }, () => new Array(8).fill(0))
+    );
     S.playing = false;
     S.tickCount = 100;
     S.knobTouched = 1;
@@ -26,6 +29,10 @@ describe("UI descriptor seams", () => {
     }
     S.trackPadMode[0] = 0;
     S.trackActiveClip[0] = 0;
+    S.activeDrumLane[0] = 2;
+    S.drumLaneNote[0][2] = 48;
+    S.drumLaneQnt[0] = 37;
+    S.drumLaneLenMode[0][2] = 5;
     S.trackQueuedClip[0] = -1;
     S.ccActiveLane[0] = 1;
     S.trackCCType[0] = [1, 0, 2, 0, 0, 0, 0, 0];
@@ -182,6 +189,29 @@ describe("UI descriptor seams", () => {
       value: "Route: Move Ch1",
       detail: "Loop 32 steps",
       route: "Res 1/16 Zoom 1/32",
+    });
+  });
+
+  test("Param Peek describes drum NOTE FX controls from drum lane state", () => {
+    S.trackPadMode[0] = 1;
+    S.activeBank = 1;
+    S.knobTouched = 0;
+    S.bankParams[0][1][0] = 109;
+    S.bankParams[0][1][1] = -7;
+
+    expect(paramPeekInfo()).toMatchObject({
+      header: "NOTE FX T1 Drum",
+      target: "Lane Octave",
+      value: "Value Note 48",
+      detail: "Lane 3, octave jumps",
+      route: "Route: Move Ch1",
+    });
+
+    S.knobTouched = 5;
+    expect(paramPeekInfo()).toMatchObject({
+      target: "Gate Time",
+      value: "Value 109%",
+      detail: "Lane 3",
     });
   });
 
