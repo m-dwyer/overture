@@ -1,6 +1,7 @@
 import { describe, beforeEach, test, expect } from "vitest";
 import { S } from "@tool-ui/ui_state.mjs";
 import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@tool-ui/ui_routes.mjs";
+import { routeCheckStatus, routeCheckViewModel } from "@tool-ui/ui_route_check.mjs";
 import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "@tool-ui/ui_sound_edit.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, paramPeekInfo } from "@tool-ui/ui_motion.mjs";
 
@@ -18,6 +19,10 @@ describe("UI descriptor seams", () => {
     S.trackChannel[0] = 1;
     S.trackRoute[4] = 0;
     S.trackChannel[4] = 5;
+    for (let t = 1; t < 8; t++) {
+      S.trackRoute[t] = t < 4 ? 1 : 0;
+      S.trackChannel[t] = t + 1;
+    }
     S.trackPadMode[0] = 0;
     S.trackActiveClip[0] = 0;
     S.trackQueuedClip[0] = -1;
@@ -105,6 +110,45 @@ describe("UI descriptor seams", () => {
     expect(routeScopeShortLabel(0)).toBe("Schw S1");
     Reflect.set(globalThis, "shadow_get_slots", () => [{ channel: 8, name: "Slot4" }]);
     expect(routeScopeShortLabel(0)).toBe("Schw Ch5");
+  });
+
+  test("route check view model preserves windowing and row labels", () => {
+    expect(routeCheckViewModel(0, globalThis.shadow_get_slots())).toEqual({
+      title: "ROUTE CHECK",
+      range: "1-4/8",
+      footer: "Jog scroll  Back/Menu",
+      rows: [
+        { track: 0, text: "T1 Move Ch1", status: "MANUAL", active: true },
+        { track: 1, text: "T2 Move Ch2", status: "MANUAL", active: false },
+        { track: 2, text: "T3 Move Ch3", status: "MANUAL", active: false },
+        { track: 3, text: "T4 Move Ch4", status: "MANUAL", active: false },
+      ],
+    });
+
+    expect(routeCheckViewModel(5, globalThis.shadow_get_slots())).toMatchObject({
+      range: "5-8/8",
+      rows: [
+        { track: 4, text: "T5 Schw Ch5", status: "OK S1", active: false },
+        { track: 5, text: "T6 Schw Ch6", status: "OK S2", active: true },
+        { track: 6, text: "T7 Schw Ch7", status: "OK S3", active: false },
+        { track: 7, text: "T8 Schw Ch8", status: "OK S3", active: false },
+      ],
+    });
+  });
+
+  test("route check statuses preserve no-slot, thru, and mismatch warnings", () => {
+    expect(routeCheckStatus(4, [{ channel: 6 }])).toBe("NO SLOT");
+    expect(routeCheckStatus(4, [{ channel: -2, name: "Thru" }])).toBe("THRU!");
+
+    S.trackRoute[0] = 0;
+    expect(routeCheckStatus(0, [])).toBe("ROUTE!");
+
+    S.trackRoute[0] = 1;
+    S.trackChannel[0] = 9;
+    expect(routeCheckStatus(0, [])).toBe("CH9!");
+
+    S.trackChannel[5] = 16;
+    expect(routeCheckStatus(5, [{ channel: 16 }])).toBe("OK S1");
   });
 
   test("motion descriptors preserve AUTO labels and Param Peek text", () => {
