@@ -1,12 +1,8 @@
 import { describe, beforeEach, test, expect } from "vitest";
-// @ts-expect-error Vite remaps the on-device module path to tool/ui during tests.
-import { S } from "/data/UserData/schwung/modules/tools/overture/ui_state.mjs";
-// @ts-expect-error Vite remaps the on-device module path to tool/ui during tests.
-import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "/data/UserData/schwung/modules/tools/overture/ui_routes.mjs";
-// @ts-expect-error Vite remaps the on-device module path to tool/ui during tests.
-import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "/data/UserData/schwung/modules/tools/overture/ui_sound_edit.mjs";
-// @ts-expect-error Vite remaps the on-device module path to tool/ui during tests.
-import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, paramPeekInfo } from "/data/UserData/schwung/modules/tools/overture/ui_motion.mjs";
+import { S } from "@tool-ui/ui_state.mjs";
+import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@tool-ui/ui_routes.mjs";
+import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "@tool-ui/ui_sound_edit.mjs";
+import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, paramPeekInfo } from "@tool-ui/ui_motion.mjs";
 
 describe("UI descriptor seams", () => {
   beforeEach(() => {

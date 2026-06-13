@@ -46,6 +46,7 @@ export default defineConfig({
     alias: {
       "seq8-wasm": SEQ8_WASM,
       "@": resolve(here, "src"),
+      "@tool-ui": TOOL_UI,
     },
   },
   server: {
