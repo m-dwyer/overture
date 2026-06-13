@@ -44,7 +44,9 @@ Call counts are from a static scan of `ui/*` (rough frequency → priority):
 - `shadow_send_midi_to_dsp(...)`  (3) — shares the set_param delivery channel (coalesces!)
 
 **co-run (native-editor delegation)** — layout-tier: stub editor view
-- `shadow_corun_begin(...)`  (9), `shadow_corun_end(...)`  (8)
+- `shadow_corun_begin(target, id, keep_mask)`
+- `shadow_corun_end()`
+- `shadow_corun_state() -> { target, id, keep_mask } | null`
 
 ## Gotchas to replicate (they shape UX; see tool CLAUDE.md)
 - **Coalescing:** only the LAST `set_param` per audio buffer reaches DSP; `shadow_send_midi_to_dsp`

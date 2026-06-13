@@ -201,9 +201,11 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(h.rec.text()).toMatch(/T1 Move Ch1/);
     h.step(30);
     expect(ui.moveCoRunTrack).toBe(0);
+    expect(globalThis.shadow_corun_state()).toMatchObject({ target: 2, id: 0 });
     h.tapStep(2);
     h.step(3);
     expect(ui.moveCoRunTrack).toBe(-1);
+    expect(globalThis.shadow_corun_state()).toBeNull();
   });
 
   test("Shift+Step 3 preflights Schwung route then enters chain co-run", () => {
@@ -219,8 +221,38 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(h.rec.text()).toMatch(/T5 Schwung Slot1/);
     h.step(30);
     expect(ui.schwungCoRunSlot).toBe(0);
+    expect(globalThis.shadow_corun_state()).toMatchObject({ target: 1, id: 0 });
     h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
     expect(ui.schwungCoRunSlot).toBe(-1);
+    expect(globalThis.shadow_corun_state()).toBeNull();
+  });
+
+  test("Move co-run cleans up when the upstream host clears state externally", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    openEditSoundFromGlobalMenu();
+    h.step(30);
+    expect(ui.moveCoRunTrack).toBe(0);
+    globalThis.shadow_corun_end();
+    h.step(3);
+    expect(ui.moveCoRunTrack).toBe(-1);
+    expect(globalThis.shadow_corun_state()).toBeNull();
+  });
+
+  test("Schwung co-run cleans up when the upstream host clears state externally", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    h.hold(49);
+    h.tapStep(2);
+    h.release(49);
+    h.step(3);
+    h.step(30);
+    expect(ui.schwungCoRunSlot).toBe(0);
+    globalThis.shadow_corun_end();
+    h.step(3);
+    expect(ui.schwungCoRunSlot).toBe(-1);
+    expect(globalThis.shadow_corun_state()).toBeNull();
   });
 
   test("Edit Sound shows NO SLOT preflight for unmatched Schwung route", () => {

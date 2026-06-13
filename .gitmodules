@@ -1,3 +1,6 @@
 [submodule "tool"]
 	path = tool
 	url = git@github.com:m-dwyer/schwung-davebox.git
+[submodule "schwung"]
+	path = schwung
+	url = git@github.com:charlesvestal/schwung.git

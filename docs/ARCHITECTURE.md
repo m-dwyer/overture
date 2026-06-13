@@ -23,6 +23,7 @@ Overture itself renders **no audio** (like dAVEBOx).
 Current repo shape:
 ```
 overture/                         ← integrator repo
+├── schwung/   submodule → upstream charlesvestal/schwung v0.9.18
 ├── tool/      submodule → m-dwyer/schwung-davebox  (THICK fork = the Overture tool)
 ├── scripts/   integration/deploy helpers
 ├── web/       emulator and tests for the real tool UI
@@ -32,16 +33,17 @@ overture/                         ← integrator repo
 Target packaging shape:
 ```
 overture/                         ← integrator repo (m-dwyer/overture, PRIVATE)
-├── schwung/   optional submodule or pinned checkout → upstream charlesvestal/schwung
+├── schwung/   submodule → upstream charlesvestal/schwung
 ├── tool/      submodule → m-dwyer/schwung-davebox  (THICK fork = the Overture tool; upstream=legsmechanical/…)
 ├── modules/   submodule(s) → curated default open modules to ship
-├── build.sh   builds patched shim + shadow_ui + the tool + bundles modules
+├── build.sh   builds upstream Schwung + the tool + bundles modules
 ├── install.sh deploys the whole stack to MOVE_HOST (move-em.local) in one command
 ├── overture.json  branding / default set / boot behaviour
 └── docs/
 ```
 The monorepo owns the **glue** (submodule pins, build/install, default-module bundle, config,
-branding) — *not* Schwung or tool source; it references your forks at specific commits.
+branding) — *not* Schwung or tool source; it references upstream Schwung and the tool fork at
+specific commits.
 `git clone --recursive && ./install.sh` = the single-package experience.
 
 > **Private note:** GitHub can't *privately fork* a public repo. The `schwung`/`tool` submodules
@@ -80,7 +82,8 @@ changes.
      on stock Schwung;
   4. bump the `schwung` pointer.
 - **Track upstream Schwung:** `git fetch upstream` in `schwung/` → rebase your (small) commit set
-  onto the new tag → rebuild → bump pointer. The recurring "integrator tax."
+  onto the new tag if a host fork becomes necessary → rebuild → bump pointer. When no host fork is
+  needed, update the submodule directly to the verified upstream tag.
 
 ## Co-run (the Ableton-editing UX)
 Co-run is **host code** (`schwung_shim.c` + `shadow_ui.c/.js` + `shadow_constants.h`) and is now an

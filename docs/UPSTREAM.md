@@ -7,6 +7,8 @@ not have to pretend the fork is still identical to upstream.
 ## Current Baseline
 
 - Overture package version: `1.1.0`
+- Upstream Schwung host pin: `v0.9.18` (`0221f3ff`), first verified upstream
+  tag used by Overture with `shadow_corun_begin/end/state`.
 - Upstream dAVEBOx baseline: `1.0b3`
 - Tool baseline commit before Overture-only Phase 5 work: `7cf3e71`
 - Parent integration commit that completed the Phase 4 upstream bug-fix port:
@@ -21,6 +23,8 @@ only when persisted state format compatibility genuinely changes.
 
 - `tool/module.json` and `tool/release.json` carry Overture's install/update
   version.
+- `schwung/` is pinned independently to the upstream Schwung host version used
+  for build/install integration.
 - This file records the dAVEBOx baseline and port status.
 - Future dAVEBOx catch-up work should update this file with the upstream tag or
   commit, the Overture parent commit that performed the port, and any skipped or

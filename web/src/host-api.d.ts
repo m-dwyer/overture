@@ -32,8 +32,9 @@ export interface HostApi {
   move_midi_inject_to_move(pkt: number[]): void;
   shadow_send_midi_to_dsp(...args: unknown[]): void;
   // co-run (native-editor delegation)
-  shadow_corun_begin(...args: unknown[]): void;
+  shadow_corun_begin(target: number, id: number, keepMask: number): void;
   shadow_corun_end(...args: unknown[]): void;
+  shadow_corun_state(): { target: number; id: number; keep_mask: number } | null;
   shadow_get_slots(): Array<Record<string, unknown>>;
   shadow_get_ui_flags(): Record<string, unknown>;
 }
@@ -69,6 +70,7 @@ declare global {
   var shadow_send_midi_to_dsp: HostApi["shadow_send_midi_to_dsp"];
   var shadow_corun_begin: HostApi["shadow_corun_begin"];
   var shadow_corun_end: HostApi["shadow_corun_end"];
+  var shadow_corun_state: HostApi["shadow_corun_state"];
   var shadow_get_slots: HostApi["shadow_get_slots"];
   var shadow_get_ui_flags: HostApi["shadow_get_ui_flags"];
 

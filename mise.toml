@@ -68,37 +68,57 @@ description = "Build + deploy the Overture tool module via Schwung's install-mod
 depends = ["dsp"]
 run = '''
 set -euo pipefail
-SCHWUNG_INSTALL="${SCHWUNG_INSTALL_SCRIPT:-../schwung/scripts/install.sh}"
+SCHWUNG_INSTALL="${SCHWUNG_INSTALL_SCRIPT:-schwung/scripts/install.sh}"
 TARBALL="tool/dist/overture-module.tar.gz"
 [ -f "$SCHWUNG_INSTALL" ] || { echo "Missing Schwung installer: $SCHWUNG_INSTALL"; exit 1; }
 [ -f "$TARBALL" ] || { echo "Missing module tarball: $TARBALL"; exit 1; }
-bash "$SCHWUNG_INSTALL" install-module "$TARBALL"
+bash "$SCHWUNG_INSTALL" install-module "$TARBALL" "--host=${MOVE_HOST:-move.local}"
 '''
 
-# --- co-run Schwung-host bridge (temporary, until upstream PR #94 lands) -------
-# Overlays joshgaine's co-run onto the device's stock Schwung via a targeted
-# 3-file swap. Source of truth = the `corun` branch on m-dwyer/schwung (our
-# private snapshot; upstream=charlesvestal stays wired for when PR #94 lands).
-# $SCHWUNG_FORK_DIR is just the build workspace (default below). corun-on-v0917.
-[tasks.corun-build]
-description = "Build the co-run Schwung bridge (Docker aarch64); clones m-dwyer/schwung@corun if absent"
+[tasks.schwung-build]
+description = "Build pinned upstream Schwung (Docker aarch64)"
+run = "bash schwung/scripts/build.sh"
+
+[tasks.schwung-check-corun]
+description = "Check the installed Move host exposes upstream Schwung co-run APIs"
 run = '''
-set -e
-DIR="${SCHWUNG_FORK_DIR:-$HOME/src/move-spike/legsmechanical-schwung}"
-if [ ! -d "$DIR/.git" ]; then
-  echo "Cloning m-dwyer/schwung (corun) -> $DIR"
-  git clone -b corun git@github.com:m-dwyer/schwung.git "$DIR"
-fi
-cd "$DIR"
-git fetch origin corun --tags --quiet
-git checkout --quiet corun
-./scripts/build.sh
+set -euo pipefail
+HOST="${MOVE_HOST:-move.local}"
+SD="/data/UserData/schwung"
+ABLE="ableton@${HOST}"
+MIN_VER="0.9.18"
+
+version_ge() {
+  awk -v a="$1" -v b="$2" 'BEGIN {
+    split(a, A, "."); split(b, B, ".");
+    for (i = 1; i <= 3; i++) {
+      ai = A[i] + 0; bi = B[i] + 0;
+      if (ai > bi) exit 0;
+      if (ai < bi) exit 1;
+    }
+    exit 0;
+  }'
+}
+
+VER="$(ssh -o ConnectTimeout=8 "$ABLE" "cat $SD/host/version.txt" 2>/dev/null | tr -d '[:space:]')"
+[ -n "$VER" ] || { echo "ERROR: could not read installed Schwung version from $HOST"; exit 1; }
+version_ge "$VER" "$MIN_VER" || { echo "ERROR: installed Schwung v$VER is older than required v$MIN_VER"; exit 1; }
+
+for sym in shadow_corun_begin shadow_corun_end shadow_corun_state; do
+  if ! ssh -o ConnectTimeout=8 "$ABLE" "strings $SD/shadow/shadow_ui | grep -q $sym" 2>/dev/null; then
+    echo "ERROR: installed shadow_ui lacks $sym"
+    exit 1
+  fi
+done
+
+echo "Installed Schwung v$VER exposes upstream co-run APIs on $HOST."
 '''
 
-[tasks.corun-deploy]
-description = "Deploy the co-run Schwung bridge to $MOVE_HOST (targeted 3-file swap; version-guarded)"
-run = "bash scripts/deploy-corun-schwung.sh"
-
-[tasks.corun-revert]
-description = "Restore stock Schwung from the *.pre-corun backups on $MOVE_HOST"
-run = "bash scripts/revert-corun-schwung.sh"
+[tasks.schwung-install]
+description = "Install pinned upstream Schwung to $MOVE_HOST only when schwung-check-corun fails"
+depends = ["schwung-build"]
+run = '''
+set -euo pipefail
+HOST="${MOVE_HOST:-move.local}"
+bash schwung/scripts/install.sh local --skip-confirmation "--host=$HOST"
+'''

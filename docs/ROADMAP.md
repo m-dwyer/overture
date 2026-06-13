@@ -63,10 +63,15 @@ Replace the temporary co-run-patched Schwung path with upstream Schwung
 at the first tag or pinned commit that contains co-run. Overture should not keep
 carrying a Schwung fork solely for co-run.
 
+Implementation pin: upstream Schwung `v0.9.18`
+(`0221f3ff06196ebb5bd660613c225c0c9ddae405`).
+
 Changes:
 
 - Update the integrator repo to prefer upstream Schwung for the host/shim layer.
-- Remove or mark legacy temporary co-run bridge tasks and scripts.
+- Remove legacy temporary co-run bridge tasks and scripts.
+- Treat device Schwung install as conditional: verify the installed host first,
+  and install pinned upstream Schwung only when it lacks co-run.
 - Keep Overture capability-gated for older or stock hosts:
   `typeof shadow_corun_begin === 'function'`.
 - Verify `shadow_corun_begin`, `shadow_corun_end`, and

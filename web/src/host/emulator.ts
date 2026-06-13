@@ -73,8 +73,17 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const host_remove_dir = (): number => 1;
   const move_midi_inject_to_move = (pkt: number[]): void => midi.inject(pkt);
   const shadow_send_midi_to_dsp = (...a: unknown[]): void => midi.toChain(a);
-  const shadow_corun_begin = (...a: unknown[]): void => log("corun_begin " + JSON.stringify(a));
-  const shadow_corun_end = (): void => log("corun_end");
+  let corunState: { target: number; id: number; keep_mask: number } | null = null;
+  const shadow_corun_begin = (target: number, id: number, keepMask: number): void => {
+    corunState = { target, id, keep_mask: keepMask };
+    log("corun_begin " + JSON.stringify([target, id, keepMask]));
+  };
+  const shadow_corun_end = (): void => {
+    corunState = null;
+    log("corun_end");
+  };
+  const shadow_corun_state = (): { target: number; id: number; keep_mask: number } | null =>
+    corunState ? { ...corunState } : null;
   const shadow_get_slots = (): Array<Record<string, unknown>> => slots;
   const shadow_get_ui_flags = (): Record<string, unknown> => ({});
 
@@ -84,7 +93,7 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     host_module_get_param, host_module_set_param,
     host_write_file, host_read_file, host_file_exists, host_ensure_dir, host_remove_dir,
     move_midi_inject_to_move, shadow_send_midi_to_dsp,
-    shadow_corun_begin, shadow_corun_end, shadow_get_slots, shadow_get_ui_flags,
+    shadow_corun_begin, shadow_corun_end, shadow_corun_state, shadow_get_slots, shadow_get_ui_flags,
   });
 
   // Load the REAL tool UI. The literal lets Vite's remap plugin (and vitest)
