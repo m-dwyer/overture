@@ -1,7 +1,9 @@
 # Overture Quick Start
 
-This is the shortest path to a useful hybrid setup: Move engines on tracks 1-4,
-Schwung/open engines on tracks 5-8, and one Overture timeline controlling both.
+This is the shortest path to the default hybrid setup: Move engines on tracks
+1-4, Schwung/open engines on tracks 5-8, and one Overture timeline controlling
+both. Overture's route system is more flexible than this template, but this is
+the setup new users should start with.
 
 ## 1. Prepare Move tracks 1-4
 
@@ -62,12 +64,13 @@ Clips are no longer always on the side buttons in Track View.
 Use Session View for clip launch, copy, cut, clear, scene work, and performance
 clip control.
 
-## 5. Edit Sound
+## 5. Load or edit the sound
 
-Use Edit Sound when you want the native editor for the active route.
+Use the active track's sound command when you want to load, change, or edit the
+engine for that route.
 
-- Move-routed tracks enter Move's native device/preset editing UI.
-- Schwung-routed tracks enter Schwung's chain editor for the slot.
+- Move-routed tracks enter Move's native device/preset UI.
+- Schwung-routed tracks enter Schwung's module/chain editor for the slot.
 - Overture keeps the sequencer running while the editor has the OLED and nav
   controls.
 - Exit back to Overture with the normal co-run exit gesture.

@@ -44,6 +44,7 @@ gesture would be faster.
 | Track navigation | Side buttons select tracks 1-4; Shift + side selects tracks 5-8. Shift+jog and Shift+bottom-pad remain fallbacks. | Keep side buttons as the primary track model; polish labels and LEDs. |
 | Clip selection | Hold a side button to reveal that track's 16 clips on the step buttons; Session View keeps clip performance and clip operations. | Polish reveal LED states and preserve direct performance flow. |
 | Sound editing | `Edit Sound...` dispatches to Move-native or Schwung-chain co-run with preflight/failure overlays. | Deepen this into a stable sound-edit module and make return/exit behavior feel seamless. |
+| Engine loading | Move engines are chosen in Move's native flow; Schwung modules are chosen in Schwung's chain/module flow. | Expose one obvious route-aware sound command so loading a Move engine on tracks 1-4 and a Schwung module on tracks 5-8 feels equally direct. |
 | Setup | Route Check shows expected Move/Schwung routes and slot status. | Evolve into Setup Health: version, co-run, slots, channels, template state, and repair guidance. |
 | Motion | Param Peek and AUTO lane labels make automation more legible. | Make AUTO feel like musical Motion: lane overview, activity LEDs, and honest target names. |
 | Step editing | Hold step + jog edits length; K controls keep the deep editor. | Add fast velocity, transpose, and nudge shortcuts while preserving trig-depth controls. |
@@ -70,11 +71,16 @@ Targets:
 `Edit Sound...` is one command with route-specific internals:
 
 - Move route: enter Move's native device/preset UI.
-- Schwung route: enter Schwung's chain editor.
+- Schwung route: enter Schwung's chain/module editor.
 - External route: show route/config status, not a fake editor.
 
 The sequencer should keep running. Overture should return to the same musical
 context when co-run exits.
+
+Engine loading should use the same mental model: one obvious command from the
+active track, then route-specific handoff. On the default template, tracks 1-4
+delegate to Move's native engine/preset browser and tracks 5-8 delegate to
+Schwung's module/chain browser.
 
 ## OLED
 

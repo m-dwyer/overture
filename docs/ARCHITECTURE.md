@@ -49,10 +49,11 @@ branding) — *not* Schwung or tool source; it references your forks at specific
 > remote for pulls), not `gh repo fork`s.
 
 ## Fork strategy (asymmetric on purpose)
-- **Schwung = upstream-first.** Co-run exists in upstream Schwung as of `v0.9.18`.
-  Prefer a plain upstream pin unless Overture needs a tiny capability-gated host
-  hook. Any host fork should be thin, tracked to upstream releases, and treated
-  as integrator tax.
+- **Schwung = upstream-first.** Co-run should come from the first verified
+  upstream Schwung tag or pinned commit that contains it. Prefer a plain
+  upstream pin unless Overture needs a tiny capability-gated host hook. Any host
+  fork should be thin, tracked to upstream releases, and treated as integrator
+  tax.
 - **`tool` = THICK fork.** This is your product. Diverge freely for Overture-native
   UX: track surface, sound edit, route health, motion, shortcut layer, LED
   language, setup, and performance flow. Over time it stops tracking dAVEBOx
@@ -93,6 +94,11 @@ Two resource pools: **≤4 Ableton-engine slots** (`ROUTE_MOVE`, inject cable 2 
 **unlimited hosted slots** (`ROUTE_SCHWUNG`, MIDI to Schwung slots) + external. Any UI track 1–4 can
 be Ableton *or* hosted; tracks 5+ are hosted-only. One uniform `track_view` + param descriptor → one
 renderer for both kinds.
+
+The default template is intentionally simpler than the capability model: tracks
+1-4 are Move-routed and tracks 5-8 are Schwung-routed. That is the first-run
+experience documented in `QUICK-START.md`; it should not be implemented by
+removing route flexibility from the tool.
 
 ## Unified automation
 Move already has native per-step parameter automation. Overture's automation work is about making a
@@ -138,6 +144,10 @@ the native, already-consistent editors. (The heavier "uniform `track_view` rende
 described in `HYBRID-GROOVEBOX.md` remains an option for deeper unification, but delegate-via-co-run is
 the lower-code, lower-fragility default — and it's *why* chain-edit co-run is worth carrying in the
 `schwung` fork.)
+
+Loading an engine follows the same rule. The user should see one route-aware
+sound command; Overture delegates Move-routed engine choice to Move's native
+flow and Schwung-routed module choice to the Schwung chain/module flow.
 
 ## Build / install / device
 - **Build:** one `build.sh` → patched shim + shadow_ui + tool `dsp.so`/`ui.js` + bundled modules.

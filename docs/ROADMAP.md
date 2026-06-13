@@ -3,8 +3,13 @@
 ## Product Direction
 
 Overture is an Overture-native groovebox for Ableton Move: one fast, cohesive
-surface for sequencing Move engines on tracks 1-4 and Schwung/open engines on
-tracks 5-8, with dAVEBOx depth preserved underneath.
+surface for sequencing a default hybrid setup of Move engines on tracks 1-4 and
+Schwung/open engines on tracks 5-8, with dAVEBOx depth preserved underneath.
+
+That split is the beginner-facing template, not the whole routing model. The
+route system remains flexible where current code supports it: tracks 1-4 can be
+Move or hosted, while tracks 5+ are hosted/external unless a future device spike
+proves a clean Move-native route beyond the four hardware engine slots.
 
 Overture should not feel like vanilla dAVEBOx with a few renamed menus, and it
 does not need to clone vanilla Move when a different choice is clearer or
@@ -49,14 +54,14 @@ Per-track Move volume remains deprioritized. Current probes found no clean route
 to Move's native faders from inside Overture without master-volume bleed or
 foreground-control problems.
 
-## Phase 0: Upstream Schwung v0.9.18 Migration
+## Phase 0: Upstream Schwung Co-run Migration
 
 **Priority:** P0
-**Branch:** `infra/upstream-schwung-0.9.18`
+**Branch:** `infra/upstream-schwung-corun`
 
 Replace the temporary co-run-patched Schwung path with upstream Schwung
-`v0.9.18` or newer. Co-run is now upstream, so Overture should not keep carrying
-a Schwung fork solely for co-run.
+at the first tag or pinned commit that contains co-run. Overture should not keep
+carrying a Schwung fork solely for co-run.
 
 Changes:
 
@@ -70,7 +75,8 @@ Changes:
 
 Acceptance:
 
-- Overture launches against upstream Schwung `v0.9.18` or newer.
+- Overture launches against the verified upstream Schwung co-run tag or pinned
+  commit.
 - Edit Sound works for Move-routed tracks and Schwung-routed tracks.
 - Route Check still detects Schwung slots.
 - Emulator tests pass.
@@ -90,6 +96,8 @@ Create focused modules around these product concepts:
   labels.
 - **sound edit:** route-specific Edit Sound dispatch, preflight wording, co-run
   state.
+- **engine loading:** one discoverable command whose route-specific handoff is
+  as easy for Move-native engines as for Schwung modules.
 - **route health:** Move/Schwung channel and slot checks.
 - **motion:** AUTO lane labels, Param Peek, automation context.
 - **shortcut layer:** Shift+Step commands and discoverability.
@@ -112,20 +120,29 @@ Acceptance:
   the same interfaces the UI uses.
 - Future UX work should not need to modify unrelated areas of `ui.js`.
 
-## Phase 2: Setup Health And Template Spike
+## Phase 2: Engine Loading And Setup Health
 
 **Priority:** P1
-**Branch:** `feature/setup-health-template-spike`
+**Branch:** `feature/engine-loading-setup-health`
 
 Reduce first-run confusion. A beginner should be able to tell whether Overture
-is ready to make sound and what to fix when it is not.
+is ready to make sound, load or change the engine for the active track, and know
+what to fix when it is not.
 
 Changes:
 
+- Add a first-class `Load Engine` or equivalent sound command beside `Edit
+  Sound`.
+- For the default Move tracks 1-4, delegate loading/changing the engine to
+  Move's native preset/device flow via co-run.
+- For default Schwung tracks 5-8, open the Schwung module/chain selection flow
+  with the same ease and with clear slot/channel preflight.
+- Keep copy route-aware but user-facing: say `Move`, `Schwung`, `Slot`, and
+  `Track`, not internal host labels unless troubleshooting needs them.
 - Evolve Route Check into Setup Health.
 - Check Schwung version and co-run capability.
-- Check Move track route/channel expectations for tracks 1-4.
-- Check Schwung slots/channels for tracks 5-8.
+- Check the default Move track route/channel expectations for tracks 1-4.
+- Check the default Schwung slot/channel expectations for tracks 5-8.
 - Detect obvious thru, missing-slot, and channel-mismatch cases.
 - Investigate install-time template deployment using `Song.abl`, Schwung set
   state, and Track Presets.
@@ -143,6 +160,10 @@ Questions:
 Acceptance:
 
 - Setup Health gives actionable user messages, not debug labels.
+- A new user can find the engine-loading path from the active track without
+  reading the manual.
+- Loading/changing a Move engine and loading/changing a Schwung module use one
+  consistent entry point with route-specific handoff.
 - No user Set is modified during the spike.
 - Findings are documented with exact files and paths tested.
 - If reliable, add a follow-up implementation phase for template deployment.
@@ -370,9 +391,9 @@ Acceptance:
 
 ## Implementation Order
 
-1. `infra/upstream-schwung-0.9.18`
+1. `infra/upstream-schwung-corun`
 2. `refactor/overture-ui-product-seams`
-3. `feature/setup-health-template-spike`
+3. `feature/engine-loading-setup-health`
 4. `feature/move-step-edit-shortcuts`
 5. `feature/motion-layer-readable`
 6. `feature/shortcut-layer-menu-demotion`

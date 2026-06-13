@@ -39,10 +39,10 @@ rest play **open Schwung/moveforge modules** — under one sequencer, one pad/kn
    Move engines and Schwung/open tracks: 8 tracks, trig conditions, polyrhythmic automation,
    bake/export, and a cohesive groovebox UX where the Ableton/open seam disappears for the user.
 
-6. **Minimal divergence from upstreams.** Keep Schwung upstream-first. Co-run exists upstream as of
-   Schwung `v0.9.18`, so only carry host changes when Overture needs a tiny capability-gated hook.
-   Diverge freely only in the *tool* (your code). Every line added to Schwung is a line rebased
-   forever.
+6. **Minimal divergence from upstreams.** Keep Schwung upstream-first. Use the first verified upstream
+   Schwung tag or pinned commit that contains co-run, and only carry host changes when Overture needs
+   a tiny capability-gated hook. Diverge freely only in the *tool* (your code). Every line added to
+   Schwung is a line rebased forever.
 
 ## The trade we're accepting
 Using Ableton's *real engines, live* is only possible by coexisting with a running Move — so we
