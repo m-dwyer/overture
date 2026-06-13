@@ -25,3 +25,9 @@ declare module "@tool-ui/ui_motion.mjs" {
   export function motionOverviewModel(track: number, clip: number): any;
   export function paramPeekInfo(): unknown;
 }
+
+declare module "@tool-ui/ui_tick_tasks.mjs" {
+  export function runMoveCoRunTickTasks(S: any, deps: any): void;
+  export function runDeferredContentResyncTasks(S: any, deps: any): void;
+  export function runEndOfTickPersistenceTasks(S: any, deps: any): void;
+}
