@@ -5,6 +5,7 @@ import {
   drumPadToLane,
   drumPadToVelZone,
   drumVelZoneToVelocity,
+  resolveDrumPadTarget,
   queueLiveNoteOff,
   queueLiveNoteOn,
   updatePadNoteMap,
@@ -65,6 +66,14 @@ describe("pad surface", () => {
     expect(drumVelZoneToVelocity(7)).toBe(64);
     expect(drumVelZoneToVelocity(8)).toBe(71);
     expect(drumVelZoneToVelocity(15)).toBe(127);
+  });
+
+  test("drum pad target classification combines lane validity and velocity-zone velocity", () => {
+    expect(resolveDrumPadTarget(0, 0, 32)).toEqual({ kind: "lane", lane: 0 });
+    expect(resolveDrumPadTarget(10, 1, 32)).toEqual({ kind: "lane", lane: 22 });
+    expect(resolveDrumPadTarget(10, 2, 32)).toEqual({ kind: "none" });
+    expect(resolveDrumPadTarget(4, 2, 32)).toEqual({ kind: "velocity", zone: 0, velocity: 8 });
+    expect(resolveDrumPadTarget(31, 2, 32)).toEqual({ kind: "velocity", zone: 15, velocity: 127 });
   });
 
   test("live note queues are track-scoped and preserve event shape", () => {
