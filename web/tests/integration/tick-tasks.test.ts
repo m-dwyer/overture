@@ -8,6 +8,7 @@ import {
   runLiveNoteDrain,
   runMetroNoteOffTask,
   runMoveCoRunTickTasks,
+  runPadMapSelfHealTask,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
 function calls() {
@@ -112,6 +113,88 @@ describe("tick task drains", () => {
     S.tickCount = 21;
     runMetroNoteOffTask(S, deps);
     expect(c.log).toHaveLength(1);
+  });
+
+  test("padmap self-heal is inert unless DSP inbound pad handling is enabled", () => {
+    const c = calls();
+    const S = {
+      dspInboundEnabled: false,
+      tickCount: 10,
+      lastPushedMuted: false,
+      sessionView: false,
+      padNoteMap: [60],
+      trackPadMode: [0],
+      trackOctave: [0],
+      activeTrack: 0,
+    };
+
+    runPadMapSelfHealTask(S, {
+      PAD_MODE_DRUM: 1,
+      padDispatchMuted: () => true,
+      host_module_get_param: c.fn("get"),
+      computePadNoteMap: c.fn("compute"),
+    });
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("padmap self-heal repushes immediately when JS mute state drifts from last push", () => {
+    const c = calls();
+    const S = {
+      dspInboundEnabled: true,
+      tickCount: 11,
+      lastPushedMuted: false,
+      sessionView: false,
+      padNoteMap: [60],
+      trackPadMode: [0],
+      trackOctave: [0],
+      activeTrack: 0,
+    };
+
+    runPadMapSelfHealTask(S, {
+      PAD_MODE_DRUM: 1,
+      padDispatchMuted: () => true,
+      host_module_get_param: c.fn("get"),
+      computePadNoteMap: c.fn("compute"),
+    });
+
+    expect(c.log).toEqual([["compute"]]);
+  });
+
+  test("padmap self-heal polls DSP every fifth tick and repushes on mute or pad-0 mismatch", () => {
+    const c = calls();
+    const S = {
+      dspInboundEnabled: true,
+      tickCount: 15,
+      lastPushedMuted: false,
+      sessionView: false,
+      padNoteMap: [60],
+      trackPadMode: [0],
+      trackOctave: [1],
+      activeTrack: 0,
+    };
+
+    runPadMapSelfHealTask(S, {
+      PAD_MODE_DRUM: 1,
+      padDispatchMuted: () => false,
+      host_module_get_param: (key: string) =>
+        key === "pad_dispatch_muted" ? "1" : key === "pad_note_map_0" ? "71" : null,
+      computePadNoteMap: c.fn("compute"),
+    });
+
+    expect(c.log).toEqual([["compute"], ["compute"]]);
+
+    c.log.length = 0;
+    S.padNoteMap[0] = 0xff;
+    runPadMapSelfHealTask(S, {
+      PAD_MODE_DRUM: 1,
+      padDispatchMuted: () => false,
+      host_module_get_param: (key: string) =>
+        key === "pad_dispatch_muted" ? "0" : key === "pad_note_map_0" ? "127" : null,
+      computePadNoteMap: c.fn("compute"),
+    });
+
+    expect(c.log).toEqual([["compute"]]);
   });
 
   test("default set-param drain honors hold, load/sync gates, host availability, and FIFO order", () => {
