@@ -7,6 +7,8 @@ import {
   handleDrumRepeat2LanePadRelease,
   handleDrumRepeat2RatePadPress,
   handleDrumRepeat2RightGridPadRelease,
+  handleDrumRepeatPadAftertouch,
+  handleDrumRepeat2LaneAftertouch,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
 function calls() {
@@ -216,6 +218,36 @@ describe("drum repeat workflows", () => {
 
     expect(S.drumRepeatHeldPad[0]).toBe(-1);
     expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Rpt1 aftertouch on the held rate pad updates velocity and sends pressure", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.drumRepeatHeldPad[0] = 13;
+    S.drumRepeatHeldPadVel[0] = 90;
+
+    expect(handleDrumRepeatPadAftertouch(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 13, 117)).toBe(true);
+
+    expect(S.drumRepeatHeldPadVel[0]).toBe(117);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_vel", "117"],
+    ]);
+  });
+
+  test("Rpt1 aftertouch on another pad does nothing", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.drumRepeatHeldPad[0] = 13;
+    S.drumRepeatHeldPadVel[0] = 90;
+
+    expect(handleDrumRepeatPadAftertouch(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 12, 117)).toBe(false);
+
+    expect(S.drumRepeatHeldPadVel[0]).toBe(90);
     expect(c.log).toEqual([]);
   });
 
@@ -534,5 +566,31 @@ describe("drum repeat workflows", () => {
     expect(handleDrumRepeat2RightGridPadRelease(S)).toBe(true);
 
     expect(S.screenDirty).toBe(true);
+  });
+
+  test("Rpt2 aftertouch on a held lane sends lane pressure", () => {
+    const c = calls();
+    const S = rpt2State();
+    S.drumRepeat2HeldLanes[0].add(6);
+
+    expect(handleDrumRepeat2LaneAftertouch(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 6, 104)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat2_vel", "6 104"],
+    ]);
+  });
+
+  test("Rpt2 aftertouch on an unheld lane does nothing", () => {
+    const c = calls();
+    const S = rpt2State();
+    S.drumRepeat2HeldLanes[0].add(6);
+
+    expect(handleDrumRepeat2LaneAftertouch(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 7, 104)).toBe(false);
+
+    expect(c.log).toEqual([]);
   });
 });
