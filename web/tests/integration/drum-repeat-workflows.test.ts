@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  handleDrumRepeatRatePadPress,
+  handleDrumRepeatRatePadRelease,
   handleDrumRepeatGatePad,
   handleDrumRepeat2LanePadPress,
   handleDrumRepeat2LanePadRelease,
@@ -37,7 +39,183 @@ function rpt2State() {
   };
 }
 
+function rpt1State() {
+  return {
+    loopHeld: false,
+    dspInboundEnabled: false,
+    drumRepeatHeldPad: [-1],
+    drumRepeatHeldPadVel: [100],
+    drumRepeatHeldPadsStack: [[] as Array<{ padIdx: number; rateIdx: number; vel: number }>],
+    drumRepeatLatched: [false],
+    screenDirty: false,
+  };
+}
+
 describe("drum repeat workflows", () => {
+  test("Rpt1 rate pad press stores the held pad and starts stock repeat", () => {
+    const c = calls();
+    const S = rpt1State();
+
+    expect(handleDrumRepeatRatePadPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 5, 1, 12, 96)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(5);
+    expect(S.drumRepeatHeldPadVel[0]).toBe(96);
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([]);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_start", "12 1 96"],
+      ["set", "t0_drum_repeat_latched", "0"],
+    ]);
+  });
+
+  test("Rpt1 patched Schwung skips drum_repeat_start on press but writes latch state", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.dspInboundEnabled = true;
+
+    expect(handleDrumRepeatRatePadPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 6, 2, 9, 80)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(6);
+    expect(S.drumRepeatHeldPadVel[0]).toBe(80);
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_latched", "0"],
+    ]);
+  });
+
+  test("Rpt1 Loop-held rate press latches after starting repeat", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.loopHeld = true;
+
+    expect(handleDrumRepeatRatePadPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 12, 4, 3, 101)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(12);
+    expect(S.drumRepeatHeldPadVel[0]).toBe(101);
+    expect(S.drumRepeatLatched[0]).toBe(true);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_start", "3 4 101"],
+      ["set", "t0_drum_repeat_latched", "1"],
+    ]);
+  });
+
+  test("Rpt1 pressing the same latched pad again unlatches and stops", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.drumRepeatHeldPad[0] = 5;
+    S.drumRepeatHeldPadVel[0] = 91;
+    S.drumRepeatHeldPadsStack[0].push({ padIdx: 4, rateIdx: 0, vel: 70 });
+    S.drumRepeatLatched[0] = true;
+
+    expect(handleDrumRepeatRatePadPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 5, 1, 2, 88)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([]);
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_stop", "1"],
+    ]);
+  });
+
+  test("Rpt1 pressing another rate while one is held pushes the previous pad to the stack", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.drumRepeatHeldPad[0] = 4;
+    S.drumRepeatHeldPadVel[0] = 77;
+
+    expect(handleDrumRepeatRatePadPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 13, 5, 6, 110)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(13);
+    expect(S.drumRepeatHeldPadVel[0]).toBe(110);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([{ padIdx: 4, rateIdx: 0, vel: 77 }]);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_start", "6 5 110"],
+      ["set", "t0_drum_repeat_latched", "0"],
+    ]);
+  });
+
+  test("Rpt1 releasing the active unlatched pad resumes the previous stacked rate", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.dspInboundEnabled = true;
+    S.drumRepeatHeldPad[0] = 13;
+    S.drumRepeatHeldPadVel[0] = 110;
+    S.drumRepeatHeldPadsStack[0].push({ padIdx: 4, rateIdx: 0, vel: 77 });
+
+    expect(handleDrumRepeatRatePadRelease(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 13, 6)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(4);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([]);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_start", "6 0 77"],
+    ]);
+  });
+
+  test("Rpt1 releasing the active unlatched pad with no stack stops", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.drumRepeatHeldPad[0] = 5;
+
+    expect(handleDrumRepeatRatePadRelease(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 5, 2)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_stop", "1"],
+    ]);
+  });
+
+  test("Rpt1 releasing a queued inactive pad removes it from the stack", () => {
+    const c = calls();
+    const S = rpt1State();
+    S.drumRepeatHeldPad[0] = 13;
+    S.drumRepeatHeldPadsStack[0].push(
+      { padIdx: 4, rateIdx: 0, vel: 77 },
+      { padIdx: 5, rateIdx: 1, vel: 88 },
+    );
+
+    expect(handleDrumRepeatRatePadRelease(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 4, 6)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(13);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([{ padIdx: 5, rateIdx: 1, vel: 88 }]);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Rpt1 right-grid release always marks dirty and swallows inactive gate-pad release", () => {
+    const c = calls();
+    const S = rpt1State();
+
+    expect(handleDrumRepeatRatePadRelease(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 22, 6)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
   test("tap gate pad toggles the repeat gate bit and redraws", () => {
     const c = calls();
     const S = baseState();
