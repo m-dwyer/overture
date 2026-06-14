@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
   handleDrumRepeatGatePad,
   handleDrumRepeat2LanePadPress,
+  handleDrumRepeat2LanePadRelease,
+  handleDrumRepeat2RightGridPadRelease,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
 function calls() {
@@ -258,5 +260,69 @@ describe("drum repeat workflows", () => {
 
     expect(S.drumRepeat2HeldLanes[0].size).toBe(0);
     expect(c.log).toEqual([]);
+  });
+
+  test("Rpt2 lane release stops an unlatched held lane", () => {
+    const c = calls();
+    const S = rpt2State();
+    S.drumRepeat2HeldLanes[0].add(5);
+    S.screenDirty = false;
+
+    expect(handleDrumRepeat2LanePadRelease(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+    }, 0, 5)).toBe(true);
+
+    expect(S.drumRepeat2HeldLanes[0].has(5)).toBe(false);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat2_lane_off", "5"],
+    ]);
+  });
+
+  test("Rpt2 lane release keeps a latched held lane running", () => {
+    const c = calls();
+    const S = rpt2State();
+    S.drumRepeat2HeldLanes[0].add(6);
+    S.drumRepeat2LatchedLanes[0].add(6);
+    S.screenDirty = false;
+
+    expect(handleDrumRepeat2LanePadRelease(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+    }, 0, 6)).toBe(true);
+
+    expect(S.drumRepeat2HeldLanes[0].has(6)).toBe(false);
+    expect(S.drumRepeat2LatchedLanes[0].has(6)).toBe(true);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Rpt2 lane release ignores invalid or unheld lanes", () => {
+    const c = calls();
+    const S = rpt2State();
+    S.drumRepeat2HeldLanes[0].add(7);
+    S.screenDirty = false;
+
+    expect(handleDrumRepeat2LanePadRelease(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+    }, 0, 32)).toBe(false);
+    expect(handleDrumRepeat2LanePadRelease(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+    }, 0, 8)).toBe(false);
+
+    expect(S.drumRepeat2HeldLanes[0].has(7)).toBe(true);
+    expect(S.screenDirty).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Rpt2 right-grid release marks the screen dirty and swallows the pad release", () => {
+    const S = { screenDirty: false };
+
+    expect(handleDrumRepeat2RightGridPadRelease(S)).toBe(true);
+
+    expect(S.screenDirty).toBe(true);
   });
 });
