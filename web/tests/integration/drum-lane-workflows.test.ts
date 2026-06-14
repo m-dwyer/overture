@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { handleDeleteDrumLaneClear } from "@tool-ui/ui_drum_lane_workflows.mjs";
+import {
+  handleDeleteDrumLaneClear,
+  handleDrumLaneMuteSolo,
+} from "@tool-ui/ui_drum_lane_workflows.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];
@@ -111,6 +114,126 @@ describe("drum lane workflows", () => {
 
     expect(S.undoAvailable).toBe(false);
     expect(S.drumLaneSteps[0][3][0]).toBe("1");
+    expect(c.log).toEqual([]);
+  });
+
+  test("Mute+lane toggles lane mute and marks Mute as a consumed modifier", () => {
+    const c = calls();
+    const S = {
+      muteUsedAsModifier: false,
+      shiftHeld: false,
+      drumLaneMute: [0],
+      drumLaneSolo: [0],
+    };
+
+    expect(handleDrumLaneMuteSolo(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 4)).toBe(true);
+
+    expect(S.muteUsedAsModifier).toBe(true);
+    expect(S.drumLaneMute[0]).toBe(1 << 4);
+    expect(S.drumLaneSolo[0]).toBe(0);
+    expect(c.log).toEqual([
+      ["set", "t0_l4_mute", "1"],
+      ["redraw"],
+    ]);
+
+    c.log.length = 0;
+    expect(handleDrumLaneMuteSolo(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 4)).toBe(true);
+
+    expect(S.drumLaneMute[0]).toBe(0);
+    expect(c.log).toEqual([
+      ["set", "t0_l4_mute", "0"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Mute+lane clears an existing solo before muting the lane", () => {
+    const c = calls();
+    const S = {
+      muteUsedAsModifier: false,
+      shiftHeld: false,
+      drumLaneMute: [0],
+      drumLaneSolo: [1 << 5],
+    };
+
+    expect(handleDrumLaneMuteSolo(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 5)).toBe(true);
+
+    expect(S.drumLaneMute[0]).toBe(1 << 5);
+    expect(S.drumLaneSolo[0]).toBe(0);
+    expect(c.log).toEqual([
+      ["set", "t0_l5_solo", "0"],
+      ["set", "t0_l5_mute", "1"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+Mute+lane toggles lane solo and clears an existing mute", () => {
+    const c = calls();
+    const S = {
+      muteUsedAsModifier: false,
+      shiftHeld: true,
+      drumLaneMute: [1 << 6],
+      drumLaneSolo: [0],
+    };
+
+    expect(handleDrumLaneMuteSolo(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 6)).toBe(true);
+
+    expect(S.muteUsedAsModifier).toBe(true);
+    expect(S.drumLaneMute[0]).toBe(0);
+    expect(S.drumLaneSolo[0]).toBe(1 << 6);
+    expect(c.log).toEqual([
+      ["set", "t0_l6_mute", "0"],
+      ["set", "t0_l6_solo", "1"],
+      ["redraw"],
+    ]);
+
+    c.log.length = 0;
+    expect(handleDrumLaneMuteSolo(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 6)).toBe(true);
+
+    expect(S.drumLaneSolo[0]).toBe(0);
+    expect(c.log).toEqual([
+      ["set", "t0_l6_solo", "0"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Mute/Solo lane workflow ignores invalid lane targets", () => {
+    const c = calls();
+    const S = {
+      muteUsedAsModifier: false,
+      shiftHeld: true,
+      drumLaneMute: [0],
+      drumLaneSolo: [0],
+    };
+
+    expect(handleDrumLaneMuteSolo(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 32)).toBe(false);
+
+    expect(S.muteUsedAsModifier).toBe(false);
+    expect(S.drumLaneMute[0]).toBe(0);
+    expect(S.drumLaneSolo[0]).toBe(0);
     expect(c.log).toEqual([]);
   });
 });
