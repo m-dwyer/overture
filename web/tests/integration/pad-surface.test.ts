@@ -5,6 +5,7 @@ import {
   drumPadToLane,
   drumPadToVelZone,
   drumVelZoneToVelocity,
+  handleDrumLanePadPress,
   handleDrumVelocityPadPress,
   resolveDrumPadTarget,
   queueLiveNoteOff,
@@ -175,6 +176,139 @@ describe("pad surface", () => {
       ["live", 0, 0x90, 45, 127, true],
       ["set", "t0_l1_step_9_vel", "111"],
     ]);
+  });
+
+  test("drum lane-pad press in Move co-run selects and syncs without live preview", () => {
+    const c = calls();
+    const S = {
+      moveCoRunTrack: 0,
+    };
+    const padPitch = new Array(32).fill(-1);
+    const padPressTick = new Array(32).fill(-1);
+    const drumRecNoteOns: Array<{ track: number; laneNote: number; vel: number }> = [];
+
+    expect(handleDrumLanePadPress(S, {
+      setActiveDrumLane: c.fn("setActive"),
+      syncDrumLaneSteps: c.fn("syncSteps"),
+      refreshDrumLaneBankParams: c.fn("refreshBank"),
+      effectiveVelocity: c.fn("effectiveVelocity"),
+      liveSendNote: c.fn("live"),
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+      padPitch,
+      padPressTick,
+      drumRecNoteOns,
+    }, 0, 12, 90, { kind: "lane", lane: 4 })).toBe(true);
+
+    expect(padPitch[12]).toBe(0xff);
+    expect(padPressTick[12]).toBe(-1);
+    expect(drumRecNoteOns).toEqual([]);
+    expect(c.log).toEqual([
+      ["setActive", 0, 4],
+      ["syncSteps", 0, 4],
+      ["refreshBank", 0, 4],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum lane-pad press previews, records, and sends stock repeat-lane fallback", () => {
+    const c = calls();
+    const S = {
+      moveCoRunTrack: -1,
+      drumLaneNote: [[36, 47]],
+      tickCount: 77,
+      liveActiveNotes: new Set<number>(),
+      recordArmed: true,
+      recordCountingIn: false,
+      recordArmedTrack: 0,
+      trackVelOverride: [99],
+      pendingDrumLaneResync: 0,
+      pendingDrumLaneResyncTrack: -1,
+      pendingDrumLaneResyncLane: -1,
+      drumPerformMode: [1],
+      drumRepeatHeldPad: [6],
+      drumRepeatLatched: [false],
+      dspInboundEnabled: false,
+    };
+    const padPitch = new Array(32).fill(-1);
+    const padPressTick = new Array(32).fill(-1);
+    const drumRecNoteOns: Array<{ track: number; laneNote: number; vel: number }> = [];
+
+    handleDrumLanePadPress(S, {
+      setActiveDrumLane: c.fn("setActive"),
+      syncDrumLaneSteps: c.fn("syncSteps"),
+      refreshDrumLaneBankParams: c.fn("refreshBank"),
+      effectiveVelocity: () => 80,
+      liveSendNote: c.fn("live"),
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+      padPitch,
+      padPressTick,
+      drumRecNoteOns,
+    }, 0, 8, 90, { kind: "lane", lane: 1 });
+
+    expect(padPitch[8]).toBe(47);
+    expect(padPressTick[8]).toBe(77);
+    expect(S.liveActiveNotes.has(47)).toBe(true);
+    expect(S.pendingDrumLaneResync).toBe(3);
+    expect(S.pendingDrumLaneResyncTrack).toBe(0);
+    expect(S.pendingDrumLaneResyncLane).toBe(1);
+    expect(drumRecNoteOns).toEqual([{ track: 0, laneNote: 47, vel: 99 }]);
+    expect(c.log).toEqual([
+      ["setActive", 0, 1],
+      ["syncSteps", 0, 1],
+      ["refreshBank", 0, 1],
+      ["live", 0, 0x90, 47, 80],
+      ["set", "t0_drum_repeat_lane", "1"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum lane-pad press during count-in captures a pre-roll note", () => {
+    const c = calls();
+    const S = {
+      moveCoRunTrack: -1,
+      drumLaneNote: [[36]],
+      tickCount: 30,
+      countInStartTick: 20,
+      liveActiveNotes: new Set<number>(),
+      recordArmed: true,
+      recordCountingIn: true,
+      recordArmedTrack: 0,
+      trackVelOverride: [0],
+      pendingPrerollNote: null,
+      drumPerformMode: [0],
+      drumRepeatHeldPad: [-1],
+      drumRepeatLatched: [false],
+      dspInboundEnabled: false,
+    };
+    const padPitch = new Array(32).fill(-1);
+    const padPressTick = new Array(32).fill(-1);
+    const drumRecNoteOns: Array<{ track: number; laneNote: number; vel: number }> = [];
+
+    handleDrumLanePadPress(S, {
+      setActiveDrumLane: c.fn("setActive"),
+      syncDrumLaneSteps: c.fn("syncSteps"),
+      refreshDrumLaneBankParams: c.fn("refreshBank"),
+      effectiveVelocity: () => 73,
+      liveSendNote: c.fn("live"),
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+      padPitch,
+      padPressTick,
+      drumRecNoteOns,
+    }, 0, 0, 90, { kind: "lane", lane: 0 });
+
+    expect(drumRecNoteOns).toEqual([]);
+    expect(S.pendingPrerollNote).toEqual({
+      track: 0,
+      lane: 0,
+      laneNote: 36,
+      vel: 73,
+      isDrum: true,
+      pressedAtTick: 30,
+      countInStart: 20,
+    });
   });
 
   test("live note queues are track-scoped and preserve event shape", () => {
