@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   runDefaultSetParamDrain,
   runDeferredContentResyncTasks,
+  runDeferredDrumNoteOffDrain,
   runEndOfTickPersistenceTasks,
   runLiveNoteDrain,
   runMoveCoRunTickTasks,
@@ -46,6 +47,24 @@ describe("tick task drains", () => {
     expect(pendingLiveNotes[0]).toEqual([]);
     expect(c.log).toEqual([
       ["set", "t0_live_notes", "off 67 on 64 90 on 60 100 off 60"],
+    ]);
+  });
+
+  test("deferred drum note-off drain flushes pitch queues through liveSendNote", () => {
+    const c = calls();
+    const pendingDrumNoteOffs = [[36, 37], [] as number[], [48]];
+
+    runDeferredDrumNoteOffDrain({
+      NUM_TRACKS: 3,
+      pendingDrumNoteOffs,
+      liveSendNote: c.fn("liveSendNote"),
+    });
+
+    expect(pendingDrumNoteOffs).toEqual([[], [], []]);
+    expect(c.log).toEqual([
+      ["liveSendNote", 0, 0x80, 36, 0],
+      ["liveSendNote", 0, 0x80, 37, 0],
+      ["liveSendNote", 2, 0x80, 48, 0],
     ]);
   });
 
