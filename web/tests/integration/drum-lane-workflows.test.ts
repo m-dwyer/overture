@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   handleDeleteDrumLaneClear,
+  handleDrumLaneCopyPaste,
   handleDrumLaneMuteSolo,
 } from "@tool-ui/ui_drum_lane_workflows.mjs";
 
@@ -234,6 +235,173 @@ describe("drum lane workflows", () => {
     expect(S.muteUsedAsModifier).toBe(false);
     expect(S.drumLaneMute[0]).toBe(0);
     expect(S.drumLaneSolo[0]).toBe(0);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Copy+lane arms a drum lane copy source", () => {
+    const c = calls();
+    const S = {
+      copySrc: null,
+      shiftHeld: false,
+    };
+
+    expect(handleDrumLaneCopyPaste(S, {
+      DRUM_LANES: 32,
+      copyDrumLane: c.fn("copy"),
+      cutDrumLane: c.fn("cut"),
+      setActiveDrumLane: c.fn("setActive"),
+      refreshDrumLaneBankParams: c.fn("refresh"),
+      invalidateLEDCache: c.fn("invalidate"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 2, 9)).toBe(true);
+
+    expect(S.copySrc).toEqual({ kind: "drum_lane", track: 2, lane: 9 });
+    expect(c.log).toEqual([
+      ["invalidate"],
+      ["popup", "COPIED"],
+    ]);
+  });
+
+  test("Shift+Copy+lane arms a drum lane cut source", () => {
+    const c = calls();
+    const S = {
+      copySrc: null,
+      shiftHeld: true,
+    };
+
+    expect(handleDrumLaneCopyPaste(S, {
+      DRUM_LANES: 32,
+      copyDrumLane: c.fn("copy"),
+      cutDrumLane: c.fn("cut"),
+      setActiveDrumLane: c.fn("setActive"),
+      refreshDrumLaneBankParams: c.fn("refresh"),
+      invalidateLEDCache: c.fn("invalidate"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 2, 9)).toBe(true);
+
+    expect(S.copySrc).toEqual({ kind: "cut_drum_lane", track: 2, lane: 9 });
+    expect(c.log).toEqual([
+      ["invalidate"],
+      ["popup", "CUT"],
+    ]);
+  });
+
+  test("Copy+lane paste copies within the same track and selects the destination lane", () => {
+    const c = calls();
+    const S = {
+      copySrc: { kind: "drum_lane", track: 2, lane: 4 },
+      shiftHeld: false,
+    };
+
+    expect(handleDrumLaneCopyPaste(S, {
+      DRUM_LANES: 32,
+      copyDrumLane: c.fn("copy"),
+      cutDrumLane: c.fn("cut"),
+      setActiveDrumLane: c.fn("setActive"),
+      refreshDrumLaneBankParams: c.fn("refresh"),
+      invalidateLEDCache: c.fn("invalidate"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 2, 11)).toBe(true);
+
+    expect(S.copySrc).toEqual({ kind: "drum_lane", track: 2, lane: 4 });
+    expect(c.log).toEqual([
+      ["copy", 2, 4, 11],
+      ["setActive", 2, 11],
+      ["refresh", 2, 11],
+      ["invalidate"],
+      ["redraw"],
+      ["popup", "PASTED"],
+    ]);
+  });
+
+  test("Cut+lane paste cuts within the same track and converts the source to copied destination", () => {
+    const c = calls();
+    const S = {
+      copySrc: { kind: "cut_drum_lane", track: 2, lane: 4 },
+      shiftHeld: true,
+    };
+
+    expect(handleDrumLaneCopyPaste(S, {
+      DRUM_LANES: 32,
+      copyDrumLane: c.fn("copy"),
+      cutDrumLane: c.fn("cut"),
+      setActiveDrumLane: c.fn("setActive"),
+      refreshDrumLaneBankParams: c.fn("refresh"),
+      invalidateLEDCache: c.fn("invalidate"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 2, 11)).toBe(true);
+
+    expect(S.copySrc).toEqual({ kind: "drum_lane", track: 2, lane: 11 });
+    expect(c.log).toEqual([
+      ["cut", 2, 4, 11],
+      ["setActive", 2, 11],
+      ["refresh", 2, 11],
+      ["invalidate"],
+      ["redraw"],
+      ["popup", "PASTED"],
+    ]);
+  });
+
+  test("Copy+lane swallows unrelated or cross-track copy sources", () => {
+    const c = calls();
+    const S = {
+      copySrc: { kind: "drum_lane", track: 1, lane: 4 },
+      shiftHeld: false,
+    };
+
+    expect(handleDrumLaneCopyPaste(S, {
+      DRUM_LANES: 32,
+      copyDrumLane: c.fn("copy"),
+      cutDrumLane: c.fn("cut"),
+      setActiveDrumLane: c.fn("setActive"),
+      refreshDrumLaneBankParams: c.fn("refresh"),
+      invalidateLEDCache: c.fn("invalidate"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 2, 11)).toBe(true);
+
+    expect(S.copySrc).toEqual({ kind: "drum_lane", track: 1, lane: 4 });
+    expect(c.log).toEqual([]);
+
+    S.copySrc = { kind: "step", absStep: 3 };
+    expect(handleDrumLaneCopyPaste(S, {
+      DRUM_LANES: 32,
+      copyDrumLane: c.fn("copy"),
+      cutDrumLane: c.fn("cut"),
+      setActiveDrumLane: c.fn("setActive"),
+      refreshDrumLaneBankParams: c.fn("refresh"),
+      invalidateLEDCache: c.fn("invalidate"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 2, 11)).toBe(true);
+
+    expect(S.copySrc).toEqual({ kind: "step", absStep: 3 });
+    expect(c.log).toEqual([]);
+  });
+
+  test("Copy+lane ignores invalid lane targets", () => {
+    const c = calls();
+    const S = {
+      copySrc: null,
+      shiftHeld: false,
+    };
+
+    expect(handleDrumLaneCopyPaste(S, {
+      DRUM_LANES: 32,
+      copyDrumLane: c.fn("copy"),
+      cutDrumLane: c.fn("cut"),
+      setActiveDrumLane: c.fn("setActive"),
+      refreshDrumLaneBankParams: c.fn("refresh"),
+      invalidateLEDCache: c.fn("invalidate"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 2, -1)).toBe(false);
+
+    expect(S.copySrc).toBe(null);
     expect(c.log).toEqual([]);
   });
 });
