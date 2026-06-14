@@ -5,6 +5,7 @@ import {
   drumPadToLane,
   drumPadToVelZone,
   drumVelZoneToVelocity,
+  handleDrumVelocityPadPress,
   resolveDrumPadTarget,
   queueLiveNoteOff,
   queueLiveNoteOn,
@@ -30,6 +31,16 @@ function baseState() {
     sessionView: false,
     extSendAsyncEnabled: false,
     deleteHeld: false,
+  };
+}
+
+function calls() {
+  const log: Array<[string, ...unknown[]]> = [];
+  return {
+    log,
+    fn(name: string) {
+      return (...args: unknown[]) => log.push([name, ...args]);
+    },
   };
 }
 
@@ -74,6 +85,96 @@ describe("pad surface", () => {
     expect(resolveDrumPadTarget(10, 2, 32)).toEqual({ kind: "none" });
     expect(resolveDrumPadTarget(4, 2, 32)).toEqual({ kind: "velocity", zone: 0, velocity: 8 });
     expect(resolveDrumPadTarget(31, 2, 32)).toEqual({ kind: "velocity", zone: 15, velocity: 127 });
+  });
+
+  test("drum velocity-pad press previews the active lane note and marks pad state", () => {
+    const c = calls();
+    const S = {
+      activeDrumLane: [2],
+      drumLaneNote: [[36, 37, 42]],
+      drumLastVelZone: [0],
+      drumVelZoneArmed: [false],
+      tickCount: 123,
+      liveActiveNotes: new Set<number>(),
+      heldStep: -1,
+      heldStepNotes: [],
+      stepBtnPressedTick: new Array(16).fill(0),
+      recordArmed: false,
+      recordCountingIn: false,
+      recordArmedTrack: -1,
+      pendingDrumLaneResync: 0,
+      pendingDrumLaneResyncTrack: -1,
+      pendingDrumLaneResyncLane: -1,
+      screenDirty: false,
+    };
+    const padPitch = new Array(32).fill(-1);
+    const padPressTick = new Array(32).fill(-1);
+    const drumRecNoteOns: Array<{ track: number; laneNote: number; vel: number }> = [];
+
+    expect(handleDrumVelocityPadPress(S, {
+      liveSendNote: c.fn("live"),
+      stepEntryVelocity: c.fn("stepEntryVelocity"),
+      host_module_set_param: c.fn("set"),
+      padPitch,
+      padPressTick,
+      drumRecNoteOns,
+    }, 0, 4, { kind: "velocity", zone: 7, velocity: 64 })).toBe(true);
+
+    expect(S.drumLastVelZone[0]).toBe(7);
+    expect(S.drumVelZoneArmed[0]).toBe(true);
+    expect(S.liveActiveNotes.has(42)).toBe(true);
+    expect(S.screenDirty).toBe(true);
+    expect(padPitch[4]).toBe(42);
+    expect(padPressTick[4]).toBe(123);
+    expect(drumRecNoteOns).toEqual([]);
+    expect(c.log).toEqual([["live", 0, 0x90, 42, 64, true]]);
+  });
+
+  test("drum velocity-pad press writes held-step velocity and queues armed recording resync", () => {
+    const c = calls();
+    const S = {
+      activeDrumLane: [1],
+      drumLaneNote: [[36, 45]],
+      drumLastVelZone: [0],
+      drumVelZoneArmed: [false],
+      tickCount: 200,
+      liveActiveNotes: new Set<number>(),
+      heldStep: 9,
+      heldStepBtn: 3,
+      heldStepNotes: [45],
+      stepEditVel: 0,
+      stepBtnPressedTick: new Array(16).fill(12),
+      recordArmed: true,
+      recordCountingIn: false,
+      recordArmedTrack: 0,
+      pendingDrumLaneResync: 0,
+      pendingDrumLaneResyncTrack: -1,
+      pendingDrumLaneResyncLane: -1,
+      screenDirty: false,
+    };
+    const padPitch = new Array(32).fill(-1);
+    const padPressTick = new Array(32).fill(-1);
+    const drumRecNoteOns: Array<{ track: number; laneNote: number; vel: number }> = [];
+
+    handleDrumVelocityPadPress(S, {
+      liveSendNote: c.fn("live"),
+      stepEntryVelocity: () => 111,
+      host_module_set_param: c.fn("set"),
+      padPitch,
+      padPressTick,
+      drumRecNoteOns,
+    }, 0, 31, { kind: "velocity", zone: 15, velocity: 127 });
+
+    expect(S.stepEditVel).toBe(111);
+    expect(S.stepBtnPressedTick[3]).toBe(-1);
+    expect(S.pendingDrumLaneResync).toBe(3);
+    expect(S.pendingDrumLaneResyncTrack).toBe(0);
+    expect(S.pendingDrumLaneResyncLane).toBe(1);
+    expect(drumRecNoteOns).toEqual([{ track: 0, laneNote: 45, vel: 15 }]);
+    expect(c.log).toEqual([
+      ["live", 0, 0x90, 45, 127, true],
+      ["set", "t0_l1_step_9_vel", "111"],
+    ]);
   });
 
   test("live note queues are track-scoped and preserve event shape", () => {
