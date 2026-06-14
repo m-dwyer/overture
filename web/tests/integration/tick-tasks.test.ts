@@ -6,6 +6,7 @@ import {
   runEndOfTickPersistenceTasks,
   runExternalRouteQueueDrain,
   runLiveNoteDrain,
+  runMetroNoteOffTask,
   runMoveCoRunTickTasks,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
@@ -92,6 +93,25 @@ describe("tick task drains", () => {
       ["external", [8, 128, 60, 0]],
       ["external", [11, 176, 7, 96]],
     ]);
+  });
+
+  test("metro note-off task injects once when the scheduled tick is reached", () => {
+    const c = calls();
+    const S = { metroNoteOffTick: 20, tickCount: 19 };
+    const deps = { move_midi_inject_to_move: c.fn("inject") };
+
+    runMetroNoteOffTask(S, deps);
+    expect(S.metroNoteOffTick).toBe(20);
+    expect(c.log).toEqual([]);
+
+    S.tickCount = 20;
+    runMetroNoteOffTask(S, deps);
+    expect(S.metroNoteOffTick).toBe(-1);
+    expect(c.log).toEqual([["inject", [0x09, 0x80, 108, 0]]]);
+
+    S.tickCount = 21;
+    runMetroNoteOffTask(S, deps);
+    expect(c.log).toHaveLength(1);
   });
 
   test("default set-param drain honors hold, load/sync gates, host availability, and FIFO order", () => {
