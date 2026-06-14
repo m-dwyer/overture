@@ -3,6 +3,7 @@ import {
   runDefaultSetParamDrain,
   runDeferredContentResyncTasks,
   runEndOfTickPersistenceTasks,
+  runLiveNoteDrain,
   runMoveCoRunTickTasks,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
@@ -17,6 +18,37 @@ function calls() {
 }
 
 describe("tick task drains", () => {
+  test("live-note drain waits past step operations and preserves collision ordering", () => {
+    const c = calls();
+    const pendingLiveNotes = [
+      [
+        { isOff: false, pitch: 60, vel: 100 },
+        { isOff: true, pitch: 60 },
+        { isOff: false, pitch: 64, vel: 90 },
+        { isOff: true, pitch: 67 },
+      ],
+      [],
+    ];
+    const S = { tickCount: 10, stepOpTick: 9 };
+    const deps = {
+      NUM_TRACKS: 2,
+      host_module_set_param: c.fn("set"),
+      pendingLiveNotes,
+    };
+
+    runLiveNoteDrain(S, deps);
+    expect(pendingLiveNotes[0]).toHaveLength(4);
+    expect(c.log).toEqual([]);
+
+    S.tickCount = 11;
+    runLiveNoteDrain(S, deps);
+
+    expect(pendingLiveNotes[0]).toEqual([]);
+    expect(c.log).toEqual([
+      ["set", "t0_live_notes", "off 67 on 64 90 on 60 100 off 60"],
+    ]);
+  });
+
   test("default set-param drain honors hold, load/sync gates, host availability, and FIFO order", () => {
     const c = calls();
     const deps = { host_module_set_param: c.fn("set") };
