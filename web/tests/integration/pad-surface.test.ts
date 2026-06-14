@@ -5,11 +5,13 @@ import {
   drumPadToLane,
   drumPadToVelZone,
   drumVelZoneToVelocity,
+  handleCaptureDrumLanePress,
   handleDrumLanePadPress,
   handleDrumVelocityPadPress,
   resolveDrumPadTarget,
   queueLiveNoteOff,
   queueLiveNoteOn,
+  selectDrumLaneSurface,
   updatePadNoteMap,
 } from "@tool-ui/ui_pad_surface.mjs";
 
@@ -86,6 +88,63 @@ describe("pad surface", () => {
     expect(resolveDrumPadTarget(10, 2, 32)).toEqual({ kind: "none" });
     expect(resolveDrumPadTarget(4, 2, 32)).toEqual({ kind: "velocity", zone: 0, velocity: 8 });
     expect(resolveDrumPadTarget(31, 2, 32)).toEqual({ kind: "velocity", zone: 15, velocity: 127 });
+  });
+
+  test("drum lane surface selection syncs lane state in order", () => {
+    const c = calls();
+
+    selectDrumLaneSurface({
+      setActiveDrumLane: c.fn("setActive"),
+      syncDrumLaneSteps: c.fn("syncSteps"),
+      refreshDrumLaneBankParams: c.fn("refreshBank"),
+    }, 2, 9);
+
+    expect(c.log).toEqual([
+      ["setActive", 2, 9],
+      ["syncSteps", 2, 9],
+      ["refreshBank", 2, 9],
+    ]);
+  });
+
+  test("capture drum lane press silently selects a lane and marks capture modifier use", () => {
+    const c = calls();
+    const S = { captureUsedAsModifier: false };
+    const padPitch = new Array(32).fill(-1);
+
+    expect(handleCaptureDrumLanePress(S, {
+      setActiveDrumLane: c.fn("setActive"),
+      syncDrumLaneSteps: c.fn("syncSteps"),
+      refreshDrumLaneBankParams: c.fn("refreshBank"),
+      forceRedraw: c.fn("redraw"),
+      padPitch,
+    }, 3, 10, { kind: "lane", lane: 6 })).toBe(true);
+
+    expect(S.captureUsedAsModifier).toBe(true);
+    expect(padPitch[10]).toBe(0xff);
+    expect(c.log).toEqual([
+      ["setActive", 3, 6],
+      ["syncSteps", 3, 6],
+      ["refreshBank", 3, 6],
+      ["redraw"],
+    ]);
+  });
+
+  test("capture drum lane press ignores non-lane targets", () => {
+    const c = calls();
+    const S = { captureUsedAsModifier: false };
+    const padPitch = new Array(32).fill(-1);
+
+    expect(handleCaptureDrumLanePress(S, {
+      setActiveDrumLane: c.fn("setActive"),
+      syncDrumLaneSteps: c.fn("syncSteps"),
+      refreshDrumLaneBankParams: c.fn("refreshBank"),
+      forceRedraw: c.fn("redraw"),
+      padPitch,
+    }, 3, 10, { kind: "velocity", zone: 3, velocity: 32 })).toBe(false);
+
+    expect(S.captureUsedAsModifier).toBe(false);
+    expect(padPitch[10]).toBe(-1);
+    expect(c.log).toEqual([]);
   });
 
   test("drum velocity-pad press previews the active lane note and marks pad state", () => {
