@@ -4,6 +4,7 @@ import {
   runDeferredContentResyncTasks,
   runDeferredDrumNoteOffDrain,
   runEndOfTickPersistenceTasks,
+  runExternalRouteQueueDrain,
   runLiveNoteDrain,
   runMoveCoRunTickTasks,
 } from "@tool-ui/ui_tick_tasks.mjs";
@@ -65,6 +66,31 @@ describe("tick task drains", () => {
       ["liveSendNote", 0, 0x80, 36, 0],
       ["liveSendNote", 0, 0x80, 37, 0],
       ["liveSendNote", 2, 0x80, 48, 0],
+    ]);
+  });
+
+  test("external route queue drain forwards valid queued MIDI messages unless async send is active", () => {
+    const c = calls();
+    const S = { extSendAsyncEnabled: true };
+    const deps = {
+      host_module_get_param: c.fn("get"),
+      move_midi_external_send: c.fn("external"),
+    };
+
+    runExternalRouteQueueDrain(S, deps);
+    expect(c.log).toEqual([]);
+
+    S.extSendAsyncEnabled = false;
+    runExternalRouteQueueDrain(S, {
+      host_module_get_param: (key: string) =>
+        key === "ext_queue" ? "144 60 100;invalid;128 60 0;176 7 96" : "",
+      move_midi_external_send: c.fn("external"),
+    });
+
+    expect(c.log).toEqual([
+      ["external", [9, 144, 60, 100]],
+      ["external", [8, 128, 60, 0]],
+      ["external", [11, 176, 7, 96]],
     ]);
   });
 
