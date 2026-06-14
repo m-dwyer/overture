@@ -4,6 +4,7 @@ import {
   createLiveNoteQueues,
   drumPadToLane,
   drumPadToVelZone,
+  drumVelZoneToVelocity,
   queueLiveNoteOff,
   queueLiveNoteOn,
   updatePadNoteMap,
@@ -57,6 +58,13 @@ describe("pad surface", () => {
     expect(drumPadToVelZone(7)).toBe(3);
     expect(drumPadToVelZone(12)).toBe(4);
     expect(drumPadToVelZone(31)).toBe(15);
+  });
+
+  test("drum velocity zones map evenly across MIDI velocity range", () => {
+    expect(drumVelZoneToVelocity(0)).toBe(8);
+    expect(drumVelZoneToVelocity(7)).toBe(64);
+    expect(drumVelZoneToVelocity(8)).toBe(71);
+    expect(drumVelZoneToVelocity(15)).toBe(127);
   });
 
   test("live note queues are track-scoped and preserve event shape", () => {
