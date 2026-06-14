@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
   buildDspPadMapPayload,
+  createLiveNoteQueues,
+  queueLiveNoteOff,
+  queueLiveNoteOn,
   updatePadNoteMap,
 } from "@tool-ui/ui_pad_surface.mjs";
 
@@ -33,6 +36,20 @@ const deps = {
 };
 
 describe("pad surface", () => {
+  test("live note queues are track-scoped and preserve event shape", () => {
+    const queues = createLiveNoteQueues(2);
+
+    queueLiveNoteOn(queues, 1, 64, 99);
+    queueLiveNoteOff(queues, 1, 64);
+    queueLiveNoteOn(queues, 0, 36, 110);
+
+    expect(queues[0]).toEqual([{ isOff: false, pitch: 36, vel: 110 }]);
+    expect(queues[1]).toEqual([
+      { isOff: false, pitch: 64, vel: 99 },
+      { isOff: true, pitch: 64 },
+    ]);
+  });
+
   test("drum pad map uses lane notes on the left half and sentinels for velocity zones", () => {
     const S = baseState();
     S.trackPadMode[0] = 1;
