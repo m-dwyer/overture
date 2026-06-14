@@ -5,6 +5,7 @@ import {
   handleDrumRepeatGatePad,
   handleDrumRepeat2LanePadPress,
   handleDrumRepeat2LanePadRelease,
+  handleDrumRepeat2RatePadPress,
   handleDrumRepeat2RightGridPadRelease,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
@@ -34,8 +35,10 @@ function rpt2State() {
     loopHeld: false,
     dspInboundEnabled: false,
     rpt2LoopPadUsed: false,
+    drumRepeat2RatePerLane: [[0, 1, 2, 3, 4, 5, 6, 7]],
     drumRepeat2HeldLanes: [new Set<number>()],
     drumRepeat2LatchedLanes: [new Set<number>()],
+    screenDirty: false,
   };
 }
 
@@ -437,6 +440,35 @@ describe("drum repeat workflows", () => {
     }, 0, 32, 9, 101)).toBe(false);
 
     expect(S.drumRepeat2HeldLanes[0].size).toBe(0);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Rpt2 rate pad updates the active lane mirror and sends stock Schwung rate assignment", () => {
+    const c = calls();
+    const S = rpt2State();
+
+    expect(handleDrumRepeat2RatePadPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 5, 6)).toBe(true);
+
+    expect(S.drumRepeat2RatePerLane[0][5]).toBe(6);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat2_rate", "5 6"],
+    ]);
+  });
+
+  test("Rpt2 rate pad skips stock rate assignment on patched Schwung but still marks dirty", () => {
+    const c = calls();
+    const S = rpt2State();
+    S.dspInboundEnabled = true;
+
+    expect(handleDrumRepeat2RatePadPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0, 4, 2)).toBe(true);
+
+    expect(S.drumRepeat2RatePerLane[0][4]).toBe(2);
+    expect(S.screenDirty).toBe(true);
     expect(c.log).toEqual([]);
   });
 
