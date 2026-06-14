@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
   buildDspPadMapPayload,
   createLiveNoteQueues,
+  drumPadToLane,
+  drumPadToVelZone,
   queueLiveNoteOff,
   queueLiveNoteOn,
   updatePadNoteMap,
@@ -36,6 +38,27 @@ const deps = {
 };
 
 describe("pad surface", () => {
+  test("drum pad geometry maps left-half pads to paged lanes", () => {
+    expect(drumPadToLane(0, 0)).toBe(0);
+    expect(drumPadToLane(3, 0)).toBe(3);
+    expect(drumPadToLane(8, 0)).toBe(4);
+    expect(drumPadToLane(24, 0)).toBe(12);
+    expect(drumPadToLane(31, 0)).toBe(-1);
+
+    expect(drumPadToLane(0, 1)).toBe(16);
+    expect(drumPadToLane(10, 1)).toBe(22);
+    expect(drumPadToLane(12, 1)).toBe(-1);
+  });
+
+  test("drum pad geometry maps right-half pads to velocity zones", () => {
+    expect(drumPadToVelZone(0)).toBe(-1);
+    expect(drumPadToVelZone(3)).toBe(-1);
+    expect(drumPadToVelZone(4)).toBe(0);
+    expect(drumPadToVelZone(7)).toBe(3);
+    expect(drumPadToVelZone(12)).toBe(4);
+    expect(drumPadToVelZone(31)).toBe(15);
+  });
+
   test("live note queues are track-scoped and preserve event shape", () => {
     const queues = createLiveNoteQueues(2);
 
