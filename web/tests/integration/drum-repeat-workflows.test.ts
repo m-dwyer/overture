@@ -9,6 +9,9 @@ import {
   handleDrumRepeat2RightGridPadRelease,
   handleDrumRepeatPadAftertouch,
   handleDrumRepeat2LaneAftertouch,
+  prepareDrumRepeatLoopPress,
+  latchHeldDrumRepeatsOnLoopPress,
+  handleDrumRepeatLoopTapRelease,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
 function calls() {
@@ -53,6 +56,22 @@ function rpt1State() {
     drumRepeatHeldPadsStack: [[] as Array<{ padIdx: number; rateIdx: number; vel: number }>],
     drumRepeatLatched: [false],
     screenDirty: false,
+  };
+}
+
+function loopState() {
+  return {
+    drumRepeatHeldPad: [-1],
+    drumRepeatHeldPadsStack: [[] as Array<{ padIdx: number; rateIdx: number; vel: number }>],
+    drumRepeatLatched: [false],
+    drumRepeat2HeldLanes: [new Set<number>()],
+    drumRepeat2LatchedLanes: [new Set<number>()],
+    liveActiveNotes: new Set<number>(),
+    loopTapUnlatchTrack: -1,
+    loopPressTick: 0,
+    tickCount: 0,
+    pendingDefaultSetParams: [] as Array<{ key: string; val: string }>,
+    rpt2LoopPadUsed: false,
   };
 }
 
@@ -592,5 +611,100 @@ describe("drum repeat workflows", () => {
     }, 0, 7, 104)).toBe(false);
 
     expect(c.log).toEqual([]);
+  });
+
+  test("Loop release with fresh Rpt2 held lanes promotes them to latched lanes through latch-held", () => {
+    const c = calls();
+    const S = loopState();
+    S.drumRepeat2HeldLanes[0].add(4);
+    S.drumRepeat2HeldLanes[0].add(7);
+
+    latchHeldDrumRepeatsOnLoopPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0);
+
+    expect(S.drumRepeat2LatchedLanes[0].has(4)).toBe(true);
+    expect(S.drumRepeat2LatchedLanes[0].has(7)).toBe(true);
+    expect(S.rpt2LoopPadUsed).toBe(true);
+    expect(S.pendingDefaultSetParams).toEqual([]);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat2_latch_held", "1"],
+    ]);
+  });
+
+  test("Loop release with fresh Rpt1 held pad latches Rpt1 through pending defaults", () => {
+    const c = calls();
+    const S = loopState();
+    S.drumRepeatHeldPad[0] = 12;
+
+    latchHeldDrumRepeatsOnLoopPress(S, {
+      host_module_set_param: c.fn("set"),
+    }, 0);
+
+    expect(S.drumRepeatLatched[0]).toBe(true);
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "t0_drum_repeat_latched", val: "1" },
+    ]);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Loop tap press snapshots Rpt1/Rpt2 unlatch eligibility only without fresh holds", () => {
+    const S = loopState();
+
+    prepareDrumRepeatLoopPress(S, 0, true, 0);
+    expect(S.loopTapUnlatchTrack).toBe(0);
+
+    S.loopTapUnlatchTrack = -1;
+    S.drumRepeatHeldPad[0] = 5;
+    prepareDrumRepeatLoopPress(S, 0, true, 0);
+    expect(S.loopTapUnlatchTrack).toBe(-1);
+
+    S.drumRepeatHeldPad[0] = 5;
+    S.drumRepeatLatched[0] = true;
+    prepareDrumRepeatLoopPress(S, 0, true, 0);
+    expect(S.loopTapUnlatchTrack).toBe(0);
+
+    S.loopTapUnlatchTrack = -1;
+    S.drumRepeat2HeldLanes[0].add(2);
+    prepareDrumRepeatLoopPress(S, 0, true, 0);
+    expect(S.loopTapUnlatchTrack).toBe(-1);
+  });
+
+  test("Loop tap release unlatches already-latched Rpt1 and Rpt2 and preserves stop ordering", () => {
+    const S = loopState();
+    S.loopTapUnlatchTrack = 0;
+    S.loopPressTick = 100;
+    S.tickCount = 112;
+    S.drumRepeatHeldPad[0] = 9;
+    S.drumRepeatHeldPadsStack[0].push({ padIdx: 8, rateIdx: 0, vel: 80 });
+    S.drumRepeatLatched[0] = true;
+    S.drumRepeat2LatchedLanes[0].add(3);
+    S.drumRepeat2LatchedLanes[0].add(4);
+
+    expect(handleDrumRepeatLoopTapRelease(S, 32)).toBe(true);
+
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([]);
+    expect(S.drumRepeat2LatchedLanes[0].size).toBe(0);
+    expect(S.loopTapUnlatchTrack).toBe(-1);
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "t0_drum_repeat_stop", val: "1" },
+      { key: "t0_drum_repeat2_stop", val: "1" },
+    ]);
+  });
+
+  test("Loop tap release ignores long holds but still clears unlatch eligibility", () => {
+    const S = loopState();
+    S.loopTapUnlatchTrack = 0;
+    S.loopPressTick = 100;
+    S.tickCount = 140;
+    S.drumRepeatLatched[0] = true;
+
+    expect(handleDrumRepeatLoopTapRelease(S, 32)).toBe(false);
+
+    expect(S.drumRepeatLatched[0]).toBe(true);
+    expect(S.loopTapUnlatchTrack).toBe(-1);
+    expect(S.pendingDefaultSetParams).toEqual([]);
   });
 });
