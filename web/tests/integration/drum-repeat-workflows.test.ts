@@ -12,6 +12,7 @@ import {
   prepareDrumRepeatLoopPress,
   latchHeldDrumRepeatsOnLoopPress,
   handleDrumRepeatLoopTapRelease,
+  handleDeleteLoopDrumRepeatStop,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
 function calls() {
@@ -72,6 +73,13 @@ function loopState() {
     tickCount: 0,
     pendingDefaultSetParams: [] as Array<{ key: string; val: string }>,
     rpt2LoopPadUsed: false,
+  };
+}
+
+function deleteLoopState() {
+  return {
+    ...loopState(),
+    drumPerformMode: [0],
   };
 }
 
@@ -706,5 +714,63 @@ describe("drum repeat workflows", () => {
     expect(S.drumRepeatLatched[0]).toBe(true);
     expect(S.loopTapUnlatchTrack).toBe(-1);
     expect(S.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Delete+Loop stops active Rpt1 latch immediately and redraws", () => {
+    const c = calls();
+    const S = deleteLoopState();
+    S.drumPerformMode[0] = 1;
+    S.drumRepeatHeldPad[0] = 9;
+    S.drumRepeatHeldPadsStack[0].push({ padIdx: 8, rateIdx: 0, vel: 80 });
+    S.drumRepeatLatched[0] = true;
+
+    expect(handleDeleteLoopDrumRepeatStop(S, {
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0)).toBe(true);
+
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([]);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_stop", "1"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Delete+Loop stops active Rpt2 latch immediately before clearing the mirror", () => {
+    const c = calls();
+    const S = deleteLoopState();
+    S.drumPerformMode[0] = 2;
+    S.drumRepeat2LatchedLanes[0].add(3);
+    S.drumRepeat2LatchedLanes[0].add(4);
+
+    expect(handleDeleteLoopDrumRepeatStop(S, {
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0)).toBe(true);
+
+    expect(S.drumRepeat2LatchedLanes[0].size).toBe(0);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat2_stop", "1"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Delete+Loop in a repeat mode with no latch keeps the unconditional redraw", () => {
+    const c = calls();
+    const S = deleteLoopState();
+    S.drumPerformMode[0] = 1;
+
+    expect(handleDeleteLoopDrumRepeatStop(S, {
+      host_module_set_param: c.fn("set"),
+      forceRedraw: c.fn("redraw"),
+    }, 0)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(c.log).toEqual([
+      ["redraw"],
+    ]);
   });
 });
