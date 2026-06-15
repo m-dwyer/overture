@@ -38,6 +38,11 @@ declare module "@tool-ui/ui_bank_render.mjs" {
   export function renderMotionBankOverview(deps: any): void;
 }
 
+declare module "@tool-ui/ui_track_idle_render.mjs" {
+  export function renderDrumTrackIdleView(deps: any): void;
+  export function renderMelodicTrackIdleView(deps: any): void;
+}
+
 declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runDefaultSetParamDrain(S: any, deps: any): void;
   export function runMoveCoRunTickTasks(S: any, deps: any): void;
