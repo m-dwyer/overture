@@ -7,6 +7,9 @@ import {
   renderDrumMidiDelayBankOverview,
   renderDrumNoteFxBankOverview,
   renderDrumRepeatGrooveBankOverview,
+  renderGenericBankOverview,
+  renderMelodicNoteFxBankOverview,
+  renderMotionBankOverview,
 } from "@tool-ui/ui_bank_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
@@ -16,6 +19,7 @@ function createDeps(calls: DrawCall[]) {
     print: (x: number, y: number, text: string, color: number) => calls.push(["print", x, y, text, color]),
     fill_rect: (x: number, y: number, w: number, h: number, color: number) => calls.push(["fill", x, y, w, h, color]),
     drawBankHeading: (name: string) => calls.push(["heading", name]),
+    drawBankHeadingInverted: (name: string) => calls.push(["headingInv", name]),
     drawAltArrow: (x: number, hdrBgWhite: boolean, on: boolean) => calls.push(["arrow", x, hdrBgWhite, on]),
     altIndicatorActive: () => true,
     bankHasAltParams: () => true,
@@ -25,7 +29,7 @@ function createDeps(calls: DrawCall[]) {
 
 function printed(calls: DrawCall[]) {
   return calls
-    .filter((call) => call[0] === "print" || call[0] === "heading")
+    .filter((call) => call[0] === "print" || call[0] === "heading" || call[0] === "headingInv")
     .map((call) => String(call[1] === 4 || call[1] === 106 || typeof call[1] === "number" ? call[3] : call[1]));
 }
 
@@ -49,13 +53,31 @@ describe("Bank render presentation", () => {
     S.knobTouched = -1;
     S.altMode = false;
     S.sessionView = false;
+    S.trackPadMode = [0];
+    S.trackCCType = [[1, 0, 2, 0, 0, 0, 0, 0]];
+    S.trackCCAssign = [[7, 74, 5, -1, 72, 91, 93, 10]];
+    S.trackCCAutoBits = [[0, 0b00000101]];
+    S.clipAtHas = [[false, true]];
+    S.clipCCVal = [[
+      [-1, -1, -1, -1, -1, -1, -1, -1],
+      [10, 64, 99, -1, -1, -1, -1, -1],
+    ]];
+    S.trackCCLiveVal = [[-1, -1, -1, -1, -1, -1, -1, -1]];
+    S.ccActiveLane = [1];
+    S.schLabel = [[null, null, "Cutoff", null, null, null, null, null]];
+    S.playing = false;
     S.bankParams = Array.from({ length: 1 }, () =>
       Array.from({ length: 8 }, () => new Array(8).fill(0))
     );
     S.bankParams[0][0] = [0, -1, 5, 0, 0, 0, 0, 0];
     S.bankParams[0][1] = [87, -4, 55, 0, 0, 0, 0, 0];
     S.bankParams[0][3] = [2, 1, -3, 4, 5, -6, 1, 0];
+    S.bankParams[0][4] = [1, 2, 3, 100, 1, 0, 1, 0];
     S.bankParams[0][7] = [2, 1, -2, 75, 0, 0, 1, 1];
+    S.noteFXRandomMode = [2];
+    S.midiDlyRandomMode = [1];
+    S.delayClockFb = [-6];
+    S.clipPlaybackAudioReverse = [[1, 1]];
     S.drumRepeatGate = [[0, 0, 0b00000101]];
     S.drumRepeatGateLen = [[0, 0, 4]];
     S.drumRepeatVelScale = [[[], [], [80, 90, 100, 110, 120, 130, 140, 150]]];
@@ -114,6 +136,63 @@ describe("Bank render presentation", () => {
     expect(dlyCalls[0]).toEqual(["heading", "DELAY"]);
     expect(printed(dlyCalls)).toEqual(expect.arrayContaining([
       "Gate", "1/8T", "Clk ", "-6  ", "Retr", "ON  ",
+    ]));
+  });
+
+  test("renders melodic AUTO overview from motion presentation model", () => {
+    S.activeBank = 6;
+    S.knobTouched = 2;
+    const calls: DrawCall[] = [];
+    renderMotionBankOverview(createDeps(calls));
+
+    expect(calls[0]).toEqual(["headingInv", "AUTO"]);
+    expect(printed(calls)).toEqual(expect.arrayContaining([
+      "Sch", "AT", "CC", "AT  ", "10  ", "CC74", "64  ", "Sch5", "99  ", "--  ", "--  ", "Cutoff",
+    ]));
+
+    S.altMode = true;
+    S.knobTouched = -1;
+    const assignCalls: DrawCall[] = [];
+    renderMotionBankOverview(createDeps(assignCalls));
+    expect(assignCalls).toContainEqual(["headingInv", "ASSIGN"]);
+    expect(assignCalls).toContainEqual(["fill", 4, 12, 24, 12, 1]);
+  });
+
+  test("renders melodic NOTE FX special-case cells", () => {
+    S.activeBank = 1;
+    S.trackPadMode[0] = 0;
+    S.altMode = true;
+    S.knobTouched = 7;
+    const calls: DrawCall[] = [];
+    renderMelodicNoteFxBankOverview(createDeps(calls));
+
+    expect(calls[0]).toEqual(["heading", "NOTE FX"]);
+    expect(calls).toContainEqual(["arrow", 98, true, true]);
+    expect(printed(calls)).toEqual(expect.arrayContaining([
+      "Oct ", "+87 ", "Len>", "--  ", ">Gate", "0%  ", "Algo", "Walk",
+    ]));
+    expect(printed(calls)).not.toContain("Rnd ");
+  });
+
+  test("renders generic bank overview alt labels and untruncated arp rates", () => {
+    S.activeBank = 0;
+    S.altMode = true;
+    S.knobTouched = 6;
+    const clipCalls: DrawCall[] = [];
+    renderGenericBankOverview(createDeps(clipCalls), 0);
+
+    expect(clipCalls[0]).toEqual(["heading", "CLIP"]);
+    expect(printed(clipCalls)).toEqual(expect.arrayContaining([
+      "Zoom", "1/32", "Nudg", "+5  ", "Rvrs", "Audi",
+    ]));
+
+    S.activeBank = 4;
+    S.altMode = false;
+    S.knobTouched = 1;
+    const arpCalls: DrawCall[] = [];
+    renderGenericBankOverview(createDeps(arpCalls), 4);
+    expect(printed(arpCalls)).toEqual(expect.arrayContaining([
+      "SEQUENCE ARP", "Rate", "1/16t",
     ]));
   });
 });

@@ -33,6 +33,9 @@ declare module "@tool-ui/ui_bank_render.mjs" {
   export function renderDrumMidiDelayBankOverview(deps: any): void;
   export function renderDrumNoteFxBankOverview(deps: any): void;
   export function renderDrumRepeatGrooveBankOverview(deps: any): void;
+  export function renderGenericBankOverview(deps: any, bank: number): void;
+  export function renderMelodicNoteFxBankOverview(deps: any): void;
+  export function renderMotionBankOverview(deps: any): void;
 }
 
 declare module "@tool-ui/ui_tick_tasks.mjs" {
