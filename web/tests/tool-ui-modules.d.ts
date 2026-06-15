@@ -36,4 +36,5 @@ declare module "@tool-ui/ui_tick_tasks.mjs" {
 declare module "@tool-ui/ui_clip_track_sync.mjs" {
   export function readMelodicClipFromDsp(S: any, deps: any, track: number, clip: number, opts: any): void;
   export function readTargetedClipAutomationFromDsp(S: any, deps: any, track: number, clip: number): void;
+  export function readTargetedClipRestorePairFromDsp(S: any, deps: any, track: number, clip: number, isDrum: boolean): void;
 }
