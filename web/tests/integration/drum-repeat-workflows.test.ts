@@ -14,6 +14,11 @@ import {
   handleDrumRepeatLoopTapRelease,
   handleDeleteLoopDrumRepeatStop,
   cycleDrumRepeatPerformMode,
+  resetDrumRepeatGrooveForLane,
+  resetDrumRepeatGrooveMirrorsForLane,
+  copyDrumRepeatGrooveMirrors,
+  moveDrumRepeatGrooveMirrors,
+  editDrumRepeatGrooveStep,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
 function calls() {
@@ -97,6 +102,109 @@ function performModeState() {
 }
 
 describe("drum repeat workflows", () => {
+  test("Delete+jog repeat-groove reset updates mirrors and appends one deferred DSP reset", () => {
+    const c = calls();
+    const S = {
+      ...baseState(),
+      drumRepeat2RatePerLane: [[4]],
+      pendingDefaultSetParams: [{ key: "existing", val: "1" }],
+    };
+
+    resetDrumRepeatGrooveForLane(S, {
+      showActionPopup: c.fn("popup"),
+    }, 0, 0);
+
+    expect(S.drumRepeatGate[0][0]).toBe(0xff);
+    expect(S.drumRepeatGateLen[0][0]).toBe(8);
+    expect(S.drumRepeatVelScale[0][0]).toEqual([100, 100, 100, 100, 100, 100, 100, 100]);
+    expect(S.drumRepeatNudge[0][0]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(S.drumRepeat2RatePerLane[0][0]).toBe(4);
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "existing", val: "1" },
+      { key: "t0_l0_repeat_groove_reset", val: "1" },
+    ]);
+    expect(c.log).toEqual([
+      ["popup", "RPT GROOVE", "RESET"],
+    ]);
+  });
+
+  test("mirror-only factory reset does not queue a DSP reset", () => {
+    const S = {
+      ...baseState(),
+      drumRepeat2RatePerLane: [[7]],
+      pendingDefaultSetParams: [{ key: "keep", val: "1" }],
+    };
+
+    resetDrumRepeatGrooveMirrorsForLane(S, 0, 0);
+
+    expect(S.drumRepeatGate[0][0]).toBe(0xff);
+    expect(S.drumRepeatGateLen[0][0]).toBe(8);
+    expect(S.drumRepeatVelScale[0][0]).toEqual([100, 100, 100, 100, 100, 100, 100, 100]);
+    expect(S.drumRepeatNudge[0][0]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(S.drumRepeat2RatePerLane[0][0]).toBe(0);
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "keep", val: "1" }]);
+  });
+
+  test("copy and move repeat-groove mirrors preserve lane semantics", () => {
+    const S = {
+      drumRepeatGate: [[0b0000_0011, 0b1111_0000, 0b0101_0101]],
+      drumRepeatGateLen: [[2, 4, 6]],
+      drumRepeatVelScale: [[
+        [101, 102, 103, 104, 105, 106, 107, 108],
+        [11, 12, 13, 14, 15, 16, 17, 18],
+        [21, 22, 23, 24, 25, 26, 27, 28],
+      ]],
+      drumRepeatNudge: [[
+        [-1, -2, -3, -4, -5, -6, -7, -8],
+        [1, 2, 3, 4, 5, 6, 7, 8],
+        [9, 10, 11, 12, 13, 14, 15, 16],
+      ]],
+      drumRepeat2RatePerLane: [[3, 4, 5]],
+    };
+
+    copyDrumRepeatGrooveMirrors(S, 0, 0, 1);
+    expect(S.drumRepeatGate[0][1]).toBe(0b0000_0011);
+    expect(S.drumRepeatGateLen[0][1]).toBe(2);
+    expect(S.drumRepeatVelScale[0][1]).toEqual([101, 102, 103, 104, 105, 106, 107, 108]);
+    expect(S.drumRepeatNudge[0][1]).toEqual([-1, -2, -3, -4, -5, -6, -7, -8]);
+    expect(S.drumRepeat2RatePerLane[0][1]).toBe(4);
+
+    moveDrumRepeatGrooveMirrors(S, 0, 1, 2);
+    expect(S.drumRepeatGate[0][2]).toBe(0b0000_0011);
+    expect(S.drumRepeatGateLen[0][2]).toBe(2);
+    expect(S.drumRepeatVelScale[0][2]).toEqual([101, 102, 103, 104, 105, 106, 107, 108]);
+    expect(S.drumRepeatNudge[0][2]).toEqual([-1, -2, -3, -4, -5, -6, -7, -8]);
+    expect(S.drumRepeatGate[0][1]).toBe(0xff);
+    expect(S.drumRepeatGateLen[0][1]).toBe(8);
+    expect(S.drumRepeatVelScale[0][1]).toEqual([100, 100, 100, 100, 100, 100, 100, 100]);
+    expect(S.drumRepeatNudge[0][1]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(S.drumRepeat2RatePerLane[0][1]).toBe(0);
+  });
+
+  test("repeat-groove knob edits clamp and write the same DSP payloads", () => {
+    const c = calls();
+    const S = {
+      screenDirty: false,
+      drumRepeatVelScale: [[[199, 1, 0, 200, 100, 100, 100, 100]]],
+      drumRepeatNudge: [[[49, -49, -50, 50, 0, 0, 0, 0]]],
+    };
+
+    expect(editDrumRepeatGrooveStep(S, { host_module_set_param: c.fn("set") }, 0, 0, 0, 1, false)).toBe(true);
+    expect(editDrumRepeatGrooveStep(S, { host_module_set_param: c.fn("set") }, 0, 0, 1, -1, false)).toBe(true);
+    expect(editDrumRepeatGrooveStep(S, { host_module_set_param: c.fn("set") }, 0, 0, 2, -1, true)).toBe(true);
+    expect(editDrumRepeatGrooveStep(S, { host_module_set_param: c.fn("set") }, 0, 0, 3, 1, true)).toBe(true);
+
+    expect(S.drumRepeatVelScale[0][0][0]).toBe(200);
+    expect(S.drumRepeatVelScale[0][0][1]).toBe(0);
+    expect(S.drumRepeatNudge[0][0][2]).toBe(-50);
+    expect(S.drumRepeatNudge[0][0][3]).toBe(50);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_l0_repeat_vel_scale", "0 200"],
+      ["set", "t0_l0_repeat_vel_scale", "1 0"],
+    ]);
+  });
+
   test("Rpt1 rate pad press stores the held pad and starts stock repeat", () => {
     const c = calls();
     const S = rpt1State();
