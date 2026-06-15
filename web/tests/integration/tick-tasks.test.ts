@@ -9,6 +9,7 @@ import {
   runMetroNoteOffTask,
   runMoveCoRunTickTasks,
   runPadMapSelfHealTask,
+  runRepeatRecordingLaneRefreshTask,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
 function calls() {
@@ -352,6 +353,66 @@ describe("tick task drains", () => {
     expect(S.clipSteps[0][2][0]).toBe(1);
     expect(S.clipLength[0][2]).toBe(32);
     expect(S.clipTPS[4][5]).toBe(24);
+  });
+
+  test("repeat recording lane refresh syncs the active drum lane after content resyncs", () => {
+    const c = calls();
+    const S = {
+      recordArmed: true,
+      playing: true,
+      sessionView: false,
+      activeTrack: 2,
+      activeDrumLane: [0, 1, 6],
+      trackPadMode: [0, 0, 1],
+      drumRepeatHeldPad: [-1, -1, 60],
+      drumRepeat2HeldLanes: [new Set(), new Set(), new Set()],
+      drumRepeat2LatchedLanes: [new Set(), new Set(), new Set()],
+    };
+
+    const handled = runRepeatRecordingLaneRefreshTask(S, {
+      PAD_MODE_DRUM: 1,
+      syncDrumLaneSteps: c.fn("syncDrumLaneSteps"),
+      forceRedraw: c.fn("forceRedraw"),
+    });
+
+    expect(handled).toBe(true);
+    expect(c.log).toEqual([
+      ["syncDrumLaneSteps", 2, 6],
+      ["forceRedraw"],
+    ]);
+  });
+
+  test("repeat recording lane refresh is gated to active drum repeat recording", () => {
+    const c = calls();
+    const base = {
+      recordArmed: true,
+      playing: true,
+      sessionView: false,
+      activeTrack: 0,
+      activeDrumLane: [3],
+      trackPadMode: [1],
+      drumRepeatHeldPad: [-1],
+      drumRepeat2HeldLanes: [new Set<number>()],
+      drumRepeat2LatchedLanes: [new Set<number>()],
+    };
+    const deps = {
+      PAD_MODE_DRUM: 1,
+      syncDrumLaneSteps: c.fn("syncDrumLaneSteps"),
+      forceRedraw: c.fn("forceRedraw"),
+    };
+
+    expect(runRepeatRecordingLaneRefreshTask(base, deps)).toBe(false);
+    base.drumRepeat2HeldLanes[0].add(4);
+    base.sessionView = true;
+    expect(runRepeatRecordingLaneRefreshTask(base, deps)).toBe(false);
+    base.sessionView = false;
+    base.trackPadMode[0] = 0;
+    expect(runRepeatRecordingLaneRefreshTask(base, deps)).toBe(false);
+    base.trackPadMode[0] = 1;
+    base.playing = false;
+    expect(runRepeatRecordingLaneRefreshTask(base, deps)).toBe(false);
+
+    expect(c.log).toEqual([]);
   });
 
   test("end-of-tick persistence preserves save, exit, hide, and snapshot priority", () => {
