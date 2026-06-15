@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  renderBakeConfirm,
   renderClearAutomationMenu,
   renderInheritPicker,
   renderLgtoConfirm,
@@ -20,6 +21,55 @@ function createDeps(calls: DrawCall[]) {
 }
 
 describe("Modal presentation", () => {
+  test("renders bake confirm wrap, multi-loop, and melodic subviews", () => {
+    const wrapCalls: DrawCall[] = [];
+    renderBakeConfirm(createDeps(wrapCalls), { wrapPhase: true, wrapSel: 2 });
+    expect(wrapCalls).toContainEqual(["header", "WRAP TAILS?"]);
+    expect(wrapCalls).toContainEqual(["print", 4, 16, "Wrap delay echoes", 1]);
+    expect(wrapCalls).toContainEqual(["print", 13, 53, "YES", 1]);
+    expect(wrapCalls).toContainEqual(["fill", 86, 50, 38, 13, 1]);
+    expect(wrapCalls).toContainEqual(["print", 87, 53, "CANCEL", 0]);
+
+    const multiCalls: DrawCall[] = [];
+    renderBakeConfirm(createDeps(multiCalls), { isMultiLoop: true, sel: 3 });
+    expect(multiCalls).toContainEqual(["header", "BAKE FX?"]);
+    expect(multiCalls).toContainEqual(["print", 4, 14, "Bake N loops of FX", 1]);
+    expect(multiCalls).toContainEqual(["fill", 60, 38, 27, 12, 1]);
+    expect(multiCalls).toContainEqual(["print", 69, 41, "4x", 0]);
+    expect(multiCalls).toContainEqual(["print", 92, 41, "CANCEL", 1]);
+
+    const melodicCalls: DrawCall[] = [];
+    renderBakeConfirm(createDeps(melodicCalls), { isDrum: false, sel: 0 });
+    expect(melodicCalls).toContainEqual(["header", "BAKE FX?"]);
+    expect(melodicCalls).toContainEqual(["print", 4, 34, "clear the settings.", 1]);
+    expect(melodicCalls).toContainEqual(["print", 23, 49, "No", 1]);
+    expect(melodicCalls).toContainEqual(["fill", 74, 46, 46, 13, 1]);
+    expect(melodicCalls).toContainEqual(["print", 88, 49, "Yes", 0]);
+  });
+
+  test("renders bake confirm drum choice and loop-count subviews", () => {
+    const choiceCalls: DrawCall[] = [];
+    renderBakeConfirm(createDeps(choiceCalls), { isDrum: true, sel: 1 });
+    expect(choiceCalls).toContainEqual(["header", "BAKE DRUMS?"]);
+    expect(choiceCalls).toContainEqual(["print", 4, 16, "Bake FX to clip", 1]);
+    expect(choiceCalls).toContainEqual(["print", 11, 53, "CLIP", 1]);
+    expect(choiceCalls).toContainEqual(["fill", 45, 50, 38, 13, 1]);
+    expect(choiceCalls).toContainEqual(["print", 52, 53, "LANE", 0]);
+
+    const loopCalls: DrawCall[] = [];
+    renderBakeConfirm(createDeps(loopCalls), {
+      isDrum: true,
+      drumLoopOpen: true,
+      drumMode: 1,
+      drumLoopSel: 0,
+    });
+    expect(loopCalls).toContainEqual(["header", "BAKE DRUMS?"]);
+    expect(loopCalls).toContainEqual(["print", 4, 13, "LANE — loop count:", 1]);
+    expect(loopCalls).toContainEqual(["fill", 14, 33, 100, 11, 1]);
+    expect(loopCalls).toContainEqual(["print", 45, 36, "CANCEL", 0]);
+    expect(loopCalls).toContainEqual(["print", 16, 50, "1x", 1]);
+  });
+
   test("renders simple confirm dialogs with selected button inversion", () => {
     const stateCalls: DrawCall[] = [];
     renderStateWipeConfirm(createDeps(stateCalls), 0);
