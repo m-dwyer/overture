@@ -3,6 +3,7 @@ import {
   runDefaultSetParamDrain,
   runDeferredContentResyncTasks,
   runDeferredDrumNoteOffDrain,
+  runDeferredLaneEditReadbackTasks,
   runDspMirrorResyncTasks,
   runEndOfTickPersistenceTasks,
   runExternalRouteQueueDrain,
@@ -463,6 +464,107 @@ describe("tick task drains", () => {
       ["invalidateLEDCache"],
       ["forceRedraw"],
     ]);
+  });
+
+  test("deferred lane edit readback clears stretch check and rolls back on DSP no-room result", () => {
+    const c = calls();
+    const S = {
+      tickCount: 20,
+      pendingAllLanesStretchCheck: 2,
+      allLanesQntResetTick: -1,
+      allLanesQntResetTrack: -1,
+      allLanesResResetTick: -1,
+      allLanesResResetTrack: -1,
+      allLanesDirResetTick: -1,
+      allLanesDirResetTrack: -1,
+      bankParams: Array.from({ length: 4 }, () => Array.from({ length: 8 }, () => new Array(8).fill(0))),
+      knobLastDir: [0, -1],
+      screenDirty: false,
+    };
+    S.bankParams[2][7][1] = 12;
+
+    runDeferredLaneEditReadbackTasks(S, {
+      host_module_get_param: (key: string) => {
+        c.log.push(["get", key]);
+        return "-1";
+      },
+      showActionPopup: c.fn("popup"),
+    });
+
+    expect(S.pendingAllLanesStretchCheck).toBe(-1);
+    expect(S.bankParams[2][7][1]).toBe(13);
+    expect(S.screenDirty).toBe(false);
+    expect(c.log).toEqual([
+      ["get", "t2_all_lanes_stretch_result"],
+      ["popup", "NO ROOM"],
+    ]);
+  });
+
+  test("deferred lane edit readback leaves stretch value alone on non-error result", () => {
+    const c = calls();
+    const S = {
+      tickCount: 20,
+      pendingAllLanesStretchCheck: 1,
+      allLanesQntResetTick: -1,
+      allLanesQntResetTrack: -1,
+      allLanesResResetTick: -1,
+      allLanesResResetTrack: -1,
+      allLanesDirResetTick: -1,
+      allLanesDirResetTrack: -1,
+      bankParams: Array.from({ length: 2 }, () => Array.from({ length: 8 }, () => new Array(8).fill(0))),
+      knobLastDir: [0, 1],
+      screenDirty: false,
+    };
+    S.bankParams[1][7][1] = 12;
+
+    runDeferredLaneEditReadbackTasks(S, {
+      host_module_get_param: (key: string) => {
+        c.log.push(["get", key]);
+        return "0";
+      },
+      showActionPopup: c.fn("popup"),
+    });
+
+    expect(S.pendingAllLanesStretchCheck).toBe(-1);
+    expect(S.bankParams[1][7][1]).toBe(12);
+    expect(c.log).toEqual([["get", "t1_all_lanes_stretch_result"]]);
+  });
+
+  test("deferred lane edit readback resets due all-lane UI mirrors and marks screen dirty", () => {
+    const c = calls();
+    const S = {
+      tickCount: 50,
+      pendingAllLanesStretchCheck: -1,
+      allLanesQntResetTick: 50,
+      allLanesQntResetTrack: 0,
+      allLanesResResetTick: 49,
+      allLanesResResetTrack: 1,
+      allLanesDirResetTick: 51,
+      allLanesDirResetTrack: 2,
+      bankParams: Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => new Array(8).fill(0))),
+      knobLastDir: [0, 1],
+      screenDirty: false,
+    };
+    S.bankParams[0][7][3] = 24;
+    S.bankParams[1][7][0] = 12;
+    S.bankParams[2][7][6] = 1;
+
+    runDeferredLaneEditReadbackTasks(S, {
+      host_module_get_param: c.fn("get"),
+      showActionPopup: c.fn("popup"),
+    });
+
+    expect(S.bankParams[0][7][3]).toBe(-1);
+    expect(S.bankParams[1][7][0]).toBe(-1);
+    expect(S.bankParams[2][7][6]).toBe(1);
+    expect(S.allLanesQntResetTick).toBe(-1);
+    expect(S.allLanesQntResetTrack).toBe(-1);
+    expect(S.allLanesResResetTick).toBe(-1);
+    expect(S.allLanesResResetTrack).toBe(-1);
+    expect(S.allLanesDirResetTick).toBe(51);
+    expect(S.allLanesDirResetTrack).toBe(2);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([]);
   });
 
   test("content resync drains decrement first and fire only on the zero tick", () => {
