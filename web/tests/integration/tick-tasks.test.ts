@@ -10,6 +10,7 @@ import {
   runMetroNoteOffTask,
   runMoveCoRunTickTasks,
   runPadMapSelfHealTask,
+  runPendingUndoSyncTask,
   runRepeatRecordingLaneRefreshTask,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
@@ -378,6 +379,90 @@ describe("tick task drains", () => {
     runMoveCoRunTickTasks(S, { move_midi_inject_to_move: c.fn("inject") });
     expect(S.moveCoRunPressGap).toBe(4);
     expect(c.log).toHaveLength(3);
+  });
+
+  test("pending undo sync decrements first and waits until the zero tick", () => {
+    const c = calls();
+    const S = {
+      pendingUndoSync: 2,
+      recordArmed: false,
+      recordCountingIn: false,
+      recordArmedTrack: -1,
+    };
+    const deps = {
+      host_module_get_param: c.fn("get"),
+      host_module_set_param: c.fn("set"),
+      syncClipsTargeted: c.fn("syncClipsTargeted"),
+      clearRecordingNoteBuffers: c.fn("clearRecordingNoteBuffers"),
+      invalidateLEDCache: c.fn("invalidateLEDCache"),
+      forceRedraw: c.fn("forceRedraw"),
+    };
+
+    runPendingUndoSyncTask(S, deps);
+
+    expect(S.pendingUndoSync).toBe(1);
+    expect(c.log).toEqual([]);
+  });
+
+  test("pending undo sync reads last restore, syncs targeted clips, and redraws on the zero tick", () => {
+    const c = calls();
+    const S = {
+      pendingUndoSync: 1,
+      recordArmed: false,
+      recordCountingIn: false,
+      recordArmedTrack: -1,
+    };
+
+    runPendingUndoSyncTask(S, {
+      host_module_get_param: (key: string) => {
+        c.log.push(["get", key]);
+        return "m 0 2";
+      },
+      host_module_set_param: c.fn("set"),
+      syncClipsTargeted: c.fn("syncClipsTargeted"),
+      clearRecordingNoteBuffers: c.fn("clearRecordingNoteBuffers"),
+      invalidateLEDCache: c.fn("invalidateLEDCache"),
+      forceRedraw: c.fn("forceRedraw"),
+    });
+
+    expect(S.pendingUndoSync).toBe(0);
+    expect(c.log).toEqual([
+      ["get", "last_restore"],
+      ["syncClipsTargeted", "m 0 2"],
+      ["invalidateLEDCache"],
+      ["forceRedraw"],
+    ]);
+  });
+
+  test("pending undo sync re-arms active recording after clearing stale note buffers", () => {
+    const c = calls();
+    const S = {
+      pendingUndoSync: 1,
+      recordArmed: true,
+      recordCountingIn: false,
+      recordArmedTrack: 3,
+    };
+
+    runPendingUndoSyncTask(S, {
+      host_module_get_param: (key: string) => {
+        c.log.push(["get", key]);
+        return "d 3 4";
+      },
+      host_module_set_param: c.fn("set"),
+      syncClipsTargeted: c.fn("syncClipsTargeted"),
+      clearRecordingNoteBuffers: c.fn("clearRecordingNoteBuffers"),
+      invalidateLEDCache: c.fn("invalidateLEDCache"),
+      forceRedraw: c.fn("forceRedraw"),
+    });
+
+    expect(c.log).toEqual([
+      ["get", "last_restore"],
+      ["syncClipsTargeted", "d 3 4"],
+      ["clearRecordingNoteBuffers"],
+      ["set", "t3_recording", "1"],
+      ["invalidateLEDCache"],
+      ["forceRedraw"],
+    ]);
   });
 
   test("content resync drains decrement first and fire only on the zero tick", () => {
