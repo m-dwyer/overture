@@ -3,6 +3,7 @@ import {
   handleUiCaptureButton,
   handleUiCopyButton,
   handleUiDeleteButton,
+  handleUiLoopPerfModeButton,
   handleUiMenuCoRunExitButton,
   handleUiMuteModifierButton,
   handleUiShiftButton,
@@ -11,6 +12,8 @@ import {
 const CAPTURE = 52;
 const COPY = 60;
 const DELETE = 119;
+const LOOP = 58;
+const LOOP_TAP_TICKS = 40;
 const MENU = 50;
 const MUTE = 88;
 const SHIFT = 49;
@@ -82,6 +85,16 @@ function state(overrides: Record<string, unknown> = {}) {
     undoSeqArpSnapshot: { present: true },
     clearAutoMenu: null,
     schwungCoRunSlot: -1,
+    // Loop perf-mode trackers
+    tickCount: 0,
+    loopPressTick: 0,
+    perfLatchMode: false,
+    perfViewLocked: false,
+    loopJogActive: false,
+    perfStack: [] as Array<{ idx: number; ticks: number }>,
+    perfStickyLengths: new Set<number>(),
+    perfHoldPadHeld: false,
+    perfModsHeld: 0,
     ...overrides,
   };
 }
@@ -101,7 +114,11 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     exitSchwungCoRun: c.fn("exitCoRun"),
     forceRedraw: c.fn("redraw"),
     invalidateLEDCache: c.fn("ledInvalidate"),
+    loopTapTicks: LOOP_TAP_TICKS,
+    moveLoop: LOOP,
     openClearAutoMenu: c.fn("openClearAutoMenu"),
+    sendPerfMods: c.fn("perfMods"),
+    setParam: c.fn("setParam"),
     showActionPopup: c.fn("popup"),
     ...overrides,
   };
@@ -462,5 +479,175 @@ describe("Button CC workflow - Menu co-run exit", () => {
     const S = state({ schwungCoRunSlot: 0 });
     expect(handleUiMenuCoRunExitButton(S, deps(c), MENU, 127)).toBe(true);
     expect(c.log).toEqual([["exitCoRun"], ["redraw"]]);
+  });
+});
+
+describe("Button CC workflow - Loop perf mode (Session View)", () => {
+  test("ignores non-Loop CCs", () => {
+    const c = calls();
+    const S = state({ sessionView: true });
+    expect(handleUiLoopPerfModeButton(S, deps(c), MUTE, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("ignores Loop in Track View (defers to the track-view sibling)", () => {
+    const c = calls();
+    const S = state({ sessionView: false });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Shift+Loop press toggles perf latch mode", () => {
+    const c = calls();
+    const S = state({ sessionView: true, shiftHeld: true, perfLatchMode: false });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.perfLatchMode).toBe(true);
+    expect(S.loopHeld).toBe(false); // shift branch returns before touching loopHeld
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("plain Loop press records press tick and held state", () => {
+    const c = calls();
+    const S = state({ sessionView: true, tickCount: 123, loopPressTick: -1 });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.loopPressTick).toBe(123);
+    expect(S.loopHeld).toBe(true);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("locked + tap release unlocks and stops the looper", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      perfViewLocked: true,
+      loopHeld: true,
+      loopJogActive: true,
+      perfStack: [{ idx: 0, ticks: 48 }],
+      perfStickyLengths: new Set([0]),
+      perfHoldPadHeld: true,
+      perfModsHeld: 2,
+      tickCount: 10,
+      loopPressTick: 0, // 10 < 40 => tap
+    });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.perfViewLocked).toBe(false);
+    expect(S.loopHeld).toBe(false);
+    expect(S.loopJogActive).toBe(false);
+    expect(S.perfStack).toEqual([]);
+    expect(S.perfStickyLengths.size).toBe(0);
+    expect(S.perfHoldPadHeld).toBe(false);
+    expect(S.perfModsHeld).toBe(0);
+    expect(c.log).toEqual([
+      ["perfMods"],
+      ["setParam", "looper_stop", "1"],
+      ["ledInvalidate"],
+      ["redraw"],
+    ]);
+  });
+
+  test("locked + hold release is a swallowed no-op", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      perfViewLocked: true,
+      tickCount: 100,
+      loopPressTick: 0, // 100 >= 40 => hold, not a tap
+    });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.perfViewLocked).toBe(true); // unchanged
+    expect(c.log).toEqual([]);
+  });
+
+  test("unlocked + tap release locks perf mode", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      perfViewLocked: false,
+      tickCount: 10,
+      loopPressTick: 0, // tap
+    });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.perfViewLocked).toBe(true);
+    expect(S.loopHeld).toBe(true);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("unlocked + hold release with sticky lengths auto-locks and arms", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      perfViewLocked: false,
+      perfHoldPadHeld: false,
+      perfStickyLengths: new Set([0, 2]),
+      perfStack: [
+        { idx: 0, ticks: 24 },
+        { idx: 1, ticks: 48 }, // dropped: idx not sticky
+        { idx: 2, ticks: 96 },
+      ],
+      tickCount: 100,
+      loopPressTick: 0, // hold
+    });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.perfViewLocked).toBe(true);
+    expect(S.perfStack).toEqual([
+      { idx: 0, ticks: 24 },
+      { idx: 2, ticks: 96 },
+    ]);
+    expect(c.log).toEqual([
+      ["setParam", "looper_arm", "96"], // last surviving entry's ticks
+      ["perfMods"],
+      ["ledInvalidate"],
+      ["redraw"],
+    ]);
+  });
+
+  test("unlocked + hold release with hold pad keeps the full stack", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      perfViewLocked: false,
+      perfHoldPadHeld: true,
+      perfStickyLengths: new Set<number>(),
+      perfStack: [
+        { idx: 0, ticks: 24 },
+        { idx: 1, ticks: 48 },
+      ],
+      tickCount: 100,
+      loopPressTick: 0, // hold
+    });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.perfViewLocked).toBe(true);
+    expect(S.perfStack).toEqual([
+      { idx: 0, ticks: 24 },
+      { idx: 1, ticks: 48 },
+    ]); // not filtered when a hold pad is down
+    expect(c.log).toEqual([
+      ["setParam", "looper_arm", "48"],
+      ["perfMods"],
+      ["ledInvalidate"],
+      ["redraw"],
+    ]);
+  });
+
+  test("unlocked + hold release with no sticky state stops and clears the stack", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      perfViewLocked: false,
+      perfHoldPadHeld: false,
+      perfStickyLengths: new Set<number>(),
+      perfStack: [{ idx: 0, ticks: 24 }],
+      tickCount: 100,
+      loopPressTick: 0, // hold
+    });
+    expect(handleUiLoopPerfModeButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.perfViewLocked).toBe(false);
+    expect(S.perfStack).toEqual([]);
+    expect(c.log).toEqual([
+      ["setParam", "looper_stop", "1"],
+      ["perfMods"],
+      ["ledInvalidate"],
+      ["redraw"],
+    ]);
   });
 });
