@@ -483,6 +483,74 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
+  test("Loop + step keeps priority over Shift + step in Track View", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+    h.ui().padLayoutChromatic[1] = false;
+    h.ui().shiftHeld = true;
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 23, 127); // step 8: Loop arm, not chromatic toggle
+    h.step(2);
+
+    expect(h.ui().loopGestureStart).toBe(7);
+    expect(h.ui().padLayoutChromatic[1]).toBe(false);
+
+    h.emu.sendInternal(0x80, 23, 0);
+    h.step(2);
+    h.release(58);
+    h.ui().shiftHeld = false;
+    h.step(2);
+  });
+
+  test("Copy + step keeps priority over Shift + step in Track View", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+    h.ui().padLayoutChromatic[1] = false;
+    h.ui().copySrc = null;
+    h.ui().copyHeld = true;
+    h.ui().shiftHeld = true;
+
+    h.emu.sendInternal(0x90, 23, 127); // step 8: Copy source, not chromatic toggle
+    h.step(2);
+
+    expect(h.ui().copySrc).toEqual({ kind: "step", absStep: 7 });
+    expect(h.ui().padLayoutChromatic[1]).toBe(false);
+
+    h.emu.sendInternal(0x80, 23, 0);
+    h.ui().copyHeld = false;
+    h.ui().shiftHeld = false;
+    h.step(2);
+  });
+
+  test("Delete + step keeps priority over Shift + step in Track View", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneSteps[0][0][15] = "1";
+    h.ui().drumLaneHasNotes[0][0] = true;
+    h.ui().drumLaneQnt[0] = 64;
+    h.ui().deleteHeld = true;
+    h.ui().shiftHeld = true;
+
+    h.emu.sendInternal(0x90, 31, 127); // step 16: Delete clear, not Shift quantize
+    h.step(2);
+
+    expect(h.ui().drumLaneSteps[0][0][15]).toBe("0");
+    expect(h.ui().drumLaneQnt[0]).toBe(64);
+
+    h.emu.sendInternal(0x80, 31, 0);
+    h.ui().deleteHeld = false;
+    h.ui().shiftHeld = false;
+    h.step(2);
+  });
+
   test("Mute + step on a drum track preserves normal step tap behavior", () => {
     noteView();
     h.ui().activeTrack = 0;

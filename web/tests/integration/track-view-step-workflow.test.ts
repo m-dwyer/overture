@@ -3,6 +3,7 @@ import {
   handleTrackViewCopyStepPress,
   handleTrackViewDeleteStepPress,
   handleTrackViewMuteStepPress,
+  handleTrackViewShiftStepPress,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -15,16 +16,24 @@ function calls() {
   };
 }
 
-function deps(c: ReturnType<typeof calls>) {
+function deps(c: ReturnType<typeof calls>, overrides = {}) {
   return {
+    applyBankParam: c.fn("applyBankParam"),
+    applyTrackConfig: c.fn("applyTrackConfig"),
     clearStep: c.fn("clearStep"),
+    computePadNoteMap: c.fn("computePadNoteMap"),
     copyStep: c.fn("copyStep"),
+    cycleDrumRepeatPerformMode: c.fn("cycleDrumRepeatPerformMode"),
+    doDoubleFill: c.fn("doDoubleFill"),
+    doLaneDoubleFill: c.fn("doLaneDoubleFill"),
+    doShiftStepCommon: c.fn("shiftCommon"),
     effectiveClip: c.fn("effectiveClip"),
     invalidateLEDCache: c.fn("invalidate"),
     forceRedraw: c.fn("redraw"),
     padModeDrum: 1,
     setParam: c.fn("setParam"),
     showActionPopup: c.fn("popup"),
+    ...overrides,
   };
 }
 
@@ -36,8 +45,16 @@ function state(overrides = {}) {
     trackCurrentPage: [0, 0, 3],
     deleteHeld: false,
     muteHeld: false,
+    shiftHeld: false,
     activeBank: 0,
     trackPadMode: [1, 0, 0],
+    padLayoutChromatic: [false, false, false],
+    trackVelOverride: [0, 0, 100],
+    bankParams: Array.from({ length: 3 }, () =>
+      Array.from({ length: 8 }, () => new Array(8).fill(0))
+    ),
+    lastTarpStyle: [2, 3, 4],
+    drumLaneQnt: [64, 64, 64],
     clipTPS: [
       [24],
       [24],
@@ -239,5 +256,199 @@ describe("Track View Step Workflow", () => {
     expect(handleTrackViewMuteStepPress(S, deps(c), 5)).toBe(false);
 
     expect(c.log).toEqual([]);
+  });
+
+  test("plain step press is ignored by the Shift+step workflow", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: false });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 7)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Shift+step 8 on a drum track cycles drum repeat perform mode", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, copyHeld: false, shiftHeld: true });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 7)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["shiftCommon", 7],
+      ["cycleDrumRepeatPerformMode", 0],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 8 on a melodic track toggles chromatic layout and recomputes pad map", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, padLayoutChromatic: [false, false, false] });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 7)).toBe(true);
+
+    expect(S.padLayoutChromatic[2]).toBe(true);
+    expect(c.log).toEqual([
+      ["shiftCommon", 7],
+      ["computePadNoteMap"],
+      ["popup", "CHROMATIC"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 10 toggles VelIn between Live and 100", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, trackVelOverride: [0, 0, 0] });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 9)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["shiftCommon", 9],
+      ["applyTrackConfig", 2, "track_vel_override", 100],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 10 toggles VelIn back to Live", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, trackVelOverride: [0, 0, 100] });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 9)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["shiftCommon", 9],
+      ["applyTrackConfig", 2, "track_vel_override", 0],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 11 toggles melodic TRACK ARP style off", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true });
+    S.bankParams[2][5][0] = 5;
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 10)).toBe(true);
+
+    expect(S.bankParams[2][5][0]).toBe(0);
+    expect(c.log).toEqual([
+      ["shiftCommon", 10],
+      ["applyBankParam", 2, 5, 0, 0],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 11 toggles melodic TRACK ARP style back to last style", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, lastTarpStyle: [2, 3, 6] });
+    S.bankParams[2][5][0] = 0;
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 10)).toBe(true);
+
+    expect(S.bankParams[2][5][0]).toBe(6);
+    expect(c.log).toEqual([
+      ["shiftCommon", 10],
+      ["applyBankParam", 2, 5, 0, 6],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 11 is ignored on drum tracks except for common shortcut and redraw", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, copyHeld: false, shiftHeld: true });
+    S.bankParams[0][5][0] = 5;
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 10)).toBe(true);
+
+    expect(S.bankParams[0][5][0]).toBe(5);
+    expect(c.log).toEqual([
+      ["shiftCommon", 10],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 15 on melodic CC automation bank calls lane double-fill", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, activeBank: 6 });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 14)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["shiftCommon", 14],
+      ["doLaneDoubleFill"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 15 on other banks calls normal double-fill", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, activeBank: 0 });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 14)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["shiftCommon", 14],
+      ["doDoubleFill"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 16 on melodic non-CC bank writes quantize 100 and updates NOTE FX mirror", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, activeBank: 0 });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 15)).toBe(true);
+
+    expect(S.bankParams[2][1][3]).toBe(100);
+    expect(c.log).toEqual([
+      ["shiftCommon", 15],
+      ["setParam", "t2_quantize", "100"],
+      ["popup", "QUANT 100%"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 16 on drum active-lane bank writes active lane quantize and updates mirrors", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, copyHeld: false, shiftHeld: true, activeBank: 0 });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 15)).toBe(true);
+
+    expect(S.drumLaneQnt[0]).toBe(100);
+    expect(S.bankParams[0][1][2]).toBe(100);
+    expect(c.log).toEqual([
+      ["shiftCommon", 15],
+      ["setParam", "t0_l4_pfx_set", "quantize 100"],
+      ["popup", "QUANT 100%"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 16 on drum ALL LANES bank writes all-lanes quantize and updates mirrors", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, copyHeld: false, shiftHeld: true, activeBank: 7 });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 15)).toBe(true);
+
+    expect(S.drumLaneQnt[0]).toBe(100);
+    expect(S.bankParams[0][7][3]).toBe(100);
+    expect(S.bankParams[0][1][2]).toBe(100);
+    expect(c.log).toEqual([
+      ["shiftCommon", 15],
+      ["setParam", "t0_drum_lanes_qnt", "100"],
+      ["popup", "QUANT 100%"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Shift+step 16 on CC automation bank does not quantize", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true, activeBank: 6 });
+
+    expect(handleTrackViewShiftStepPress(S, deps(c), 15)).toBe(true);
+
+    expect(S.bankParams[2][1][3]).toBe(0);
+    expect(c.log).toEqual([
+      ["shiftCommon", 15],
+      ["redraw"],
+    ]);
   });
 });
