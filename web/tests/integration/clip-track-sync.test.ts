@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
   readDrumActiveLaneFromDsp,
+  readDrumRepeatRatesFromDsp,
   readMelodicClipFromDsp,
+  readTrackArpStepConfigFromDsp,
   readTrackConfigFromDsp,
   refreshDrumLaneBankParamsFromDsp,
   refreshPerClipBankParamsFromDsp,
@@ -61,6 +63,20 @@ function createTrackConfigState() {
     trackLooper: [9, 9],
     drumInpQuant: [9, 9],
     bankParams: Array.from({ length: 2 }, () => Array.from({ length: 8 }, () => new Array(8).fill(99))),
+  };
+}
+
+function createTrackArpState() {
+  return {
+    tarpStepVel: Array.from({ length: 2 }, () => new Array(8).fill(9)),
+    tarpStepInt: Array.from({ length: 2 }, () => new Array(8).fill(9)),
+    tarpStepLoopLen: [7, 7],
+  };
+}
+
+function createDrumRepeatRatesState() {
+  return {
+    drumRepeat2RatePerLane: Array.from({ length: 2 }, () => new Array(32).fill(9)),
   };
 }
 
@@ -463,5 +479,67 @@ describe("Track / Clip Sync track config readback", () => {
     expect(S.trackLooper[0]).toBe(1);
     expect(S.drumInpQuant[0]).toBe(0);
     expect(S.bankParams[0][7][5]).toBe(0);
+  });
+});
+
+describe("Track / Clip Sync track arp and repeat rate readback", () => {
+  test("track arp step config preserves DSP read order and loop-length fallback", () => {
+    const S = createTrackArpState();
+    const calls: string[] = [];
+    const params = new Map<string, string>([
+      ["t1_tarp_sv", "1 2 bad 4 5 6 7 8"],
+      ["t1_tarp_si", "8 7 6 5 4 3 2 1"],
+      ["t1_tarp_sll", "99"],
+    ]);
+
+    readTrackArpStepConfigFromDsp(S, {
+      host_module_get_param: (key: string) => {
+        calls.push(key);
+        return params.get(key) ?? null;
+      },
+    }, 1);
+
+    expect(calls).toEqual(["t1_tarp_sv", "t1_tarp_si", "t1_tarp_sll"]);
+    expect(S.tarpStepVel[1]).toEqual([1, 2, 0, 4, 5, 6, 7, 8]);
+    expect(S.tarpStepInt[1]).toEqual([8, 7, 6, 5, 4, 3, 2, 1]);
+    expect(S.tarpStepLoopLen[1]).toBe(8);
+  });
+
+  test("track arp step config keeps existing mirrors when velocity read is missing", () => {
+    const S = createTrackArpState();
+    const calls: string[] = [];
+
+    readTrackArpStepConfigFromDsp(S, {
+      host_module_get_param: (key: string) => {
+        calls.push(key);
+        return key === "t0_tarp_sv" ? "" : "unexpected";
+      },
+    }, 0);
+
+    expect(calls).toEqual(["t0_tarp_sv"]);
+    expect(S.tarpStepVel[0]).toEqual([9, 9, 9, 9, 9, 9, 9, 9]);
+    expect(S.tarpStepInt[0]).toEqual([9, 9, 9, 9, 9, 9, 9, 9]);
+    expect(S.tarpStepLoopLen[0]).toBe(7);
+  });
+
+  test("drum repeat rates readback preserves partial updates and missing fallback", () => {
+    const S = createDrumRepeatRatesState();
+    const calls: string[] = [];
+
+    readDrumRepeatRatesFromDsp(S, {
+      host_module_get_param: (key: string) => {
+        calls.push(key);
+        return "0 1 2 bad";
+      },
+    }, 1);
+
+    expect(calls).toEqual(["t1_drum_r2rt"]);
+    expect(S.drumRepeat2RatePerLane[1].slice(0, 6)).toEqual([0, 1, 2, 0, 9, 9]);
+
+    readDrumRepeatRatesFromDsp(S, {
+      host_module_get_param: () => "",
+    }, 1);
+
+    expect(S.drumRepeat2RatePerLane[1].slice(0, 6)).toEqual([0, 1, 2, 0, 9, 9]);
   });
 });
