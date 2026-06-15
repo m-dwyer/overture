@@ -643,6 +643,71 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
+  test("plain melodic step tap assigns an empty step", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+    h.ui().lastPlayedNote = 60;
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().clipSteps[1][ac][9] = 0;
+    h.ui().clipNonEmpty[1][ac] = false;
+
+    h.tapStep(9);
+    h.step(2);
+
+    expect(h.ui().clipSteps[1][ac][9]).toBe(1);
+    expect(h.ui().clipNonEmpty[1][ac]).toBe(true);
+    expect(h.ui().heldStep).toBe(-1);
+  });
+
+  test("melodic CC bank step press enters CC step edit setup", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 6;
+    h.ui().trackCurrentPage[1] = 0;
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().clipSteps[1][ac][4] = 0;
+    h.ui().ccStepEditActive = false;
+
+    h.emu.sendInternal(0x90, 20, 127); // press step 5
+
+    expect(h.ui().heldStep).toBe(4);
+    expect(h.ui().ccStepEditActive).toBe(true);
+
+    h.emu.sendInternal(0x80, 20, 0);
+    h.step(2);
+    h.ui().activeBank = 0;
+  });
+
+  test("melodic chord-first step press captures pending chord context", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+    h.ui().liveActiveNotes = new Set([67, 60, 64]);
+    h.ui().lastPadVelocity = 91;
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().clipSteps[1][ac][5] = 0;
+
+    h.emu.sendInternal(0x90, 21, 127); // press step 6, do not tick yet
+
+    expect(h.ui().pendingChordToStep).toEqual({
+      t: 1,
+      ac,
+      step: 5,
+      wasEmpty: true,
+      pitches: [60, 64, 67],
+      vel: 91,
+    });
+    expect(h.ui().stepBtnPressedTick[5]).toBe(-1);
+    expect(h.ui().stepWasHeld).toBe(true);
+
+    h.emu.sendInternal(0x80, 21, 0);
+    h.ui().liveActiveNotes = new Set();
+    h.step(2);
+  });
+
   test("Loop + two steps in ALL LANES writes every drum lane range", () => {
     noteView();
     h.ui().activeTrack = 0;

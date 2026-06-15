@@ -5,6 +5,7 @@ import {
   handleTrackViewMuteStepPress,
   handleTrackViewShiftStepPress,
   handleTrackViewDrumStepPress,
+  handleTrackViewMelodicStepPress,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -29,6 +30,8 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     doLaneDoubleFill: c.fn("doLaneDoubleFill"),
     doShiftStepCommon: c.fn("shiftCommon"),
     effectiveClip: c.fn("effectiveClip"),
+    effectiveVelocity: c.fn("effectiveVelocity"),
+    clipHasContent: c.fn("clipHasContent"),
     getParam: (...args: unknown[]) => {
       c.log.push(["getParam", ...args]);
       return null;
@@ -36,6 +39,7 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     invalidateLEDCache: c.fn("invalidate"),
     forceRedraw: c.fn("redraw"),
     padModeDrum: 1,
+    refreshSeqNotesIfCurrent: c.fn("refreshSeqNotes"),
     setParam: c.fn("setParam"),
     stepEntryVelocity: (...args: unknown[]) => {
       c.log.push(["stepEntryVelocity", ...args]);
@@ -69,6 +73,11 @@ function state(overrides = {}) {
     stepEditRand: 0,
     stepEditRatch: 0,
     activeBank: 0,
+    ccStepEditActive: false,
+    pendingChordToStep: null,
+    liveActiveNotes: new Set<number>(),
+    lastPadVelocity: 87,
+    lastPlayedNote: 60,
     trackPadMode: [1, 0, 0],
     padLayoutChromatic: [false, false, false],
     trackVelOverride: [0, 0, 100],
@@ -88,6 +97,21 @@ function state(overrides = {}) {
       [24],
       [24],
       [24, 24],
+    ],
+    clipSteps: [
+      [Array(64).fill(0)],
+      [Array(64).fill(0)],
+      [Array(64).fill(0), Array(64).fill(0)],
+    ],
+    clipNonEmpty: [
+      [false],
+      [false],
+      [false, false],
+    ],
+    clipLength: [
+      [64],
+      [64],
+      [64, 64],
     ],
     ccActiveLane: [0, 0, 1],
     ccLaneTps: [
@@ -663,6 +687,235 @@ describe("Track View Step Workflow", () => {
     expect(S.stepEditGate).toBe(96);
     expect(c.log).toEqual([
       ["setParam", "t0_l4_step_62_gate", "96"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum tracks are ignored by the melodic step workflow", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, copyHeld: false });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c), 5)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Shift+step is ignored by the melodic step workflow", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, shiftHeld: true });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c), 5)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("melodic first press on empty step records hold state and default edit values", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, tickCount: 222 });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.stepBtnPressedTick[5]).toBe(222);
+    expect(S.heldStepBtn).toBe(5);
+    expect(S.heldStep).toBe(53);
+    expect(S.stepWasEmpty).toBe(true);
+    expect(S.heldStepNotes).toEqual([]);
+    expect(S.stepEditVel).toBe(100);
+    expect(S.stepEditGate).toBe(24);
+    expect(S.stepEditNudge).toBe(0);
+    expect(S.stepEditIter).toBe(0);
+    expect(S.stepEditRand).toBe(0);
+    expect(S.stepEditRatch).toBe(0);
+    expect(S.ccStepEditActive).toBe(false);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("melodic first press on non-empty step defers note read until hold threshold", () => {
+    const c = calls();
+    const clipSteps = [
+      [Array(64).fill(0)],
+      [Array(64).fill(0)],
+      [Array(64).fill(0), Array(64).fill(0)],
+    ];
+    clipSteps[2][1][53] = 1;
+    const S = state({ copyHeld: false, clipSteps });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.stepWasEmpty).toBe(false);
+    expect(S.heldStepNotes).toEqual([]);
+    expect(S.stepEditVel).toBe(100);
+    expect(S.stepEditGate).toBe(24);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("melodic CC bank first press marks CC step edit active", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, activeBank: 6 });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.ccStepEditActive).toBe(true);
+    expect(S.stepWasEmpty).toBe(true);
+    expect(S.stepEditVel).toBe(0);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("melodic chord-first press captures pending chord context and bypasses tap-toggle", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      liveActiveNotes: new Set([67, 60, 64]),
+      lastPadVelocity: 90,
+    });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, {
+      effectiveClip: () => 1,
+      effectiveVelocity: (raw: number) => {
+        c.log.push(["effectiveVelocity", raw]);
+        return raw;
+      },
+    }), 5)).toBe(true);
+
+    expect(S.pendingChordToStep).toEqual({
+      t: 2,
+      ac: 1,
+      step: 53,
+      wasEmpty: true,
+      pitches: [60, 64, 67],
+      vel: 96,
+    });
+    expect(S.stepBtnPressedTick[5]).toBe(-1);
+    expect(S.stepWasHeld).toBe(true);
+    expect(c.log).toEqual([
+      ["effectiveVelocity", 90],
+      ["stepEntryVelocity", 2, 90, false],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic second press during primary tap window assigns an empty step", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 48,
+      heldStepBtn: 0,
+      stepBtnPressedTick: [100, ...Array(15).fill(-1)],
+      lastPlayedNote: 62,
+    });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.clipSteps[2][1][53]).toBe(1);
+    expect(S.clipNonEmpty[2][1]).toBe(true);
+    expect(S.stepBtnPressedTick[5]).toBe(-1);
+    expect(c.log).toEqual([
+      ["stepEntryVelocity", 2, -1, false],
+      ["setParam", "t2_c1_step_53_toggle", "62 96"],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic second press during primary tap window deactivates an active step", () => {
+    const c = calls();
+    const clipSteps = [
+      [Array(64).fill(0)],
+      [Array(64).fill(0)],
+      [Array(64).fill(0), Array(64).fill(0)],
+    ];
+    clipSteps[2][1][53] = 1;
+    const S = state({
+      copyHeld: false,
+      heldStep: 48,
+      heldStepBtn: 0,
+      stepBtnPressedTick: [100, ...Array(15).fill(-1)],
+      clipSteps,
+      clipNonEmpty: [[false], [false], [false, true]],
+    });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, {
+      effectiveClip: () => 1,
+      clipHasContent: (track: number, clip: number) => {
+        c.log.push(["clipHasContent", track, clip]);
+        return false;
+      },
+    }), 5)).toBe(true);
+
+    expect(S.clipSteps[2][1][53]).toBe(2);
+    expect(S.clipNonEmpty[2][1]).toBe(false);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53", "0"],
+      ["clipHasContent", 2, 1],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic second press during primary tap window reactivates an inactive step", () => {
+    const c = calls();
+    const clipSteps = [
+      [Array(64).fill(0)],
+      [Array(64).fill(0)],
+      [Array(64).fill(0), Array(64).fill(0)],
+    ];
+    clipSteps[2][1][53] = 2;
+    const S = state({
+      copyHeld: false,
+      heldStep: 48,
+      heldStepBtn: 0,
+      stepBtnPressedTick: [100, ...Array(15).fill(-1)],
+      clipSteps,
+    });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.clipSteps[2][1][53]).toBe(1);
+    expect(S.clipNonEmpty[2][1]).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53", "1"],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic second press during held step edit sets gate span through tapped step", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 50,
+      heldStepBtn: 2,
+      heldStepNotes: [60],
+      stepEditGate: 24,
+      stepBtnPressedTick: Array(16).fill(-1),
+    });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.stepWasHeld).toBe(true);
+    expect(S.stepEditGate).toBe(96);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_50_gate", "96"],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic held step gate tap shrinks when gate already spans through tapped step", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 50,
+      heldStepBtn: 2,
+      heldStepNotes: [60],
+      stepEditGate: 96,
+      stepBtnPressedTick: Array(16).fill(-1),
+    });
+
+    expect(handleTrackViewMelodicStepPress(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.stepEditGate).toBe(72);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_50_gate", "72"],
       ["redraw"],
     ]);
   });

@@ -110,6 +110,9 @@ Current Track View Step Workflow ownership:
   dispatch, and quantize-100 writes.
 - Normal drum step press owns press-time step edit entry, empty/occupied
   edit-value seeding, tap-window multi-toggle, and held-step gate-span taps.
+- Normal melodic step press owns press-time step edit entry, empty/non-empty
+  state seeding, CC step-edit activation, chord-first capture, tap-window
+  multi-toggle, and held-step gate-span taps.
 
 Behavior to preserve:
 
@@ -123,10 +126,10 @@ Behavior to preserve:
 - Copy + second step copies only when source and target differ, redraws, and
   never mixes step copy with other copy source kinds.
 - Mute + step must continue falling through before Shift+step.
-- Drum hold-threshold auto-assign, drum step release/velocity confirm, melodic
-  step press/edit, Parameter Bank behavior, recording behavior, Session View
-  Performance Mode, modal workflows, and unrelated DSP reads/writes remain in
-  `ui.js` for now.
+- Drum/melodic hold-threshold behavior, step release/velocity confirm, deeper
+  CC step-edit behavior, Parameter Bank behavior, recording behavior, Session
+  View Performance Mode, modal workflows, and unrelated DSP reads/writes remain
+  in `ui.js` for now.
 
 Tests currently covering this seam:
 
@@ -140,9 +143,10 @@ Continue extracting one narrow Track View step-button branch at a time from
 priority. Mute+step is characterized as a fallthrough modifier with no separate
 Track View action, and Shift+step shortcuts now live in the Track View Step
 Workflow seam. Normal drum step press handling now lives in the seam, while its
-tick hold-threshold and release commit behavior remain in `ui.js`. The next
-candidate is the normal melodic step press branch; avoid Parameter Bank behavior,
-recording behavior, and release/tick behavior until that branch has
+tick hold-threshold and release commit behavior remain in `ui.js`. Normal
+melodic step press handling now lives in the seam too. The next candidate is the
+step hold-threshold lifecycle, likely split drum/melodic/CC if needed; avoid
+Parameter Bank behavior and recording behavior until that lifecycle has
 characterization coverage.
 
 ## Candidate Later Slices
