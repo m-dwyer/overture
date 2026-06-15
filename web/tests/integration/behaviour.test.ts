@@ -297,4 +297,81 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
     expect(gateAfter).not.toBe(gateBefore);
   });
+
+  test("Loop + single step sets the active drum lane length fallback", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 19, 127); // step 4
+    h.step(2);
+
+    expect(h.ui().loopGestureStart).toBe(3);
+    expect(h.ui().drumLaneLength[0]).not.toBe(64);
+
+    h.emu.sendInternal(0x80, 19, 0);
+
+    expect(h.ui().loopGestureStart).toBe(-1);
+    expect(h.ui().drumLaneLoopStart[0]).toBe(0);
+    expect(h.ui().drumLaneLength[0]).toBe(64);
+
+    h.step(2);
+    expect(h.get("t0_l0_loop_start")).toBe("0");
+    expect(h.get("t0_l0_length")).toBe("64");
+    h.release(58);
+    h.step(2);
+  });
+
+  test("Loop + two steps sets a reversed drum lane range", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 23, 127); // step 8: arm
+    h.step(2);
+    h.emu.sendInternal(0x90, 18, 127); // step 3: B before A
+
+    expect(h.ui().loopGestureFired).toBe(true);
+    expect(h.ui().drumLaneLoopStart[0]).toBe(32);
+    expect(h.ui().drumLaneLength[0]).toBe(96);
+
+    h.step(2);
+    expect(h.get("t0_l0_loop_start")).toBe("32");
+    expect(h.get("t0_l0_length")).toBe("96");
+
+    h.emu.sendInternal(0x80, 23, 0);
+    h.emu.sendInternal(0x80, 18, 0);
+    h.step(2);
+    h.release(58);
+    h.step(2);
+  });
+
+  test("Loop + step is blocked during active recording", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().recordArmed = true;
+    h.ui().recordCountingIn = false;
+    const lenBefore = h.ui().drumLaneLength[0];
+    const paramBefore = h.get("t0_l0_length");
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 20, 127);
+    h.step(2);
+    h.emu.sendInternal(0x80, 20, 0);
+    h.step(2);
+    h.release(58);
+    h.step(2);
+
+    expect(h.ui().loopGestureStart).toBe(-1);
+    expect(h.ui().drumLaneLength[0]).toBe(lenBefore);
+    expect(h.get("t0_l0_length")).toBe(paramBefore);
+
+    h.ui().recordArmed = false;
+  });
 });
