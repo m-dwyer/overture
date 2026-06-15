@@ -1,7 +1,13 @@
 import { describe, expect, test } from "vitest";
-import { handleUiCaptureButton } from "@tool-ui/ui_button_cc_workflow.mjs";
+import {
+  handleUiCaptureButton,
+  handleUiCopyButton,
+  handleUiMuteModifierButton,
+} from "@tool-ui/ui_button_cc_workflow.mjs";
 
 const CAPTURE = 52;
+const COPY = 60;
+const MUTE = 88;
 const DRUM = 1;
 
 function calls() {
@@ -35,6 +41,11 @@ function state(overrides: Record<string, unknown> = {}) {
     activeTrack: 1,
     trackActiveClip: [0, 3, 0, 0],
     trackPadMode: [1, 0, 0, 0], // track 0 drum, track 1 melodic
+    // Copy / Mute modifier trackers
+    copyHeld: false,
+    copySrc: null,
+    muteHeld: false,
+    muteUsedAsModifier: false,
     ...overrides,
   };
 }
@@ -42,9 +53,12 @@ function state(overrides: Record<string, unknown> = {}) {
 function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = {}) {
   return {
     moveCapture: CAPTURE,
+    moveCopy: COPY,
+    moveMute: MUTE,
     padModeDrum: DRUM,
     computePadNoteMap: c.fn("padmap"),
     forceRedraw: c.fn("redraw"),
+    invalidateLEDCache: c.fn("ledInvalidate"),
     ...overrides,
   };
 }
@@ -170,5 +184,73 @@ describe("Button CC workflow - Capture button", () => {
     expect(S.confirmBake).toBe(false);
     expect(S.pendingSceneBakePicker).toBe(false);
     expect(c.log).toEqual([["padmap"], ["redraw"]]);
+  });
+});
+
+describe("Button CC workflow - Copy button", () => {
+  test("ignores non-Copy CCs", () => {
+    const c = calls();
+    expect(handleUiCopyButton(state(), deps(c), 59, 127)).toBeUndefined();
+    expect(c.log).toEqual([]);
+  });
+
+  test("Copy press sets held state and re-pushes the pad map (no LED invalidate)", () => {
+    const c = calls();
+    const S = state();
+
+    handleUiCopyButton(S, deps(c), COPY, 127);
+
+    expect(S.copyHeld).toBe(true);
+    expect(c.log).toEqual([["padmap"]]);
+  });
+
+  test("Copy release clears held state, drops the copy source, and invalidates LEDs", () => {
+    const c = calls();
+    const S = state({ copyHeld: true, copySrc: { track: 1, clip: 2 } });
+
+    handleUiCopyButton(S, deps(c), COPY, 0);
+
+    expect(S.copyHeld).toBe(false);
+    expect(S.copySrc).toBeNull();
+    expect(c.log).toEqual([["ledInvalidate"], ["padmap"]]);
+  });
+});
+
+describe("Button CC workflow - Mute modifier tracker", () => {
+  test("ignores non-Mute CCs", () => {
+    const c = calls();
+    expect(handleUiMuteModifierButton(state(), deps(c), 87, 127)).toBeUndefined();
+    expect(c.log).toEqual([]);
+  });
+
+  test("Mute press sets held state and clears modifier-use", () => {
+    const c = calls();
+    const S = state({ muteUsedAsModifier: true });
+
+    handleUiMuteModifierButton(S, deps(c), MUTE, 127);
+
+    expect(S.muteHeld).toBe(true);
+    expect(S.muteUsedAsModifier).toBe(false);
+    expect(c.log).toEqual([["padmap"]]);
+  });
+
+  test("Mute release clears held state but leaves modifier-use untouched", () => {
+    const c = calls();
+    const S = state({ muteHeld: true, muteUsedAsModifier: true });
+
+    handleUiMuteModifierButton(S, deps(c), MUTE, 0);
+
+    expect(S.muteHeld).toBe(false);
+    expect(S.muteUsedAsModifier).toBe(true); // only press resets it
+    expect(c.log).toEqual([["padmap"]]);
+  });
+
+  test("Mute in Session View invalidates the LED cache before re-pushing the pad map", () => {
+    const c = calls();
+    const S = state({ sessionView: true });
+
+    handleUiMuteModifierButton(S, deps(c), MUTE, 127);
+
+    expect(c.log).toEqual([["ledInvalidate"], ["padmap"]]);
   });
 });
