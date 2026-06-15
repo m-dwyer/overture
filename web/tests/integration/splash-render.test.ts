@@ -1,10 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { renderSplashFrame } from "@tool-ui/ui_splash.mjs";
+import { renderSplashFrame, renderSplashScreen, SPLASH_COUNT } from "@tool-ui/ui_splash.mjs";
 
 type DrawCall = [string, ...unknown[]];
 
 function createDeps(calls: DrawCall[]) {
   return {
+    clear_screen: () => calls.push(["clear"]),
     fill_rect: (x: number, y: number, w: number, h: number, color: number) => calls.push(["fill", x, y, w, h, color]),
   };
 }
@@ -60,5 +61,44 @@ describe("Splash render presentation", () => {
     expect(calls).toEqual([
       ["fill", 6, 0, 4, 1, 1],
     ]);
+  });
+
+  test("splash screen picks a frame on first entry and clears before drawing", () => {
+    const calls: DrawCall[] = [];
+    const state = { splashWasVisible: false, currentSplashIdx: 0 };
+    renderSplashScreen(state, {
+      ...createDeps(calls),
+      pickSplashIdx: () => 1,
+    });
+
+    expect(state).toEqual({ splashWasVisible: true, currentSplashIdx: 1 });
+    expect(calls[0]).toEqual(["clear"]);
+    expect(calls.length).toBeGreaterThan(1);
+    expect(calls[1][0]).toBe("fill");
+  });
+
+  test("splash screen reuses selected frame while visible", () => {
+    const calls: DrawCall[] = [];
+    const state = { splashWasVisible: true, currentSplashIdx: 2 };
+    renderSplashScreen(state, {
+      ...createDeps(calls),
+      pickSplashIdx: () => {
+        throw new Error("should not repick while splash is visible");
+      },
+    });
+
+    expect(state.currentSplashIdx).toBe(2);
+    expect(calls[0]).toEqual(["clear"]);
+    expect(calls.length).toBeGreaterThan(1);
+  });
+
+  test("splash screen wraps frame index by splash count", () => {
+    const wrappedCalls: DrawCall[] = [];
+    const baseCalls: DrawCall[] = [];
+
+    renderSplashScreen({ splashWasVisible: true, currentSplashIdx: SPLASH_COUNT + 1 }, createDeps(wrappedCalls));
+    renderSplashScreen({ splashWasVisible: true, currentSplashIdx: 1 }, createDeps(baseCalls));
+
+    expect(wrappedCalls).toEqual(baseCalls);
   });
 });
