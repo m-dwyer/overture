@@ -12,6 +12,7 @@ import {
   handleTrackViewMelodicStepNoteAssignment,
   handleTrackViewMelodicStepKnob,
   handleTrackViewDrumStepKnob,
+  handleTrackViewCcStepEditKnob,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -147,6 +148,11 @@ function state(overrides = {}) {
       [[0]],
       [[0]],
       [[0], [0, 48, 0]],
+    ],
+    trackCCAutoBits: [
+      [0],
+      [0],
+      [0, 0],
     ],
     clipCCVal: [
       [Array(8).fill(-1)],
@@ -1440,6 +1446,150 @@ describe("Track View Step Workflow", () => {
       activeTrack: 0,
       heldStep: 37,
       heldStepNotes: [40],
+    }), deps(c), 70, 1)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("CC-bank held-step knob clears an unset lane on negative delta", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      heldStep: 53,
+      ccStepEditSet: [false, false, false, false, false, false, false, false],
+      ccStepEditVal: [10, 20, 30, 40, 50, 60, 70, 80],
+    });
+
+    expect(handleTrackViewCcStepEditKnob(S, deps(c, { effectiveClip: () => 1 }), 72, 127)).toBe(true);
+
+    expect(S.ccStepEditSet[1]).toBe(false);
+    expect(S.ccStepEditVal[1]).toBe(20);
+    expect(S.ccActiveLane[2]).toBe(1);
+    expect(S.knobTouched).toBe(1);
+    expect(S.knobTurnedTick[1]).toBe(123);
+    expect(S.screenDirty).toBe(true);
+    expect(S.trackCCAutoBits[2][1]).toBe(0);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 127, 1],
+      ["setParam", "t2_cc_auto_clear_range", "1 1 2544 2591"],
+    ]);
+  });
+
+  test("CC-bank held-step knob writes seed value when unset lane moves positive", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      heldStep: 53,
+      ccStepEditSet: [false, false, false, false, false, false, false, false],
+      ccStepEditVal: [10, 20, 30, 40, 50, 60, 70, 80],
+    });
+
+    expect(handleTrackViewCcStepEditKnob(S, deps(c, { effectiveClip: () => 1 }), 72, 1)).toBe(true);
+
+    expect(S.ccStepEditSet[1]).toBe(true);
+    expect(S.ccStepEditVal[1]).toBe(20);
+    expect(S.trackCCAutoBits[2][1]).toBe(2);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 1],
+      ["setParam", "t2_cc_auto_set2", "1 1 2544 2591 20"],
+    ]);
+  });
+
+  test("CC-bank held-step knob clears a set lane when value moves below zero", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      heldStep: 53,
+      ccStepEditSet: [false, false, true, false, false, false, false, false],
+      ccStepEditVal: [0, 0, 0, 0, 0, 0, 0, 0],
+    });
+
+    expect(handleTrackViewCcStepEditKnob(S, deps(c, {
+      effectiveClip: () => 1,
+      ccKnobDelta: (d2: number, knobIdx: number) => {
+        c.log.push(["ccKnobDelta", d2, knobIdx]);
+        return -1;
+      },
+    }), 73, 127)).toBe(true);
+
+    expect(S.ccStepEditSet[2]).toBe(false);
+    expect(S.trackCCAutoBits[2][1]).toBe(0);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 127, 2],
+      ["setParam", "t2_cc_auto_clear_range", "1 2 1272 1295"],
+    ]);
+  });
+
+  test("CC-bank held-step knob clamps set lane value and uses clip TPS fallback", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      heldStep: 53,
+      ccStepEditSet: [true, false, false, false, false, false, false, false],
+      ccStepEditVal: [126, 0, 0, 0, 0, 0, 0, 0],
+    });
+
+    expect(handleTrackViewCcStepEditKnob(S, deps(c, {
+      effectiveClip: () => 1,
+      ccKnobDelta: (d2: number, knobIdx: number) => {
+        c.log.push(["ccKnobDelta", d2, knobIdx]);
+        return 4;
+      },
+    }), 71, 1)).toBe(true);
+
+    expect(S.ccStepEditVal[0]).toBe(127);
+    expect(S.trackCCAutoBits[2][1]).toBe(1);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 0],
+      ["setParam", "t2_cc_auto_set2", "1 0 1272 1295 127"],
+    ]);
+  });
+
+  test("CC-bank held-step knob consumes zero delta without touching state", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      heldStep: 53,
+    });
+
+    expect(handleTrackViewCcStepEditKnob(S, deps(c, {
+      ccKnobDelta: (d2: number, knobIdx: number) => {
+        c.log.push(["ccKnobDelta", d2, knobIdx]);
+        return 0;
+      },
+    }), 71, 1)).toBe(true);
+
+    expect(S.knobTouched).toBe(-1);
+    expect(S.screenDirty).toBe(false);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 0],
+    ]);
+  });
+
+  test("CC-bank held-step knobs are ignored outside melodic CC step edit", () => {
+    const c = calls();
+
+    expect(handleTrackViewCcStepEditKnob(state({ copyHeld: false }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewCcStepEditKnob(state({
+      copyHeld: false,
+      heldStep: 53,
+      activeBank: 0,
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewCcStepEditKnob(state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      activeBank: 6,
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewCcStepEditKnob(state({
+      copyHeld: false,
+      heldStep: 53,
+      activeBank: 6,
     }), deps(c), 70, 1)).toBe(false);
 
     expect(c.log).toEqual([]);
