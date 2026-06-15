@@ -2,12 +2,14 @@ import { describe, expect, test } from "vitest";
 import {
   handleUiCaptureButton,
   handleUiCopyButton,
+  handleUiDeleteButton,
   handleUiMuteModifierButton,
   handleUiShiftButton,
 } from "@tool-ui/ui_button_cc_workflow.mjs";
 
 const CAPTURE = 52;
 const COPY = 60;
+const DELETE = 119;
 const MUTE = 88;
 const SHIFT = 49;
 const DRUM = 1;
@@ -52,6 +54,31 @@ function state(overrides: Record<string, unknown> = {}) {
     shiftTrackLEDActive: false,
     jogTouched: false,
     pendingEditEntryTrack: -1,
+    deleteHeld: false,
+    deleteTapArmed: false,
+    loopHeld: false,
+    activeBank: 0,
+    ccActiveLane: [0, 2, 0, 0],
+    ccLaneLoopStart: [
+      [[0, 0, 0]],
+      [[0, 0, 0], [0, 0, 9], [0, 0, 0], [0, 0, 0]],
+    ],
+    ccLaneLength: [
+      [[0, 0, 0]],
+      [[0, 0, 0], [0, 0, 16], [0, 0, 0], [0, 0, 0]],
+    ],
+    ccLaneTps: [
+      [[0, 0, 0]],
+      [[0, 0, 0], [0, 0, 48], [0, 0, 0], [0, 0, 0]],
+    ],
+    ccLaneResTps: [
+      [[0, 0, 0]],
+      [[0, 0, 0], [0, 0, 24], [0, 0, 0], [0, 0, 0]],
+    ],
+    undoAvailable: false,
+    redoAvailable: true,
+    undoSeqArpSnapshot: { present: true },
+    clearAutoMenu: null,
     ...overrides,
   };
 }
@@ -60,13 +87,17 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
   return {
     moveCapture: CAPTURE,
     moveCopy: COPY,
+    moveDelete: DELETE,
     moveMute: MUTE,
     moveShift: SHIFT,
     padModeDrum: DRUM,
     computePadNoteMap: c.fn("padmap"),
     editSoundForTrack: c.fn("editSound"),
+    effectiveClip: (track: number) => (track === 1 ? 1 : 0),
     forceRedraw: c.fn("redraw"),
     invalidateLEDCache: c.fn("ledInvalidate"),
+    openClearAutoMenu: c.fn("openClearAutoMenu"),
+    showActionPopup: c.fn("popup"),
     ...overrides,
   };
 }
@@ -120,6 +151,90 @@ describe("Button CC workflow - Shift button", () => {
     expect(S.shiftHeld).toBe(true);
     expect(S.shiftTrackLEDActive).toBe(true);
     expect(c.log).toEqual([["padmap"]]);
+  });
+});
+
+describe("Button CC workflow - Delete button", () => {
+  test("ignores non-Delete CCs", () => {
+    const c = calls();
+    expect(handleUiDeleteButton(state(), deps(c), 118, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Delete press tracks held state and re-pushes the pad map", () => {
+    const c = calls();
+    const S = state();
+
+    expect(handleUiDeleteButton(S, deps(c), DELETE, 127)).toBe(false);
+
+    expect(S.deleteHeld).toBe(true);
+    expect(c.log).toEqual([["padmap"]]);
+  });
+
+  test("Delete release clears held state and re-pushes the pad map", () => {
+    const c = calls();
+    const S = state({ deleteHeld: true });
+
+    expect(handleUiDeleteButton(S, deps(c), DELETE, 0)).toBe(false);
+
+    expect(S.deleteHeld).toBe(false);
+    expect(c.log).toEqual([["padmap"]]);
+  });
+
+  test("Loop+Delete on melodic AUTO bank resets the active automation lane and consumes the CC", () => {
+    const c = calls();
+    const S = state({ loopHeld: true, activeBank: 6, activeTrack: 1, sessionView: false });
+
+    expect(handleUiDeleteButton(S, deps(c), DELETE, 127)).toBe(true);
+
+    expect(S.deleteHeld).toBe(true);
+    expect(S.ccLaneLoopStart[1][1][2]).toBe(0);
+    expect(S.ccLaneLength[1][1][2]).toBe(0);
+    expect(S.ccLaneTps[1][1][2]).toBe(0);
+    expect(S.ccLaneResTps[1][1][2]).toBe(0);
+    expect(S.undoAvailable).toBe(true);
+    expect(S.redoAvailable).toBe(false);
+    expect(S.undoSeqArpSnapshot).toBeNull();
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "t1_c1_k2_cc_lane_reset", val: "1" },
+    ]);
+    expect(c.log).toEqual([["popup", "LANE LOOP", "RESET"], ["redraw"], ["padmap"]]);
+  });
+
+  test("Delete press on melodic AUTO bank arms the clear automation menu", () => {
+    const c = calls();
+    const S = state({ activeBank: 6, activeTrack: 1, sessionView: false });
+
+    expect(handleUiDeleteButton(S, deps(c), DELETE, 127)).toBe(false);
+
+    expect(S.deleteTapArmed).toBe(true);
+    expect(c.log).toEqual([["padmap"]]);
+  });
+
+  test("Delete press does not arm the clear automation menu in Session View, drum tracks, or when already open", () => {
+    const cases = [
+      state({ activeBank: 6, activeTrack: 1, sessionView: true }),
+      state({ activeBank: 6, activeTrack: 0, sessionView: false }),
+      state({ activeBank: 6, activeTrack: 1, sessionView: false, clearAutoMenu: { sel: 0 } }),
+    ];
+
+    for (const S of cases) {
+      const c = calls();
+      expect(handleUiDeleteButton(S, deps(c), DELETE, 127)).toBe(false);
+      expect(S.deleteTapArmed).toBe(false);
+      expect(c.log).toEqual([["padmap"]]);
+    }
+  });
+
+  test("Delete release after an armed tap opens the clear automation menu", () => {
+    const c = calls();
+    const S = state({ deleteHeld: true, deleteTapArmed: true });
+
+    expect(handleUiDeleteButton(S, deps(c), DELETE, 0)).toBe(false);
+
+    expect(S.deleteHeld).toBe(false);
+    expect(S.deleteTapArmed).toBe(false);
+    expect(c.log).toEqual([["openClearAutoMenu"], ["padmap"]]);
   });
 });
 
