@@ -49,6 +49,11 @@ declare module "@tool-ui/ui_popup_render.mjs" {
   export function renderTrackActionPopup(deps: any): void;
 }
 
+declare module "@tool-ui/ui_prompt_render.mjs" {
+  export function renderMergePlacementPrompt(deps: any): void;
+  export function renderSceneBakePickerPrompt(deps: any): void;
+}
+
 declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runDefaultSetParamDrain(S: any, deps: any): void;
   export function runMoveCoRunTickTasks(S: any, deps: any): void;
