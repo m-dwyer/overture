@@ -65,6 +65,10 @@ declare module "@tool-ui/ui_loop_render.mjs" {
   export function renderLoopView(deps: any): void;
 }
 
+declare module "@tool-ui/ui_step_interval_render.mjs" {
+  export function renderStepIntervalOverlay(deps: any, bank: number): void;
+}
+
 declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runDefaultSetParamDrain(S: any, deps: any): void;
   export function runMoveCoRunTickTasks(S: any, deps: any): void;
