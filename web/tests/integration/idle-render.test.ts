@@ -5,6 +5,7 @@ import {
   renderDrumTrackIdleView,
   renderMelodicTrackIdleView,
   renderMotionIdleView,
+  renderDrumPositionBar,
 } from "@tool-ui/ui_idle_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
@@ -20,7 +21,6 @@ function createDeps(calls: DrawCall[], values: Record<string, string | null> = {
     drawMetroIndicator: () => calls.push(["metro"]),
     drawTrackRow: (y: number) => calls.push(["trackRow", y]),
     drawPositionBar: (track: number) => calls.push(["positionBar", track]),
-    drawDrumPositionBar: (track: number) => calls.push(["drumPositionBar", track]),
     host_module_get_param: (key: string) => {
       getCalls.push(key);
       return Object.prototype.hasOwnProperty.call(values, key) ? values[key] : null;
@@ -63,8 +63,16 @@ describe("Idle presentation", () => {
     S.scaleAware = 1;
     S.activeDrumLane = [2, 0, 0, 0, 0, 0, 0, 0];
     S.drumLanePage = [1, 0, 0, 0, 0, 0, 0, 0];
+    S.drumStepPage = [1, 0, 0, 0, 0, 0, 0, 0];
+    S.drumCurrentStep = [22, 0, 0, 0, 0, 0, 0, 0];
+    S.drumLaneLoopStart = [16, 0, 0, 0, 0, 0, 0, 0];
     S.drumLaneNote = Array.from({ length: 8 }, () => new Array(32).fill(36));
     S.drumLaneNote[0][2] = 48;
+    S.drumLaneLength = [32, 16, 16, 16, 16, 16, 16, 16];
+    S.drumLaneSteps = Array.from({ length: 8 }, () =>
+      Array.from({ length: 32 }, () => "0".repeat(256))
+    );
+    S.drumLaneSteps[0][2] = `${"0".repeat(3)}1${"0".repeat(47)}1${"0".repeat(204)}`;
     S.drumLaneSolo = [0, 0, 0, 0, 0, 0, 0, 0];
     S.drumLaneMute = [0, 0, 0, 0, 0, 0, 0, 0];
     S.trackCurrentPage = [1, 0, 0, 0, 0, 0, 0, 0];
@@ -154,9 +162,25 @@ describe("Idle presentation", () => {
     expect(pixelTexts(calls)).toEqual(expect.arrayContaining(["Bank: B  Pad: C2 (48)", "SOLOED", "B", "C"]));
     expect(calls).toContainEqual(["metro"]);
     expect(calls).toContainEqual(["trackRow", 34]);
-    expect(calls).toContainEqual(["drumPositionBar", 0]);
+    expect(calls).toContainEqual(["fill", 4, 57, 59, 5, 1]);
+    expect(calls).toContainEqual(["fill", 64, 61, 59, 1, 1]);
+    expect(calls).toContainEqual(["fill", 2, 58, 1, 3, 1]);
+    expect(calls).toContainEqual(["fill", 124, 58, 1, 3, 1]);
     expect(calls).toContainEqual(["fill", 4, 45, 9, 7, 1]);
     expect(calls).toContainEqual(["fill", 20, 45, 9, 7, 1]);
+  });
+
+  test("renders drum position bar pages, playhead, and extent markers", () => {
+    S.playing = true;
+    S.trackClipPlaying[0] = true;
+    const calls: DrawCall[] = [];
+    renderDrumPositionBar(createDeps(calls), 0);
+
+    expect(calls).toContainEqual(["fill", 4, 57, 59, 5, 1]);
+    expect(calls).toContainEqual(["fill", 64, 61, 59, 1, 1]);
+    expect(calls).toContainEqual(["fill", 26, 57, 1, 5, 0]);
+    expect(calls).toContainEqual(["fill", 2, 58, 1, 3, 1]);
+    expect(calls).toContainEqual(["fill", 124, 58, 1, 3, 1]);
   });
 
   test("renders AUTO idle lane info, badges, graph, and current page", () => {
