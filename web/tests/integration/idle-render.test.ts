@@ -7,6 +7,7 @@ import {
   renderMotionIdleView,
   renderDrumPositionBar,
 } from "@tool-ui/ui_idle_render.mjs";
+import { renderTrackRow } from "@tool-ui/ui_track_chrome_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 
@@ -19,7 +20,6 @@ function createDeps(calls: DrawCall[], values: Record<string, string | null> = {
     drawBankHeading: (name: string, showTrack?: boolean) => calls.push(["heading", name, showTrack]),
     drawBankHeadingInverted: (name: string, showTrack?: boolean) => calls.push(["headingInv", name, showTrack]),
     drawMetroIndicator: () => calls.push(["metro"]),
-    drawTrackRow: (y: number) => calls.push(["trackRow", y]),
     drawPositionBar: (track: number) => calls.push(["positionBar", track]),
     host_module_get_param: (key: string) => {
       getCalls.push(key);
@@ -45,6 +45,8 @@ describe("Idle presentation", () => {
     S.trackClipPlaying = [true, true, false, false, false, false, false, false];
     S.trackWillRelaunch = [false, false, false, false, false, false, false, false];
     S.trackQueuedClip = [-1, -1, -1, -1, -1, -1, -1, -1];
+    S.trackMuted = [false, false, false, false, false, false, false, false];
+    S.trackSoloed = [false, false, false, false, false, false, false, false];
     S.clipNonEmpty = Array.from({ length: 8 }, () => new Array(16).fill(false));
     S.drumClipNonEmpty = Array.from({ length: 8 }, () => new Array(16).fill(false));
     S.clipNonEmpty[0][1] = true;
@@ -122,7 +124,8 @@ describe("Idle presentation", () => {
     expect(calls[0]).toEqual(["fill", 0, 0, 128, 12, 1]);
     expect(calls).toContainEqual(["print", 40, 2, "overture", 0]);
     expect(calls).toContainEqual(["metro"]);
-    expect(calls).toContainEqual(["trackRow", 34]);
+    expect(calls).toContainEqual(["print", 5, 34, "1", 1]);
+    expect(calls).toContainEqual(["fill", 3, 32, 10, 1, 1]);
     expect(pixelTexts(calls)).toEqual(expect.arrayContaining(["B", "C"]));
     expect(calls).toContainEqual(["fill", 4, 45, 9, 7, 1]);
     expect(calls).toContainEqual(["fill", 20, 45, 9, 7, 1]);
@@ -143,7 +146,8 @@ describe("Idle presentation", () => {
     expect(calls).toContainEqual(["fill", 51, 9, 19, 7, 1]);
     expect(calls).toContainEqual(["fill", 82, 15, 42, 1, 1]);
     expect(calls).toContainEqual(["metro"]);
-    expect(calls).toContainEqual(["trackRow", 34]);
+    expect(calls).toContainEqual(["print", 5, 34, "1", 1]);
+    expect(calls).toContainEqual(["fill", 3, 32, 10, 1, 1]);
     expect(calls).toContainEqual(["positionBar", 0]);
     expect(calls).toContainEqual(["fill", 4, 45, 9, 7, 1]);
     expect(calls).toContainEqual(["fill", 20, 45, 9, 7, 1]);
@@ -161,7 +165,8 @@ describe("Idle presentation", () => {
     expect(calls[0]).toEqual(["headingInv", "AUTO", false]);
     expect(pixelTexts(calls)).toEqual(expect.arrayContaining(["Bank: B  Pad: C2 (48)", "SOLOED", "B", "C"]));
     expect(calls).toContainEqual(["metro"]);
-    expect(calls).toContainEqual(["trackRow", 34]);
+    expect(calls).toContainEqual(["print", 5, 34, "1", 1]);
+    expect(calls).toContainEqual(["fill", 3, 32, 10, 1, 1]);
     expect(calls).toContainEqual(["fill", 4, 57, 59, 5, 1]);
     expect(calls).toContainEqual(["fill", 64, 61, 59, 1, 1]);
     expect(calls).toContainEqual(["fill", 2, 58, 1, 3, 1]);
@@ -181,6 +186,22 @@ describe("Idle presentation", () => {
     expect(calls).toContainEqual(["fill", 26, 57, 1, 5, 0]);
     expect(calls).toContainEqual(["fill", 2, 58, 1, 3, 1]);
     expect(calls).toContainEqual(["fill", 124, 58, 1, 3, 1]);
+  });
+
+  test("renders track row active, muted, and soloed states", () => {
+    S.activeTrack = 2;
+    S.trackMuted[1] = true;
+    S.trackSoloed[3] = true;
+    S.tickCount = 48;
+    const calls: DrawCall[] = [];
+    renderTrackRow(createDeps(calls), 34);
+
+    expect(calls).toContainEqual(["print", 5, 34, "1", 1]);
+    expect(calls).toContainEqual(["print", 21, 34, "2", 1]);
+    expect(calls).toContainEqual(["print", 37, 34, "3", 1]);
+    expect(calls).toContainEqual(["fill", 35, 32, 10, 1, 1]);
+    expect(calls).toContainEqual(["fill", 51, 32, 10, 12, 1]);
+    expect(calls).toContainEqual(["print", 53, 34, "4", 0]);
   });
 
   test("renders AUTO idle lane info, badges, graph, and current page", () => {
