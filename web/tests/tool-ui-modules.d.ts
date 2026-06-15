@@ -61,6 +61,10 @@ declare module "@tool-ui/ui_param_peek_render.mjs" {
   export function renderParamPeek(deps: any): void;
 }
 
+declare module "@tool-ui/ui_loop_render.mjs" {
+  export function renderLoopView(deps: any): void;
+}
+
 declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runDefaultSetParamDrain(S: any, deps: any): void;
   export function runMoveCoRunTickTasks(S: any, deps: any): void;
