@@ -3,11 +3,13 @@ import {
   handleUiCaptureButton,
   handleUiCopyButton,
   handleUiMuteModifierButton,
+  handleUiShiftButton,
 } from "@tool-ui/ui_button_cc_workflow.mjs";
 
 const CAPTURE = 52;
 const COPY = 60;
 const MUTE = 88;
+const SHIFT = 49;
 const DRUM = 1;
 
 function calls() {
@@ -46,6 +48,10 @@ function state(overrides: Record<string, unknown> = {}) {
     copySrc: null,
     muteHeld: false,
     muteUsedAsModifier: false,
+    shiftHeld: false,
+    shiftTrackLEDActive: false,
+    jogTouched: false,
+    pendingEditEntryTrack: -1,
     ...overrides,
   };
 }
@@ -55,13 +61,67 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     moveCapture: CAPTURE,
     moveCopy: COPY,
     moveMute: MUTE,
+    moveShift: SHIFT,
     padModeDrum: DRUM,
     computePadNoteMap: c.fn("padmap"),
+    editSoundForTrack: c.fn("editSound"),
     forceRedraw: c.fn("redraw"),
     invalidateLEDCache: c.fn("ledInvalidate"),
     ...overrides,
   };
 }
+
+describe("Button CC workflow - Shift button", () => {
+  test("ignores non-Shift CCs", () => {
+    const c = calls();
+    expect(handleUiShiftButton(state(), deps(c), 48, 127)).toBeUndefined();
+    expect(c.log).toEqual([]);
+  });
+
+  test("Shift press sets held state, activates the track LED overlay, re-pushes pad map, and redraws Track View", () => {
+    const c = calls();
+    const S = state();
+
+    handleUiShiftButton(S, deps(c), SHIFT, 127);
+
+    expect(S.shiftHeld).toBe(true);
+    expect(S.shiftTrackLEDActive).toBe(true);
+    expect(c.log).toEqual([["padmap"], ["redraw"]]);
+  });
+
+  test("Shift release clears held state, clears jog touch, re-pushes pad map, and redraws Track View", () => {
+    const c = calls();
+    const S = state({ shiftHeld: true, shiftTrackLEDActive: true, jogTouched: true });
+
+    handleUiShiftButton(S, deps(c), SHIFT, 0);
+
+    expect(S.shiftHeld).toBe(false);
+    expect(S.shiftTrackLEDActive).toBe(false);
+    expect(S.jogTouched).toBe(false);
+    expect(c.log).toEqual([["padmap"], ["redraw"]]);
+  });
+
+  test("Shift release dispatches deferred edit-entry and clears the pending track before redraw", () => {
+    const c = calls();
+    const S = state({ shiftHeld: true, pendingEditEntryTrack: 2 });
+
+    handleUiShiftButton(S, deps(c), SHIFT, 0);
+
+    expect(S.pendingEditEntryTrack).toBe(-1);
+    expect(c.log).toEqual([["padmap"], ["editSound", 2], ["redraw"]]);
+  });
+
+  test("Shift transitions in Session View skip redraw but still re-push the pad map", () => {
+    const c = calls();
+    const S = state({ sessionView: true });
+
+    handleUiShiftButton(S, deps(c), SHIFT, 127);
+
+    expect(S.shiftHeld).toBe(true);
+    expect(S.shiftTrackLEDActive).toBe(true);
+    expect(c.log).toEqual([["padmap"]]);
+  });
+});
 
 describe("Button CC workflow - Capture button", () => {
   test("ignores non-Capture CCs", () => {
