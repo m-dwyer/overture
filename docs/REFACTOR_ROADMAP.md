@@ -108,6 +108,8 @@ Current Track View Step Workflow ownership:
 - Shift + step owns Track View shortcuts for drum perform mode, melodic
   chromatic/in-scale layout, VelIn, melodic TRACK ARP style, double-fill
   dispatch, and quantize-100 writes.
+- Normal drum step press owns press-time step edit entry, empty/occupied
+  edit-value seeding, tap-window multi-toggle, and held-step gate-span taps.
 
 Behavior to preserve:
 
@@ -121,9 +123,10 @@ Behavior to preserve:
 - Copy + second step copies only when source and target differ, redraws, and
   never mixes step copy with other copy source kinds.
 - Mute + step must continue falling through before Shift+step.
-- Step-edit release behavior, Parameter Bank behavior, recording behavior,
-  Session View Performance Mode, modal workflows, and unrelated DSP reads/writes
-  remain in `ui.js` for now.
+- Drum hold-threshold auto-assign, drum step release/velocity confirm, melodic
+  step press/edit, Parameter Bank behavior, recording behavior, Session View
+  Performance Mode, modal workflows, and unrelated DSP reads/writes remain in
+  `ui.js` for now.
 
 Tests currently covering this seam:
 
@@ -136,9 +139,11 @@ Continue extracting one narrow Track View step-button branch at a time from
 `_onStepButtons()`, after characterization coverage and without changing handler
 priority. Mute+step is characterized as a fallthrough modifier with no separate
 Track View action, and Shift+step shortcuts now live in the Track View Step
-Workflow seam. The next candidate is the normal drum step tap/hold branch; avoid
-held-step edit, Parameter Bank behavior, and recording behavior until that branch
-has characterization coverage.
+Workflow seam. Normal drum step press handling now lives in the seam, while its
+tick hold-threshold and release commit behavior remain in `ui.js`. The next
+candidate is the normal melodic step press branch; avoid Parameter Bank behavior,
+recording behavior, and release/tick behavior until that branch has
+characterization coverage.
 
 ## Candidate Later Slices
 

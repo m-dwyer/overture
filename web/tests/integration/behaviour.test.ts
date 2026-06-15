@@ -576,6 +576,47 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
+  test("plain drum step tap toggles an empty step", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneSteps[0][0][9] = "0";
+    h.ui().drumLaneHasNotes[0][0] = false;
+
+    h.tapStep(9);
+    h.step(2);
+
+    expect(h.ui().drumLaneSteps[0][0][9]).toBe("1");
+    expect(h.ui().drumLaneHasNotes[0][0]).toBe(true);
+    expect(h.ui().heldStep).toBe(-1);
+  });
+
+  test("plain drum step hold auto-assigns empty step without tap-clearing on release", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneSteps[0][0][10] = "0";
+    h.ui().drumLaneHasNotes[0][0] = false;
+
+    h.emu.sendInternal(0x90, 26, 127); // hold step 11
+    h.step(25);
+
+    expect(h.ui().heldStep).toBe(10);
+    expect(h.ui().stepWasHeld).toBe(true);
+    expect(h.ui().drumLaneSteps[0][0][10]).toBe("1");
+
+    h.emu.sendInternal(0x80, 26, 0);
+    h.step(2);
+
+    expect(h.ui().drumLaneSteps[0][0][10]).toBe("1");
+    expect(h.ui().drumLaneHasNotes[0][0]).toBe(true);
+    expect(h.ui().heldStep).toBe(-1);
+  });
+
   test("Mute + step on a melodic track preserves normal step tap behavior", () => {
     noteView();
     h.ui().activeTrack = 1;

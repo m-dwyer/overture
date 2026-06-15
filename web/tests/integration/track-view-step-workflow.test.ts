@@ -4,6 +4,7 @@ import {
   handleTrackViewDeleteStepPress,
   handleTrackViewMuteStepPress,
   handleTrackViewShiftStepPress,
+  handleTrackViewDrumStepPress,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -28,10 +29,18 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     doLaneDoubleFill: c.fn("doLaneDoubleFill"),
     doShiftStepCommon: c.fn("shiftCommon"),
     effectiveClip: c.fn("effectiveClip"),
+    getParam: (...args: unknown[]) => {
+      c.log.push(["getParam", ...args]);
+      return null;
+    },
     invalidateLEDCache: c.fn("invalidate"),
     forceRedraw: c.fn("redraw"),
     padModeDrum: 1,
     setParam: c.fn("setParam"),
+    stepEntryVelocity: (...args: unknown[]) => {
+      c.log.push(["stepEntryVelocity", ...args]);
+      return 96;
+    },
     showActionPopup: c.fn("popup"),
     ...overrides,
   };
@@ -46,6 +55,19 @@ function state(overrides = {}) {
     deleteHeld: false,
     muteHeld: false,
     shiftHeld: false,
+    tickCount: 123,
+    heldStep: -1,
+    heldStepBtn: -1,
+    heldStepNotes: [],
+    stepWasEmpty: false,
+    stepWasHeld: false,
+    stepBtnPressedTick: Array(16).fill(-1),
+    stepEditVel: 0,
+    stepEditGate: 0,
+    stepEditNudge: 0,
+    stepEditIter: 0,
+    stepEditRand: 0,
+    stepEditRatch: 0,
     activeBank: 0,
     trackPadMode: [1, 0, 0],
     padLayoutChromatic: [false, false, false],
@@ -55,6 +77,13 @@ function state(overrides = {}) {
     ),
     lastTarpStyle: [2, 3, 4],
     drumLaneQnt: [64, 64, 64],
+    drumLaneNote: [
+      Array.from({ length: 32 }, (_, i) => 36 + i),
+      Array.from({ length: 32 }, (_, i) => 36 + i),
+      Array.from({ length: 32 }, (_, i) => 36 + i),
+    ],
+    drumLaneLength: [64, 64, 64],
+    drumLaneTPS: [24, 24, 24],
     clipTPS: [
       [24],
       [24],
@@ -448,6 +477,192 @@ describe("Track View Step Workflow", () => {
     expect(S.bankParams[2][1][3]).toBe(0);
     expect(c.log).toEqual([
       ["shiftCommon", 15],
+      ["redraw"],
+    ]);
+  });
+
+  test("plain melodic step press is ignored by the drum step workflow", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, activeTrack: 2, trackPadMode: [1, 0, 0] });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c), 5)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Shift+step is ignored by the drum step workflow", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, copyHeld: false, shiftHeld: true });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c), 5)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("drum first press on empty step records hold state and default edit values", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, copyHeld: false, tickCount: 321 });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c), 5)).toBe(true);
+
+    expect(S.stepBtnPressedTick[5]).toBe(321);
+    expect(S.heldStepBtn).toBe(5);
+    expect(S.heldStep).toBe(37);
+    expect(S.stepWasEmpty).toBe(true);
+    expect(S.heldStepNotes).toEqual([]);
+    expect(S.stepEditVel).toBe(96);
+    expect(S.stepEditGate).toBe(12);
+    expect(S.stepEditNudge).toBe(0);
+    expect(S.stepEditIter).toBe(0);
+    expect(S.stepEditRand).toBe(0);
+    expect(S.stepEditRatch).toBe(0);
+    expect(c.log).toEqual([
+      ["stepEntryVelocity", 0, -1, true],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum first press on occupied step reads edit values and marks notes present", () => {
+    const c = calls();
+    const drumSteps = Array.from({ length: 32 }, () => Array(64).fill("0"));
+    drumSteps[4][37] = "1";
+    const getValues = new Map([
+      ["t0_l4_step_37_vel", "77"],
+      ["t0_l4_step_37_gate", "18"],
+      ["t0_l4_step_37_nudge", "-3"],
+      ["t0_l4_step_37_iter", "2"],
+      ["t0_l4_step_37_rand", "5"],
+      ["t0_l4_step_37_ratch", "1"],
+    ]);
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      drumLaneSteps: [
+        drumSteps,
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+      ],
+    });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c, {
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return getValues.get(key) ?? null;
+      },
+    }), 5)).toBe(true);
+
+    expect(S.stepWasEmpty).toBe(false);
+    expect(S.heldStepNotes).toEqual([40]);
+    expect(S.stepEditVel).toBe(77);
+    expect(S.stepEditGate).toBe(18);
+    expect(S.stepEditNudge).toBe(-3);
+    expect(S.stepEditIter).toBe(2);
+    expect(S.stepEditRand).toBe(5);
+    expect(S.stepEditRatch).toBe(1);
+    expect(c.log).toEqual([
+      ["getParam", "t0_l4_step_37_vel"],
+      ["getParam", "t0_l4_step_37_gate"],
+      ["getParam", "t0_l4_step_37_nudge"],
+      ["getParam", "t0_l4_step_37_iter"],
+      ["getParam", "t0_l4_step_37_rand"],
+      ["getParam", "t0_l4_step_37_ratch"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum second press during primary tap window toggles an empty step immediately", () => {
+    const c = calls();
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStep: 32,
+      heldStepBtn: 0,
+      stepBtnPressedTick: [100, ...Array(15).fill(-1)],
+    });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c), 5)).toBe(true);
+
+    expect(S.drumLaneSteps[0][4][37]).toBe("1");
+    expect(S.drumLaneHasNotes[0][4]).toBe(true);
+    expect(S.stepBtnPressedTick[5]).toBe(-1);
+    expect(c.log).toEqual([
+      ["stepEntryVelocity", 0, -1, true],
+      ["setParam", "t0_l4_step_37_toggle", "96"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum second press during primary tap window clears an occupied step immediately", () => {
+    const c = calls();
+    const drumSteps = Array.from({ length: 32 }, () => Array(64).fill("0"));
+    drumSteps[4][37] = "1";
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStep: 32,
+      heldStepBtn: 0,
+      stepBtnPressedTick: [100, ...Array(15).fill(-1)],
+      drumLaneSteps: [
+        drumSteps,
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+      ],
+      drumLaneHasNotes: [
+        [false, false, false, false, true, ...Array(27).fill(false)],
+        Array(32).fill(false),
+        Array(32).fill(false),
+      ],
+    });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c), 5)).toBe(true);
+
+    expect(S.drumLaneSteps[0][4][37]).toBe("0");
+    expect(S.drumLaneHasNotes[0][4]).toBe(false);
+    expect(S.stepBtnPressedTick[5]).toBe(-1);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_clear", "1"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum second press during held step edit sets gate span through tapped step", () => {
+    const c = calls();
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStep: 34,
+      heldStepBtn: 2,
+      heldStepNotes: [40],
+      stepBtnPressedTick: Array(16).fill(-1),
+    });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c), 5)).toBe(true);
+
+    expect(S.stepWasHeld).toBe(true);
+    expect(S.stepEditGate).toBe(96);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_34_gate", "96"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum second press during held step edit wraps gate span around lane length", () => {
+    const c = calls();
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStep: 62,
+      heldStepBtn: 14,
+      heldStepNotes: [40],
+      drumStepPage: [0, 0, 0],
+      stepBtnPressedTick: Array(16).fill(-1),
+    });
+
+    expect(handleTrackViewDrumStepPress(S, deps(c), 1)).toBe(true);
+
+    expect(S.stepEditGate).toBe(96);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_62_gate", "96"],
       ["redraw"],
     ]);
   });
