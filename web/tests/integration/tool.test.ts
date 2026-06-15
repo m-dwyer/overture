@@ -565,4 +565,32 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.step(2);
     }
   });
+
+  test("malformed last_restore falls back to full clip sync", () => {
+    const ui = h.ui();
+    h.set("t1_c0_step_3_add", "64 0 100");
+    expect(h.get("t1_c0_steps")?.[3]).toBe("1");
+
+    (ui.clipSteps as number[][][])[1][0][3] = 0;
+    (ui.clipNonEmpty as boolean[][])[1][0] = false;
+    ui.pendingUndoSync = 1;
+    ui.recordArmed = false;
+    ui.recordCountingIn = false;
+    ui.recordArmedTrack = -1;
+
+    const originalGet = globalThis.host_module_get_param;
+    globalThis.host_module_get_param = (key: string): string | null =>
+      key === "last_restore" ? "malformed" : originalGet(key);
+    try {
+      h.step(1);
+    } finally {
+      globalThis.host_module_get_param = originalGet;
+      h.set("t1_c0_step_3_clear", "1");
+      h.step(2);
+    }
+
+    expect(ui.pendingUndoSync).toBe(0);
+    expect((ui.clipSteps as number[][][])[1][0][3]).toBe(1);
+    expect((ui.clipNonEmpty as boolean[][])[1][0]).toBe(true);
+  });
 });
