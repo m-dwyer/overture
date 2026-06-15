@@ -7,6 +7,7 @@ import {
   handleTrackViewDrumStepPress,
   handleTrackViewMelodicStepPress,
   handleTrackViewStepRelease,
+  handleTrackViewStepHoldThreshold,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -43,6 +44,7 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     padModeDrum: 1,
     refreshSeqNotesIfCurrent: c.fn("refreshSeqNotes"),
     setParam: c.fn("setParam"),
+    stepHoldTicks: 19,
     stepEntryVelocity: (...args: unknown[]) => {
       c.log.push(["stepEntryVelocity", ...args]);
       return 96;
@@ -78,6 +80,9 @@ function state(overrides = {}) {
     noNoteFlashEndTick: -1,
     screenDirty: false,
     ccStepEditActive: false,
+    ccStepEditSet: Array(8).fill(false),
+    ccStepEditComputed: Array(8).fill(-1),
+    ccStepEditVal: Array(8).fill(0),
     pendingChordToStep: null,
     liveActiveNotes: new Set<number>(),
     lastPadVelocity: 87,
@@ -122,6 +127,11 @@ function state(overrides = {}) {
       [[0]],
       [[0]],
       [[0], [0, 48, 0]],
+    ],
+    clipCCVal: [
+      [Array(8).fill(-1)],
+      [Array(8).fill(-1)],
+      [Array(8).fill(-1), [10, -1, 20, -1, 30, -1, 40, -1]],
     ],
     pendingCCBitsRefresh: -1,
     undoAvailable: false,
@@ -1186,5 +1196,221 @@ describe("Track View Step Workflow", () => {
     expect(S.heldStep).toBe(-1);
     expect(S.pendingStepsReread).toBe(0);
     expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("hold threshold ignores steps that have not reached the hold window", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      tickCount: 118,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 100, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepHoldThreshold(S, deps(c))).toBe(false);
+
+    expect(S.stepBtnPressedTick[5]).toBe(100);
+    expect(S.stepWasHeld).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("CC bank hold threshold seeds point, computed, and resting values", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      tickCount: 119,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepWasEmpty: true,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 100, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepHoldThreshold(S, deps(c, {
+      effectiveClip: () => 1,
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return "64 -1 0 -1 127 -1 -1 -1 10 11 12 200 -1 15 16 17";
+      },
+    }))).toBe(true);
+
+    expect(S.stepBtnPressedTick[5]).toBe(-1);
+    expect(S.stepWasHeld).toBe(true);
+    expect(S.ccStepEditSet).toEqual([true, false, true, false, true, false, false, false]);
+    expect(S.ccStepEditComputed).toEqual([10, 11, 12, -1, -1, 15, 16, 17]);
+    expect(S.ccStepEditVal).toEqual([64, 0, 0, 0, 127, 0, 40, 0]);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["getParam", "t2_c1_ccstepinfo_53"],
+    ]);
+  });
+
+  test("drum empty-step hold threshold auto-assigns and reads back edit values", () => {
+    const c = calls();
+    const values = new Map([
+      ["t0_l4_step_37_vel", "75"],
+      ["t0_l4_step_37_gate", "18"],
+      ["t0_l4_step_37_nudge", "-4"],
+      ["t0_l4_step_37_iter", "3"],
+      ["t0_l4_step_37_rand", "6"],
+      ["t0_l4_step_37_ratch", "2"],
+    ]);
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      tickCount: 119,
+      heldStepBtn: 5,
+      heldStep: 37,
+      stepWasEmpty: true,
+      stepEditVel: 96,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 100, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepHoldThreshold(S, deps(c, {
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return values.get(key) ?? null;
+      },
+    }))).toBe(true);
+
+    expect(S.drumLaneSteps[0][4][37]).toBe("1");
+    expect(S.drumLaneHasNotes[0][4]).toBe(true);
+    expect(S.heldStepNotes).toEqual([40]);
+    expect(S.stepEditVel).toBe(75);
+    expect(S.stepEditGate).toBe(18);
+    expect(S.stepEditNudge).toBe(-4);
+    expect(S.stepEditIter).toBe(3);
+    expect(S.stepEditRand).toBe(6);
+    expect(S.stepEditRatch).toBe(2);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_toggle", "96"],
+      ["getParam", "t0_l4_step_37_vel"],
+      ["getParam", "t0_l4_step_37_gate"],
+      ["getParam", "t0_l4_step_37_nudge"],
+      ["getParam", "t0_l4_step_37_iter"],
+      ["getParam", "t0_l4_step_37_rand"],
+      ["getParam", "t0_l4_step_37_ratch"],
+    ]);
+  });
+
+  test("drum occupied-step hold threshold only closes tap window and marks dirty", () => {
+    const c = calls();
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      tickCount: 119,
+      heldStepBtn: 5,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepWasEmpty: false,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 100, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepHoldThreshold(S, deps(c))).toBe(true);
+
+    expect(S.stepBtnPressedTick[5]).toBe(-1);
+    expect(S.stepWasHeld).toBe(true);
+    expect(S.heldStepNotes).toEqual([40]);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("melodic non-empty hold threshold reads notes and edit values", () => {
+    const c = calls();
+    const values = new Map([
+      ["t2_c1_step_53_notes", "60 64 128 -1"],
+      ["t2_c1_step_53_vel", "82"],
+      ["t2_c1_step_53_gate", "48"],
+      ["t2_c1_step_53_nudge", "7"],
+      ["t2_c1_step_53_iter", "1"],
+      ["t2_c1_step_53_rand", "4"],
+      ["t2_c1_step_53_ratch", "2"],
+    ]);
+    const S = state({
+      copyHeld: false,
+      tickCount: 119,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepWasEmpty: false,
+      heldStepNotes: [],
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 100, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepHoldThreshold(S, deps(c, {
+      effectiveClip: () => 1,
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return values.get(key) ?? null;
+      },
+    }))).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([60, 64]);
+    expect(S.stepEditVel).toBe(82);
+    expect(S.stepEditGate).toBe(48);
+    expect(S.stepEditNudge).toBe(7);
+    expect(S.stepEditIter).toBe(1);
+    expect(S.stepEditRand).toBe(4);
+    expect(S.stepEditRatch).toBe(2);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["getParam", "t2_c1_step_53_notes"],
+      ["getParam", "t2_c1_step_53_vel"],
+      ["getParam", "t2_c1_step_53_gate"],
+      ["getParam", "t2_c1_step_53_nudge"],
+      ["getParam", "t2_c1_step_53_iter"],
+      ["getParam", "t2_c1_step_53_rand"],
+      ["getParam", "t2_c1_step_53_ratch"],
+    ]);
+  });
+
+  test("melodic empty-step hold threshold auto-assigns last played note", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      tickCount: 119,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepWasEmpty: true,
+      heldStepNotes: [],
+      lastPlayedNote: 67,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 100, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepHoldThreshold(S, deps(c, { effectiveClip: () => 1 }))).toBe(true);
+
+    expect(S.clipSteps[2][1][53]).toBe(1);
+    expect(S.clipNonEmpty[2][1]).toBe(true);
+    expect(S.heldStepNotes).toEqual([67]);
+    expect(S.stepEditVel).toBe(96);
+    expect(S.stepWasEmpty).toBe(false);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["stepEntryVelocity", 2, -1, false],
+      ["setParam", "t2_c1_step_53_toggle", "67 96"],
+      ["refreshSeqNotes", 2, 1, 53],
+    ]);
+  });
+
+  test("melodic empty-step hold threshold without last played note flashes no-note warning", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      tickCount: 119,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepWasEmpty: true,
+      heldStepNotes: [],
+      lastPlayedNote: -1,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 100, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepHoldThreshold(S, deps(c, { effectiveClip: () => 1 }))).toBe(true);
+
+    expect(S.noNoteFlashEndTick).toBe(151);
+    expect(S.screenDirty).toBe(true);
+    expect(S.clipSteps[2][1][53]).toBe(0);
+    expect(c.log).toEqual([]);
   });
 });

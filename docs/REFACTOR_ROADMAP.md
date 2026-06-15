@@ -116,6 +116,9 @@ Current Track View Step Workflow ownership:
 - Track View step release owns drum tap commit/clear, drum hold-release
   reassign/velocity confirm, melodic tap commit/clear/no-note flash, melodic
   hold-release reassign/reread scheduling, and CC-safe release cleanup.
+- Track View step hold-threshold owns tap-window closure, CC step-edit seeding,
+  drum empty-step auto-assign/readback, melodic non-empty note/edit readback,
+  and melodic empty-step auto-assign/no-note flash.
 
 Behavior to preserve:
 
@@ -129,9 +132,9 @@ Behavior to preserve:
 - Copy + second step copies only when source and target differ, redraws, and
   never mixes step copy with other copy source kinds.
 - Mute + step must continue falling through before Shift+step.
-- Drum/melodic hold-threshold behavior, deeper CC step-edit behavior, Parameter
-  Bank behavior, recording behavior, Session View Performance Mode, modal
-  workflows, and unrelated DSP reads/writes remain in `ui.js` for now.
+- Deeper CC step-edit behavior, Parameter Bank behavior, recording behavior,
+  Session View Performance Mode, modal workflows, and unrelated DSP reads/writes
+  remain in `ui.js` for now.
 
 Tests currently covering this seam:
 
@@ -144,10 +147,10 @@ Continue extracting one narrow Track View step-button branch at a time from
 `_onStepButtons()`, after characterization coverage and without changing handler
 priority. Mute+step is characterized as a fallthrough modifier with no separate
 Track View action, and Shift+step shortcuts now live in the Track View Step
-Workflow seam. Normal drum and melodic step press handling now live in the seam,
-and step release commit/cleanup now routes through `handleTrackViewStepRelease()`.
-The next candidate is the step hold-threshold lifecycle, likely split
-drum/melodic/CC if needed; avoid Parameter Bank behavior and recording behavior
+Workflow seam. Normal drum and melodic step press handling, step release
+commit/cleanup, and the tick-side hold-threshold lifecycle now live in the seam.
+The next candidate is deeper CC step-edit handling or another cohesive Track
+View step-edit cluster; avoid Parameter Bank behavior and recording behavior
 until that lifecycle has characterization coverage.
 
 ## Candidate Later Slices
