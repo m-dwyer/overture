@@ -648,6 +648,81 @@ describe("tick task drains", () => {
     expect(S.clipTPS[4][5]).toBe(24);
   });
 
+  test("content resync applies the same melodic clip readback for step reread and scene bake", () => {
+    const c = calls();
+    const S = {
+      pendingDrumResync: 0,
+      pendingDrumLaneResync: 0,
+      pendingStepsReread: 1,
+      pendingStepsRereadTrack: 0,
+      pendingStepsRereadClip: 2,
+      pendingSceneBakeResync: 1,
+      pendingSceneBakeClip: 3,
+      activeDrumLane: [0, 0, 0],
+      trackPadMode: [0, 0, 1],
+      trackActiveClip: [2, 4, 3],
+      clipSteps: Array.from({ length: 3 }, () => Array.from({ length: 8 }, () => new Array(8).fill(0))),
+      clipNonEmpty: Array.from({ length: 3 }, () => new Array(8).fill(false)),
+      clipLength: Array.from({ length: 3 }, () => new Array(8).fill(16)),
+      clipTPS: Array.from({ length: 3 }, () => new Array(8).fill(24)),
+    };
+    const params = new Map<string, string>([
+      ["t0_c2_steps", "12000000"],
+      ["t0_c2_length", "32"],
+      ["t0_c2_tps", "12"],
+      ["t0_c3_steps", "20000000"],
+      ["t0_c3_length", "48"],
+      ["t0_c3_tps", "99"],
+      ["t1_c3_steps", "01000000"],
+      ["t1_c3_length", "64"],
+      ["t1_c3_tps", "6"],
+    ]);
+
+    runDeferredContentResyncTasks(S, {
+      NUM_TRACKS: 3,
+      NUM_STEPS: 8,
+      PAD_MODE_DRUM: 1,
+      TPS_VALUES: [6, 12, 24],
+      host_module_get_param: (key: string) => {
+        c.log.push(["get", key]);
+        return params.get(key) ?? null;
+      },
+      syncDrumClipContent: c.fn("syncDrumClipContent"),
+      syncDrumLanesMeta: c.fn("syncDrumLanesMeta"),
+      syncDrumLaneSteps: c.fn("syncDrumLaneSteps"),
+      refreshDrumLaneBankParams: c.fn("refreshDrumLaneBankParams"),
+      refreshPerClipBankParams: c.fn("refreshPerClipBankParams"),
+      clipHasContent: (t: number, clip: number) => S.clipSteps[t][clip].some((v: number) => v !== 0),
+      forceRedraw: c.fn("forceRedraw"),
+    });
+
+    expect(S.clipSteps[0][2].slice(0, 3)).toEqual([1, 2, 0]);
+    expect(S.clipNonEmpty[0][2]).toBe(true);
+    expect(S.clipLength[0][2]).toBe(32);
+    expect(S.clipTPS[0][2]).toBe(12);
+    expect(S.clipSteps[0][3].slice(0, 2)).toEqual([2, 0]);
+    expect(S.clipTPS[0][3]).toBe(24);
+    expect(S.clipSteps[1][3].slice(0, 2)).toEqual([0, 1]);
+    expect(S.clipLength[1][3]).toBe(64);
+    expect(c.log).toEqual([
+      ["get", "t0_c2_steps"],
+      ["get", "t0_c2_length"],
+      ["get", "t0_c2_tps"],
+      ["refreshPerClipBankParams", 0],
+      ["forceRedraw"],
+      ["get", "t0_c3_steps"],
+      ["get", "t0_c3_length"],
+      ["get", "t0_c3_tps"],
+      ["get", "t1_c3_steps"],
+      ["get", "t1_c3_length"],
+      ["get", "t1_c3_tps"],
+      ["syncDrumClipContent", 2],
+      ["syncDrumLanesMeta", 2],
+      ["syncDrumLaneSteps", 2, 0],
+      ["forceRedraw"],
+    ]);
+  });
+
   test("repeat recording lane refresh syncs the active drum lane after content resyncs", () => {
     const c = calls();
     const S = {
