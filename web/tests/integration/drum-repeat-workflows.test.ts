@@ -19,6 +19,8 @@ import {
   copyDrumRepeatGrooveMirrors,
   moveDrumRepeatGrooveMirrors,
   editDrumRepeatGrooveStep,
+  handleDrumRepeatPadPress,
+  handleDrumRepeatPadRelease,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
 function calls() {
@@ -98,6 +100,24 @@ function performModeState() {
     drumRepeatLatched: [false],
     drumRepeat2HeldLanes: [new Set<number>()],
     drumRepeat2LatchedLanes: [new Set<number>()],
+  };
+}
+
+function repeatRouterDeps(c: ReturnType<typeof calls>, padPitch = new Array(32).fill(64)) {
+  return {
+    PAD_MODE_DRUM: 1,
+    DRUM_LANES: 32,
+    drumPadToLane: (padIdx: number) => {
+      const col = padIdx % 8;
+      if (col >= 4) return -1;
+      return Math.floor(padIdx / 8) * 4 + col;
+    },
+    setActiveDrumLane: c.fn("setActive"),
+    syncDrumLaneSteps: c.fn("syncSteps"),
+    refreshDrumLaneBankParams: c.fn("refreshBank"),
+    host_module_set_param: c.fn("set"),
+    forceRedraw: c.fn("redraw"),
+    padPitch,
   };
 }
 
@@ -202,6 +222,116 @@ describe("drum repeat workflows", () => {
     expect(c.log).toEqual([
       ["set", "t0_l0_repeat_vel_scale", "0 200"],
       ["set", "t0_l0_repeat_vel_scale", "1 0"],
+    ]);
+  });
+
+  test("repeat pad router dispatches Rpt1 rate pads and leaves left-grid pads alone", () => {
+    const c = calls();
+    const S = {
+      ...rpt1State(),
+      trackPadMode: [1],
+      drumPerformMode: [1],
+      activeDrumLane: [3],
+      shiftHeld: false,
+      copyHeld: false,
+      muteHeld: false,
+    };
+
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c), 0, 5, 96)).toBe(true);
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c), 0, 1, 96)).toBe(false);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(5);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_start", "3 1 96"],
+      ["set", "t0_drum_repeat_latched", "0"],
+    ]);
+  });
+
+  test("repeat pad router dispatches Rpt1 gate pads and respects modifier exclusions", () => {
+    const c = calls();
+    const S = {
+      ...baseState(),
+      trackPadMode: [1],
+      drumPerformMode: [1],
+      activeDrumLane: [0],
+      shiftHeld: false,
+      copyHeld: false,
+      muteHeld: false,
+    };
+
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c), 0, 21, 96)).toBe(true);
+    S.copyHeld = true;
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c), 0, 22, 96)).toBe(false);
+
+    expect(S.drumRepeatGate[0][0]).toBe(0b0010_1111);
+    expect(c.log).toEqual([
+      ["set", "t0_l0_repeat_gate_toggle", "1"],
+      ["redraw"],
+    ]);
+  });
+
+  test("repeat pad router dispatches Rpt2 rate, gate, and lane pads but not Delete+lane", () => {
+    const c = calls();
+    const padPitch = new Array(32).fill(64);
+    const S = {
+      ...baseState(),
+      ...rpt2State(),
+      trackPadMode: [1],
+      drumPerformMode: [2],
+      activeDrumLane: [0],
+      shiftHeld: false,
+      copyHeld: false,
+      muteHeld: false,
+      deleteHeld: false,
+    };
+
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c, padPitch), 0, 6, 90)).toBe(true);
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c, padPitch), 0, 22, 90)).toBe(true);
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c, padPitch), 0, 9, 101)).toBe(true);
+    S.deleteHeld = true;
+    expect(handleDrumRepeatPadPress(S, repeatRouterDeps(c, padPitch), 0, 10, 101)).toBe(false);
+
+    expect(S.drumRepeat2RatePerLane[0][0]).toBe(2);
+    expect(S.drumRepeatGate[0][0]).toBe(0b0010_1001);
+    expect(S.drumRepeat2HeldLanes[0].has(5)).toBe(true);
+    expect(padPitch[9]).toBe(-1);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat2_rate", "0 2"],
+      ["set", "t0_l0_repeat_gate_toggle", "2"],
+      ["redraw"],
+      ["setActive", 0, 5],
+      ["syncSteps", 0, 5],
+      ["refreshBank", 0, 5],
+      ["set", "t0_drum_repeat2_lane_on", "5 101"],
+      ["redraw"],
+    ]);
+  });
+
+  test("repeat release router swallows Rpt1 and Rpt2 owned pad releases", () => {
+    const c = calls();
+    const S = {
+      ...rpt1State(),
+      ...rpt2State(),
+      trackPadMode: [1],
+      drumPerformMode: [1],
+      activeDrumLane: [4],
+      drumRepeatHeldPad: [5],
+      drumRepeatHeldPadsStack: [[] as Array<{ padIdx: number; rateIdx: number; vel: number }>],
+      drumRepeatLatched: [false],
+    };
+
+    expect(handleDrumRepeatPadRelease(S, repeatRouterDeps(c), 0, 5)).toBe(true);
+    S.drumPerformMode[0] = 2;
+    S.drumRepeat2HeldLanes[0].add(6);
+    expect(handleDrumRepeatPadRelease(S, repeatRouterDeps(c), 0, 10)).toBe(true);
+    expect(handleDrumRepeatPadRelease(S, repeatRouterDeps(c), 0, 23)).toBe(true);
+
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.drumRepeat2HeldLanes[0].has(6)).toBe(false);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_stop", "1"],
+      ["set", "t0_drum_repeat2_lane_off", "6"],
     ]);
   });
 
