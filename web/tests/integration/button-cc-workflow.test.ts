@@ -7,6 +7,7 @@ import {
   handleUiLoopTrackViewButton,
   handleUiMenuCoRunExitButton,
   handleUiMuteModifierButton,
+  handleUiNoteSessionButton,
   handleUiShiftButton,
 } from "@tool-ui/ui_button_cc_workflow.mjs";
 
@@ -17,6 +18,8 @@ const LOOP = 58;
 const LOOP_TAP_TICKS = 40;
 const MENU = 50;
 const MUTE = 88;
+const NOTE_SESSION = 50;
+const NOTE_SESSION_HOLD_TICKS = 40;
 const SHIFT = 49;
 const DRUM = 1;
 
@@ -113,6 +116,23 @@ function state(overrides: Record<string, unknown> = {}) {
     stepBtnPressedTick: [0, 0, 0, 0, 0, 0, 0, 0],
     sessionStepHeld: 3,
     sessionStepHeldCtx: 2,
+    // Note/Session view-toggle + dialog-dismissal trackers
+    moveCoRunTrack: -1,
+    snapshotPicker: null as { confirm: unknown } | null,
+    routeCheckOpen: false,
+    tapTempoOpen: false,
+    confirmStateWipe: false,
+    recordBlockedDialog: false,
+    confirmLgto: false,
+    confirmClearSession: false,
+    confirmSaveState: false,
+    confirmConvertToDrum: false,
+    exportDoneDialog: false,
+    confirmExport: false,
+    globalMenuOpen: false,
+    lastSentMenuEditValue: 42,
+    noteSessionPressedTick: -1,
+    sessionViewMomentary: false,
     ...overrides,
   };
 }
@@ -143,6 +163,17 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     sendPerfMods: c.fn("perfMods"),
     setParam: c.fn("setParam"),
     showActionPopup: c.fn("popup"),
+    // Note/Session view-toggle + dialog-dismissal deps
+    moveNoteSession: NOTE_SESSION,
+    noteSessionHoldTicks: NOTE_SESSION_HOLD_TICKS,
+    closeSnapshotPicker: c.fn("closeSnapshot"),
+    openGlobalMenu: c.fn("openGlobalMenu"),
+    closeTapTempo: c.fn("closeTapTempo"),
+    removeFlagsWrap: c.fn("removeFlags"),
+    clearAllLEDs: c.fn("clearLEDs"),
+    exitModule: c.fn("exitModule"),
+    closeConvertConfirm: c.fn("closeConvert"),
+    switchViewCleanup: c.fn("switchViewCleanup"),
     ...overrides,
   };
 }
@@ -839,5 +870,222 @@ describe("Button CC workflow - Loop track view", () => {
     const S = state({ activeTrack: 1, loopGestureStart: -1 });
     expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 0)).toBe(true);
     expect(c.log).toEqual([["padmap"], ["tapRelease"], ["redraw"]]);
+  });
+});
+
+describe("Button CC workflow - Note/Session button", () => {
+  test("ignores non-matching CCs", () => {
+    const c = calls();
+    const S = state();
+    expect(handleUiNoteSessionButton(S, deps(c), DELETE, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Move co-run swallows the press (no view toggle, no dialog change)", () => {
+    const c = calls();
+    const S = state({ moveCoRunTrack: 2, sessionView: false });
+    expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+    expect(S.sessionView).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Move co-run swallows the release too", () => {
+    const c = calls();
+    const S = state({ moveCoRunTrack: 0 });
+    expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 0)).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  describe("press dialog dismissal", () => {
+    test("snapshot picker confirm backs out to the list", () => {
+      const c = calls();
+      const S = state({ snapshotPicker: { confirm: { sel: 1 } } });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.snapshotPicker!.confirm).toBe(null);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("snapshot picker without confirm closes the picker", () => {
+      const c = calls();
+      const S = state({ snapshotPicker: { confirm: null } });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(c.log).toEqual([["closeSnapshot"], ["redraw"]]);
+    });
+
+    test("Shift+press with global menu open closes it", () => {
+      const c = calls();
+      const S = state({ shiftHeld: true, globalMenuOpen: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.globalMenuOpen).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("Shift+press with no menu opens the global menu", () => {
+      const c = calls();
+      const S = state({ shiftHeld: true, globalMenuOpen: false });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(c.log).toEqual([["openGlobalMenu"]]);
+    });
+
+    test("route check dialog closes", () => {
+      const c = calls();
+      const S = state({ routeCheckOpen: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.routeCheckOpen).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("tap tempo overlay closes", () => {
+      const c = calls();
+      const S = state({ tapTempoOpen: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(c.log).toEqual([["closeTapTempo"], ["redraw"]]);
+    });
+
+    test("state-wipe confirm exits the module", () => {
+      const c = calls();
+      const S = state({ confirmStateWipe: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.confirmStateWipe).toBe(false);
+      expect(c.log).toEqual([
+        ["removeFlags"],
+        ["clearLEDs"],
+        ["exitModule"],
+        ["redraw"],
+      ]);
+    });
+
+    test("record-blocked dialog closes", () => {
+      const c = calls();
+      const S = state({ recordBlockedDialog: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.recordBlockedDialog).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("legato confirm closes", () => {
+      const c = calls();
+      const S = state({ confirmLgto: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.confirmLgto).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("bake confirm closes and clears the wrap-phase flag", () => {
+      const c = calls();
+      const S = state({ confirmBake: true, confirmBakeWrapPhase: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.confirmBake).toBe(false);
+      expect(S.confirmBakeWrapPhase).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("global menu + clear-session confirm closes", () => {
+      const c = calls();
+      const S = state({ globalMenuOpen: true, confirmClearSession: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.confirmClearSession).toBe(false);
+      expect(S.globalMenuOpen).toBe(true); // menu stays open under the confirm
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("global menu + save-state confirm closes", () => {
+      const c = calls();
+      const S = state({ globalMenuOpen: true, confirmSaveState: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.confirmSaveState).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("global menu + convert-to-drum confirm closes via helper", () => {
+      const c = calls();
+      const S = state({ globalMenuOpen: true, confirmConvertToDrum: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(c.log).toEqual([["closeConvert"], ["redraw"]]);
+    });
+
+    test("global menu + export-done dialog closes both dialog and menu", () => {
+      const c = calls();
+      const S = state({ globalMenuOpen: true, exportDoneDialog: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.exportDoneDialog).toBe(false);
+      expect(S.globalMenuOpen).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("global menu + export confirm closes", () => {
+      const c = calls();
+      const S = state({ globalMenuOpen: true, confirmExport: true });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.confirmExport).toBe(false);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("plain global menu closes and clears the last-sent edit value", () => {
+      const c = calls();
+      const S = state({ globalMenuOpen: true, lastSentMenuEditValue: 42 });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.globalMenuOpen).toBe(false);
+      expect(S.lastSentMenuEditValue).toBe(null);
+      expect(c.log).toEqual([["redraw"]]);
+    });
+
+    test("arp-steps overlay exits without switching view", () => {
+      const c = calls();
+      const S = state({ stepIntervalMode: true, sessionView: false });
+      expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+      expect(S.stepIntervalMode).toBe(false);
+      expect(S.sessionView).toBe(false);
+      expect(c.log).toEqual([["padmap"], ["redraw"]]);
+    });
+  });
+
+  test("plain press with no dialogs toggles the view momentarily", () => {
+    const c = calls();
+    const S = state({ sessionView: false, tickCount: 100, noteSessionPressedTick: -1 });
+    expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 127)).toBe(true);
+    expect(S.noteSessionPressedTick).toBe(100);
+    expect(S.sessionViewMomentary).toBe(true);
+    expect(S.sessionView).toBe(true);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([["switchViewCleanup"], ["ledInvalidate"]]);
+  });
+
+  test("tap release makes the view switch permanent (no switch back)", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      sessionViewMomentary: true,
+      noteSessionPressedTick: 100,
+      tickCount: 100 + NOTE_SESSION_HOLD_TICKS - 1,
+    });
+    expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 0)).toBe(true);
+    expect(S.sessionViewMomentary).toBe(false);
+    expect(S.sessionView).toBe(true); // unchanged
+    expect(S.noteSessionPressedTick).toBe(-1);
+    expect(c.log).toEqual([]);
+  });
+
+  test("hold release switches back to the original view", () => {
+    const c = calls();
+    const S = state({
+      sessionView: true,
+      sessionViewMomentary: true,
+      noteSessionPressedTick: 100,
+      tickCount: 100 + NOTE_SESSION_HOLD_TICKS,
+    });
+    expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 0)).toBe(true);
+    expect(S.sessionViewMomentary).toBe(false);
+    expect(S.sessionView).toBe(false); // switched back
+    expect(S.noteSessionPressedTick).toBe(-1);
+    expect(c.log).toEqual([["switchViewCleanup"], ["ledInvalidate"], ["redraw"]]);
+  });
+
+  test("release with nothing pending just resets the press tick", () => {
+    const c = calls();
+    const S = state({ sessionViewMomentary: false, noteSessionPressedTick: -1 });
+    expect(handleUiNoteSessionButton(S, deps(c), NOTE_SESSION, 0)).toBe(true);
+    expect(S.noteSessionPressedTick).toBe(-1);
+    expect(c.log).toEqual([]);
   });
 });
