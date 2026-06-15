@@ -703,6 +703,26 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     expect(h.ui().stepBtnPressedTick[5]).toBe(-1);
     expect(h.ui().stepWasHeld).toBe(true);
 
+    h.step(1);
+
+    expect(h.ui().pendingChordToStep).toBe(null);
+    expect(h.ui().pendingChordPhase2).toEqual({
+      t: 1,
+      ac,
+      step: 5,
+      wasEmpty: true,
+      pitches: [60, 64, 67],
+      vel: 91,
+    });
+    expect(h.ui().clipSteps[1][ac][5]).toBe(1);
+    expect(h.get(`t1_c${ac}_step_5_notes`)).toBe("60");
+
+    h.step(1);
+
+    expect(h.ui().pendingChordPhase2).toBe(null);
+    expect(h.ui().heldStepNotes).toEqual([60, 64, 67]);
+    expect(h.get(`t1_c${ac}_step_5_notes`)).toBe("60 64 67");
+
     h.emu.sendInternal(0x80, 21, 0);
     h.ui().liveActiveNotes = new Set();
     h.step(2);

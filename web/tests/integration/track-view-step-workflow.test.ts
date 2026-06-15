@@ -8,6 +8,7 @@ import {
   handleTrackViewMelodicStepPress,
   handleTrackViewStepRelease,
   handleTrackViewStepHoldThreshold,
+  handleTrackViewChordFirstStepTick,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -84,6 +85,7 @@ function state(overrides = {}) {
     ccStepEditComputed: Array(8).fill(-1),
     ccStepEditVal: Array(8).fill(0),
     pendingChordToStep: null,
+    pendingChordPhase2: null,
     liveActiveNotes: new Set<number>(),
     lastPadVelocity: 87,
     lastPlayedNote: 60,
@@ -817,6 +819,124 @@ describe("Track View Step Workflow", () => {
       ["effectiveVelocity", 90],
       ["stepEntryVelocity", 2, 90, false],
       ["redraw"],
+    ]);
+  });
+
+  test("chord-first tick phase 1 toggles an empty step and schedules phase 2", () => {
+    const c = calls();
+    const pending = {
+      t: 2,
+      ac: 1,
+      step: 53,
+      wasEmpty: true,
+      pitches: [60, 64, 67],
+      vel: 96,
+    };
+    const S = state({
+      copyHeld: false,
+      pendingChordToStep: pending,
+    });
+
+    expect(handleTrackViewChordFirstStepTick(S, deps(c))).toBe(true);
+
+    expect(S.clipSteps[2][1][53]).toBe(1);
+    expect(S.clipNonEmpty[2][1]).toBe(true);
+    expect(S.pendingChordPhase2).toBe(pending);
+    expect(S.pendingChordToStep).toBe(null);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_toggle", "60 96"],
+    ]);
+  });
+
+  test("chord-first tick phase 1 schedules phase 2 without toggling an existing step", () => {
+    const c = calls();
+    const pending = {
+      t: 2,
+      ac: 1,
+      step: 53,
+      wasEmpty: false,
+      pitches: [60, 64, 67],
+      vel: 96,
+    };
+    const S = state({
+      copyHeld: false,
+      pendingChordToStep: pending,
+    });
+
+    expect(handleTrackViewChordFirstStepTick(S, deps(c))).toBe(true);
+
+    expect(S.pendingChordPhase2).toBe(pending);
+    expect(S.pendingChordToStep).toBe(null);
+    expect(c.log).toEqual([]);
+  });
+
+  test("chord-first tick phase 1 is deferred on the CC bank", () => {
+    const c = calls();
+    const pending = {
+      t: 2,
+      ac: 1,
+      step: 53,
+      wasEmpty: true,
+      pitches: [60, 64, 67],
+      vel: 96,
+    };
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      pendingChordToStep: pending,
+    });
+
+    expect(handleTrackViewChordFirstStepTick(S, deps(c))).toBe(false);
+
+    expect(S.pendingChordToStep).toBe(pending);
+    expect(S.pendingChordPhase2).toBe(null);
+    expect(c.log).toEqual([]);
+  });
+
+  test("chord-first tick phase 2 writes full chord notes and refreshes state", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      pendingChordPhase2: {
+        t: 2,
+        ac: 1,
+        step: 53,
+        wasEmpty: true,
+        pitches: [60, 64, 67],
+        vel: 96,
+      },
+    });
+
+    expect(handleTrackViewChordFirstStepTick(S, deps(c))).toBe(true);
+
+    expect(S.pendingChordPhase2).toBe(null);
+    expect(S.heldStepNotes).toEqual([60, 64, 67]);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_set_notes", "60 64 67"],
+      ["refreshSeqNotes", 2, 1, 53],
+    ]);
+  });
+
+  test("chord-first tick phase 2 refreshes single-note captures without set_notes", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      pendingChordPhase2: {
+        t: 2,
+        ac: 1,
+        step: 53,
+        wasEmpty: true,
+        pitches: [60],
+        vel: 96,
+      },
+    });
+
+    expect(handleTrackViewChordFirstStepTick(S, deps(c))).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([60]);
+    expect(c.log).toEqual([
+      ["refreshSeqNotes", 2, 1, 53],
     ]);
   });
 

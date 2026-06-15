@@ -119,6 +119,9 @@ Current Track View Step Workflow ownership:
 - Track View step hold-threshold owns tap-window closure, CC step-edit seeding,
   drum empty-step auto-assign/readback, melodic non-empty note/edit readback,
   and melodic empty-step auto-assign/no-note flash.
+- Track View chord-first tick handling owns phase 1 empty-step activation,
+  pending phase 2 promotion, full-chord note write, held-note refresh, and CC
+  bank deferral.
 
 Behavior to preserve:
 
@@ -148,7 +151,8 @@ Continue extracting one narrow Track View step-button branch at a time from
 priority. Mute+step is characterized as a fallthrough modifier with no separate
 Track View action, and Shift+step shortcuts now live in the Track View Step
 Workflow seam. Normal drum and melodic step press handling, step release
-commit/cleanup, and the tick-side hold-threshold lifecycle now live in the seam.
+commit/cleanup, the tick-side hold-threshold lifecycle, and chord-first tick
+phase handling now live in the seam.
 The next candidate is deeper CC step-edit handling or another cohesive Track
 View step-edit cluster; avoid Parameter Bank behavior and recording behavior
 until that lifecycle has characterization coverage.
