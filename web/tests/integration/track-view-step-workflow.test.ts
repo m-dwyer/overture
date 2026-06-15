@@ -13,6 +13,7 @@ import {
   handleTrackViewMelodicStepKnob,
   handleTrackViewDrumStepKnob,
   handleTrackViewCcStepEditKnob,
+  handleTrackViewStepEditKnob,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -1590,6 +1591,91 @@ describe("Track View Step Workflow", () => {
       copyHeld: false,
       heldStep: 53,
       activeBank: 6,
+    }), deps(c), 70, 1)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("held-step knob dispatch gives CC-bank editing first priority", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      heldStep: 53,
+      heldStepNotes: [60],
+      ccStepEditSet: [false, false, false, false, false, false, false, false],
+      ccStepEditVal: [10, 20, 30, 40, 50, 60, 70, 80],
+    });
+
+    expect(handleTrackViewStepEditKnob(S, deps(c, { effectiveClip: () => 1 }), 72, 1)).toBe(true);
+
+    expect(S.ccStepEditSet[1]).toBe(true);
+    expect(S.knobTouched).toBe(1);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 1],
+      ["setParam", "t2_cc_auto_set2", "1 1 2544 2591 20"],
+    ]);
+  });
+
+  test("held-step knob dispatch routes drum steps before melodic editing", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      activeBank: 6,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepEditGate: 24,
+    });
+
+    expect(handleTrackViewStepEditKnob(S, deps(c), 71, 1)).toBe(true);
+
+    expect(S.stepEditGate).toBe(30);
+    expect(S.ccStepEditSet[0]).toBe(false);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 0],
+      ["setParam", "t0_l4_step_37_gate", "30"],
+    ]);
+  });
+
+  test("held-step knob dispatch routes non-CC melodic steps", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 0,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepEditGate: 24,
+    });
+
+    expect(handleTrackViewStepEditKnob(S, deps(c, { effectiveClip: () => 1 }), 73, 1)).toBe(true);
+
+    expect(S.stepEditGate).toBe(30);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 2],
+      ["setParam", "t2_c1_step_53_gate", "30"],
+    ]);
+  });
+
+  test("held-step knob dispatch returns false when no branch handles", () => {
+    const c = calls();
+
+    expect(handleTrackViewStepEditKnob(state({
+      copyHeld: false,
+      heldStep: -1,
+      heldStepNotes: [60],
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewStepEditKnob(state({
+      copyHeld: false,
+      activeBank: 0,
+      heldStep: 53,
+      heldStepNotes: [],
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewStepEditKnob(state({
+      copyHeld: false,
+      activeBank: 0,
+      heldStep: 53,
+      heldStepNotes: [60],
     }), deps(c), 70, 1)).toBe(false);
 
     expect(c.log).toEqual([]);
