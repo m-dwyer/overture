@@ -21,6 +21,7 @@ interface SessionUiState extends UiState {
   copyHeld: boolean;
   copySrc: unknown;
   captureHeld: boolean;
+  captureUsedAsModifier: boolean;
   playing: boolean;
   trackPadMode: number[];
   trackActiveClip: number[];
@@ -29,7 +30,9 @@ interface SessionUiState extends UiState {
   trackWillRelaunch: boolean[];
   trackQueuedClip: number[];
   clipNonEmpty: boolean[][];
+  drumClipNonEmpty: boolean[][];
   clipLoopStart: number[][];
+  actionPopupLines: string[];
   pendingDrumResync: number;
   pendingDrumResyncTrack: number;
   stepBtnPressedTick: number[];
@@ -76,6 +79,7 @@ function resetSessionState(ui: SessionUiState): void {
   ui.copyHeld = false;
   ui.copySrc = null;
   ui.captureHeld = false;
+  ui.captureUsedAsModifier = false;
   ui.playing = false;
   ui.sceneRow = 0;
   ui.activeTrack = 0;
@@ -84,6 +88,7 @@ function resetSessionState(ui: SessionUiState): void {
   ui.trackClipPlaying.fill(false);
   ui.trackWillRelaunch.fill(false);
   ui.trackQueuedClip.fill(-1);
+  ui.actionPopupLines = [];
   ui.pendingDrumResync = 0;
   ui.pendingDrumResyncTrack = -1;
   ui.sessionStepHeld = -1;
@@ -416,6 +421,43 @@ describe("Session View Workflow - side rows", () => {
       { key: "t1_c6_hard_reset", val: "1" },
       { key: "t0_c6_drum_reset", val: "1" },
     ]);
+  });
+
+  test("Capture+side row copies live and queued clips into the selected row", () => {
+    ui.captureHeld = true;
+    ui.sceneRow = 4;
+    ui.trackActiveClip[0] = 2;
+    ui.trackClipPlaying[0] = true;
+    ui.drumClipNonEmpty[0][2] = true;
+    ui.trackQueuedClip[1] = 3;
+    ui.clipNonEmpty[1][3] = true;
+    ui.trackActiveClip[2] = 1;
+    ui.clipNonEmpty[2][1] = true;
+
+    pressSideRow(h, 3);
+
+    expect(ui.captureUsedAsModifier).toBe(true);
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "drum_clip_copy", val: "0 2 0 7" },
+      { key: "clip_copy", val: "1 3 1 7" },
+    ]);
+    expect(ui.drumClipNonEmpty[0][7]).toBe(true);
+    expect(ui.clipNonEmpty[1][7]).toBe(true);
+    expect(ui.clipNonEmpty[2][7]).toBe(false);
+    expect(ui.actionPopupLines).toEqual(["CAPTURED", "TO ROW 8"]);
+  });
+
+  test("Capture+side row reports nothing when no live or queued clips have content", () => {
+    ui.captureHeld = true;
+    ui.sceneRow = 4;
+    ui.trackActiveClip[1] = 2;
+    ui.clipNonEmpty[1][2] = true;
+
+    pressSideRow(h, 3);
+
+    expect(ui.captureUsedAsModifier).toBe(true);
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+    expect(ui.actionPopupLines).toEqual(["NOTHING", "TO CAPTURE"]);
   });
 
   test("Plain Session View side row queues launch_scene", () => {
