@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   handleDeleteDrumLaneClear,
+  handleDrumLaneFactoryReset,
   handleDrumLaneCopyPaste,
   handleDrumLaneMuteSolo,
 } from "@tool-ui/ui_drum_lane_workflows.mjs";
@@ -35,6 +36,88 @@ function baseState() {
 }
 
 describe("drum lane workflows", () => {
+  test("Shift+Delete+lane factory reset clears lane mirrors, repeat defaults, and schedules delayed resync", () => {
+    const c = calls();
+    const S = {
+      ...baseState(),
+      drumLaneLength: [48],
+      drumRepeatGate: [[0xff, 0xaa, 0xff, 0xff, 0xff, 0xff, 0xff, 0x55]],
+      drumRepeatGateLen: [[8, 5, 8, 8, 8, 8, 8, 3]],
+      drumRepeatVelScale: [
+        Array.from({ length: 32 }, () => [11, 12, 13, 14, 15, 16, 17, 18]),
+      ],
+      drumRepeatNudge: [
+        Array.from({ length: 32 }, () => [-1, -2, -3, -4, -5, -6, -7, -8]),
+      ],
+      drumRepeat2RatePerLane: [
+        Array.from({ length: 32 }, (_, lane) => lane + 1),
+      ],
+      pendingDrumLaneResync: 0,
+      pendingDrumLaneResyncTrack: -1,
+      pendingDrumLaneResyncLane: -1,
+    };
+
+    expect(handleDrumLaneFactoryReset(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      setActiveDrumLane: c.fn("setActive"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 3)).toBe(true);
+
+    expect(S.undoAvailable).toBe(true);
+    expect(S.redoAvailable).toBe(false);
+    expect(S.undoSeqArpSnapshot).toBe(null);
+    expect(S.drumLaneLength[0]).toBe(16);
+    expect(S.drumLaneSteps[0][3]).toEqual(new Array(256).fill("0"));
+    expect(S.drumLaneHasNotes[0][3]).toBe(false);
+    expect(S.drumLaneHasNotes[0][7]).toBe(true);
+    expect(S.drumClipNonEmpty[0][2]).toBe(true);
+    expect(S.drumRepeatGate[0][3]).toBe(0xff);
+    expect(S.drumRepeatGateLen[0][3]).toBe(8);
+    expect(S.drumRepeatVelScale[0][3]).toEqual([100, 100, 100, 100, 100, 100, 100, 100]);
+    expect(S.drumRepeatNudge[0][3]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(S.drumRepeat2RatePerLane[0][3]).toBe(0);
+    expect(S.pendingDrumLaneResync).toBe(2);
+    expect(S.pendingDrumLaneResyncTrack).toBe(0);
+    expect(S.pendingDrumLaneResyncLane).toBe(3);
+    expect(c.log).toEqual([
+      ["set", "t0_l3_hard_reset", "1"],
+      ["setActive", 0, 3],
+      ["popup", "LANE", "RESET"],
+      ["redraw"],
+    ]);
+  });
+
+  test("factory reset ignores invalid lane targets", () => {
+    const c = calls();
+    const S = {
+      ...baseState(),
+      drumLaneLength: [48],
+      drumRepeatGate: [[0xff]],
+      drumRepeatGateLen: [[8]],
+      drumRepeatVelScale: [[new Array(8).fill(90)]],
+      drumRepeatNudge: [[new Array(8).fill(1)]],
+      drumRepeat2RatePerLane: [[3]],
+      pendingDrumLaneResync: 0,
+      pendingDrumLaneResyncTrack: -1,
+      pendingDrumLaneResyncLane: -1,
+    };
+
+    expect(handleDrumLaneFactoryReset(S, {
+      DRUM_LANES: 32,
+      host_module_set_param: c.fn("set"),
+      setActiveDrumLane: c.fn("setActive"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    }, 0, 32)).toBe(false);
+
+    expect(S.undoAvailable).toBe(false);
+    expect(S.drumLaneLength[0]).toBe(48);
+    expect(S.pendingDrumLaneResync).toBe(0);
+    expect(c.log).toEqual([]);
+  });
+
   test("Delete+lane clear marks undo, clears only the lane mirror, and preserves non-empty clip state from other lanes", () => {
     const c = calls();
     const S = baseState();
