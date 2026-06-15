@@ -50,7 +50,9 @@ declare module "@tool-ui/ui_popup_render.mjs" {
 }
 
 declare module "@tool-ui/ui_prompt_render.mjs" {
+  export function renderCompressLimitNotice(deps: any): void;
   export function renderMergePlacementPrompt(deps: any): void;
+  export function renderNoNoteFlashNotice(deps: any): void;
   export function renderSceneBakePickerPrompt(deps: any): void;
 }
 

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
+  renderCompressLimitNotice,
   renderMergePlacementPrompt,
+  renderNoNoteFlashNotice,
   renderSceneBakePickerPrompt,
 } from "@tool-ui/ui_prompt_render.mjs";
 
@@ -37,6 +39,23 @@ describe("Static prompt presentation", () => {
       ["print", 4, 22, "Tap row or scene step", 1],
       ["print", 4, 34, "to pick destination", 1],
       ["print", 4, 50, "Capture cancels", 1],
+    ]);
+  });
+
+  test("renders Track View static notices", () => {
+    const compress: DrawCall[] = [];
+    renderCompressLimitNotice(createDeps(compress));
+    expect(compress).toEqual([
+      ["print", 4, 10, "[CLIP       ]", 1],
+      ["print", 4, 22, "Beat Stretch", 1],
+      ["print", 4, 34, "COMPRESS LIMIT", 1],
+    ]);
+
+    const noNote: DrawCall[] = [];
+    renderNoNoteFlashNotice(createDeps(noNote));
+    expect(noNote).toEqual([
+      ["print", 4, 22, "NO NOTE", 1],
+      ["print", 4, 34, "Play a pad first", 1],
     ]);
   });
 });
