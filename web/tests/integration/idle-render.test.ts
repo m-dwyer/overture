@@ -7,7 +7,7 @@ import {
   renderMotionIdleView,
   renderDrumPositionBar,
 } from "@tool-ui/ui_idle_render.mjs";
-import { renderTrackRow } from "@tool-ui/ui_track_chrome_render.mjs";
+import { renderMetroIndicator, renderTrackRow } from "@tool-ui/ui_track_chrome_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 
@@ -40,17 +40,22 @@ describe("Idle presentation", () => {
     S.activeTrack = 0;
     S.activeBank = 0;
     S.tickCount = 100;
+    S.sessionView = false;
     S.trackPadMode = [0, 1, 0, 0, 0, 0, 0, 0];
     S.trackActiveClip = [1, 2, 0, 0, 0, 0, 0, 0];
     S.trackClipPlaying = [true, true, false, false, false, false, false, false];
     S.trackWillRelaunch = [false, false, false, false, false, false, false, false];
     S.trackQueuedClip = [-1, -1, -1, -1, -1, -1, -1, -1];
+    S.metronomeOn = 0;
+    S.trackVelOverride = [96, 0, 0, 0, 0, 0, 0, 0];
     S.trackMuted = [false, false, false, false, false, false, false, false];
     S.trackSoloed = [false, false, false, false, false, false, false, false];
     S.clipNonEmpty = Array.from({ length: 8 }, () => new Array(16).fill(false));
     S.drumClipNonEmpty = Array.from({ length: 8 }, () => new Array(16).fill(false));
     S.clipNonEmpty[0][1] = true;
     S.drumClipNonEmpty[1][2] = true;
+    S.clipLengthManuallySet = Array.from({ length: 8 }, () => new Array(16).fill(false));
+    S.drumLaneLengthManuallySet = [false, false, false, false, false, false, false, false];
     S.bankParams = Array.from({ length: 8 }, () =>
       Array.from({ length: 8 }, () => new Array(8).fill(0))
     );
@@ -202,6 +207,64 @@ describe("Idle presentation", () => {
     expect(calls).toContainEqual(["fill", 35, 32, 10, 1, 1]);
     expect(calls).toContainEqual(["fill", 51, 32, 10, 12, 1]);
     expect(calls).toContainEqual(["print", 53, 34, "4", 0]);
+  });
+
+  test("renders metro labels and Track View velocity/adaptive status", () => {
+    S.metronomeOn = 1;
+    S.activeTrack = 0;
+    S.trackActiveClip[0] = 2;
+    S.clipNonEmpty[0][2] = false;
+    S.trackVelOverride[0] = 127;
+    const calls: DrawCall[] = [];
+    renderMetroIndicator(createDeps(calls));
+
+    expect(calls).toContainEqual(["fill", 4, 22, 2, 2, 1]);
+    expect(calls).toContainEqual(["pixel", 8, 21, "Count", 1]);
+    expect(calls).toContainEqual(["fill", 40, 22, 2, 2, 1]);
+    expect(calls).toContainEqual(["pixel", 67, 21, "127", 1]);
+    expect(calls).toContainEqual(["pixel", 103, 21, "Adap", 1]);
+
+    S.sessionView = true;
+    S.metronomeOn = 2;
+    const recCalls: DrawCall[] = [];
+    renderMetroIndicator(createDeps(recCalls));
+    expect(recCalls).toContainEqual(["pixel", 8, 21, "Rec", 1]);
+
+    S.metronomeOn = 0;
+    const offCalls: DrawCall[] = [];
+    renderMetroIndicator(createDeps(offCalls));
+    expect(offCalls).toEqual([]);
+  });
+
+  test("renders fixed status for manual melodic length and drum content", () => {
+    S.activeTrack = 0;
+    S.trackActiveClip[0] = 2;
+    S.clipNonEmpty[0][2] = false;
+    S.clipLengthManuallySet[0][2] = true;
+    const melodicCalls: DrawCall[] = [];
+    renderMetroIndicator(createDeps(melodicCalls));
+    expect(melodicCalls).not.toContainEqual(["pixel", 103, 21, "Adap", 1]);
+    expect(melodicCalls).toContainEqual(["pixel", 109, 21, "Fix", 1]);
+
+    S.activeTrack = 1;
+    S.trackPadMode[1] = 1;
+    S.trackActiveClip[1] = 2;
+    S.drumClipNonEmpty[1][2] = true;
+    const drumCalls: DrawCall[] = [];
+    renderMetroIndicator(createDeps(drumCalls));
+    expect(drumCalls).toContainEqual(["pixel", 109, 21, "Fix", 1]);
+  });
+
+  test("suppresses Track View metro status in Session View", () => {
+    S.sessionView = true;
+    S.metronomeOn = 3;
+    const calls: DrawCall[] = [];
+    renderMetroIndicator(createDeps(calls));
+
+    expect(calls).toContainEqual(["pixel", 8, 21, "Rec/Ply", 1]);
+    expect(calls).not.toContainEqual(["pixel", 67, 21, "96  ", 1]);
+    expect(calls).not.toContainEqual(["pixel", 103, 21, "Adap", 1]);
+    expect(calls).not.toContainEqual(["pixel", 109, 21, "Fix", 1]);
   });
 
   test("renders AUTO idle lane info, badges, graph, and current page", () => {
