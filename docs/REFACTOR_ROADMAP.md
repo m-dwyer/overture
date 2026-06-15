@@ -129,8 +129,10 @@ Tests currently covering this seam:
 
 Continue extracting one narrow Track View step-button branch at a time from
 `_onStepButtons()`, after characterization coverage and without changing handler
-priority. The next small candidate is Mute+step; avoid held-step edit and
-Parameter Bank behavior until the simpler modifier branches are out.
+priority. Mute+step is now characterized as a fallthrough modifier with no
+separate Track View action. The next small candidate is Shift+step shortcuts;
+avoid held-step edit and Parameter Bank behavior until the simpler modifier
+branches are out.
 
 ## Candidate Later Slices
 

@@ -436,7 +436,7 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
-  test("Copy + step keeps priority over Delete + step in Track View", () => {
+  test("Copy + step keeps priority over Delete + Mute + step in Track View", () => {
     noteView();
     h.ui().activeTrack = 1;
     h.ui().activeBank = 0;
@@ -445,8 +445,9 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.ui().pendingDefaultSetParams = [];
     h.ui().copyHeld = true;
     h.ui().deleteHeld = true;
+    h.ui().muteHeld = true;
 
-    h.emu.sendInternal(0x90, 20, 127); // step 5: Copy source, not Delete clear
+    h.emu.sendInternal(0x90, 20, 127); // step 5: Copy source, not Delete/Mute
     h.step(2);
 
     expect(h.ui().copySrc).toEqual({ kind: "step", absStep: 4 });
@@ -455,6 +456,81 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.emu.sendInternal(0x80, 20, 0);
     h.ui().copyHeld = false;
     h.ui().deleteHeld = false;
+    h.ui().muteHeld = false;
+    h.step(2);
+  });
+
+  test("Delete + step keeps priority over Mute + step in Track View", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneSteps[0][0][4] = "1";
+    h.ui().drumLaneHasNotes[0][0] = true;
+    h.ui().deleteHeld = true;
+    h.ui().muteHeld = true;
+
+    h.emu.sendInternal(0x90, 20, 127); // step 5: Delete clear, not normal Mute+step edit
+    h.step(2);
+
+    expect(h.ui().drumLaneSteps[0][0][4]).toBe("0");
+    expect(h.ui().heldStep).toBe(-1);
+
+    h.emu.sendInternal(0x80, 20, 0);
+    h.ui().deleteHeld = false;
+    h.ui().muteHeld = false;
+    h.step(2);
+  });
+
+  test("Mute + step on a drum track preserves normal step tap behavior", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneSteps[0][0][6] = "0";
+    h.ui().drumLaneHasNotes[0][0] = false;
+    h.ui().muteHeld = true;
+
+    h.emu.sendInternal(0x90, 22, 127); // press step 7
+    h.step(2);
+    expect(h.ui().heldStep).toBe(6);
+
+    h.emu.sendInternal(0x80, 22, 0);
+    h.step(2);
+
+    expect(h.ui().drumLaneSteps[0][0][6]).toBe("1");
+    expect(h.ui().drumLaneHasNotes[0][0]).toBe(true);
+    expect(h.ui().heldStep).toBe(-1);
+
+    h.ui().muteHeld = false;
+    h.step(2);
+  });
+
+  test("Mute + step on a melodic track preserves normal step tap behavior", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+    h.ui().lastPlayedNote = 60;
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().clipSteps[1][ac][7] = 0;
+    h.ui().clipNonEmpty[1][ac] = false;
+    h.ui().muteHeld = true;
+
+    h.emu.sendInternal(0x90, 23, 127); // press step 8
+    h.step(2);
+    expect(h.ui().heldStep).toBe(7);
+
+    h.emu.sendInternal(0x80, 23, 0);
+    h.step(2);
+
+    expect(h.ui().clipSteps[1][ac][7]).toBe(1);
+    expect(h.ui().clipNonEmpty[1][ac]).toBe(true);
+    expect(h.ui().heldStep).toBe(-1);
+
+    h.ui().muteHeld = false;
     h.step(2);
   });
 

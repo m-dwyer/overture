@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   handleTrackViewCopyStepPress,
   handleTrackViewDeleteStepPress,
+  handleTrackViewMuteStepPress,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -34,6 +35,7 @@ function state(overrides = {}) {
     activeTrack: 2,
     trackCurrentPage: [0, 0, 3],
     deleteHeld: false,
+    muteHeld: false,
     activeBank: 0,
     trackPadMode: [1, 0, 0],
     clipTPS: [
@@ -217,6 +219,24 @@ describe("Track View Step Workflow", () => {
     const S = state({ deleteHeld: false });
 
     expect(handleTrackViewDeleteStepPress(S, deps(c), 5)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Mute+step is intentionally left to the normal Track View step handlers", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, deleteHeld: false, muteHeld: true });
+
+    expect(handleTrackViewMuteStepPress(S, deps(c), 5)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("plain step press is ignored by the Mute+step workflow", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, deleteHeld: false, muteHeld: false });
+
+    expect(handleTrackViewMuteStepPress(S, deps(c), 5)).toBe(false);
 
     expect(c.log).toEqual([]);
   });
