@@ -4,6 +4,7 @@ import {
   handleUiCopyButton,
   handleUiDeleteButton,
   handleUiLoopPerfModeButton,
+  handleUiLoopTrackViewButton,
   handleUiMenuCoRunExitButton,
   handleUiMuteModifierButton,
   handleUiShiftButton,
@@ -95,6 +96,23 @@ function state(overrides: Record<string, unknown> = {}) {
     perfStickyLengths: new Set<number>(),
     perfHoldPadHeld: false,
     perfModsHeld: 0,
+    // Loop track-view trackers
+    stepIntervalMode: false,
+    loopGestureStart: -1,
+    loopTapUnlatchTrack: -1,
+    liveActiveNotes: new Set<number>(),
+    bankParams: Array.from({ length: 4 }, () =>
+      Array.from({ length: 6 }, () => [0, 0, 0, 0, 0, 0, 0, 0]),
+    ),
+    tarpHeldNotes: Array.from({ length: 4 }, () => new Set<number>()),
+    heldStepBtn: 5,
+    heldStep: 5,
+    heldStepNotes: [1] as number[],
+    stepWasEmpty: true,
+    stepWasHeld: true,
+    stepBtnPressedTick: [0, 0, 0, 0, 0, 0, 0, 0],
+    sessionStepHeld: 3,
+    sessionStepHeldCtx: 2,
     ...overrides,
   };
 }
@@ -117,6 +135,11 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     loopTapTicks: LOOP_TAP_TICKS,
     moveLoop: LOOP,
     openClearAutoMenu: c.fn("openClearAutoMenu"),
+    prepareDrumRepeatLoopPress: c.fn("prepLoopPress"),
+    handleDeleteLoopDrumRepeatStop: c.fn("delLoopStop"),
+    latchHeldDrumRepeatsOnLoopPress: c.fn("latchHeld"),
+    resolveLoopGesture: c.fn("resolveGesture"),
+    handleDrumRepeatLoopTapRelease: c.fn("tapRelease"),
     sendPerfMods: c.fn("perfMods"),
     setParam: c.fn("setParam"),
     showActionPopup: c.fn("popup"),
@@ -649,5 +672,172 @@ describe("Button CC workflow - Loop perf mode (Session View)", () => {
       ["ledInvalidate"],
       ["redraw"],
     ]);
+  });
+});
+
+describe("Button CC workflow - Loop track view", () => {
+  test("ignores non-Loop CCs", () => {
+    const c = calls();
+    expect(handleUiLoopTrackViewButton(state(), deps(c), MUTE, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("ignores Loop in Session View (defers to the perf-mode sibling)", () => {
+    const c = calls();
+    const S = state({ sessionView: true });
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Arp Steps overlay press only tracks held + redraws", () => {
+    const c = calls();
+    const S = state({ stepIntervalMode: true, loopGestureStart: 4 });
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.loopHeld).toBe(true);
+    expect(S.loopGestureStart).toBe(4); // press never clears the gesture
+    expect(c.log).toEqual([["padmap"], ["redraw"]]);
+  });
+
+  test("Arp Steps overlay release clears an in-flight gesture", () => {
+    const c = calls();
+    const S = state({ stepIntervalMode: true, loopGestureStart: 4 });
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.loopHeld).toBe(false);
+    expect(S.loopGestureStart).toBe(-1);
+    expect(c.log).toEqual([["padmap"], ["redraw"]]);
+  });
+
+  test("Delete+Loop on the auto bank resets the active lane (melodic)", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, deleteHeld: true, activeBank: 6 });
+    // effectiveClip(1) => 1, ccActiveLane[1] => 2: target [1][1][2]
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.ccLaneLoopStart[1][1][2]).toBe(0);
+    expect(S.ccLaneLength[1][1][2]).toBe(0);
+    expect(S.ccLaneTps[1][1][2]).toBe(0);
+    expect(S.ccLaneResTps[1][1][2]).toBe(0);
+    expect(S.undoAvailable).toBe(true);
+    expect(S.redoAvailable).toBe(false);
+    expect(S.undoSeqArpSnapshot).toBe(null);
+    expect(S.pendingDefaultSetParams).toContainEqual({
+      key: "t1_c1_k2_cc_lane_reset",
+      val: "1",
+    });
+    expect(c.log).toEqual([
+      ["padmap"],
+      ["prepLoopPress", 1, false, 0],
+      ["popup", "LANE LOOP", "RESET"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Delete+Loop on a drum track stops the drum repeat latch and returns early", () => {
+    const c = calls();
+    const S = state({ activeTrack: 0, deleteHeld: true }); // track 0 is drum
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(c.log).toEqual([
+      ["padmap"],
+      ["prepLoopPress", 0, true, 0],
+      ["delLoopStop", 0],
+    ]);
+  });
+
+  test("TARP latch shortcut turns latch off when a pad is held and latch is on", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, liveActiveNotes: new Set([60]) });
+    S.bankParams[1][5][7] = 1; // latch currently on
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.bankParams[1][5][7]).toBe(0);
+    expect(S.pendingDefaultSetParams).toContainEqual({
+      key: "t1_tarp_latch",
+      val: "0",
+    });
+    expect(c.log).toEqual([
+      ["padmap"],
+      ["prepLoopPress", 1, false, 1],
+      ["latchHeld", 1],
+      ["redraw"],
+    ]);
+  });
+
+  test("TARP latch shortcut turns latch on when off and a style is set", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, liveActiveNotes: new Set([60]) });
+    S.bankParams[1][5][7] = 0; // latch off
+    S.bankParams[1][5][0] = 1; // TARP style set
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.bankParams[1][5][7]).toBe(1);
+    expect(S.pendingDefaultSetParams).toContainEqual({
+      key: "t1_tarp_latch",
+      val: "1",
+    });
+  });
+
+  test("TARP latch shortcut is a no-op when latch off and no style set", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, liveActiveNotes: new Set([60]) });
+    S.bankParams[1][5][7] = 0;
+    S.bankParams[1][5][0] = 0; // no style
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.bankParams[1][5][7]).toBe(0);
+    expect(S.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Loop press with no pads held clears the latched TARP buffer", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1 }); // liveActiveNotes empty
+    S.bankParams[1][5][7] = 1; // latch on
+    S.tarpHeldNotes[1] = new Set([62, 64]);
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.tarpHeldNotes[1].size).toBe(0);
+    expect(c.log).toEqual([
+      ["padmap"],
+      ["prepLoopPress", 1, false, 0],
+      ["setParam", "t1_tarp_clear_latched", "1"],
+      ["latchHeld", 1],
+      ["redraw"],
+    ]);
+  });
+
+  test("plain Loop press latches held repeats and clears step-hold trackers", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, tickCount: 77 });
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 127)).toBe(true);
+    expect(S.loopPressTick).toBe(77);
+    expect(S.heldStepBtn).toBe(-1);
+    expect(S.heldStep).toBe(-1);
+    expect(S.heldStepNotes).toEqual([]);
+    expect(S.stepWasEmpty).toBe(false);
+    expect(S.stepWasHeld).toBe(false);
+    expect(S.stepBtnPressedTick).toEqual([-1, -1, -1, -1, -1, -1, -1, -1]);
+    expect(S.sessionStepHeld).toBe(-1);
+    expect(S.sessionStepHeldCtx).toBe(0);
+    expect(c.log).toEqual([
+      ["padmap"],
+      ["prepLoopPress", 1, false, 0],
+      ["latchHeld", 1],
+      ["redraw"],
+    ]);
+  });
+
+  test("Loop release with an in-flight gesture resolves it then runs tap-release", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, loopGestureStart: 2, loopTapUnlatchTrack: 1 });
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(S.loopJogActive).toBe(false);
+    expect(S.loopTapUnlatchTrack).toBe(-1);
+    expect(c.log).toEqual([
+      ["padmap"],
+      ["resolveGesture", true],
+      ["tapRelease"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Loop release with no gesture only runs tap-release", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, loopGestureStart: -1 });
+    expect(handleUiLoopTrackViewButton(S, deps(c), LOOP, 0)).toBe(true);
+    expect(c.log).toEqual([["padmap"], ["tapRelease"], ["redraw"]]);
   });
 });
