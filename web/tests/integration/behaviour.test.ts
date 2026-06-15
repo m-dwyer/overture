@@ -176,6 +176,47 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
+  test("releasing a different side button does not clear hold-reveal state", () => {
+    noteView();
+    h.hold(43);
+    h.step(25);
+
+    expect(h.ui().sideHeldBtn).toBe(3);
+    expect(h.ui().sideBtnPressedTick).not.toBe(-1);
+    expect(h.ui().revealClipsTrack).toBe(0);
+
+    h.release(42);
+    h.step(2);
+
+    expect(h.ui().sideHeldBtn).toBe(3);
+    expect(h.ui().sideBtnPressedTick).not.toBe(-1);
+    expect(h.ui().revealClipsTrack).toBe(0);
+
+    h.release(43);
+    h.step(2);
+    expect(h.ui().sideHeldBtn).toBe(-1);
+    expect(h.ui().sideBtnPressedTick).toBe(-1);
+    expect(h.ui().revealClipsTrack).toBe(-1);
+  });
+
+  test("Track View side press arms hold-reveal tracking", () => {
+    noteView();
+    const tickBefore = h.ui().tickCount as number;
+
+    h.hold(42);
+    h.step(2);
+
+    expect(h.ui().activeTrack).toBe(1);
+    expect(h.ui().sideHeldBtn).toBe(2);
+    expect(h.ui().sideBtnPressedTick as number).toBeGreaterThanOrEqual(tickBefore);
+    expect(h.ui().revealClipsTrack).toBe(-1);
+
+    h.release(42);
+    h.step(2);
+    expect(h.ui().sideHeldBtn).toBe(-1);
+    expect(h.ui().sideBtnPressedTick).toBe(-1);
+  });
+
   // Change #1: Shift+side banks to tracks 5–8 (CC43=track 5 … CC40=track 8).
   test("Shift + side button selects tracks 5–8 (bank)", () => {
     noteView();
