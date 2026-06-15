@@ -32,3 +32,7 @@ declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runDeferredContentResyncTasks(S: any, deps: any): void;
   export function runEndOfTickPersistenceTasks(S: any, deps: any): void;
 }
+
+declare module "@tool-ui/ui_clip_track_sync.mjs" {
+  export function readMelodicClipFromDsp(S: any, deps: any, track: number, clip: number, opts: any): void;
+}
