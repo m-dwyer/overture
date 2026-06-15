@@ -100,6 +100,10 @@ Current Track View Step Workflow ownership:
   source and target differ.
 - Copy + same step preserves existing no-copy refresh behavior.
 - Existing non-step `copySrc` is swallowed and does not mix copy kinds.
+- Delete + step on melodic normal banks dispatches the active clip step clear.
+- Delete + step on melodic CC automation bank clears all knob points in the
+  step range and schedules pending CC bits refresh.
+- Delete + step on drum tracks clears the active lane step mirror and redraws.
 
 Behavior to preserve:
 
@@ -107,12 +111,14 @@ Behavior to preserve:
 - Hold-reveal clip selection keeps priority before Session View and Track View
   step edits.
 - Loop gesture behavior keeps priority before Copy/Delete/Mute step edits.
+- Copy + step behavior keeps priority before Delete + step when both modifiers
+  are held.
 - Copy + first step captures a step source and invalidates LEDs.
 - Copy + second step copies only when source and target differ, redraws, and
   never mixes step copy with other copy source kinds.
-- Delete, Mute, step-edit release behavior, Parameter Bank behavior, recording
-  behavior, Session View Performance Mode, modal workflows, and unrelated DSP
-  reads/writes remain in `ui.js` for now.
+- Mute, step-edit release behavior, Parameter Bank behavior, recording behavior,
+  Session View Performance Mode, modal workflows, and unrelated DSP reads/writes
+  remain in `ui.js` for now.
 
 Tests currently covering this seam:
 
@@ -123,8 +129,8 @@ Tests currently covering this seam:
 
 Continue extracting one narrow Track View step-button branch at a time from
 `_onStepButtons()`, after characterization coverage and without changing handler
-priority. Good next candidates are Delete+step or Mute+step; avoid held-step
-edit and Parameter Bank behavior until the simpler modifier branches are out.
+priority. The next small candidate is Mute+step; avoid held-step edit and
+Parameter Bank behavior until the simpler modifier branches are out.
 
 ## Candidate Later Slices
 

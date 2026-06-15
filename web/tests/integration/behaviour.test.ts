@@ -412,6 +412,52 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
+  test("Loop + step keeps priority over Delete + step in Track View", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneSteps[0][0][1] = "1";
+    h.ui().drumLaneHasNotes[0][0] = true;
+    h.ui().deleteHeld = true;
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 17, 127); // step 2: Loop arm, not Delete clear
+    h.step(2);
+
+    expect(h.ui().loopGestureStart).toBe(1);
+    expect(h.ui().drumLaneSteps[0][0][1]).toBe("1");
+
+    h.emu.sendInternal(0x80, 17, 0);
+    h.step(2);
+    h.release(58);
+    h.ui().deleteHeld = false;
+    h.step(2);
+  });
+
+  test("Copy + step keeps priority over Delete + step in Track View", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+    h.ui().copySrc = null;
+    h.ui().pendingDefaultSetParams = [];
+    h.ui().copyHeld = true;
+    h.ui().deleteHeld = true;
+
+    h.emu.sendInternal(0x90, 20, 127); // step 5: Copy source, not Delete clear
+    h.step(2);
+
+    expect(h.ui().copySrc).toEqual({ kind: "step", absStep: 4 });
+    expect(h.ui().pendingDefaultSetParams).toEqual([]);
+
+    h.emu.sendInternal(0x80, 20, 0);
+    h.ui().copyHeld = false;
+    h.ui().deleteHeld = false;
+    h.step(2);
+  });
+
   test("Loop + two steps in ALL LANES writes every drum lane range", () => {
     noteView();
     h.ui().activeTrack = 0;
