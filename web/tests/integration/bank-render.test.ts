@@ -10,6 +10,7 @@ import {
   renderGenericBankOverview,
   renderMelodicNoteFxBankOverview,
   renderMotionBankOverview,
+  renderTrackBankOverview,
 } from "@tool-ui/ui_bank_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
@@ -194,5 +195,31 @@ describe("Bank render presentation", () => {
     expect(printed(arpCalls)).toEqual(expect.arrayContaining([
       "SEQUENCE ARP", "Rate", "1/16t",
     ]));
+  });
+
+  test("dispatches Track View bank overview presentation by track and bank state", () => {
+    S.trackPadMode[0] = 1;
+    S.activeBank = 7;
+    S.allLanesConfirmed = false;
+    const confirmCalls: DrawCall[] = [];
+    renderTrackBankOverview(createDeps(confirmCalls), 7);
+    expect(printed(confirmCalls)).toEqual(expect.arrayContaining(["ALL LANES", "Edits will affect", "OK"]));
+
+    S.allLanesConfirmed = true;
+    const allCalls: DrawCall[] = [];
+    renderTrackBankOverview(createDeps(allCalls), 7);
+    expect(printed(allCalls)).toEqual(expect.arrayContaining(["ALL LANES", "SyncRpt", "ON  "]));
+
+    S.activeBank = 5;
+    const grooveCalls: DrawCall[] = [];
+    renderTrackBankOverview(createDeps(grooveCalls), 5);
+    expect(printed(grooveCalls)).toEqual(expect.arrayContaining(["REPEAT GROOVE", "80% ", "90% "]));
+
+    S.trackPadMode[0] = 0;
+    S.activeBank = 1;
+    const melodicCalls: DrawCall[] = [];
+    renderTrackBankOverview(createDeps(melodicCalls), 1);
+    expect(melodicCalls[0]).toEqual(["heading", "NOTE FX"]);
+    expect(printed(melodicCalls)).toEqual(expect.arrayContaining(["Oct ", "+87 ", ">Gate"]));
   });
 });
