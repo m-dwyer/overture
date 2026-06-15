@@ -6,7 +6,6 @@ import {
   handleDrumRepeat2LanePadPress,
   handleDrumRepeat2LanePadRelease,
   handleDrumRepeat2RatePadPress,
-  handleDrumRepeat2RightGridPadRelease,
   handleDrumRepeatPadAftertouch,
   handleDrumRepeat2LaneAftertouch,
   prepareDrumRepeatLoopPress,
@@ -52,6 +51,8 @@ function rpt2State() {
     drumRepeat2RatePerLane: [[0, 1, 2, 3, 4, 5, 6, 7]],
     drumRepeat2HeldLanes: [new Set<number>()],
     drumRepeat2LatchedLanes: [new Set<number>()],
+    trackPadMode: [1],
+    drumPerformMode: [2],
     screenDirty: false,
   };
 }
@@ -839,9 +840,13 @@ describe("drum repeat workflows", () => {
   });
 
   test("Rpt2 right-grid release marks the screen dirty and swallows the pad release", () => {
-    const S = { screenDirty: false };
+    const S = rpt2State();
+    S.screenDirty = false;
 
-    expect(handleDrumRepeat2RightGridPadRelease(S)).toBe(true);
+    expect(handleDrumRepeatPadRelease(S, {
+      PAD_MODE_DRUM: 1,
+      drumPadToLane: () => -1,
+    }, 0, 12)).toBe(true);
 
     expect(S.screenDirty).toBe(true);
   });
