@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   renderBakeConfirm,
+  renderBakeSceneConfirm,
   renderClearAutomationMenu,
   renderInheritPicker,
   renderLgtoConfirm,
@@ -68,6 +69,29 @@ describe("Modal presentation", () => {
     expect(loopCalls).toContainEqual(["fill", 14, 33, 100, 11, 1]);
     expect(loopCalls).toContainEqual(["print", 45, 36, "CANCEL", 0]);
     expect(loopCalls).toContainEqual(["print", 16, 50, "1x", 1]);
+  });
+
+  test("renders bake scene confirm loop-count and wrap-tail subviews", () => {
+    const loopCalls: DrawCall[] = [];
+    renderBakeSceneConfirm(createDeps(loopCalls), { sel: 2 });
+    expect(loopCalls).toContainEqual(["clear"]);
+    expect(loopCalls).toContainEqual(["header", "BAKE SCENE?"]);
+    expect(loopCalls).toContainEqual(["print", 4, 22, "Loop count:", 1]);
+    expect(loopCalls).toContainEqual(["print", 45, 36, "CANCEL", 1]);
+    expect(loopCalls).toContainEqual(["print", 16, 50, "1x", 1]);
+    expect(loopCalls).toContainEqual(["fill", 46, 47, 36, 11, 1]);
+    expect(loopCalls).toContainEqual(["print", 58, 50, "2x", 0]);
+    expect(loopCalls).toContainEqual(["print", 100, 50, "4x", 1]);
+
+    const wrapCalls: DrawCall[] = [];
+    renderBakeSceneConfirm(createDeps(wrapCalls), { wrapPhase: true, wrapSel: 0 });
+    expect(wrapCalls).toContainEqual(["clear"]);
+    expect(wrapCalls).toContainEqual(["header", "BAKE SCENE?"]);
+    expect(wrapCalls).toContainEqual(["print", 4, 22, "Wrap tails?", 1]);
+    expect(wrapCalls).toContainEqual(["fill", 4, 47, 36, 11, 1]);
+    expect(wrapCalls).toContainEqual(["print", 13, 50, "YES", 0]);
+    expect(wrapCalls).toContainEqual(["print", 59, 50, "NO", 1]);
+    expect(wrapCalls).toContainEqual(["print", 87, 50, "CANCEL", 1]);
   });
 
   test("renders simple confirm dialogs with selected button inversion", () => {
