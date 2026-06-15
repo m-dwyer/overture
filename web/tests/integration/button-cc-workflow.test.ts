@@ -3,6 +3,7 @@ import {
   handleUiCaptureButton,
   handleUiCopyButton,
   handleUiDeleteButton,
+  handleUiMenuCoRunExitButton,
   handleUiMuteModifierButton,
   handleUiShiftButton,
 } from "@tool-ui/ui_button_cc_workflow.mjs";
@@ -10,6 +11,7 @@ import {
 const CAPTURE = 52;
 const COPY = 60;
 const DELETE = 119;
+const MENU = 50;
 const MUTE = 88;
 const SHIFT = 49;
 const DRUM = 1;
@@ -79,6 +81,7 @@ function state(overrides: Record<string, unknown> = {}) {
     redoAvailable: true,
     undoSeqArpSnapshot: { present: true },
     clearAutoMenu: null,
+    schwungCoRunSlot: -1,
     ...overrides,
   };
 }
@@ -88,12 +91,14 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     moveCapture: CAPTURE,
     moveCopy: COPY,
     moveDelete: DELETE,
+    moveMenu: MENU,
     moveMute: MUTE,
     moveShift: SHIFT,
     padModeDrum: DRUM,
     computePadNoteMap: c.fn("padmap"),
     editSoundForTrack: c.fn("editSound"),
     effectiveClip: (track: number) => (track === 1 ? 1 : 0),
+    exitSchwungCoRun: c.fn("exitCoRun"),
     forceRedraw: c.fn("redraw"),
     invalidateLEDCache: c.fn("ledInvalidate"),
     openClearAutoMenu: c.fn("openClearAutoMenu"),
@@ -427,5 +432,35 @@ describe("Button CC workflow - Mute modifier tracker", () => {
     handleUiMuteModifierButton(S, deps(c), MUTE, 127);
 
     expect(c.log).toEqual([["ledInvalidate"], ["padmap"]]);
+  });
+});
+
+describe("Button CC workflow - Menu co-run exit", () => {
+  test("ignores non-Menu CCs", () => {
+    const c = calls();
+    const S = state({ schwungCoRunSlot: 2 });
+    expect(handleUiMenuCoRunExitButton(S, deps(c), DELETE, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("ignores Menu release", () => {
+    const c = calls();
+    const S = state({ schwungCoRunSlot: 2 });
+    expect(handleUiMenuCoRunExitButton(S, deps(c), MENU, 0)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Menu press with no Schwung co-run is a no-op", () => {
+    const c = calls();
+    const S = state({ schwungCoRunSlot: -1 });
+    expect(handleUiMenuCoRunExitButton(S, deps(c), MENU, 127)).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Menu press during Schwung co-run exits and redraws", () => {
+    const c = calls();
+    const S = state({ schwungCoRunSlot: 0 });
+    expect(handleUiMenuCoRunExitButton(S, deps(c), MENU, 127)).toBe(true);
+    expect(c.log).toEqual([["exitCoRun"], ["redraw"]]);
   });
 });
