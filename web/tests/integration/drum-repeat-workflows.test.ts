@@ -13,6 +13,7 @@ import {
   latchHeldDrumRepeatsOnLoopPress,
   handleDrumRepeatLoopTapRelease,
   handleDeleteLoopDrumRepeatStop,
+  cycleDrumRepeatPerformMode,
 } from "@tool-ui/ui_drum_repeat_workflows.mjs";
 
 function calls() {
@@ -80,6 +81,18 @@ function deleteLoopState() {
   return {
     ...loopState(),
     drumPerformMode: [0],
+  };
+}
+
+function performModeState() {
+  return {
+    activeBank: 0,
+    drumPerformMode: [0],
+    drumRepeatHeldPad: [-1],
+    drumRepeatHeldPadsStack: [[] as Array<{ padIdx: number; rateIdx: number; vel: number }>],
+    drumRepeatLatched: [false],
+    drumRepeat2HeldLanes: [new Set<number>()],
+    drumRepeat2LatchedLanes: [new Set<number>()],
   };
 }
 
@@ -771,6 +784,88 @@ describe("drum repeat workflows", () => {
     expect(S.drumRepeatLatched[0]).toBe(false);
     expect(c.log).toEqual([
       ["redraw"],
+    ]);
+  });
+
+  test("cycling from Velocity to Rpt1 selects the repeat bank and shows the mode popup", () => {
+    const c = calls();
+    const S = performModeState();
+
+    expect(cycleDrumRepeatPerformMode(S, {
+      host_module_set_param: c.fn("set"),
+      setDrumPerformMode: (track: number, mode: number) => {
+        c.log.push(["mode", track, mode]);
+        S.drumPerformMode[track] = mode;
+      },
+      showModePopup: c.fn("popup"),
+    }, 0)).toBe(true);
+
+    expect(S.drumPerformMode[0]).toBe(1);
+    expect(S.activeBank).toBe(5);
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(c.log).toEqual([
+      ["mode", 0, 1],
+      ["popup", "PERFORMANCE PADS", ["Velocity", "Repeat Play (Rpt1)", "Repeat Set (Rpt2)"], 1],
+    ]);
+  });
+
+  test("cycling out of Rpt1 stops repeat before mode change and clears held-pad mirrors", () => {
+    const c = calls();
+    const S = performModeState();
+    S.activeBank = 5;
+    S.drumPerformMode[0] = 1;
+    S.drumRepeatHeldPad[0] = 9;
+    S.drumRepeatHeldPadsStack[0].push({ padIdx: 8, rateIdx: 0, vel: 80 });
+    S.drumRepeatLatched[0] = true;
+
+    expect(cycleDrumRepeatPerformMode(S, {
+      host_module_set_param: c.fn("set"),
+      setDrumPerformMode: (track: number, mode: number) => {
+        c.log.push(["mode", track, mode]);
+        S.drumPerformMode[track] = mode;
+      },
+      showModePopup: c.fn("popup"),
+    }, 0)).toBe(true);
+
+    expect(S.drumPerformMode[0]).toBe(2);
+    expect(S.activeBank).toBe(5);
+    expect(S.drumRepeatHeldPad[0]).toBe(-1);
+    expect(S.drumRepeatHeldPadsStack[0]).toEqual([]);
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat_stop", "1"],
+      ["mode", 0, 2],
+      ["popup", "PERFORMANCE PADS", ["Velocity", "Repeat Play (Rpt1)", "Repeat Set (Rpt2)"], 2],
+    ]);
+  });
+
+  test("cycling out of Rpt2 stops repeat before mode change and clears lane mirrors", () => {
+    const c = calls();
+    const S = performModeState();
+    S.activeBank = 5;
+    S.drumPerformMode[0] = 2;
+    S.drumRepeat2HeldLanes[0].add(3);
+    S.drumRepeat2LatchedLanes[0].add(4);
+    S.drumRepeatLatched[0] = true;
+
+    expect(cycleDrumRepeatPerformMode(S, {
+      host_module_set_param: c.fn("set"),
+      setDrumPerformMode: (track: number, mode: number) => {
+        c.log.push(["mode", track, mode]);
+        S.drumPerformMode[track] = mode;
+      },
+      showModePopup: c.fn("popup"),
+    }, 0)).toBe(true);
+
+    expect(S.drumPerformMode[0]).toBe(0);
+    expect(S.activeBank).toBe(5);
+    expect(S.drumRepeat2HeldLanes[0].size).toBe(0);
+    expect(S.drumRepeat2LatchedLanes[0].size).toBe(0);
+    expect(S.drumRepeatLatched[0]).toBe(false);
+    expect(c.log).toEqual([
+      ["set", "t0_drum_repeat2_stop", "1"],
+      ["mode", 0, 0],
+      ["popup", "PERFORMANCE PADS", ["Velocity", "Repeat Play (Rpt1)", "Repeat Set (Rpt2)"], 0],
     ]);
   });
 });
