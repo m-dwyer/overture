@@ -8,6 +8,7 @@ import {
   renderRecordBlockedDialog,
   renderSnapshotPicker,
   renderStateWipeConfirm,
+  renderXposeConfirm,
 } from "@tool-ui/ui_modal_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
@@ -92,6 +93,37 @@ describe("Modal presentation", () => {
     expect(wrapCalls).toContainEqual(["print", 13, 50, "YES", 0]);
     expect(wrapCalls).toContainEqual(["print", 59, 50, "NO", 1]);
     expect(wrapCalls).toContainEqual(["print", 87, 50, "CANCEL", 1]);
+  });
+
+  test("renders transpose confirm target and selected button inversion", () => {
+    const yesCalls: DrawCall[] = [];
+    renderXposeConfirm(createDeps(yesCalls), {
+      key: 2,
+      scale: 1,
+      sel: 0,
+      noteKeys: ["C", "C#", "D"],
+      scaleDisplay: ["Maj", "Min"],
+    });
+    expect(yesCalls).toContainEqual(["clear"]);
+    expect(yesCalls).toContainEqual(["header", "TRANSPOSE CLIPS?"]);
+    expect(yesCalls).toContainEqual(["print", 4, 22, "To D Min", 1]);
+    expect(yesCalls).toContainEqual(["print", 4, 33, "All melodic clips", 1]);
+    expect(yesCalls).toContainEqual(["fill", 4, 50, 50, 11, 1]);
+    expect(yesCalls).toContainEqual(["print", 21, 53, "YES", 0]);
+    expect(yesCalls).toContainEqual(["print", 94, 53, "NO", 1]);
+
+    const noCalls: DrawCall[] = [];
+    renderXposeConfirm(createDeps(noCalls), {
+      key: 0,
+      scale: 9,
+      sel: 1,
+      noteKeys: ["C"],
+      scaleDisplay: ["Maj"],
+    });
+    expect(noCalls).toContainEqual(["print", 4, 22, "To C ?", 1]);
+    expect(noCalls).toContainEqual(["print", 21, 53, "YES", 1]);
+    expect(noCalls).toContainEqual(["fill", 74, 50, 50, 11, 1]);
+    expect(noCalls).toContainEqual(["print", 94, 53, "NO", 0]);
   });
 
   test("renders simple confirm dialogs with selected button inversion", () => {
