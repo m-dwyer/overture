@@ -3,6 +3,7 @@ import {
   runDefaultSetParamDrain,
   runDeferredContentResyncTasks,
   runDeferredDrumNoteOffDrain,
+  runDspMirrorResyncTasks,
   runEndOfTickPersistenceTasks,
   runExternalRouteQueueDrain,
   runLiveNoteDrain,
@@ -19,6 +20,23 @@ function calls() {
     fn(name: string) {
       return (...args: unknown[]) => log.push([name, ...args]);
     },
+  };
+}
+
+function dspMirrorDeps(c: ReturnType<typeof calls>, instanceId = "new-instance") {
+  return {
+    host_module_get_param: (key: string) => {
+      c.log.push(["get", key]);
+      return key === "instance_id" ? instanceId : null;
+    },
+    host_module_set_param: c.fn("set"),
+    pollDSP: c.fn("pollDSP"),
+    syncClipsFromDsp: c.fn("syncClipsFromDsp"),
+    syncMuteSoloFromDsp: c.fn("syncMuteSoloFromDsp"),
+    restoreUiSidecar: c.fn("restoreUiSidecar"),
+    computePadNoteMap: c.fn("computePadNoteMap"),
+    invalidateLEDCache: c.fn("invalidateLEDCache"),
+    forceRedraw: c.fn("forceRedraw"),
   };
 }
 
@@ -245,6 +263,94 @@ describe("tick task drains", () => {
     expect(c.log).toEqual([
       ["set", "first", "1"],
       ["set", "second", "2"],
+    ]);
+  });
+
+  test("DSP hot-reload resync is gated by cadence, host availability, and changed non-empty instance id", () => {
+    const c = calls();
+    const S = {
+      tickCount: 99,
+      lastDspInstanceId: "old-instance",
+      pendingDspSync: 0,
+      stateLoading: true,
+      trackCurrentStep: [0, 31],
+      trackCurrentPage: [9, 9],
+    };
+
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c));
+    expect(c.log).toEqual([]);
+    expect(S.lastDspInstanceId).toBe("old-instance");
+
+    S.tickCount = 100;
+    runDspMirrorResyncTasks(S, { ...dspMirrorDeps(c), host_module_set_param: null });
+    expect(c.log).toEqual([]);
+    expect(S.lastDspInstanceId).toBe("old-instance");
+
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c, "old-instance"));
+    expect(c.log).toEqual([["get", "instance_id"]]);
+    expect(S.lastDspInstanceId).toBe("old-instance");
+
+    c.log.length = 0;
+    S.lastDspInstanceId = "";
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c, "first-instance"));
+    expect(c.log).toEqual([["get", "instance_id"]]);
+    expect(S.lastDspInstanceId).toBe("first-instance");
+  });
+
+  test("DSP hot-reload refreshes mirrors in order without sidecar restore or clearing state loading", () => {
+    const c = calls();
+    const S = {
+      tickCount: 200,
+      lastDspInstanceId: "old-instance",
+      pendingDspSync: 0,
+      stateLoading: true,
+      trackCurrentStep: [-1, 0, 16, 31],
+      trackCurrentPage: [7, 7, 7, 7],
+    };
+
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c, "new-instance"));
+
+    expect(S.lastDspInstanceId).toBe("new-instance");
+    expect(S.trackCurrentPage).toEqual([0, 0, 1, 1]);
+    expect(S.stateLoading).toBe(true);
+    expect(c.log).toEqual([
+      ["get", "instance_id"],
+      ["pollDSP"],
+      ["syncClipsFromDsp"],
+      ["syncMuteSoloFromDsp"],
+      ["computePadNoteMap"],
+      ["invalidateLEDCache"],
+      ["forceRedraw"],
+    ]);
+  });
+
+  test("pending DSP sync decrements first and only refreshes mirrors on the zero tick", () => {
+    const c = calls();
+    const S = {
+      tickCount: 201,
+      lastDspInstanceId: "old-instance",
+      pendingDspSync: 2,
+      stateLoading: true,
+      trackCurrentStep: [15, 47],
+      trackCurrentPage: [8, 8],
+    };
+
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c));
+    expect(S.pendingDspSync).toBe(1);
+    expect(c.log).toEqual([]);
+
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c));
+    expect(S.pendingDspSync).toBe(0);
+    expect(S.trackCurrentPage).toEqual([0, 2]);
+    expect(S.stateLoading).toBe(false);
+    expect(c.log).toEqual([
+      ["pollDSP"],
+      ["syncClipsFromDsp"],
+      ["syncMuteSoloFromDsp"],
+      ["restoreUiSidecar", true],
+      ["computePadNoteMap"],
+      ["invalidateLEDCache"],
+      ["forceRedraw"],
     ]);
   });
 
