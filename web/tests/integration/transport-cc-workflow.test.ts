@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { handleUiPlayButton, handleUiRecordButton } from "@tool-ui/ui_transport_cc_workflow.mjs";
+import {
+  handleUiPlayButton,
+  handleUiRecordButton,
+  handleUiSampleButton,
+} from "@tool-ui/ui_transport_cc_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];
@@ -83,6 +87,17 @@ function state(overrides = {}) {
     undoAvailable: false,
     redoAvailable: true,
     undoSeqArpSnapshot: { old: true },
+    sampleHeld: false,
+    sampleUsedAsModifier: false,
+    pendingInheritPicker: null,
+    confirmBakeScene: false,
+    confirmBake: false,
+    confirmBakeDrumLoopOpen: false,
+    confirmBakeWrapPhase: false,
+    dspMergeState: 0,
+    pendingDefaultSetParams: [],
+    pendingMergeArm: false,
+    actionPopupEndTick: -1,
     metronomeOn: 1,
     metronomeOnLast: 3,
     ...overrides,
@@ -103,11 +118,13 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     },
     movePlay: 85,
     moveRec: 86,
+    moveSample: 118,
     numTracks: 4,
     padModeDrum: 1,
     red: 5,
     setButtonLED: (...args: unknown[]) => c.log.push(["led", ...args]),
     setParam: (...args: unknown[]) => c.log.push(["setParam", ...args]),
+    resolveInheritPicker: (...args: unknown[]) => c.log.push(["inherit", ...args]),
     showActionPopup: c.fn("popup"),
     unlatchAllTracks: c.fn("unlatch"),
     ...overrides,
@@ -273,6 +290,141 @@ describe("Transport CC workflow - Play button", () => {
       ["setParam", "transport", "play"],
       ["setParam", "transport", "play"],
     ]);
+  });
+});
+
+describe("Transport CC workflow - Sample button", () => {
+  test("ignores non-Sample CCs and Shift+Sample", () => {
+    const c = calls();
+    const S = state();
+    const d = deps(c);
+
+    expect(handleUiSampleButton(S, d, 117, 127)).toBeUndefined();
+    expect(handleUiSampleButton(state({ shiftHeld: true }), d, 118, 127)).toBeUndefined();
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Sample press tracks held state and clears modifier use", () => {
+    const c = calls();
+    const S = state({ sampleUsedAsModifier: true });
+
+    handleUiSampleButton(S, deps(c), 118, 127);
+
+    expect(S.sampleHeld).toBe(true);
+    expect(S.sampleUsedAsModifier).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Sample press cancels inherit picker as a modifier", () => {
+    const c = calls();
+    const S = state({ pendingInheritPicker: { selectedIndex: 0 } });
+
+    handleUiSampleButton(S, deps(c), 118, 127);
+
+    expect(S.sampleHeld).toBe(true);
+    expect(S.sampleUsedAsModifier).toBe(true);
+    expect(c.log).toEqual([["inherit", -1]]);
+  });
+
+  test("Sample press cancels scene bake confirm and redraws", () => {
+    const c = calls();
+    const S = state({ confirmBakeScene: true });
+
+    handleUiSampleButton(S, deps(c), 118, 127);
+
+    expect(S.confirmBakeScene).toBe(false);
+    expect(S.sampleUsedAsModifier).toBe(true);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("Sample press cancels clip bake confirm and redraws", () => {
+    const c = calls();
+    const S = state({
+      confirmBake: true,
+      confirmBakeDrumLoopOpen: true,
+      confirmBakeWrapPhase: true,
+    });
+
+    handleUiSampleButton(S, deps(c), 118, 127);
+
+    expect(S.confirmBake).toBe(false);
+    expect(S.confirmBakeDrumLoopOpen).toBe(false);
+    expect(S.confirmBakeWrapPhase).toBe(false);
+    expect(S.sampleUsedAsModifier).toBe(true);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("Sample press during merge queues merge stop", () => {
+    const c = calls();
+    const S = state({ dspMergeState: 2 });
+
+    handleUiSampleButton(S, deps(c), 118, 127);
+
+    expect(S.sampleUsedAsModifier).toBe(true);
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "merge_stop", val: "1" }]);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Sample release clears held state", () => {
+    const c = calls();
+    const S = state({ sampleHeld: true, sessionView: false });
+
+    handleUiSampleButton(S, deps(c), 118, 0);
+
+    expect(S.sampleHeld).toBe(false);
+    expect(S.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Sample release in Track View remains a no-op beyond clearing held state", () => {
+    const c = calls();
+    const S = state({ sampleHeld: true, sessionView: false, sampleUsedAsModifier: false });
+
+    handleUiSampleButton(S, deps(c), 118, 0);
+
+    expect(S.sampleHeld).toBe(false);
+    expect(S.pendingMergeArm).toBe(false);
+    expect(S.pendingDefaultSetParams).toEqual([]);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Sample release in Session View arms live merge when unused", () => {
+    const c = calls();
+    const S = state({ sampleHeld: true, sessionView: true, tickCount: 2000 });
+
+    handleUiSampleButton(S, deps(c), 118, 0);
+
+    expect(S.sampleHeld).toBe(false);
+    expect(S.pendingMergeArm).toBe(true);
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "merge_arm", val: "1" }]);
+    expect(S.actionPopupEndTick).toBe(2280);
+    expect(c.log).toEqual([
+      ["led", 118, 5],
+      ["popup", "LIVE MERGE", "Capturing all 8", "tracks. Tap Sample", "again to stop."],
+    ]);
+  });
+
+  test("Sample release in Session View stops active merge", () => {
+    const c = calls();
+    const S = state({ sampleHeld: true, sessionView: true, dspMergeState: 1 });
+
+    handleUiSampleButton(S, deps(c), 118, 0);
+
+    expect(S.sampleHeld).toBe(false);
+    expect(S.pendingMergeArm).toBe(false);
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "merge_stop", val: "1" }]);
+    expect(c.log).toEqual([]);
+  });
+
+  test("Sample release after modifier use does not arm merge", () => {
+    const c = calls();
+    const S = state({ sampleHeld: true, sessionView: true, sampleUsedAsModifier: true });
+
+    handleUiSampleButton(S, deps(c), 118, 0);
+
+    expect(S.sampleHeld).toBe(false);
+    expect(S.pendingDefaultSetParams).toEqual([]);
+    expect(c.log).toEqual([]);
   });
 });
 
