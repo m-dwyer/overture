@@ -10,6 +10,7 @@ import {
   handleTrackViewStepHoldThreshold,
   handleTrackViewChordFirstStepTick,
   handleTrackViewMelodicStepNoteAssignment,
+  handleTrackViewMelodicStepKnob,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -45,12 +46,21 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     noNoteFlashTicks: 32,
     padModeDrum: 1,
     refreshSeqNotesIfCurrent: c.fn("refreshSeqNotes"),
+    scaleNudgeNote: (note: number, dir: number, key: number, scale: number) => {
+      c.log.push(["scaleNudgeNote", note, dir, key, scale]);
+      return note + dir;
+    },
     setParam: c.fn("setParam"),
+    ccKnobDelta: (d2: number, knobIdx: number) => {
+      c.log.push(["ccKnobDelta", d2, knobIdx]);
+      return d2 >= 1 && d2 <= 63 ? 1 : -1;
+    },
     stepHoldTicks: 19,
     stepEntryVelocity: (...args: unknown[]) => {
       c.log.push(["stepEntryVelocity", ...args]);
       return 96;
     },
+    stepIterList: [0, 0x21, 0x22, 0x31],
     showActionPopup: c.fn("popup"),
     ...overrides,
   };
@@ -78,6 +88,12 @@ function state(overrides = {}) {
     stepEditIter: 0,
     stepEditRand: 0,
     stepEditRatch: 0,
+    knobTouched: -1,
+    knobTurnedTick: Array(8).fill(-1),
+    knobAccum: Array(8).fill(0),
+    knobLastDir: Array(8).fill(0),
+    padKey: 0,
+    padScale: 0,
     activeBank: 0,
     noNoteFlashEndTick: -1,
     screenDirty: false,
@@ -1074,6 +1090,192 @@ describe("Track View Step Workflow", () => {
       activeTrack: 0,
       heldStep: 37,
     }), deps(c), 64, 91)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("melodic held-step knob K1 shifts notes by octave after sensitivity threshold", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [5, 120],
+      knobAccum: [11, 0, 0, 0, 0, 0, 0, 0],
+      knobLastDir: [1, 0, 0, 0, 0, 0, 0, 0],
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 71, 1)).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([17, 127]);
+    expect(S.knobAccum[0]).toBe(0);
+    expect(S.knobTouched).toBe(0);
+    expect(S.knobTurnedTick[0]).toBe(123);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_set_notes", "17 127"],
+    ]);
+  });
+
+  test("melodic held-step knob K2 pitch nudge uses injected scale nudge after threshold", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60, 64],
+      knobAccum: [0, 9, 0, 0, 0, 0, 0, 0],
+      knobLastDir: [0, -1, 0, 0, 0, 0, 0, 0],
+      padKey: 2,
+      padScale: 3,
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 72, 127)).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([59, 63]);
+    expect(S.knobAccum[1]).toBe(0);
+    expect(c.log).toEqual([
+      ["scaleNudgeNote", 60, -1, 2, 3],
+      ["scaleNudgeNote", 64, -1, 2, 3],
+      ["setParam", "t2_c1_step_53_set_notes", "59 63"],
+    ]);
+  });
+
+  test("melodic held-step knob K3 edits gate with accelerated step sizing", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepEditGate: 24,
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 73, 1)).toBe(true);
+
+    expect(S.stepEditGate).toBe(30);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 2],
+      ["setParam", "t2_c1_step_53_gate", "30"],
+    ]);
+  });
+
+  test("melodic held-step knob K4 edits velocity and clamps", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepEditVel: 127,
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 74, 1)).toBe(true);
+
+    expect(S.stepEditVel).toBe(127);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_vel", "127"],
+    ]);
+  });
+
+  test("melodic held-step knob K5 edits nudge after threshold and clamps to TPS", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepEditNudge: 23,
+      knobAccum: [0, 0, 0, 0, 7, 0, 0, 0],
+      knobLastDir: [0, 0, 0, 0, 1, 0, 0, 0],
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 75, 1)).toBe(true);
+
+    expect(S.stepEditNudge).toBe(23);
+    expect(S.knobAccum[4]).toBe(0);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_nudge", "23"],
+    ]);
+  });
+
+  test("melodic held-step knob K6 steps iter through injected list", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepEditIter: 0x21,
+      knobAccum: [0, 0, 0, 0, 0, 2, 0, 0],
+      knobLastDir: [0, 0, 0, 0, 0, 1, 0, 0],
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 76, 1)).toBe(true);
+
+    expect(S.stepEditIter).toBe(0x22);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_iter", "34"],
+    ]);
+  });
+
+  test("melodic held-step knob K7 edits probability with acceleration and clamps", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepEditRand: 100,
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 77, 1)).toBe(true);
+
+    expect(S.stepEditRand).toBe(100);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 6],
+      ["setParam", "t2_c1_step_53_rand", "100"],
+    ]);
+  });
+
+  test("melodic held-step knob K8 edits ratchet after threshold and clamps", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepEditRatch: 4,
+      knobAccum: [0, 0, 0, 0, 0, 0, 0, 7],
+      knobLastDir: [0, 0, 0, 0, 0, 0, 0, 1],
+    });
+
+    expect(handleTrackViewMelodicStepKnob(S, deps(c, { effectiveClip: () => 1 }), 78, 1)).toBe(true);
+
+    expect(S.stepEditRatch).toBe(4);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_ratch", "4"],
+    ]);
+  });
+
+  test("melodic held-step knobs are ignored outside melodic non-CC step edit", () => {
+    const c = calls();
+
+    expect(handleTrackViewMelodicStepKnob(state({ copyHeld: false }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewMelodicStepKnob(state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [],
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewMelodicStepKnob(state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      activeBank: 6,
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewMelodicStepKnob(state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewMelodicStepKnob(state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+    }), deps(c), 70, 1)).toBe(false);
 
     expect(c.log).toEqual([]);
   });
