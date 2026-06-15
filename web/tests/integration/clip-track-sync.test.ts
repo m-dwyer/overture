@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   readDrumActiveLaneFromDsp,
   readMelodicClipFromDsp,
+  readTrackConfigFromDsp,
   refreshDrumLaneBankParamsFromDsp,
   refreshPerClipBankParamsFromDsp,
   readTargetedClipAutomationFromDsp,
@@ -48,6 +49,18 @@ function createBankState() {
     drumRepeatNudge: Array.from({ length: 2 }, () => Array.from({ length: 8 }, () => new Array(8).fill(0))),
     drumRepeatGateLen: Array.from({ length: 2 }, () => new Array(8).fill(0)),
     screenDirty: false,
+  };
+}
+
+function createTrackConfigState() {
+  return {
+    trackChannel: [9, 9],
+    trackRoute: [9, 9],
+    trackPadMode: [9, 9],
+    trackVelOverride: [9, 9],
+    trackLooper: [9, 9],
+    drumInpQuant: [9, 9],
+    bankParams: Array.from({ length: 2 }, () => Array.from({ length: 8 }, () => new Array(8).fill(99))),
   };
 }
 
@@ -381,5 +394,74 @@ describe("Track / Clip Sync bank snapshot readback", () => {
       "t1_l3_repeat_state",
     ]);
     expect(S.screenDirty).toBe(true);
+  });
+});
+
+describe("Track / Clip Sync track config readback", () => {
+  test("preserves track config DSP read order, parsing, and DIQ bank mirror", () => {
+    const S = createTrackConfigState();
+    const calls: string[] = [];
+    const params = new Map<string, string>([
+      ["t1_channel", "0"],
+      ["t1_route", "external"],
+      ["t1_pad_mode", "1"],
+      ["t1_track_vel_override", "64"],
+      ["t1_track_looper", "2"],
+      ["t1_diq", "99"],
+    ]);
+
+    readTrackConfigFromDsp(S, {
+      host_module_get_param: (key: string) => {
+        calls.push(key);
+        return params.get(key) ?? null;
+      },
+    }, 1);
+
+    expect(calls).toEqual([
+      "t1_channel",
+      "t1_route",
+      "t1_pad_mode",
+      "t1_track_vel_override",
+      "t1_track_looper",
+      "t1_diq",
+    ]);
+    expect(S.trackChannel[1]).toBe(1);
+    expect(S.trackRoute[1]).toBe(2);
+    expect(S.trackPadMode[1]).toBe(1);
+    expect(S.trackVelOverride[1]).toBe(64);
+    expect(S.trackLooper[1]).toBe(2);
+    expect(S.drumInpQuant[1]).toBe(8);
+    expect(S.bankParams[1][7][5]).toBe(8);
+  });
+
+  test("preserves missing-value fallbacks and route mapping behavior", () => {
+    const S = createTrackConfigState();
+    S.trackChannel[0] = 4;
+    S.trackRoute[0] = 2;
+    S.trackPadMode[0] = 1;
+    S.trackVelOverride[0] = 50;
+    S.trackLooper[0] = 1;
+    S.drumInpQuant[0] = 7;
+    S.bankParams[0][7][5] = 7;
+    const params = new Map<string, string | null>([
+      ["t0_channel", null],
+      ["t0_route", "move"],
+      ["t0_pad_mode", ""],
+      ["t0_track_vel_override", "bad"],
+      ["t0_track_looper", null],
+      ["t0_diq", "-4"],
+    ]);
+
+    readTrackConfigFromDsp(S, {
+      host_module_get_param: (key: string) => params.get(key) ?? null,
+    }, 0);
+
+    expect(S.trackChannel[0]).toBe(4);
+    expect(S.trackRoute[0]).toBe(1);
+    expect(S.trackPadMode[0]).toBe(0);
+    expect(S.trackVelOverride[0]).toBe(0);
+    expect(S.trackLooper[0]).toBe(1);
+    expect(S.drumInpQuant[0]).toBe(0);
+    expect(S.bankParams[0][7][5]).toBe(0);
   });
 });
