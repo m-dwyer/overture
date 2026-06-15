@@ -1,0 +1,119 @@
+import { beforeEach, describe, expect, test } from "vitest";
+import { S } from "@tool-ui/ui_state.mjs";
+import {
+  renderAllLanesBankOverview,
+  renderAllLanesConfirm,
+  renderDrumLaneBankOverview,
+  renderDrumMidiDelayBankOverview,
+  renderDrumNoteFxBankOverview,
+  renderDrumRepeatGrooveBankOverview,
+} from "@tool-ui/ui_bank_render.mjs";
+
+type DrawCall = [string, ...unknown[]];
+
+function createDeps(calls: DrawCall[]) {
+  return {
+    print: (x: number, y: number, text: string, color: number) => calls.push(["print", x, y, text, color]),
+    fill_rect: (x: number, y: number, w: number, h: number, color: number) => calls.push(["fill", x, y, w, h, color]),
+    drawBankHeading: (name: string) => calls.push(["heading", name]),
+    drawAltArrow: (x: number, hdrBgWhite: boolean, on: boolean) => calls.push(["arrow", x, hdrBgWhite, on]),
+    altIndicatorActive: () => true,
+    bankHasAltParams: () => true,
+    midiNoteName: (n: number) => `N${n}`,
+  };
+}
+
+function printed(calls: DrawCall[]) {
+  return calls
+    .filter((call) => call[0] === "print" || call[0] === "heading")
+    .map((call) => String(call[1] === 4 || call[1] === 106 || typeof call[1] === "number" ? call[3] : call[1]));
+}
+
+describe("Bank render presentation", () => {
+  beforeEach(() => {
+    S.activeTrack = 0;
+    S.activeBank = 0;
+    S.trackActiveClip = [1];
+    S.activeDrumLane = [2];
+    S.drumLaneLength = [12];
+    S.drumLaneTPS = [48];
+    S.drumLaneEuclidN = [[0, 0, 20]];
+    S.drumLanePlaybackDir = [[0, 0, 3]];
+    S.drumLanePlaybackAudioReverse = [[0, 0, 1]];
+    S.drumLaneNote = [[36, 37, 48]];
+    S.drumLaneLenMode = [[0, 0, 5]];
+    S.clipSeqFollow = [[false, true]];
+    S.trackVelOverride = [96];
+    S.drumInpQuant = [3];
+    S.tickCount = 48;
+    S.knobTouched = -1;
+    S.altMode = false;
+    S.sessionView = false;
+    S.bankParams = Array.from({ length: 1 }, () =>
+      Array.from({ length: 8 }, () => new Array(8).fill(0))
+    );
+    S.bankParams[0][0] = [0, -1, 5, 0, 0, 0, 0, 0];
+    S.bankParams[0][1] = [87, -4, 55, 0, 0, 0, 0, 0];
+    S.bankParams[0][3] = [2, 1, -3, 4, 5, -6, 1, 0];
+    S.bankParams[0][7] = [2, 1, -2, 75, 0, 0, 1, 1];
+    S.drumRepeatGate = [[0, 0, 0b00000101]];
+    S.drumRepeatGateLen = [[0, 0, 4]];
+    S.drumRepeatVelScale = [[[], [], [80, 90, 100, 110, 120, 130, 140, 150]]];
+    S.drumRepeatNudge = [[[], [], [-2, 0, 3, 4, 5, 6, 7, 8]]];
+    S.allLanesConfirmed = true;
+  });
+
+  test("renders DRUM LANE overview labels and lane-level values", () => {
+    const calls: DrawCall[] = [];
+    renderDrumLaneBankOverview(createDeps(calls));
+
+    expect(calls[0]).toEqual(["heading", "DRUM LANE"]);
+    expect(printed(calls)).toEqual(expect.arrayContaining([
+      "Res ", "1/8 ", "Stch", "/2  ", "Shft", "+5  ", "Lgto", "->  ",
+      "Eucl", "12  ", "Dir ", "PPb ", "SqFl", "ON  ",
+    ]));
+  });
+
+  test("renders ALL LANES confirmation and overview presentation", () => {
+    const confirmCalls: DrawCall[] = [];
+    renderAllLanesConfirm(createDeps(confirmCalls));
+    expect(printed(confirmCalls)).toEqual(expect.arrayContaining([
+      "ALL LANES", "Tr1", "Edits will affect", "all lanes.", "OK",
+    ]));
+
+    const overviewCalls: DrawCall[] = [];
+    renderAllLanesBankOverview(createDeps(overviewCalls));
+    expect(overviewCalls).toContainEqual(["arrow", 98, true, true]);
+    expect(printed(overviewCalls)).toEqual(expect.arrayContaining([
+      "ALL LANES", "Tr1", "Res ", "1/8 ", "Qnt ", "75% ", "VelIn", "96  ",
+      "InQ ", "1/16", "Dir ", "Bwd ", "SyncRpt", "ON  ",
+    ]));
+  });
+
+  test("renders drum NOTE FX, REPEAT GROOVE, and MIDI DLY overview cells", () => {
+    const noteCalls: DrawCall[] = [];
+    renderDrumNoteFxBankOverview(createDeps(noteCalls));
+    expect(noteCalls[0]).toEqual(["heading", "NOTE FX"]);
+    expect(printed(noteCalls)).toEqual(expect.arrayContaining([
+      "Oct", "Note", "N48 48", "Vel ", "-4  ", "Qnt ", "55% ", "Len>", "2   ", ">Gate", "87% ",
+    ]));
+
+    S.activeBank = 5;
+    S.altMode = true;
+    const grooveCalls: DrawCall[] = [];
+    renderDrumRepeatGrooveBankOverview(createDeps(grooveCalls));
+    expect(grooveCalls).toContainEqual(["arrow", 98, false, true]);
+    expect(printed(grooveCalls)).toEqual(expect.arrayContaining([
+      "REPEAT GROOVE", "-2% ", " 0% ", "+3% ", "+4% ",
+    ]));
+
+    S.activeBank = 3;
+    S.altMode = false;
+    const dlyCalls: DrawCall[] = [];
+    renderDrumMidiDelayBankOverview(createDeps(dlyCalls));
+    expect(dlyCalls[0]).toEqual(["heading", "DELAY"]);
+    expect(printed(dlyCalls)).toEqual(expect.arrayContaining([
+      "Gate", "1/8T", "Clk ", "-6  ", "Retr", "ON  ",
+    ]));
+  });
+});

@@ -26,6 +26,15 @@ declare module "@tool-ui/ui_motion.mjs" {
   export function paramPeekInfo(): unknown;
 }
 
+declare module "@tool-ui/ui_bank_render.mjs" {
+  export function renderAllLanesBankOverview(deps: any): void;
+  export function renderAllLanesConfirm(deps: any): void;
+  export function renderDrumLaneBankOverview(deps: any): void;
+  export function renderDrumMidiDelayBankOverview(deps: any): void;
+  export function renderDrumNoteFxBankOverview(deps: any): void;
+  export function renderDrumRepeatGrooveBankOverview(deps: any): void;
+}
+
 declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runDefaultSetParamDrain(S: any, deps: any): void;
   export function runMoveCoRunTickTasks(S: any, deps: any): void;
