@@ -374,4 +374,107 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
 
     h.ui().recordArmed = false;
   });
+
+  test("Track View melodic Loop + jog changes active clip length", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().clipLoopStart[1][ac] = 32;
+    h.ui().clipLength[1][ac] = 33;
+    h.ui().clipLengthManuallySet[1][ac] = false;
+    h.set("t1_c0_loop_set", (32 << 16) | 33);
+    h.step(3);
+
+    h.hold(58); // Loop
+    h.cc(14, 127); // jog ccw -> one step shorter
+
+    expect(h.ui().clipLength[1][ac]).toBe(32);
+    expect(h.ui().clipLengthManuallySet[1][ac]).toBe(true);
+    expect(h.ui().trackCurrentPage[1]).toBe(3);
+
+    h.step(3);
+    expect(h.get("t1_c0_length")).toBe("32");
+    h.release(58);
+    h.step(2);
+  });
+
+  test("Track View drum Loop + jog changes active lane length", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneLoopStart[0] = 32;
+    h.ui().drumLaneLength[0] = 33;
+    h.ui().drumLaneLengthManuallySet[0] = false;
+    h.set("t0_l0_loop_set", (32 << 16) | 33);
+    h.step(3);
+
+    h.hold(58); // Loop
+    h.cc(14, 127); // jog ccw -> one step shorter
+
+    expect(h.ui().drumLaneLength[0]).toBe(32);
+    expect(h.ui().drumLaneLengthManuallySet[0]).toBe(true);
+    expect(h.ui().drumStepPage[0]).toBe(3);
+
+    h.step(3);
+    expect(h.get("t0_l0_length")).toBe("32");
+    h.release(58);
+    h.step(2);
+  });
+
+  test("Track View Loop + jog is blocked during active recording", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 0;
+    h.ui().activeDrumLane[0] = 0;
+    h.ui().recordArmed = true;
+    h.ui().recordCountingIn = false;
+    h.ui().drumLaneLength[0] = 33;
+    h.set("t0_l0_loop_set", 33);
+    h.step(3);
+
+    h.hold(58); // Loop
+    h.cc(14, 1); // jog cw would lengthen if not blocked
+    h.step(3);
+    h.release(58);
+    h.step(2);
+
+    expect(h.ui().drumLaneLength[0]).toBe(33);
+    expect(h.get("t0_l0_length")).toBe("33");
+
+    h.ui().recordArmed = false;
+  });
+
+  test("CC automation bank Loop + jog edits active CC lane length", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 6;
+    h.ui().trackCurrentPage[1] = 0;
+
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().ccActiveLane[1] = 0;
+    h.ui().clipLoopStart[1][ac] = 0;
+    h.ui().clipLength[1][ac] = 64;
+    h.ui().ccLaneLoopStart[1][ac][0] = 32;
+    h.ui().ccLaneLength[1][ac][0] = 33;
+    h.set("t1_c0_length", "64");
+    h.set("t1_c0_k0_cc_loop_set", (32 << 16) | 33);
+    h.step(3);
+
+    h.hold(58); // Loop
+    h.cc(14, 127); // jog ccw -> one step shorter
+
+    expect(h.ui().ccLaneLength[1][ac][0]).toBe(32);
+    expect(h.ui().clipLength[1][ac]).toBe(64);
+    expect(h.ui().trackCurrentPage[1]).toBe(3);
+
+    h.step(3);
+    expect(h.get("t1_c0_length")).toBe("64");
+    h.release(58);
+    h.step(2);
+  });
 });
