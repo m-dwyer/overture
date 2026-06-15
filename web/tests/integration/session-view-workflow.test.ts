@@ -56,6 +56,10 @@ function pressClipPad(h: Harness, track: number, row: number): void {
   h.emu.sendInternal(0x90, rowBase + track, 110);
 }
 
+function pressSideRow(h: Harness, row: number): void {
+  h.emu.sendInternal(0xb0, 43 - row, 127);
+}
+
 function resetSessionState(ui: SessionUiState): void {
   ui.sessionView = true;
   ui.deleteHeld = false;
@@ -308,5 +312,126 @@ describe("Session View Workflow - clip pads", () => {
     expect(ui.activeTrack).toBe(1);
     expect(ui.trackActiveClip[1]).toBe(2);
     expect(ui.trackCurrentPage[1]).toBe(0);
+  });
+});
+
+describe("Session View Workflow - side rows", () => {
+  let h: Harness;
+  let ui: SessionUiState;
+
+  beforeEach(async () => {
+    h = await createHarness();
+    ui = h.ui() as SessionUiState;
+    resetSessionState(ui);
+  }, 60_000);
+
+  test("pendingSceneBakePicker side row opens scene bake confirm with selected scene row", () => {
+    ui.pendingSceneBakePicker = true;
+    ui.sceneRow = 4;
+
+    pressSideRow(h, 2);
+
+    expect(ui.pendingSceneBakePicker).toBe(false);
+    expect(ui.confirmBakeScene).toBe(true);
+    expect(ui.confirmBakeSceneSel).toBe(1);
+    expect(ui.confirmBakeSceneClip).toBe(6);
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("pendingMergePlacement side row queues merge_place_row", () => {
+    ui.pendingMergePlacement = true;
+    ui.sceneRow = 4;
+
+    pressSideRow(h, 1);
+
+    expect(ui.pendingMergePlacement).toBe(false);
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "merge_place_row", val: "5" }]);
+  });
+
+  test("Copy+side row arms row copy and paste queues row_copy", () => {
+    ui.copyHeld = true;
+    ui.sceneRow = 4;
+    ui.clipNonEmpty[1][4] = true;
+
+    pressSideRow(h, 0);
+    expect(ui.copySrc).toEqual({ kind: "row", row: 4 });
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+
+    pressSideRow(h, 3);
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "row_copy", val: "4 7" }]);
+    expect(ui.clipNonEmpty[1][7]).toBe(true);
+  });
+
+  test("Shift+Copy+side row arms row cut and paste queues row_cut", () => {
+    ui.copyHeld = true;
+    ui.shiftHeld = true;
+    ui.sceneRow = 4;
+    ui.clipNonEmpty[1][4] = true;
+
+    pressSideRow(h, 0);
+    expect(ui.copySrc).toEqual({ kind: "cut_row", row: 4 });
+
+    pressSideRow(h, 3);
+    expect(ui.copySrc).toEqual({ kind: "row", row: 7 });
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "row_cut", val: "4 7" }]);
+    expect(ui.clipNonEmpty[1][4]).toBe(false);
+    expect(ui.clipNonEmpty[1][7]).toBe(true);
+  });
+
+  test("Delete+side row queues row_clear", () => {
+    ui.deleteHeld = true;
+    ui.sceneRow = 4;
+    ui.clipNonEmpty[1][5] = true;
+    ui.clipLoopStart[1][5] = 16;
+
+    pressSideRow(h, 1);
+
+    expect(ui.clipNonEmpty[1][5]).toBe(false);
+    expect(ui.clipLoopStart[1][5]).toBe(0);
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "row_clear", val: "5" }]);
+  });
+
+  test("Shift+Delete+side row hard-resets all clips in the selected row", () => {
+    ui.deleteHeld = true;
+    ui.shiftHeld = true;
+    ui.sceneRow = 4;
+    ui.clipNonEmpty[1][6] = true;
+    ui.clipNonEmpty[2][6] = true;
+    ui.clipLength[1][6] = 64;
+    ui.clipLoopStart[1][6] = 16;
+
+    pressSideRow(h, 2);
+
+    expect(ui.clipNonEmpty[1][6]).toBe(false);
+    expect(ui.clipNonEmpty[2][6]).toBe(false);
+    expect(ui.clipLength[1][6]).toBe(16);
+    expect(ui.clipLoopStart[1][6]).toBe(0);
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t7_c6_hard_reset", val: "1" },
+      { key: "t6_c6_hard_reset", val: "1" },
+      { key: "t5_c6_hard_reset", val: "1" },
+      { key: "t4_c6_hard_reset", val: "1" },
+      { key: "t3_c6_hard_reset", val: "1" },
+      { key: "t2_c6_hard_reset", val: "1" },
+      { key: "t1_c6_hard_reset", val: "1" },
+      { key: "t0_c6_drum_reset", val: "1" },
+    ]);
+  });
+
+  test("Plain Session View side row queues launch_scene", () => {
+    ui.sceneRow = 4;
+
+    pressSideRow(h, 3);
+
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "launch_scene", val: "7" }]);
+  });
+
+  test("Shift+side row queues launch_scene_quant", () => {
+    ui.shiftHeld = true;
+    ui.sceneRow = 4;
+
+    pressSideRow(h, 3);
+
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "launch_scene_quant", val: "7" }]);
   });
 });

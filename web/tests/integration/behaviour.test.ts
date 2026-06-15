@@ -194,6 +194,20 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     expect(h.ui().activeTrack).toBe(0);
   });
 
+  test("Delete + side button in Track View is swallowed and does not select a track", () => {
+    noteView();
+    h.press(43);
+    h.step(2);
+    expect(h.ui().activeTrack).toBe(0);
+
+    h.ui().deleteHeld = true;
+    h.cc(40, 127);
+    h.step(2);
+    h.ui().deleteHeld = false;
+
+    expect(h.ui().activeTrack).toBe(0);
+  });
+
   test("Shift + bottom-row pad switches the active track", () => {
     noteView();
     h.hold(49);
