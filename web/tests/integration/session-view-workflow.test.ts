@@ -18,6 +18,20 @@ interface SessionUiState extends UiState {
   confirmBakeSceneClip: number;
   pendingMergePlacement: boolean;
   pendingDefaultSetParams: PendingParam[];
+  copyHeld: boolean;
+  copySrc: unknown;
+  captureHeld: boolean;
+  playing: boolean;
+  trackPadMode: number[];
+  trackActiveClip: number[];
+  trackCurrentPage: number[];
+  trackClipPlaying: boolean[];
+  trackWillRelaunch: boolean[];
+  trackQueuedClip: number[];
+  clipNonEmpty: boolean[][];
+  clipLoopStart: number[][];
+  pendingDrumResync: number;
+  pendingDrumResyncTrack: number;
   stepBtnPressedTick: number[];
   sessionStepHeld: number;
   sessionStepHeldCtx: number;
@@ -37,6 +51,11 @@ function releaseStep(h: Harness, idx: number): void {
   h.emu.sendInternal(0x80, 16 + idx, 0);
 }
 
+function pressClipPad(h: Harness, track: number, row: number): void {
+  const rowBase = 92 - row * 8;
+  h.emu.sendInternal(0x90, rowBase + track, 110);
+}
+
 function resetSessionState(ui: SessionUiState): void {
   ui.sessionView = true;
   ui.deleteHeld = false;
@@ -50,6 +69,19 @@ function resetSessionState(ui: SessionUiState): void {
   ui.confirmBakeSceneSel = -1;
   ui.confirmBakeSceneClip = -1;
   ui.pendingDefaultSetParams = [];
+  ui.copyHeld = false;
+  ui.copySrc = null;
+  ui.captureHeld = false;
+  ui.playing = false;
+  ui.sceneRow = 0;
+  ui.activeTrack = 0;
+  ui.trackActiveClip.fill(0);
+  ui.trackCurrentPage.fill(0);
+  ui.trackClipPlaying.fill(false);
+  ui.trackWillRelaunch.fill(false);
+  ui.trackQueuedClip.fill(-1);
+  ui.pendingDrumResync = 0;
+  ui.pendingDrumResyncTrack = -1;
   ui.sessionStepHeld = -1;
   ui.sessionStepHeldCtx = 0;
   ui.stepBtnPressedTick.fill(-1);
@@ -178,5 +210,103 @@ describe("Session View Workflow - step buttons", () => {
 
     expect(ui.pendingDefaultSetParams).toEqual([]);
     expect(ui.sessionStepHeld).toBe(-1);
+  });
+});
+
+describe("Session View Workflow - clip pads", () => {
+  let h: Harness;
+  let ui: SessionUiState;
+
+  beforeEach(async () => {
+    h = await createHarness();
+    ui = h.ui() as SessionUiState;
+    resetSessionState(ui);
+  }, 60_000);
+
+  test("Delete+clip pad clears that clip and keeps transport state", () => {
+    ui.deleteHeld = true;
+    ui.trackPadMode[1] = 0;
+    ui.clipNonEmpty[1][1] = true;
+
+    pressClipPad(h, 1, 1);
+
+    expect(ui.clipNonEmpty[1][1]).toBe(false);
+    expect(ui.clearDrainHold).toBe(1);
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "t1_c1_clear", val: "1" }]);
+  });
+
+  test("Shift+Delete+clip pad hard-resets that clip", () => {
+    ui.deleteHeld = true;
+    ui.shiftHeld = true;
+    ui.trackPadMode[1] = 0;
+    ui.clipNonEmpty[1][1] = true;
+    ui.clipLength[1][1] = 64;
+    ui.clipLoopStart[1][1] = 16;
+
+    pressClipPad(h, 1, 1);
+
+    expect(ui.clipNonEmpty[1][1]).toBe(false);
+    expect(ui.clipLength[1][1]).toBe(16);
+    expect(ui.clipLoopStart[1][1]).toBe(0);
+    expect(ui.clearDrainHold).toBe(1);
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "t1_c1_hard_reset", val: "1" }]);
+  });
+
+  test("Copy+clip pad arms a melodic clip source and paste queues clip_copy", () => {
+    ui.copyHeld = true;
+    ui.trackPadMode[1] = 0;
+    ui.clipNonEmpty[1][1] = true;
+
+    pressClipPad(h, 1, 1);
+    expect(ui.copySrc).toEqual({ kind: "clip", track: 1, clip: 1 });
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+
+    pressClipPad(h, 1, 2);
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "clip_copy", val: "1 1 1 2" }]);
+    expect(ui.clipNonEmpty[1][2]).toBe(true);
+  });
+
+  test("Shift+Copy+clip pad arms cut source and paste queues clip_cut", () => {
+    ui.copyHeld = true;
+    ui.shiftHeld = true;
+    ui.trackPadMode[1] = 0;
+    ui.clipNonEmpty[1][1] = true;
+
+    pressClipPad(h, 1, 1);
+    expect(ui.copySrc).toEqual({ kind: "cut_clip", track: 1, clip: 1 });
+
+    pressClipPad(h, 1, 2);
+    expect(ui.copySrc).toEqual({ kind: "clip", track: 1, clip: 2 });
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "clip_cut", val: "1 1 1 2" }]);
+    expect(ui.clipNonEmpty[1][1]).toBe(false);
+    expect(ui.clipNonEmpty[1][2]).toBe(true);
+  });
+
+  test("Shift+clip pad opens the clip for editing without launching a stopped non-empty clip", () => {
+    ui.shiftHeld = true;
+    ui.trackPadMode[1] = 0;
+    ui.trackActiveClip[1] = 0;
+    ui.clipLoopStart[1][1] = 32;
+    ui.clipNonEmpty[1][1] = true;
+
+    pressClipPad(h, 1, 1);
+
+    expect(ui.sessionView).toBe(false);
+    expect(ui.activeTrack).toBe(1);
+    expect(ui.trackActiveClip[1]).toBe(1);
+    expect(ui.trackCurrentPage[1]).toBe(2);
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Plain Session View clip pad focuses and launches that clip while stopped", () => {
+    ui.trackPadMode[1] = 0;
+    ui.trackActiveClip[1] = 0;
+
+    pressClipPad(h, 1, 2);
+
+    expect(ui.sessionView).toBe(true);
+    expect(ui.activeTrack).toBe(1);
+    expect(ui.trackActiveClip[1]).toBe(2);
+    expect(ui.trackCurrentPage[1]).toBe(0);
   });
 });
