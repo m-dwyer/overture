@@ -11,6 +11,7 @@ import {
   handleTrackViewChordFirstStepTick,
   handleTrackViewMelodicStepNoteAssignment,
   handleTrackViewMelodicStepKnob,
+  handleTrackViewDrumStepKnob,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -1275,6 +1276,170 @@ describe("Track View Step Workflow", () => {
       copyHeld: false,
       heldStep: 53,
       heldStepNotes: [60],
+    }), deps(c), 70, 1)).toBe(false);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("drum held-step knob K1 edits gate with accelerated step sizing", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepEditGate: 24,
+    });
+
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 71, 1)).toBe(true);
+
+    expect(S.stepEditGate).toBe(30);
+    expect(S.knobTouched).toBe(0);
+    expect(S.knobTurnedTick[0]).toBe(123);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 1, 0],
+      ["setParam", "t0_l4_step_37_gate", "30"],
+    ]);
+  });
+
+  test("drum held-step knob K2 edits velocity and clamps", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepEditVel: 0,
+    });
+
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 72, 127)).toBe(true);
+
+    expect(S.stepEditVel).toBe(0);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_vel", "0"],
+    ]);
+  });
+
+  test("drum held-step knob K3 edits nudge after threshold and clamps to lane TPS", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepEditNudge: -23,
+      knobAccum: [0, 0, 7, 0, 0, 0, 0, 0],
+      knobLastDir: [0, 0, -1, 0, 0, 0, 0, 0],
+    });
+
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 73, 127)).toBe(true);
+
+    expect(S.stepEditNudge).toBe(-23);
+    expect(S.knobAccum[2]).toBe(0);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_nudge", "-23"],
+    ]);
+  });
+
+  test("drum held-step knobs K4 and K8 update touch state without writing params", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+    });
+
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 74, 1)).toBe(true);
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 78, 1)).toBe(true);
+
+    expect(S.knobTouched).toBe(7);
+    expect(S.knobTurnedTick[3]).toBe(123);
+    expect(S.knobTurnedTick[7]).toBe(123);
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("drum held-step knob K5 steps iter through injected list", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepEditIter: 0x21,
+      knobAccum: [0, 0, 0, 0, 2, 0, 0, 0],
+      knobLastDir: [0, 0, 0, 0, 1, 0, 0, 0],
+    });
+
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 75, 1)).toBe(true);
+
+    expect(S.stepEditIter).toBe(0x22);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_iter", "34"],
+    ]);
+  });
+
+  test("drum held-step knob K6 edits probability with acceleration and clamps", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepEditRand: 0,
+    });
+
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 76, 127)).toBe(true);
+
+    expect(S.stepEditRand).toBe(0);
+    expect(c.log).toEqual([
+      ["ccKnobDelta", 127, 5],
+      ["setParam", "t0_l4_step_37_rand", "0"],
+    ]);
+  });
+
+  test("drum held-step knob K7 edits ratchet after threshold and clamps", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepEditRatch: 4,
+      knobAccum: [0, 0, 0, 0, 0, 0, 7, 0],
+      knobLastDir: [0, 0, 0, 0, 0, 0, 1, 0],
+    });
+
+    expect(handleTrackViewDrumStepKnob(S, deps(c), 77, 1)).toBe(true);
+
+    expect(S.stepEditRatch).toBe(4);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_ratch", "4"],
+    ]);
+  });
+
+  test("drum held-step knobs are ignored outside drum step edit", () => {
+    const c = calls();
+
+    expect(handleTrackViewDrumStepKnob(state({ copyHeld: false }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewDrumStepKnob(state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [],
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewDrumStepKnob(state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+    }), deps(c), 71, 1)).toBe(false);
+    expect(handleTrackViewDrumStepKnob(state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+      heldStepNotes: [40],
     }), deps(c), 70, 1)).toBe(false);
 
     expect(c.log).toEqual([]);

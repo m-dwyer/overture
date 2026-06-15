@@ -128,6 +128,9 @@ Current Track View Step Workflow ownership:
 - Track View melodic non-CC held-step knobs own octave/pitch edits, gate,
   velocity, nudge, iter, probability, ratchet writes, knob touch state, and
   screen-dirty updates.
+- Track View drum held-step knobs own gate, velocity, nudge, iter, probability,
+  ratchet writes, ignored K4/K8 touch behavior, knob touch state, and
+  screen-dirty updates.
 
 Behavior to preserve:
 
@@ -161,11 +164,11 @@ commit/cleanup, the tick-side hold-threshold lifecycle, and chord-first tick
 phase handling now live in the seam. Melodic held-step note assignment from
 pad/external-note input also lives in the seam while live preview, recording,
 and MIDI routing remain in `ui.js`. Melodic non-CC held-step knob handling now
-also lives in the seam while drum held-step knobs and CC-bank step-edit knobs
-remain in `ui.js`.
-The next candidate is drum held-step knob handling, CC-bank step-edit handling,
-or another cohesive Track View step-edit cluster; avoid Parameter Bank behavior
-and recording behavior until that lifecycle has characterization coverage.
+also lives in the seam. Drum held-step knob handling now lives in the seam while
+CC-bank step-edit knobs remain in `ui.js`.
+The next candidate is CC-bank step-edit handling or another cohesive Track View
+step-edit cluster; avoid Parameter Bank behavior and recording behavior until
+that lifecycle has characterization coverage.
 
 ## Candidate Later Slices
 
