@@ -113,6 +113,9 @@ Current Track View Step Workflow ownership:
 - Normal melodic step press owns press-time step edit entry, empty/non-empty
   state seeding, CC step-edit activation, chord-first capture, tap-window
   multi-toggle, and held-step gate-span taps.
+- Track View step release owns drum tap commit/clear, drum hold-release
+  reassign/velocity confirm, melodic tap commit/clear/no-note flash, melodic
+  hold-release reassign/reread scheduling, and CC-safe release cleanup.
 
 Behavior to preserve:
 
@@ -126,10 +129,9 @@ Behavior to preserve:
 - Copy + second step copies only when source and target differ, redraws, and
   never mixes step copy with other copy source kinds.
 - Mute + step must continue falling through before Shift+step.
-- Drum/melodic hold-threshold behavior, step release/velocity confirm, deeper
-  CC step-edit behavior, Parameter Bank behavior, recording behavior, Session
-  View Performance Mode, modal workflows, and unrelated DSP reads/writes remain
-  in `ui.js` for now.
+- Drum/melodic hold-threshold behavior, deeper CC step-edit behavior, Parameter
+  Bank behavior, recording behavior, Session View Performance Mode, modal
+  workflows, and unrelated DSP reads/writes remain in `ui.js` for now.
 
 Tests currently covering this seam:
 
@@ -142,12 +144,11 @@ Continue extracting one narrow Track View step-button branch at a time from
 `_onStepButtons()`, after characterization coverage and without changing handler
 priority. Mute+step is characterized as a fallthrough modifier with no separate
 Track View action, and Shift+step shortcuts now live in the Track View Step
-Workflow seam. Normal drum step press handling now lives in the seam, while its
-tick hold-threshold and release commit behavior remain in `ui.js`. Normal
-melodic step press handling now lives in the seam too. The next candidate is the
-step hold-threshold lifecycle, likely split drum/melodic/CC if needed; avoid
-Parameter Bank behavior and recording behavior until that lifecycle has
-characterization coverage.
+Workflow seam. Normal drum and melodic step press handling now live in the seam,
+and step release commit/cleanup now routes through `handleTrackViewStepRelease()`.
+The next candidate is the step hold-threshold lifecycle, likely split
+drum/melodic/CC if needed; avoid Parameter Bank behavior and recording behavior
+until that lifecycle has characterization coverage.
 
 ## Candidate Later Slices
 

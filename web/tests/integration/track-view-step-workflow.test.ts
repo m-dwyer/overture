@@ -6,6 +6,7 @@ import {
   handleTrackViewShiftStepPress,
   handleTrackViewDrumStepPress,
   handleTrackViewMelodicStepPress,
+  handleTrackViewStepRelease,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -38,6 +39,7 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     },
     invalidateLEDCache: c.fn("invalidate"),
     forceRedraw: c.fn("redraw"),
+    noNoteFlashTicks: 32,
     padModeDrum: 1,
     refreshSeqNotesIfCurrent: c.fn("refreshSeqNotes"),
     setParam: c.fn("setParam"),
@@ -73,6 +75,8 @@ function state(overrides = {}) {
     stepEditRand: 0,
     stepEditRatch: 0,
     activeBank: 0,
+    noNoteFlashEndTick: -1,
+    screenDirty: false,
     ccStepEditActive: false,
     pendingChordToStep: null,
     liveActiveNotes: new Set<number>(),
@@ -124,6 +128,12 @@ function state(overrides = {}) {
     redoAvailable: true,
     undoSeqArpSnapshot: { captured: true },
     activeDrumLane: [4, 0, 0],
+    trackActiveClip: [0, 0, 1],
+    drumClipNonEmpty: [
+      [false],
+      [false],
+      [false, false],
+    ],
     drumStepPage: [2, 0, 0],
     drumLaneSteps: [
       Array.from({ length: 32 }, () => Array(64).fill("0")),
@@ -135,6 +145,12 @@ function state(overrides = {}) {
       Array(32).fill(false),
       Array(32).fill(false),
     ],
+    pendingDrumLaneResync: 0,
+    pendingDrumLaneResyncTrack: -1,
+    pendingDrumLaneResyncLane: -1,
+    pendingStepsReread: 0,
+    pendingStepsRereadTrack: -1,
+    pendingStepsRereadClip: -1,
     ...overrides,
   };
 }
@@ -918,5 +934,257 @@ describe("Track View Step Workflow", () => {
       ["setParam", "t2_c1_step_50_gate", "72"],
       ["redraw"],
     ]);
+  });
+
+  test("release of unrelated step is ignored by Track View release workflow", () => {
+    const c = calls();
+    const S = state({ copyHeld: false, heldStepBtn: 4, heldStep: 52 });
+
+    expect(handleTrackViewStepRelease(S, deps(c), 5)).toBe(false);
+
+    expect(S.heldStepBtn).toBe(4);
+    expect(c.log).toEqual([]);
+  });
+
+  test("drum tap release assigns an empty held step and exits step edit", () => {
+    const c = calls();
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 37,
+      stepWasEmpty: true,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 200, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c, {
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return "1";
+      },
+    }), 5)).toBe(true);
+
+    expect(S.drumLaneSteps[0][4][37]).toBe("1");
+    expect(S.drumLaneHasNotes[0][4]).toBe(true);
+    expect(S.drumClipNonEmpty[0][0]).toBe(true);
+    expect(S.heldStep).toBe(-1);
+    expect(S.stepWasEmpty).toBe(false);
+    expect(c.log).toEqual([
+      ["stepEntryVelocity", 0, -1, true],
+      ["setParam", "t0_l4_step_37_toggle", "96"],
+      ["getParam", "t0_c0_drum_has_content"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum tap release clears an occupied held step and does not confirm velocity", () => {
+    const c = calls();
+    const drumSteps = Array.from({ length: 32 }, () => Array(64).fill("0"));
+    drumSteps[4][37] = "1";
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepWasEmpty: false,
+      stepEditVel: 77,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 200, ...Array(10).fill(-1)],
+      drumLaneSteps: [
+        drumSteps,
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+      ],
+      drumLaneHasNotes: [
+        [false, false, false, false, true, ...Array(27).fill(false)],
+        Array(32).fill(false),
+        Array(32).fill(false),
+      ],
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c), 5)).toBe(true);
+
+    expect(S.drumLaneSteps[0][4][37]).toBe("0");
+    expect(S.drumLaneHasNotes[0][4]).toBe(false);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_clear", "1"],
+      ["getParam", "t0_c0_drum_has_content"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum hold release reassigns when nudge crosses the lane midpoint", () => {
+    const c = calls();
+    const drumSteps = Array.from({ length: 32 }, () => Array(64).fill("0"));
+    drumSteps[4][37] = "1";
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepWasHeld: true,
+      stepEditNudge: 12,
+      stepEditVel: 88,
+      drumLaneSteps: [
+        drumSteps,
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+        Array.from({ length: 32 }, () => Array(64).fill("0")),
+      ],
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c), 5)).toBe(true);
+
+    expect(S.drumLaneSteps[0][4][37]).toBe("0");
+    expect(S.pendingDrumLaneResync).toBe(3);
+    expect(S.pendingDrumLaneResyncTrack).toBe(0);
+    expect(S.pendingDrumLaneResyncLane).toBe(4);
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_reassign", "38"],
+      ["redraw"],
+    ]);
+  });
+
+  test("drum hold release confirms velocity when not cleared or reassigned", () => {
+    const c = calls();
+    const S = state({
+      activeTrack: 0,
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 37,
+      heldStepNotes: [40],
+      stepWasHeld: true,
+      stepEditNudge: 0,
+      stepEditVel: 88,
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c), 5)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["setParam", "t0_l4_step_37_vel", "88"],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic tap release assigns an empty held step from last played note", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepWasEmpty: true,
+      lastPlayedNote: 64,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 200, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.clipSteps[2][1][53]).toBe(1);
+    expect(S.clipNonEmpty[2][1]).toBe(true);
+    expect(S.heldStep).toBe(-1);
+    expect(c.log).toEqual([
+      ["stepEntryVelocity", 2, -1, false],
+      ["setParam", "t2_c1_step_53_toggle", "64 96"],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic tap release without a last played note flashes no-note warning", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepWasEmpty: true,
+      lastPlayedNote: -1,
+      tickCount: 500,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 200, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.noNoteFlashEndTick).toBe(532);
+    expect(S.screenDirty).toBe(true);
+    expect(S.clipSteps[2][1][53]).toBe(0);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("melodic tap release clears an occupied held step", () => {
+    const c = calls();
+    const clipSteps = [
+      [Array(64).fill(0)],
+      [Array(64).fill(0)],
+      [Array(64).fill(0), Array(64).fill(0)],
+    ];
+    clipSteps[2][1][53] = 1;
+    const S = state({
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 53,
+      stepWasEmpty: false,
+      clipSteps,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 200, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(c.log).toEqual([
+      ["clearStep", 2, 1, 53],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic hold release reassigns nudged notes and schedules a step reread", () => {
+    const c = calls();
+    const clipSteps = [
+      [Array(64).fill(0)],
+      [Array(64).fill(0)],
+      [Array(64).fill(0), Array(64).fill(0)],
+    ];
+    clipSteps[2][1][53] = 1;
+    const S = state({
+      copyHeld: false,
+      heldStepBtn: 5,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepWasHeld: true,
+      stepEditNudge: -13,
+      clipSteps,
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.clipSteps[2][1][53]).toBe(0);
+    expect(S.pendingStepsReread).toBe(2);
+    expect(S.pendingStepsRereadTrack).toBe(2);
+    expect(S.pendingStepsRereadClip).toBe(1);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_reassign", "52"],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic CC bank release exits step edit without toggling or rereading notes", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      ccStepEditActive: true,
+      heldStepBtn: 5,
+      heldStep: 53,
+      heldStepNotes: [60],
+      stepWasEmpty: true,
+      stepWasHeld: true,
+      stepBtnPressedTick: [-1, -1, -1, -1, -1, 200, ...Array(10).fill(-1)],
+    });
+
+    expect(handleTrackViewStepRelease(S, deps(c, { effectiveClip: () => 1 }), 5)).toBe(true);
+
+    expect(S.ccStepEditActive).toBe(true);
+    expect(S.heldStep).toBe(-1);
+    expect(S.pendingStepsReread).toBe(0);
+    expect(c.log).toEqual([["redraw"]]);
   });
 });
