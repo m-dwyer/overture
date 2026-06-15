@@ -122,6 +122,9 @@ Current Track View Step Workflow ownership:
 - Track View chord-first tick handling owns phase 1 empty-step activation,
   pending phase 2 promotion, full-chord note write, held-note refresh, and CC
   bank deferral.
+- Track View melodic held-step note assignment owns pad/external-note step
+  note toggles/replacement, authoritative note readback, clip mirror updates,
+  sequence-note refresh, and redraw.
 
 Behavior to preserve:
 
@@ -152,7 +155,9 @@ priority. Mute+step is characterized as a fallthrough modifier with no separate
 Track View action, and Shift+step shortcuts now live in the Track View Step
 Workflow seam. Normal drum and melodic step press handling, step release
 commit/cleanup, the tick-side hold-threshold lifecycle, and chord-first tick
-phase handling now live in the seam.
+phase handling now live in the seam. Melodic held-step note assignment from
+pad/external-note input also lives in the seam while live preview, recording,
+and MIDI routing remain in `ui.js`.
 The next candidate is deeper CC step-edit handling or another cohesive Track
 View step-edit cluster; avoid Parameter Bank behavior and recording behavior
 until that lifecycle has characterization coverage.

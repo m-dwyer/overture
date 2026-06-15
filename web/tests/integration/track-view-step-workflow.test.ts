@@ -9,6 +9,7 @@ import {
   handleTrackViewStepRelease,
   handleTrackViewStepHoldThreshold,
   handleTrackViewChordFirstStepTick,
+  handleTrackViewMelodicStepNoteAssignment,
 } from "@tool-ui/ui_track_view_step_workflow.mjs";
 
 function calls() {
@@ -938,6 +939,143 @@ describe("Track View Step Workflow", () => {
     expect(c.log).toEqual([
       ["refreshSeqNotes", 2, 1, 53],
     ]);
+  });
+
+  test("melodic held-step note assignment toggles a pitch and mirrors readback notes", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+    });
+
+    expect(handleTrackViewMelodicStepNoteAssignment(S, deps(c, {
+      effectiveClip: () => 1,
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return "60 64";
+      },
+    }), 64, 91)).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([60, 64]);
+    expect(S.clipSteps[2][1][53]).toBe(1);
+    expect(S.clipNonEmpty[2][1]).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_toggle", "64 91"],
+      ["getParam", "t2_c1_step_53_notes"],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic held-step note assignment can replace auto-assigned empty-step note", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      stepWasEmpty: true,
+      heldStepNotes: [60],
+    });
+
+    expect(handleTrackViewMelodicStepNoteAssignment(S, deps(c, {
+      effectiveClip: () => 1,
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return "67";
+      },
+    }), 67, 91, { replaceAutoAssigned: true })).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([67]);
+    expect(S.clipSteps[2][1][53]).toBe(1);
+    expect(S.clipNonEmpty[2][1]).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_set_notes", "67"],
+      ["getParam", "t2_c1_step_53_notes"],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic held-step note assignment clears JS mirrors when readback is empty", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      heldStep: 53,
+      heldStepNotes: [60],
+      clipNonEmpty: [[false], [false], [false, true]],
+    });
+
+    expect(handleTrackViewMelodicStepNoteAssignment(S, deps(c, {
+      effectiveClip: () => 1,
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return "";
+      },
+      clipHasContent: (track: number, clip: number) => {
+        c.log.push(["clipHasContent", track, clip]);
+        return false;
+      },
+    }), 60, 91)).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([]);
+    expect(S.clipSteps[2][1][53]).toBe(0);
+    expect(S.clipNonEmpty[2][1]).toBe(false);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_toggle", "60 91"],
+      ["getParam", "t2_c1_step_53_notes"],
+      ["clipHasContent", 2, 1],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic held-step note assignment preserves current CC bank behavior", () => {
+    const c = calls();
+    const S = state({
+      copyHeld: false,
+      activeBank: 6,
+      heldStep: 53,
+      heldStepNotes: [],
+    });
+
+    expect(handleTrackViewMelodicStepNoteAssignment(S, deps(c, {
+      effectiveClip: () => 1,
+      getParam: (key: string) => {
+        c.log.push(["getParam", key]);
+        return "72";
+      },
+    }), 72, 91)).toBe(true);
+
+    expect(S.heldStepNotes).toEqual([72]);
+    expect(c.log).toEqual([
+      ["setParam", "t2_c1_step_53_toggle", "72 91"],
+      ["getParam", "t2_c1_step_53_notes"],
+      ["refreshSeqNotes", 2, 1, 53],
+      ["redraw"],
+    ]);
+  });
+
+  test("melodic held-step note assignment is ignored outside Track View melodic step edit", () => {
+    const c = calls();
+
+    expect(handleTrackViewMelodicStepNoteAssignment(state({ copyHeld: false }), deps(c), 64, 91)).toBe(false);
+    expect(handleTrackViewMelodicStepNoteAssignment(state({
+      copyHeld: false,
+      heldStep: 53,
+      shiftHeld: true,
+    }), deps(c), 64, 91)).toBe(false);
+    expect(handleTrackViewMelodicStepNoteAssignment(state({
+      copyHeld: false,
+      heldStep: 53,
+      sessionView: true,
+    }), deps(c), 64, 91)).toBe(false);
+    expect(handleTrackViewMelodicStepNoteAssignment(state({
+      copyHeld: false,
+      activeTrack: 0,
+      heldStep: 37,
+    }), deps(c), 64, 91)).toBe(false);
+
+    expect(c.log).toEqual([]);
   });
 
   test("melodic second press during primary tap window assigns an empty step", () => {
