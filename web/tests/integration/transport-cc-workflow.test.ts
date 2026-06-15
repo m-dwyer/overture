@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  handleUiMuteButton,
   handleUiPlayButton,
   handleUiRecordButton,
   handleUiSampleButton,
@@ -100,6 +101,10 @@ function state(overrides = {}) {
     actionPopupEndTick: -1,
     metronomeOn: 1,
     metronomeOnLast: 3,
+    drumLaneMute: [3, 0, 0, 0],
+    drumLaneSolo: [5, 0, 0, 0],
+    trackMuted: [false, false, false, false],
+    trackSoloed: [false, false, false, false],
     ...overrides,
   };
 }
@@ -119,6 +124,7 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     movePlay: 85,
     moveRec: 86,
     moveSample: 118,
+    moveMute: 88,
     numTracks: 4,
     padModeDrum: 1,
     red: 5,
@@ -127,6 +133,9 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     resolveInheritPicker: (...args: unknown[]) => c.log.push(["inherit", ...args]),
     showActionPopup: c.fn("popup"),
     unlatchAllTracks: c.fn("unlatch"),
+    clearAllMuteSolo: c.fn("clearAllMuteSolo"),
+    setTrackMute: (...args: unknown[]) => c.log.push(["setTrackMute", ...args]),
+    setTrackSolo: (...args: unknown[]) => c.log.push(["setTrackSolo", ...args]),
     ...overrides,
   };
 }
@@ -600,5 +609,119 @@ describe("Transport CC workflow - Record button", () => {
       ["led", 86, 5],
       ["setParam", "t0_recording", "1"],
     ]);
+  });
+});
+
+describe("Transport CC workflow - Mute button", () => {
+  test("ignores non-Mute CCs", () => {
+    const c = calls();
+    const S = state();
+    const d = deps(c);
+
+    expect(handleUiMuteButton(S, d, 87, 127)).toBeUndefined();
+    expect(handleUiMuteButton(S, d, 87, 0)).toBeUndefined();
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Delete+Mute press in Track View drum clears the drum lane mute/solo", () => {
+    const c = calls();
+    const S = state({ deleteHeld: true, sessionView: false, activeTrack: 0 });
+
+    handleUiMuteButton(S, deps(c), 88, 127);
+
+    expect(S.drumLaneMute[0]).toBe(0);
+    expect(S.drumLaneSolo[0]).toBe(0);
+    expect(S.muteUsedAsModifier).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "t0_drum_mute_all_clear", "1"],
+      ["redraw"],
+    ]);
+  });
+
+  test("Delete+Mute press outside a Track View drum clip clears all mute/solo", () => {
+    const c = calls();
+    // activeTrack 1 is melodic (trackPadMode[1] === 0).
+    const S = state({ deleteHeld: true, sessionView: false, activeTrack: 1 });
+
+    handleUiMuteButton(S, deps(c), 88, 127);
+
+    expect(S.muteUsedAsModifier).toBe(false);
+    expect(c.log).toEqual([["clearAllMuteSolo"]]);
+  });
+
+  test("Delete+Mute press in Session View drum track still clears all mute/solo", () => {
+    const c = calls();
+    const S = state({ deleteHeld: true, sessionView: true, activeTrack: 0 });
+
+    handleUiMuteButton(S, deps(c), 88, 127);
+
+    expect(c.log).toEqual([["clearAllMuteSolo"]]);
+  });
+
+  test("plain Mute press is a no-op without Delete", () => {
+    const c = calls();
+    const S = state({ deleteHeld: false });
+
+    handleUiMuteButton(S, deps(c), 88, 127);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Mute release toggles the active track mute in Track View", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, sessionView: false });
+    S.trackMuted[1] = false;
+
+    handleUiMuteButton(S, deps(c), 88, 0);
+
+    expect(c.log).toEqual([["setTrackMute", 1, true]]);
+  });
+
+  test("Mute release toggles the active track mute off when already muted", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, sessionView: false });
+    S.trackMuted[1] = true;
+
+    handleUiMuteButton(S, deps(c), 88, 0);
+
+    expect(c.log).toEqual([["setTrackMute", 1, false]]);
+  });
+
+  test("Shift+Mute release toggles the active track solo", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, sessionView: false, shiftHeld: true });
+    S.trackSoloed[1] = false;
+
+    handleUiMuteButton(S, deps(c), 88, 0);
+
+    expect(c.log).toEqual([["setTrackSolo", 1, true]]);
+  });
+
+  test("Mute release is ignored when Mute was used as a modifier", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, sessionView: false, muteUsedAsModifier: true });
+
+    handleUiMuteButton(S, deps(c), 88, 0);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Mute release is ignored while Delete is held", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, sessionView: false, deleteHeld: true });
+
+    handleUiMuteButton(S, deps(c), 88, 0);
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Mute release is ignored in Session View", () => {
+    const c = calls();
+    const S = state({ activeTrack: 1, sessionView: true });
+
+    handleUiMuteButton(S, deps(c), 88, 0);
+
+    expect(c.log).toEqual([]);
   });
 });
