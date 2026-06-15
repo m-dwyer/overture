@@ -55,14 +55,17 @@ next-slice sections over appending contradictory plans.
 - Session View Workflow extraction for step buttons, clip pads, and side rows.
 - Track View side-button adapter cleanup for track selection and hold-reveal
   state.
-- Loop Step Gesture Workflow extraction for Loop+step A/B window gestures and
-  single-step fallback resolution.
+- Loop Step Gesture Workflow extraction for Loop+step A/B window gestures,
+  single-step fallback resolution, loop-window writes, and Track View Loop+jog
+  length edits.
+- Track View Step Workflow extraction started with Copy+step source capture and
+  same-clip paste behavior.
 
 ## Current Focus
 
 `tool/ui/ui.js` is still large, but several runtime concepts now have earned
-module seams. The current focus is deepening `tool/ui/ui_loop_gesture_workflow.mjs`
-without broadening it into a generic input handler.
+module seams. The current focus has moved from Loop Gesture Workflow deepening
+to the first Track View Step Workflow slices.
 
 Current Loop Gesture Workflow ownership:
 
@@ -82,22 +85,21 @@ Current Loop Gesture Workflow ownership:
 - top-level MIDI/button handler priority;
 - host globals and `host_module_set_param`;
 - render invalidation and other legacy adapters.
+- shared legacy `S` and adapter calls such as `effectiveClip()`, `copyStep()`,
+  `invalidateLEDCache()`, and `forceRedraw()`.
 
 Tests currently covering this seam:
 
 - `web/tests/integration/behaviour.test.ts`
 - `web/tests/integration/loop-render.test.ts` for the separate render module
 
-## Next Slice: Track View Step Workflow
+Current Track View Step Workflow ownership:
 
-Extract one narrow Track View step-button branch from `_onStepButtons()` into a
-new workflow module only after adding characterization coverage.
-
-Candidate first slice:
-
-- Copy + step button within the active clip, because it has a small state
-  surface (`copyHeld`, `copySrc`, active clip, current page) and should preserve
-  existing Session View, hold-reveal, Loop gesture, Delete, and Mute priorities.
+- Copy + first step captures `{ kind: "step", absStep }` and invalidates LEDs.
+- Copy + second step copies source step to target step in the active clip when
+  source and target differ.
+- Copy + same step preserves existing no-copy refresh behavior.
+- Existing non-step `copySrc` is swallowed and does not mix copy kinds.
 
 Behavior to preserve:
 
@@ -112,23 +114,30 @@ Behavior to preserve:
   behavior, Session View Performance Mode, modal workflows, and unrelated DSP
   reads/writes remain in `ui.js` for now.
 
+Tests currently covering this seam:
+
+- `web/tests/integration/track-view-step-workflow.test.ts`
+- `web/tests/integration/behaviour.test.ts`
+
+## Next Slice: Track View Step Workflow
+
+Continue extracting one narrow Track View step-button branch at a time from
+`_onStepButtons()`, after characterization coverage and without changing handler
+priority. Good next candidates are Delete+step or Mute+step; avoid held-step
+edit and Parameter Bank behavior until the simpler modifier branches are out.
+
 ## Candidate Later Slices
 
-1. Continue Loop Gesture Workflow.
-   - Reassess whether `_fireLoopWindowSet()` and `_fireLoopWindowSetCC()` should
-     remain `ui.js` host adapters or move behind the workflow interface.
-   - Only move them if the caller interface gets smaller and tests still cover
-     all contexts: melodic, drum lane, ALL LANES, and CC lane.
-2. Track View Step Workflow.
+1. Track View Step Workflow.
    - Extract copy/delete/shift/drum/melodic step-button behavior from
      `_onStepButtons()` in small slices.
    - Preserve Session View priority, hold-reveal priority, Loop gesture
      priority, and existing step-edit release behavior.
-3. Parameter Bank CC Automation Slice.
+2. Parameter Bank CC Automation Slice.
    - Start with `activeBank === 6` behavior in `_onCC_knobs()`.
    - Cover alt turn, delete clear, armed recording, stopped resting value, and
      playing audition behavior before moving code.
-4. Recording Workflow.
+3. Recording Workflow.
    - Extract arm/disarm/handoff, melodic note queues, drum note queues, and the
      Tick Pipeline drain as a deeper workflow module.
    - Do this after smaller input-workflow seams have reduced `ui.js` enough to

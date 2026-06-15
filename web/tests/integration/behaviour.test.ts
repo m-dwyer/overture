@@ -381,6 +381,37 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
+  test("Loop + step keeps priority over Copy + step in Track View", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().clipLoopStart[1][ac] = 0;
+    h.ui().clipLength[1][ac] = 64;
+    h.ui().clipLengthManuallySet[1][ac] = false;
+    h.ui().copySrc = null;
+
+    h.hold(60); // Copy
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 17, 127); // step 2: Loop arm, not Copy source
+    h.step(2);
+    h.emu.sendInternal(0x90, 20, 127); // step 5: Loop B
+
+    expect(h.ui().loopGestureFired).toBe(true);
+    expect(h.ui().copySrc).toBe(null);
+    expect(h.ui().clipLoopStart[1][ac]).toBe(16);
+    expect(h.ui().clipLength[1][ac]).toBe(64);
+
+    h.emu.sendInternal(0x80, 17, 0);
+    h.emu.sendInternal(0x80, 20, 0);
+    h.step(2);
+    h.release(58);
+    h.release(60);
+    h.step(2);
+  });
+
   test("Loop + two steps in ALL LANES writes every drum lane range", () => {
     noteView();
     h.ui().activeTrack = 0;
