@@ -38,7 +38,8 @@ declare module "@tool-ui/ui_bank_render.mjs" {
   export function renderMotionBankOverview(deps: any): void;
 }
 
-declare module "@tool-ui/ui_track_idle_render.mjs" {
+declare module "@tool-ui/ui_idle_render.mjs" {
+  export function renderSessionIdleView(deps: any): void;
   export function renderDrumTrackIdleView(deps: any): void;
   export function renderMelodicTrackIdleView(deps: any): void;
 }

@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { S } from "@tool-ui/ui_state.mjs";
 import {
+  renderSessionIdleView,
   renderDrumTrackIdleView,
   renderMelodicTrackIdleView,
-} from "@tool-ui/ui_track_idle_render.mjs";
+} from "@tool-ui/ui_idle_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 
 function createDeps(calls: DrawCall[]) {
   return {
     pixelPrint: (x: number, y: number, text: string, color: number) => calls.push(["pixel", x, y, text, color]),
+    print: (x: number, y: number, text: string, color: number) => calls.push(["print", x, y, text, color]),
     fill_rect: (x: number, y: number, w: number, h: number, color: number) => calls.push(["fill", x, y, w, h, color]),
     drawBankHeading: (name: string, showTrack?: boolean) => calls.push(["heading", name, showTrack]),
     drawBankHeadingInverted: (name: string, showTrack?: boolean) => calls.push(["headingInv", name, showTrack]),
@@ -26,7 +28,7 @@ function pixelTexts(calls: DrawCall[]) {
     .map((call) => String(call[3]));
 }
 
-describe("Track idle presentation", () => {
+describe("Idle presentation", () => {
   beforeEach(() => {
     S.activeTrack = 0;
     S.activeBank = 0;
@@ -56,6 +58,21 @@ describe("Track idle presentation", () => {
     S.drumLaneNote[0][2] = 48;
     S.drumLaneSolo = [0, 0, 0, 0, 0, 0, 0, 0];
     S.drumLaneMute = [0, 0, 0, 0, 0, 0, 0, 0];
+  });
+
+  test("renders Session View idle banner, active clips, and track row", () => {
+    S.playing = true;
+    S.masterPos = 192;
+    const calls: DrawCall[] = [];
+    renderSessionIdleView(createDeps(calls));
+
+    expect(calls[0]).toEqual(["fill", 0, 0, 128, 12, 1]);
+    expect(calls).toContainEqual(["print", 40, 2, "overture", 0]);
+    expect(calls).toContainEqual(["metro"]);
+    expect(calls).toContainEqual(["trackRow", 34]);
+    expect(pixelTexts(calls)).toEqual(expect.arrayContaining(["B", "C"]));
+    expect(calls).toContainEqual(["fill", 4, 45, 9, 7, 1]);
+    expect(calls).toContainEqual(["fill", 20, 45, 9, 7, 1]);
   });
 
   test("renders melodic idle heading, arp/scale status, active clips, and position bar", () => {
