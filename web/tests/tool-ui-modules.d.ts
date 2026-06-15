@@ -54,6 +54,7 @@ declare module "@tool-ui/ui_prompt_render.mjs" {
   export function renderMergePlacementPrompt(deps: any): void;
   export function renderNoNoteFlashNotice(deps: any): void;
   export function renderSceneBakePickerPrompt(deps: any): void;
+  export function renderShiftStepHelp(deps: any): void;
 }
 
 declare module "@tool-ui/ui_tick_tasks.mjs" {
