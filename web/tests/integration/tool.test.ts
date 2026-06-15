@@ -593,4 +593,34 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect((ui.clipSteps as number[][][])[1][0][3]).toBe(1);
     expect((ui.clipNonEmpty as boolean[][])[1][0]).toBe(true);
   });
+
+  test("targeted DR row sync keeps active-row lane readback selection in UI caller", () => {
+    const ui = h.ui();
+    ui.trackActiveClip = [2, 1, 2, 3, 2, 5, 6, 7];
+    ui.activeDrumLane = [1, 2, 3, 4, 5, 6, 7, 8];
+    ui.pendingUndoSync = 1;
+    ui.recordArmed = false;
+    ui.recordCountingIn = false;
+    ui.recordArmedTrack = -1;
+
+    const reads: string[] = [];
+    const originalGet = globalThis.host_module_get_param;
+    globalThis.host_module_get_param = (key: string): string | null => {
+      reads.push(key);
+      return key === "last_restore" ? "d 99 99 DR 2" : originalGet(key);
+    };
+    try {
+      h.step(1);
+    } finally {
+      globalThis.host_module_get_param = originalGet;
+    }
+
+    expect(ui.pendingUndoSync).toBe(0);
+    expect(reads).toContain("t0_l1_pfx_snapshot");
+    expect(reads).toContain("t2_l3_pfx_snapshot");
+    expect(reads).toContain("t4_l5_pfx_snapshot");
+    expect(reads).not.toContain("t1_l2_pfx_snapshot");
+    expect(reads).not.toContain("t3_l4_pfx_snapshot");
+    expect(reads).not.toContain("t5_l6_pfx_snapshot");
+  });
 });

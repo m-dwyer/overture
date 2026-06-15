@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  readDrumActiveLaneFromDsp,
   readMelodicClipFromDsp,
   readTargetedClipAutomationFromDsp,
   readTargetedClipRestorePairFromDsp,
@@ -126,6 +127,25 @@ describe("Track / Clip Sync melodic readback", () => {
     expect(S.trackCCAutoBits[0][1]).toBe(0);
     expect(S.clipCCVal[0][1]).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(S.clipAtHas[0][1]).toBe(false);
+  });
+
+  test("drum active-lane readback preserves content, lane meta, steps, then bank ordering", () => {
+    const S = createState();
+    const calls: Array<[string, ...unknown[]]> = [];
+
+    readDrumActiveLaneFromDsp(S, {
+      syncDrumClipContent: (track: number) => calls.push(["syncDrumClipContent", track]),
+      syncDrumLanesMeta: (track: number) => calls.push(["syncDrumLanesMeta", track]),
+      syncDrumLaneSteps: (track: number, lane: number) => calls.push(["syncDrumLaneSteps", track, lane]),
+      refreshDrumLaneBankParams: (track: number, lane: number) => calls.push(["refreshDrumLaneBankParams", track, lane]),
+    }, 1);
+
+    expect(calls).toEqual([
+      ["syncDrumClipContent", 1],
+      ["syncDrumLanesMeta", 1],
+      ["syncDrumLaneSteps", 1, 6],
+      ["refreshDrumLaneBankParams", 1, 6],
+    ]);
   });
 
   test("targeted restore pair preserves melodic clip then automation ordering", () => {
