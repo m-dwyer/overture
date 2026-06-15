@@ -2,7 +2,10 @@ import { describe, expect, test } from "vitest";
 import {
   renderClearAutomationMenu,
   renderInheritPicker,
+  renderLgtoConfirm,
+  renderRecordBlockedDialog,
   renderSnapshotPicker,
+  renderStateWipeConfirm,
 } from "@tool-ui/ui_modal_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
@@ -17,6 +20,32 @@ function createDeps(calls: DrawCall[]) {
 }
 
 describe("Modal presentation", () => {
+  test("renders simple confirm dialogs with selected button inversion", () => {
+    const stateCalls: DrawCall[] = [];
+    renderStateWipeConfirm(createDeps(stateCalls), 0);
+    expect(stateCalls).toContainEqual(["header", "Incompatible State"]);
+    expect(stateCalls).toContainEqual(["print", 4, 16, "Session incompatible", 1]);
+    expect(stateCalls).toContainEqual(["fill", 6, 46, 46, 13, 1]);
+    expect(stateCalls).toContainEqual(["print", 20, 49, "Yes", 0]);
+    expect(stateCalls).toContainEqual(["print", 91, 49, "No", 1]);
+
+    const recordCalls: DrawCall[] = [];
+    renderRecordBlockedDialog(createDeps(recordCalls), 1);
+    expect(recordCalls).toContainEqual(["header", "REC Unavailable"]);
+    expect(recordCalls).toContainEqual(["print", 4, 16, "Set Dir to Fwd", 1]);
+    expect(recordCalls).toContainEqual(["print", 25, 49, "OK", 1]);
+    expect(recordCalls).toContainEqual(["fill", 58, 46, 64, 13, 1]);
+    expect(recordCalls).toContainEqual(["print", 64, 49, "BAKE NOW", 0]);
+
+    const lgtoCalls: DrawCall[] = [];
+    renderLgtoConfirm(createDeps(lgtoCalls), { isDrum: true, selected: 1 });
+    expect(lgtoCalls).toContainEqual(["header", "Lgto (lane)"]);
+    expect(lgtoCalls).toContainEqual(["print", 4, 16, "Destructive", 1]);
+    expect(lgtoCalls).toContainEqual(["print", 25, 49, "OK", 1]);
+    expect(lgtoCalls).toContainEqual(["fill", 58, 46, 64, 13, 1]);
+    expect(lgtoCalls).toContainEqual(["print", 72, 49, "CANCEL", 0]);
+  });
+
   test("renders inherit picker selected-row inversion and scroll indicators", () => {
     const calls: DrawCall[] = [];
     renderInheritPicker(createDeps(calls), {
