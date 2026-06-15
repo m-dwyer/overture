@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 import {
+  handleUiBackButton,
   handleUiMuteButton,
   handleUiPlayButton,
   handleUiRecordButton,
   handleUiSampleButton,
+  handleUiUndoButton,
 } from "@tool-ui/ui_transport_cc_workflow.mjs";
 
 function calls() {
@@ -105,6 +107,28 @@ function state(overrides = {}) {
     drumLaneSolo: [5, 0, 0, 0],
     trackMuted: [false, false, false, false],
     trackSoloed: [false, false, false, false],
+    // Back button
+    tapTempoOpen: false,
+    globalMenuOpen: false,
+    confirmClearSession: false,
+    confirmSaveState: false,
+    confirmConvertToDrum: false,
+    exportDoneDialog: false,
+    confirmExport: false,
+    routeCheckOpen: false,
+    lastSentMenuEditValue: 42,
+    schwungCoRunSlot: -1,
+    pendingHideAfterSave: false,
+    // Undo button
+    redoSeqArpSnapshot: null,
+    pendingUndoSync: 0,
+    screenDirty: false,
+    bankParams: [
+      [[], [], [], [], [10, 11, 12, 13, 14, 15, 16, 17], [], []],
+      [[], [], [], [], [20, 21, 22, 23, 24, 25, 26, 27], [], []],
+      [[], [], [], [], [30, 31, 32, 33, 34, 35, 36, 37], [], []],
+      [[], [], [], [], [40, 41, 42, 43, 44, 45, 46, 47], [], []],
+    ],
     ...overrides,
   };
 }
@@ -125,6 +149,8 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     moveRec: 86,
     moveSample: 118,
     moveMute: 88,
+    moveBack: 51,
+    moveUndo: 56,
     numTracks: 4,
     padModeDrum: 1,
     red: 5,
@@ -136,6 +162,15 @@ function deps(c: ReturnType<typeof calls>, overrides = {}) {
     clearAllMuteSolo: c.fn("clearAllMuteSolo"),
     setTrackMute: (...args: unknown[]) => c.log.push(["setTrackMute", ...args]),
     setTrackSolo: (...args: unknown[]) => c.log.push(["setTrackSolo", ...args]),
+    closeTapTempo: c.fn("closeTapTempo"),
+    closeConvertConfirm: c.fn("closeConvertConfirm"),
+    exitSchwungCoRun: c.fn("exitCoRun"),
+    saveState: c.fn("saveState"),
+    banks: [
+      {}, {}, {}, {},
+      { knobs: [1, 1, 1, 1, 1, 1, 1, 1] }, // bank 4: all knobs present
+      {}, {},
+    ],
     ...overrides,
   };
 }
@@ -609,6 +644,183 @@ describe("Transport CC workflow - Record button", () => {
       ["led", 86, 5],
       ["setParam", "t0_recording", "1"],
     ]);
+  });
+});
+
+describe("Transport CC workflow - Back button", () => {
+  test("ignores non-Back CCs and non-press Back values", () => {
+    const c = calls();
+    const d = deps(c);
+
+    expect(handleUiBackButton(state(), d, 50, 127)).toBeUndefined();
+    expect(handleUiBackButton(state(), d, 51, 0)).toBeUndefined();
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Back closes the tap-tempo overlay first", () => {
+    const c = calls();
+    const S = state({ tapTempoOpen: true, globalMenuOpen: true });
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.globalMenuOpen).toBe(true); // not touched — tap tempo took priority
+    expect(c.log).toEqual([["closeTapTempo"], ["redraw"]]);
+  });
+
+  test("Back cancels the bake confirm", () => {
+    const c = calls();
+    const S = state({ confirmBake: true, confirmBakeWrapPhase: true });
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.confirmBake).toBe(false);
+    expect(S.confirmBakeWrapPhase).toBe(false);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("Back steps back through menu sub-dialogs before closing the menu", () => {
+    const c = calls();
+    const S = state({ globalMenuOpen: true, confirmConvertToDrum: true });
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.globalMenuOpen).toBe(true); // dialog dismissed, menu still open
+    expect(c.log).toEqual([["closeConvertConfirm"], ["redraw"]]);
+  });
+
+  test("Back from the export-done dialog closes both dialog and menu", () => {
+    const c = calls();
+    const S = state({ globalMenuOpen: true, exportDoneDialog: true });
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.exportDoneDialog).toBe(false);
+    expect(S.globalMenuOpen).toBe(false);
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("Back closes a plain open menu and clears the cached menu edit value", () => {
+    const c = calls();
+    const S = state({ globalMenuOpen: true, lastSentMenuEditValue: 99 });
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.globalMenuOpen).toBe(false);
+    expect(S.lastSentMenuEditValue).toBeNull();
+    expect(c.log).toEqual([["redraw"]]);
+  });
+
+  test("Shift+Back with no open layer suspends and hides the module", () => {
+    const c = calls();
+    const S = state({ shiftHeld: true, schwungCoRunSlot: -1 });
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.pendingHideAfterSave).toBe(true);
+    expect(c.log).toEqual([["saveState"]]);
+  });
+
+  test("Shift+Back exits co-run before saving when a slot is active", () => {
+    const c = calls();
+    const S = state({ shiftHeld: true, schwungCoRunSlot: 2 });
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.pendingHideAfterSave).toBe(true);
+    expect(c.log).toEqual([["exitCoRun"], ["saveState"]]);
+  });
+
+  test("plain Back with nothing open is a no-op", () => {
+    const c = calls();
+    const S = state();
+
+    handleUiBackButton(S, deps(c), 51, 127);
+
+    expect(S.pendingHideAfterSave).toBe(false);
+    expect(c.log).toEqual([]);
+  });
+});
+
+describe("Transport CC workflow - Undo button", () => {
+  test("ignores non-Undo CCs and non-press Undo values", () => {
+    const c = calls();
+    const d = deps(c);
+
+    expect(handleUiUndoButton(state(), d, 55, 127)).toBeUndefined();
+    expect(handleUiUndoButton(state(), d, 56, 0)).toBeUndefined();
+
+    expect(c.log).toEqual([]);
+  });
+
+  test("Undo restores DSP, flips availability, and arms the undo sync", () => {
+    const c = calls();
+    const S = state({ undoAvailable: true, undoSeqArpSnapshot: null });
+
+    handleUiUndoButton(S, deps(c), 56, 127);
+
+    expect(S.redoAvailable).toBe(true);
+    expect(S.undoAvailable).toBe(false);
+    expect(S.pendingUndoSync).toBe(5);
+    expect(S.redoSeqArpSnapshot).toBeNull();
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([
+      ["setParam", "undo_restore", "1"],
+      ["popup", "UNDO"],
+    ]);
+  });
+
+  test("Undo snapshots the SEQ ARP bank for redo and re-bakes the saved params", () => {
+    const c = calls();
+    const S = state({
+      undoAvailable: true,
+      undoSeqArpSnapshot: { track: 2, params: [90, 91, 92, 93, 94, 95, 96, 97] },
+    });
+
+    handleUiUndoButton(S, deps(c), 56, 127);
+
+    // redo snapshot captures the pre-restore bank-4 params for track 2
+    expect(S.redoSeqArpSnapshot).toEqual({ track: 2, params: [30, 31, 32, 33, 34, 35, 36, 37] });
+    // and the undo snapshot params are baked back into bank 4 for track 2
+    expect(S.bankParams[2][4]).toEqual([90, 91, 92, 93, 94, 95, 96, 97]);
+    expect(c.log).toEqual([
+      ["setParam", "undo_restore", "1"],
+      ["popup", "UNDO"],
+    ]);
+  });
+
+  test("Undo with nothing to undo reports it without touching DSP", () => {
+    const c = calls();
+    const S = state({ undoAvailable: false });
+
+    handleUiUndoButton(S, deps(c), 56, 127);
+
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([["popup", "NOTHING TO", "UNDO"]]);
+  });
+
+  test("Shift+Undo redoes, flips availability, and arms the undo sync", () => {
+    const c = calls();
+    const S = state({ shiftHeld: true, redoAvailable: true, redoSeqArpSnapshot: null });
+
+    handleUiUndoButton(S, deps(c), 56, 127);
+
+    expect(S.undoAvailable).toBe(true);
+    expect(S.redoAvailable).toBe(false);
+    expect(S.pendingUndoSync).toBe(5);
+    expect(c.log).toEqual([
+      ["setParam", "redo_restore", "1"],
+      ["popup", "REDO"],
+    ]);
+  });
+
+  test("Shift+Undo with nothing to redo reports it", () => {
+    const c = calls();
+    const S = state({ shiftHeld: true, redoAvailable: false });
+
+    handleUiUndoButton(S, deps(c), 56, 127);
+
+    expect(c.log).toEqual([["popup", "NOTHING TO", "REDO"]]);
   });
 });
 
