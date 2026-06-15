@@ -69,15 +69,18 @@ Current Loop Gesture Workflow ownership:
 - Loop+step press-time context capture for melodic clip, drum lane, ALL LANES,
   and CC lane contexts.
 - Loop+step A/B window gesture calculation, including reversed endpoints.
+- Loop+step loop-window writes for melodic clip, drum lane, ALL LANES, and CC
+  lane contexts, including mirror updates, page clamping, manual-length flags,
+  and pending drum resync for ALL LANES.
 - Single-step fallback resolution on start-step release or Loop release.
 - Active-recording block for Loop+step edits.
+- Track View Loop-held jog length edits for melodic clip, drum lane, ALL LANES,
+  and CC lane contexts.
 
 `ui.js` should continue to own:
 
 - top-level MIDI/button handler priority;
 - host globals and `host_module_set_param`;
-- `_fireLoopWindowSet()` / `_fireLoopWindowSetCC()` until moving them would
-  shrink the interface rather than widen it;
 - render invalidation and other legacy adapters.
 
 Tests currently covering this seam:
@@ -85,42 +88,29 @@ Tests currently covering this seam:
 - `web/tests/integration/behaviour.test.ts`
 - `web/tests/integration/loop-render.test.ts` for the separate render module
 
-## Next Slice: Loop + Jog Gesture Workflow
+## Next Slice: Track View Step Workflow
 
-Extract only the Track View Loop-held jog branch from `_onCC_jog()` into
-`tool/ui/ui_loop_gesture_workflow.mjs`.
+Extract one narrow Track View step-button branch from `_onStepButtons()` into a
+new workflow module only after adding characterization coverage.
+
+Candidate first slice:
+
+- Copy + step button within the active clip, because it has a small state
+  surface (`copyHeld`, `copySrc`, active clip, current page) and should preserve
+  existing Session View, hold-reveal, Loop gesture, Delete, and Mute priorities.
 
 Behavior to preserve:
 
-- Session View Loop behavior keeps priority before Track View Loop+jog edits.
-- Melodic Loop+jog changes active clip length, clamps to the current loop start,
-  updates `clipLengthManuallySet`, and writes the same DSP key as today.
-- Drum Loop+jog changes active drum lane length, clamps to the current loop
-  start, updates `drumLaneLengthManuallySet`, and writes the same DSP key as
-  today.
-- CC automation bank Loop+jog changes the active CC lane loop length, not the
-  clip length.
-- Active recording blocks length edits.
-- Track View page clamping and redraw behavior stay unchanged.
-
-Tests first:
-
-- Add characterization tests in `web/tests/integration/behaviour.test.ts` for
-  melodic Loop+jog, drum Loop+jog, active-recording block, and CC automation
-  Loop+jog.
-- Prefer engine truth (`get_param`) where the DSP key is readable; otherwise
-  assert UI mirror state immediately at the callback boundary and then tick to
-  confirm DSP readback where possible.
-
-Refactor:
-
-- Move the Loop-held jog decision and mirror updates behind a narrow workflow
-  function.
-- Keep `ui.js` as the adapter for host writes, popups, redraw, and handler
-  priority.
-- Do not move Track View step edit, Parameter Bank behavior, recording behavior,
-  Session View Performance Mode, or modal workflows into the Loop Gesture
-  Workflow.
+- Session View step behavior keeps priority before Track View step edits.
+- Hold-reveal clip selection keeps priority before Session View and Track View
+  step edits.
+- Loop gesture behavior keeps priority before Copy/Delete/Mute step edits.
+- Copy + first step captures a step source and invalidates LEDs.
+- Copy + second step copies only when source and target differ, redraws, and
+  never mixes step copy with other copy source kinds.
+- Delete, Mute, step-edit release behavior, Parameter Bank behavior, recording
+  behavior, Session View Performance Mode, modal workflows, and unrelated DSP
+  reads/writes remain in `ui.js` for now.
 
 ## Candidate Later Slices
 

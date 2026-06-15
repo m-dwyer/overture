@@ -350,6 +350,111 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 
+  test("Loop + two steps sets the active melodic clip range", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 0;
+    h.ui().trackCurrentPage[1] = 0;
+
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().clipLengthManuallySet[1][ac] = false;
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 17, 127); // step 2: arm
+    h.step(2);
+    h.emu.sendInternal(0x90, 20, 127); // step 5: B
+
+    expect(h.ui().loopGestureFired).toBe(true);
+    expect(h.ui().clipLoopStart[1][ac]).toBe(16);
+    expect(h.ui().clipLength[1][ac]).toBe(64);
+    expect(h.ui().clipLengthManuallySet[1][ac]).toBe(true);
+    expect(h.ui().trackCurrentPage[1]).toBe(1);
+
+    h.step(2);
+    expect(h.get("t1_c0_loop_start")).toBe("16");
+    expect(h.get("t1_c0_length")).toBe("64");
+
+    h.emu.sendInternal(0x80, 17, 0);
+    h.emu.sendInternal(0x80, 20, 0);
+    h.step(2);
+    h.release(58);
+    h.step(2);
+  });
+
+  test("Loop + two steps in ALL LANES writes every drum lane range", () => {
+    noteView();
+    h.ui().activeTrack = 0;
+    h.ui().activeBank = 7;
+    h.ui().activeDrumLane[0] = 5;
+    h.ui().drumStepPage[0] = 0;
+    h.ui().drumLaneLengthManuallySet[0] = false;
+    h.ui().pendingDrumResync = 0;
+    h.ui().pendingDrumResyncTrack = -1;
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 18, 127); // step 3: arm
+    h.step(2);
+    h.emu.sendInternal(0x90, 21, 127); // step 6: B
+
+    expect(h.ui().loopGestureFired).toBe(true);
+    expect(h.ui().drumLaneLoopStart[0]).toBe(32);
+    expect(h.ui().drumLaneLength[0]).toBe(64);
+    expect(h.ui().drumLaneLengthManuallySet[0]).toBe(true);
+    expect(h.ui().drumStepPage[0]).toBe(2);
+    expect(h.ui().pendingDrumResync).toBe(2);
+    expect(h.ui().pendingDrumResyncTrack).toBe(0);
+
+    h.step(2);
+    expect(h.get("t0_l0_loop_start")).toBe("32");
+    expect(h.get("t0_l0_length")).toBe("64");
+    expect(h.get("t0_l5_loop_start")).toBe("32");
+    expect(h.get("t0_l5_length")).toBe("64");
+
+    h.emu.sendInternal(0x80, 18, 0);
+    h.emu.sendInternal(0x80, 21, 0);
+    h.step(2);
+    h.release(58);
+    h.step(2);
+  });
+
+  test("Loop + two steps in CC automation bank sets active CC lane range", () => {
+    noteView();
+    h.ui().activeTrack = 1;
+    h.ui().activeBank = 6;
+    h.ui().trackCurrentPage[1] = 0;
+
+    const ac = h.ui().trackActiveClip[1] as number;
+    h.ui().ccActiveLane[1] = 0;
+    h.ui().clipLoopStart[1][ac] = 0;
+    h.ui().clipLength[1][ac] = 96;
+    h.ui().ccLaneLoopStart[1][ac][0] = 0;
+    h.ui().ccLaneLength[1][ac][0] = 96;
+    h.set("t1_c0_length", "96");
+    h.set("t1_c0_k0_cc_loop_set", 96);
+    h.step(3);
+
+    h.hold(58); // Loop
+    h.emu.sendInternal(0x90, 19, 127); // step 4: arm
+    h.step(2);
+    h.emu.sendInternal(0x90, 21, 127); // step 6: B
+
+    expect(h.ui().loopGestureFired).toBe(true);
+    expect(h.ui().ccLaneLoopStart[1][ac][0]).toBe(48);
+    expect(h.ui().ccLaneLength[1][ac][0]).toBe(48);
+    expect(h.ui().clipLength[1][ac]).toBe(96);
+    expect(h.ui().trackCurrentPage[1]).toBe(3);
+
+    h.step(2);
+    expect(h.get("t1_c0_length")).toBe("96");
+    expect(h.get("t1_c0_cc_lane_loops")?.split(" ").slice(0, 2)).toEqual(["48", "48"]);
+
+    h.emu.sendInternal(0x80, 19, 0);
+    h.emu.sendInternal(0x80, 21, 0);
+    h.step(2);
+    h.release(58);
+    h.step(2);
+  });
+
   test("Loop + step is blocked during active recording", () => {
     noteView();
     h.ui().activeTrack = 0;
