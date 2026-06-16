@@ -13,16 +13,22 @@ import {
   runExtMidiRemapReapply,
   runGlobalMenuParamPreview,
   runLiveNoteDrain,
+  runMetroBeatDetect,
   runMetroNoteOffTask,
   runMoveCoRunTickTasks,
+  runOverlayTimerExpiries,
   runPadMapSelfHealTask,
+  runPendingEditSoundAdvance,
   runPendingPadNoteMapRecompute,
   runPendingSetLoad,
   runPendingTrackConvert,
   runPendingUndoSyncTask,
   runRepeatRecordingLaneRefreshTask,
+  runSceneCacheRefresh,
   runSchLabelFetch,
+  runSessionStepHoldToSave,
   runSessionViewEdgeTasks,
+  runSideButtonHoldThreshold,
   runTransposePreviewSelfHeal,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
@@ -1189,5 +1195,220 @@ describe("pre-LED reconcile tick steps (batch A1-A12)", () => {
     };
     runTransposePreviewSelfHeal(onKey, deps);
     expect(c.log).toEqual([]);
+  });
+});
+
+describe("render-cadence tick steps (batch B1-B6)", () => {
+  const TIMER_DEPS = {
+    BANK_DISPLAY_TICKS: 94,
+    KNOB_TURN_HIGHLIGHT_TICKS: 47,
+    PARAM_PEEK_DETAIL_TICKS: 24,
+  };
+
+  test("runOverlayTimerExpiries clears each elapsed timer and marks the screen dirty", () => {
+    const S: any = {
+      tickCount: 200,
+      bankSelectTick: 100, // 100 elapsed >= 94 -> expire
+      stretchBlockedEndTick: 150, // <= 200 -> expire
+      actionPopupEndTick: 250, // > 200 -> keep
+      knobTouched: 2,
+      knobTurnedTick: [0, 0, 100], // 100 elapsed >= 47 -> expire (clears knobTouched)
+      knobTouchStartTick: 50,
+      noNoteFlashEndTick: -1,
+      stepSaveFlashEndTick: 199, // <= 200 -> clear flash pair
+      stepSaveFlashStartTick: 50,
+      screenDirty: false,
+    };
+    runOverlayTimerExpiries(S, TIMER_DEPS);
+    expect(S.bankSelectTick).toBe(-1);
+    expect(S.stretchBlockedEndTick).toBe(-1);
+    expect(S.actionPopupEndTick).toBe(250); // unchanged
+    expect(S.knobTouched).toBe(-1);
+    expect(S.knobTouchStartTick).toBe(-1);
+    expect(S.stepSaveFlashEndTick).toBe(-1);
+    expect(S.stepSaveFlashStartTick).toBe(-1);
+    expect(S.screenDirty).toBe(true);
+  });
+
+  test("runOverlayTimerExpiries marks dirty on the param-peek detail edge without clearing knobTouched", () => {
+    // knob still within highlight window, but exactly at the detail threshold
+    const S: any = {
+      tickCount: 124,
+      bankSelectTick: -1,
+      stretchBlockedEndTick: -1,
+      actionPopupEndTick: -1,
+      knobTouched: 0,
+      knobTurnedTick: [120], // 4 elapsed < 47 -> not expired
+      knobTouchStartTick: 100, // 24 elapsed === PARAM_PEEK_DETAIL_TICKS
+      noNoteFlashEndTick: -1,
+      stepSaveFlashEndTick: -1,
+      screenDirty: false,
+    };
+    runOverlayTimerExpiries(S, TIMER_DEPS);
+    expect(S.knobTouched).toBe(0); // still touched
+    expect(S.screenDirty).toBe(true);
+  });
+
+  function holdSaveDeps(c: ReturnType<typeof calls>) {
+    return {
+      STEP_SAVE_HOLD_TICKS: 47,
+      NUM_TRACKS: 2,
+      DRUM_LANES: 16,
+      STEP_SAVE_FLASH_TICKS: 24,
+      host_module_set_param: c.fn("set"),
+      showActionPopup: c.fn("popup"),
+      forceRedraw: c.fn("redraw"),
+    };
+  }
+
+  test("runSessionStepHoldToSave saves a perf preset on the perf-context threshold", () => {
+    const c = calls();
+    const S: any = {
+      tickCount: 100,
+      sessionStepHeld: 3,
+      sessionStepHeldCtx: 1,
+      stepBtnPressedTick: [0, 0, 0, 50], // 50 elapsed >= 47
+      perfSnapshots: new Array(16).fill(0),
+      perfModsToggled: 0b0010,
+      perfModsHeld: 0b0100,
+    };
+    runSessionStepHoldToSave(S, holdSaveDeps(c));
+    expect(S.sessionStepHeld).toBe(-1);
+    expect(S.perfSnapshots[3]).toBe(0b0110);
+    expect(S.stepSaveFlashStartTick).toBe(100);
+    expect(S.stepSaveFlashEndTick).toBe(124);
+    expect(c.log).toContainEqual(["popup", "PERF PRESET", "SAVED"]);
+    expect(c.log.filter(([n]) => n === "set")).toHaveLength(0);
+  });
+
+  test("runSessionStepHoldToSave saves mute state with the effective drum-solo mask", () => {
+    const c = calls();
+    const S: any = {
+      tickCount: 100,
+      sessionStepHeld: 0,
+      sessionStepHeldCtx: 0,
+      stepBtnPressedTick: [50],
+      snapshots: new Array(16).fill(null),
+      trackMuted: [false, true],
+      trackSoloed: [false, false],
+      // track0: lane0 muted; lane1 soloed -> all-but-lane1 become effectively muted
+      drumLaneMute: [0b0001, 0],
+      drumLaneSolo: [0b0010, 0],
+    };
+    runSessionStepHoldToSave(S, holdSaveDeps(c));
+    expect(S.sessionStepHeld).toBe(-1);
+    // effMask track0 = mute(0b0001) | not-soloed(all bits except bit1) ; track1 = 0
+    const expectedEff0 = (0b0001 | (0xffff & ~0b0010)) >>> 0;
+    expect(S.snapshots[0]).toEqual({
+      mute: [false, true],
+      solo: [false, false],
+      drumEffMute: [expectedEff0, 0],
+    });
+    const setCall = c.log.find(([n]) => n === "set");
+    expect(setCall).toEqual(["set", "snap_save", `0 0 1 0 0 ${expectedEff0} 0`]);
+    expect(c.log).toContainEqual(["popup", "MUTE STATE", "SAVED"]);
+
+    // gated: threshold not yet reached
+    c.log.length = 0;
+    const early = { ...S, sessionStepHeld: 0, tickCount: 80, stepBtnPressedTick: [50] };
+    runSessionStepHoldToSave(early, holdSaveDeps(c));
+    expect(early.sessionStepHeld).toBe(0);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runPendingEditSoundAdvance dispatches move vs schwung co-run entries", () => {
+    const c = calls();
+    const actions = [
+      { kind: "move", track: 5 },
+      { kind: "schwung", track: 6, slot: 2 },
+      null,
+    ];
+    let i = 0;
+    const deps = {
+      advancePendingEditSoundEntry: (t: number) => {
+        c.log.push(["advance", t]);
+        return actions[i++];
+      },
+      enterMoveNativeCoRun: c.fn("move"),
+      enterSchwungCoRun: c.fn("schwung"),
+    };
+    runPendingEditSoundAdvance({ activeTrack: 5 }, deps);
+    expect(c.log).toContainEqual(["move", 5]);
+
+    runPendingEditSoundAdvance({ activeTrack: 6 }, deps);
+    expect(c.log).toContainEqual(["schwung", 6, 2]);
+
+    // null action -> no co-run entry
+    c.log.length = 0;
+    runPendingEditSoundAdvance({ activeTrack: 0 }, deps);
+    expect(c.log).toEqual([["advance", 0]]);
+  });
+
+  test("runMetroBeatDetect plays a click only on a beat-count change", () => {
+    const c = calls();
+    let beat = "4";
+    const deps = {
+      host_module_get_param: () => beat,
+      playMetronomeClick: c.fn("click"),
+    };
+    const S: any = { metronomeOn: 1, metroPrevBeat: 3, recordCountingIn: true, tickCount: 99 };
+    runMetroBeatDetect(S, deps);
+    expect(S.metroPrevBeat).toBe(4);
+    expect(S.countInBeatStartTick).toBe(99);
+    expect(c.log).toEqual([["click"]]);
+
+    // same beat -> no click
+    c.log.length = 0;
+    runMetroBeatDetect(S, deps);
+    expect(c.log).toEqual([]);
+
+    // metronome off -> no get_param/click
+    c.log.length = 0;
+    runMetroBeatDetect({ metronomeOn: 0 }, deps);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runSideButtonHoldThreshold promotes to clips-reveal past the hold window", () => {
+    const c = calls();
+    const deps = { STEP_HOLD_TICKS: 19, forceRedraw: c.fn("redraw") };
+    const S: any = {
+      sideHeldBtn: 2,
+      revealClipsTrack: -1,
+      sideBtnPressedTick: 50,
+      tickCount: 70, // 20 elapsed >= 19
+      activeTrack: 4,
+    };
+    runSideButtonHoldThreshold(S, deps);
+    expect(S.revealClipsTrack).toBe(4);
+    expect(c.log).toEqual([["redraw"]]);
+
+    // already revealed -> no-op; not yet elapsed -> no-op
+    c.log.length = 0;
+    runSideButtonHoldThreshold(S, deps);
+    runSideButtonHoldThreshold(
+      { sideHeldBtn: 2, revealClipsTrack: -1, sideBtnPressedTick: 60, tickCount: 70, activeTrack: 4 },
+      deps,
+    );
+    expect(c.log).toEqual([]);
+  });
+
+  test("runSceneCacheRefresh fills all 16 scene cache slots", () => {
+    const deps = {
+      sceneAllPlaying: (i: number) => i % 2 === 0,
+      sceneAllQueued: (i: number) => i === 3,
+      sceneAnyPlaying: (i: number) => i < 4,
+    };
+    const S: any = {
+      cachedSceneAllPlaying: new Array(16).fill(null),
+      cachedSceneAllQueued: new Array(16).fill(null),
+      cachedSceneAnyPlaying: new Array(16).fill(null),
+    };
+    runSceneCacheRefresh(S, deps);
+    expect(S.cachedSceneAllPlaying[0]).toBe(true);
+    expect(S.cachedSceneAllPlaying[1]).toBe(false);
+    expect(S.cachedSceneAllQueued[3]).toBe(true);
+    expect(S.cachedSceneAnyPlaying[3]).toBe(true);
+    expect(S.cachedSceneAnyPlaying[4]).toBe(false);
+    expect(S.cachedSceneAllPlaying).toHaveLength(16);
   });
 });
