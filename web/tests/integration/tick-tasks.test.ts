@@ -25,6 +25,7 @@ import {
   runPendingSetLoad,
   runPendingTrackConvert,
   runPendingUndoSyncTask,
+  runRecordingEventFlush,
   runRepeatRecordingLaneRefreshTask,
   runSceneCacheRefresh,
   runSchLabelFetch,
@@ -1822,5 +1823,302 @@ describe("LED-paint tick steps (batch B7-B8)", () => {
     const S2 = b8State({ sessionView: false, activeBank: 6, lastAllLanesBlink: 1 });
     runViewLEDsAndBlinks(S2, viewDeps(calls()));
     expect(S2.lastAllLanesBlink).toBeNull();
+  });
+});
+
+describe("recording-event flush tick step (batch C1)", () => {
+  // The flush is a mutually-exclusive priority ladder that emits AT MOST ONE
+  // set_param family per tick (coalescing survival). set_param recorded as
+  // ["set", key, val]; the drum-rec arrays are passed by reference via deps.
+  function flushDeps(c: ReturnType<typeof calls>, over: any = {}): any {
+    return {
+      host_module_set_param: c.fn("set"),
+      host_module_get_param: () => "0", // tarp off by default
+      drumRecNoteOns: [],
+      drumRecNoteOffs: [],
+      PAD_MODE_DRUM: "DRUM",
+      disarmRecord: c.fn("disarm"),
+      invalidateLEDCache: c.fn("inval"),
+      forceRedraw: c.fn("redraw"),
+      ...over,
+    };
+  }
+
+  function steps(val: string | number, n = 16): any[] {
+    return Array.from({ length: n }, () => val);
+  }
+
+  function flushState(over: any = {}): any {
+    return {
+      recordArmed: true,
+      recordCountingIn: false,
+      _recNoteOns: [],
+      _recNoteOffs: [],
+      pendingPrerollGate: null,
+      pendingPrerollToggleQueue: [],
+      pendingPrerollNote: null,
+      pendingPrerollNotes: [],
+      playing: true,
+      liveActiveNotes: new Set(),
+      tickCount: 100,
+      transportStartTick: 0,
+      recordArmedTrack: 0,
+      activeTrack: 0,
+      trackActiveClip: [0],
+      trackPadMode: ["MEL"],
+      pendingScheduledDisarm: false,
+      recordScheduledStop: false,
+      recordScheduledStopTarget: -1,
+      clipAdaptiveMode: [[false]],
+      drumLaneLoopStart: [0],
+      clipLoopStart: [[0]],
+      drumLaneTPS: [24],
+      clipTPS: [[24]],
+      drumLaneSteps: [[steps("0")]],
+      drumLaneHasNotes: [[false]],
+      drumLaneLength: [16],
+      clipSteps: [[steps(0)]],
+      clipNonEmpty: [[false]],
+      clipLength: [[16]],
+      drumCurrentStep: [0],
+      trackCurrentStep: [0],
+      ...over,
+    };
+  }
+
+  // --- guards ---
+  test("no-op when not record-armed", () => {
+    const c = calls();
+    runRecordingEventFlush(flushState({ recordArmed: false, _recNoteOns: [{ rt: 0, pitch: 60, vel: 100 }] }), flushDeps(c));
+    expect(c.log).toEqual([]);
+  });
+
+  test("no-op while counting in", () => {
+    const c = calls();
+    runRecordingEventFlush(flushState({ recordCountingIn: true, _recNoteOns: [{ rt: 0, pitch: 60, vel: 100 }] }), flushDeps(c));
+    expect(c.log).toEqual([]);
+  });
+
+  test("no-op when host_module_set_param is unavailable", () => {
+    const c = calls();
+    const S = flushState({ _recNoteOns: [{ rt: 0, pitch: 60, vel: 100 }] });
+    runRecordingEventFlush(S, flushDeps(c, { host_module_set_param: null }));
+    expect(c.log).toEqual([]);
+  });
+
+  // --- branch 1: note-on (highest priority) ---
+  test("note-on batches all queued pitches and wins over every lower branch", () => {
+    const c = calls();
+    const drumOns = [{ track: 1, laneNote: 36, vel: 90 }];
+    const S = flushState({
+      _recNoteOns: [{ rt: 2, pitch: 60, vel: 100 }, { rt: 2, pitch: 64, vel: 110 }],
+      _recNoteOffs: [{ rt: 2, pitch: 67 }],
+      pendingPrerollGate: { isDrum: false, track: 0, clip: 0, gate: 5 },
+    });
+    runRecordingEventFlush(S, flushDeps(c, { drumRecNoteOns: drumOns }));
+    expect(c.log).toEqual([["set", "t2_record_note_on", "60 100 64 110"]]);
+    expect(S._recNoteOns.length).toBe(0);
+    expect(drumOns.length).toBe(1); // lower branches untouched
+    expect(S._recNoteOffs.length).toBe(1);
+    expect(S.pendingPrerollGate).not.toBeNull();
+  });
+
+  // --- branch 2: drum-on ---
+  test("drum-on fires only after note-on queue drains, batched and cleared by reference", () => {
+    const c = calls();
+    const drumOns = [{ track: 3, laneNote: 36, vel: 90 }, { track: 3, laneNote: 38, vel: 95 }];
+    const S = flushState({ _recNoteOffs: [{ rt: 3, pitch: 40 }] });
+    runRecordingEventFlush(S, flushDeps(c, { drumRecNoteOns: drumOns }));
+    expect(c.log).toEqual([["set", "t3_drum_record_note_on", "36 90 38 95"]]);
+    expect(drumOns.length).toBe(0);
+    expect(S._recNoteOffs.length).toBe(1); // still untouched
+  });
+
+  // --- branch 3: note-off ---
+  test("note-off batches pitches and clears the queue", () => {
+    const c = calls();
+    const S = flushState({ _recNoteOffs: [{ rt: 1, pitch: 60 }, { rt: 1, pitch: 64 }] });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t1_record_note_off", "60 64"]]);
+    expect(S._recNoteOffs.length).toBe(0);
+  });
+
+  // --- branch 4: drum-off ---
+  test("drum-off batches lane notes and clears by reference", () => {
+    const c = calls();
+    const drumOffs = [{ track: 2, laneNote: 36 }, { track: 2, laneNote: 38 }];
+    runRecordingEventFlush(flushState(), flushDeps(c, { drumRecNoteOffs: drumOffs }));
+    expect(c.log).toEqual([["set", "t2_drum_record_note_off", "36 38"]]);
+    expect(drumOffs.length).toBe(0);
+  });
+
+  // --- branch 5: preroll-gate ---
+  test("preroll-gate writes the loop-start step gate (melodic) and clears the gate", () => {
+    const c = calls();
+    const S = flushState({ pendingPrerollGate: { isDrum: false, track: 0, clip: 0, gate: 7 }, clipLoopStart: [[3]] });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t0_c0_step_3_gate", "7"]]);
+    expect(S.pendingPrerollGate).toBeNull();
+  });
+
+  test("preroll-gate writes the drum lane step gate", () => {
+    const c = calls();
+    const S = flushState({ pendingPrerollGate: { isDrum: true, track: 0, lane: 2, gate: 4 }, drumLaneLoopStart: [1] });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t0_l2_step_1_gate", "4"]]);
+    expect(S.pendingPrerollGate).toBeNull();
+  });
+
+  // --- branch 6: preroll-toggle-queue ---
+  test("preroll-toggle-queue shifts one entry; the last entry hands off a gate", () => {
+    const c = calls();
+    const S = flushState({
+      pendingPrerollToggleQueue: [{ track: 0, clip: 0, pitch: 62, vel: 100, gate: 9, last: true }],
+      clipLoopStart: [[0]],
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t0_c0_step_0_toggle", "62 100"]]);
+    expect(S.pendingPrerollToggleQueue.length).toBe(0);
+    expect(S.pendingPrerollGate).toEqual({ isDrum: false, track: 0, clip: 0, gate: 9 });
+  });
+
+  // --- branch 7: preroll-note (drum) ---
+  test("preroll drum note captures step 0 once released and a step has elapsed", () => {
+    const c = calls();
+    const S = flushState({
+      pendingPrerollNote: { isDrum: true, track: 0, lane: 0, laneNote: 36, vel: 100, countInStart: -96, pressedAtTick: 0, releasedAtTick: 50 },
+      tickCount: 100, transportStartTick: 0,
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(S.pendingPrerollNote).toBeNull();
+    const sets = c.log.filter((e) => e[0] === "set");
+    expect(sets[0]).toEqual(["set", "t0_l0_step_0_toggle", "100"]);
+    expect(S.pendingPrerollGate?.isDrum).toBe(true);
+    expect(S.drumLaneSteps[0][0][0]).toBe("1");
+    expect(S.drumLaneHasNotes[0][0]).toBe(true);
+    expect(c.log).toContainEqual(["inval"]);
+    expect(c.log).toContainEqual(["redraw"]);
+  });
+
+  test("preroll drum note waits while the pad is still held", () => {
+    const c = calls();
+    const S = flushState({
+      pendingPrerollNote: { isDrum: true, track: 0, lane: 1, laneNote: 36, vel: 100, countInStart: -96, pressedAtTick: 0 },
+      liveActiveNotes: new Set([36]),
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(S.pendingPrerollNote).not.toBeNull();
+    expect(c.log).toEqual([]);
+  });
+
+  // --- branch 8: preroll-notes (TARP swallow + chord capture) ---
+  // Reaching this branch requires pendingPrerollGate === null and an empty
+  // toggle queue (both have higher priority); TARP then drops the chord queue.
+  test("preroll-notes with tarp_on clears the queues without capturing", () => {
+    const c = calls();
+    const S = flushState({
+      pendingPrerollNotes: [{ track: 0, clip: 0, pitch: 60, vel: 100, countInStart: -96, pressedAtTick: 0 }],
+    });
+    runRecordingEventFlush(S, flushDeps(c, { host_module_get_param: () => "1" }));
+    expect(S.pendingPrerollNotes).toEqual([]);
+    expect(S.pendingPrerollToggleQueue).toEqual([]);
+    expect(S.pendingPrerollGate).toBeNull();
+    expect(c.log.filter((e) => e[0] === "set")).toEqual([]);
+  });
+
+  test("preroll-notes single-note chord captures step 0 and hands off a gate", () => {
+    const c = calls();
+    const S = flushState({
+      pendingPrerollNotes: [{ track: 0, clip: 0, pitch: 60, vel: 100, countInStart: -96, pressedAtTick: 0, releasedAtTick: 50 }],
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log.filter((e) => e[0] === "set")).toEqual([["set", "t0_c0_step_0_toggle", "60 100"]]);
+    expect(S.pendingPrerollGate?.isDrum).toBe(false);
+    expect(S.clipSteps[0][0][0]).toBe(1);
+    expect(S.clipNonEmpty[0][0]).toBe(true);
+    expect(S.pendingPrerollNotes).toEqual([]);
+  });
+
+  test("preroll-notes multi-note chord queues the remaining notes for later toggles", () => {
+    const c = calls();
+    const S = flushState({
+      pendingPrerollNotes: [
+        { track: 0, clip: 0, pitch: 60, vel: 100, countInStart: -96, pressedAtTick: 0, releasedAtTick: 50 },
+        { track: 0, clip: 0, pitch: 64, vel: 100, releasedAtTick: 50 },
+        { track: 0, clip: 0, pitch: 67, vel: 100, releasedAtTick: 50 },
+      ],
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log.filter((e) => e[0] === "set")).toEqual([["set", "t0_c0_step_0_toggle", "60 100"]]);
+    expect(S.pendingPrerollGate).toBeNull(); // not set when chord > 1
+    expect(S.pendingPrerollToggleQueue.length).toBe(2);
+    expect(S.pendingPrerollToggleQueue[1].last).toBe(true);
+  });
+
+  // --- branch 9: else ladder (scheduled-stop two-tick + adaptive-extend) ---
+  test("scheduled-stop tick 1 locks clip length and arms the disarm for next tick", () => {
+    const c = calls();
+    const S = flushState({
+      recordScheduledStop: true,
+      recordScheduledStopTarget: 16,
+      trackCurrentStep: [15],
+      clipAdaptiveMode: [[true]],
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t0_c0_length", "16"]]);
+    expect(S.clipLength[0][0]).toBe(16);
+    expect(S.clipAdaptiveMode[0][0]).toBe(false);
+    expect(S.recordScheduledStop).toBe(false);
+    expect(S.recordScheduledStopTarget).toBe(-1);
+    expect(S.pendingScheduledDisarm).toBe(true);
+  });
+
+  test("scheduled-stop tick 1 locks drum lane length when the armed track is a drum track", () => {
+    const c = calls();
+    const S = flushState({
+      trackPadMode: ["DRUM"],
+      recordScheduledStop: true,
+      recordScheduledStopTarget: 32,
+      drumCurrentStep: [31],
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t0_all_lanes_length", "32"]]);
+    expect(S.drumLaneLength[0]).toBe(32);
+    expect(S.pendingScheduledDisarm).toBe(true);
+  });
+
+  test("scheduled-disarm tick 2 calls disarmRecord alone", () => {
+    const c = calls();
+    const S = flushState({ pendingScheduledDisarm: true });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(S.pendingScheduledDisarm).toBe(false);
+    expect(c.log).toEqual([["disarm"]]);
+  });
+
+  test("adaptive-extend grows the clip by one page near the boundary", () => {
+    const c = calls();
+    const S = flushState({ clipAdaptiveMode: [[true]], clipLength: [[16]], trackCurrentStep: [13] });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t0_c0_length", "32"]]);
+    expect(S.clipLength[0][0]).toBe(32);
+  });
+
+  test("adaptive-extend grows the drum lane by one page near the boundary", () => {
+    const c = calls();
+    const S = flushState({
+      trackPadMode: ["DRUM"],
+      clipAdaptiveMode: [[true]],
+      drumLaneLength: [16],
+      drumCurrentStep: [13],
+    });
+    runRecordingEventFlush(S, flushDeps(c));
+    expect(c.log).toEqual([["set", "t0_all_lanes_length", "32"]]);
+    expect(S.drumLaneLength[0]).toBe(32);
+  });
+
+  test("else ladder is a no-op when nothing is pending", () => {
+    const c = calls();
+    runRecordingEventFlush(flushState(), flushDeps(c));
+    expect(c.log).toEqual([]);
   });
 });
