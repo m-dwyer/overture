@@ -1,18 +1,29 @@
 import { describe, expect, test } from "vitest";
 import {
+  runCcGradientPalette,
+  runCcLiveValPoll,
   runDefaultSetParamDrain,
+  runDeferredCcBitsRefresh,
   runDeferredContentResyncTasks,
   runDeferredDrumNoteOffDrain,
   runDeferredLaneEditReadbackTasks,
   runDspMirrorResyncTasks,
   runEndOfTickPersistenceTasks,
   runExternalRouteQueueDrain,
+  runExtMidiRemapReapply,
+  runGlobalMenuParamPreview,
   runLiveNoteDrain,
   runMetroNoteOffTask,
   runMoveCoRunTickTasks,
   runPadMapSelfHealTask,
+  runPendingPadNoteMapRecompute,
+  runPendingSetLoad,
+  runPendingTrackConvert,
   runPendingUndoSyncTask,
   runRepeatRecordingLaneRefreshTask,
+  runSchLabelFetch,
+  runSessionViewEdgeTasks,
+  runTransposePreviewSelfHeal,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
 function calls() {
@@ -821,5 +832,362 @@ describe("tick task drains", () => {
     runEndOfTickPersistenceTasks(snapState, baseDeps);
     expect(snapState.pendingSnapshotCopy).toBeNull();
     expect(c.log).toEqual([["commitSnapshot", "uuid", 7, "B"]]);
+  });
+});
+
+describe("pre-LED reconcile tick steps (batch A1-A12)", () => {
+  test("runPendingTrackConvert fires conversion and clears the pending field", () => {
+    const c = calls();
+    const deps = { convertTrackType: c.fn("convert") };
+
+    const idle = { pendingTrackConvert: null };
+    runPendingTrackConvert(idle, deps);
+    expect(c.log).toEqual([]);
+
+    const S = { pendingTrackConvert: { t: 2, toDrum: true } };
+    runPendingTrackConvert(S, deps);
+    expect(S.pendingTrackConvert).toBeNull();
+    expect(c.log).toEqual([["convert", 2, true]]);
+  });
+
+  test("runPendingPadNoteMapRecompute only fires when the default-drain queue is empty", () => {
+    const c = calls();
+    const deps = { computePadNoteMap: c.fn("recompute") };
+
+    // gated: queue non-empty
+    runPendingPadNoteMapRecompute(
+      { pendingPadNoteMapRecompute: true, pendingDefaultSetParams: [1], clearDrainHold: 0 },
+      deps,
+    );
+    // gated: clearDrainHold active
+    runPendingPadNoteMapRecompute(
+      { pendingPadNoteMapRecompute: true, pendingDefaultSetParams: [], clearDrainHold: 1 },
+      deps,
+    );
+    // gated: flag not set
+    runPendingPadNoteMapRecompute(
+      { pendingPadNoteMapRecompute: false, pendingDefaultSetParams: [], clearDrainHold: 0 },
+      deps,
+    );
+    expect(c.log).toEqual([]);
+
+    const S = { pendingPadNoteMapRecompute: true, pendingDefaultSetParams: [], clearDrainHold: 0 };
+    runPendingPadNoteMapRecompute(S, deps);
+    expect(S.pendingPadNoteMapRecompute).toBe(false);
+    expect(c.log).toEqual([["recompute"]]);
+  });
+
+  test("runExtMidiRemapReapply re-applies only when the remap inputs change", () => {
+    const c = calls();
+    const deps = { applyExtMidiRemap: c.fn("remap") };
+    const S = {
+      activeTrack: 1,
+      trackRoute: [0, 5, 0],
+      trackChannel: [0, 3, 0],
+      midiInChannel: 9,
+      _lastRemapTrack: -1,
+      _lastRemapRoute: -1,
+      _lastRemapChannel: -1,
+      _lastRemapMidiIn: -2,
+    };
+    runExtMidiRemapReapply(S, deps);
+    expect(c.log).toEqual([["remap"]]);
+    expect(S._lastRemapTrack).toBe(1);
+    expect(S._lastRemapRoute).toBe(5);
+    expect(S._lastRemapChannel).toBe(3);
+    expect(S._lastRemapMidiIn).toBe(9);
+
+    // unchanged → no re-apply
+    c.log.length = 0;
+    runExtMidiRemapReapply(S, deps);
+    expect(c.log).toEqual([]);
+
+    // a single input change re-triggers
+    S.midiInChannel = 10;
+    runExtMidiRemapReapply(S, deps);
+    expect(c.log).toEqual([["remap"]]);
+    expect(S._lastRemapMidiIn).toBe(10);
+  });
+
+  test("runSessionViewEdgeTasks resets TARP latch on entry and repushes padmap on the edge", () => {
+    const c = calls();
+    const deps = {
+      host_module_set_param: c.fn("set"),
+      computePadNoteMap: c.fn("recompute"),
+    };
+    const bankParams = [[[], [], [], [], [], [0, 0, 0, 0, 0, 0, 0, 1]]];
+    const S = { sessionView: true, _lastSessionView: false, activeTrack: 0, bankParams };
+
+    runSessionViewEdgeTasks(S, deps);
+    expect(bankParams[0][5][7]).toBe(0);
+    expect(c.log).toEqual([
+      ["set", "t0_tarp_latch", "0"],
+      ["recompute"],
+    ]);
+    expect(S._lastSessionView).toBe(true);
+
+    // no edge → no recompute, no tarp reset
+    c.log.length = 0;
+    runSessionViewEdgeTasks(S, deps);
+    expect(c.log).toEqual([]);
+
+    // leaving session view is an edge → recompute (no tarp reset on exit)
+    S.sessionView = false;
+    runSessionViewEdgeTasks(S, deps);
+    expect(c.log).toEqual([["recompute"]]);
+    expect(S._lastSessionView).toBe(false);
+  });
+
+  test("runDeferredCcBitsRefresh clears step-edit flag and re-reads cc bits/rest", () => {
+    const c = calls();
+    const deps = {
+      host_module_get_param: (key: string) => {
+        c.log.push(["get", key]);
+        if (key.endsWith("_cc_auto_bits")) return "5";
+        if (key.endsWith("_cc_rest")) return "10 -1 200 64 0 0 0 0";
+        return null;
+      },
+      invalidateLEDCache: c.fn("invalidate"),
+    };
+    const S = {
+      ccStepEditActive: true,
+      heldStep: -1,
+      pendingCCBitsRefresh: 3,
+      activeTrack: 1,
+      trackCCAutoBits: [[], [0, 0, 0, 0]],
+      clipCCVal: [[], [[], [], [], new Array(8).fill(0)]],
+    };
+    runDeferredCcBitsRefresh(S, deps);
+    expect(S.ccStepEditActive).toBe(false);
+    expect(S.pendingCCBitsRefresh).toBe(-1);
+    expect(S.trackCCAutoBits[1][3]).toBe(5);
+    // out-of-range (-1, 200) clamp to -1; in-range preserved
+    expect(S.clipCCVal[1][3]).toEqual([10, -1, -1, 64, 0, 0, 0, 0]);
+    expect(c.log.at(-1)).toEqual(["invalidate"]);
+
+    // step-edit flag NOT cleared while a step is held; no refresh when idx < 0
+    c.log.length = 0;
+    const held = { ccStepEditActive: true, heldStep: 4, pendingCCBitsRefresh: -1 };
+    runDeferredCcBitsRefresh(held, deps);
+    expect(held.ccStepEditActive).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runCcLiveValPoll fills live CC values only on bank 6 while playing", () => {
+    const c = calls();
+    const deps = {
+      host_module_get_param: (key: string) => {
+        c.log.push(["get", key]);
+        return "0 64 200 -1 127 0 0 0";
+      },
+    };
+    const S = {
+      activeBank: 6,
+      playing: true,
+      sessionView: false,
+      ccStepEditActive: false,
+      activeTrack: 2,
+      trackCCLiveVal: [[], [], new Array(8).fill(99)],
+    };
+    runCcLiveValPoll(S, deps);
+    expect(S.trackCCLiveVal[2]).toEqual([0, 64, -1, -1, 127, 0, 0, 0]);
+
+    // gated off when not playing
+    c.log.length = 0;
+    runCcLiveValPoll({ ...S, playing: false }, deps);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runSchLabelFetch advances one lane per tick and fetches Sch labels", () => {
+    const c = calls();
+    const deps = {
+      shadow_get_param: (slot: number, key: string) => {
+        c.log.push(["shadow", slot, key]);
+        return "Cutoff";
+      },
+      schSlotForTrack: () => 1,
+    };
+    const S = {
+      schLabelFetchLane: 0,
+      activeTrack: 0,
+      trackCCType: [[2, 0, 0, 0, 0, 0, 0, 0]],
+      trackCCAssign: [[12, 0, 0, 0, 0, 0, 0, 0]],
+      schLabel: [new Array(8).fill(null)],
+      screenDirty: false,
+    };
+    runSchLabelFetch(S, deps);
+    expect(S.schLabelFetchLane).toBe(1);
+    expect(S.schLabel[0][0]).toBe("Cutoff");
+    expect(S.screenDirty).toBe(true);
+    expect(c.log).toEqual([["shadow", 1, "knob_12_param"]]);
+
+    // lane 7 → resets sentinel to -1
+    S.schLabelFetchLane = 7;
+    S.trackCCType[0][7] = 0;
+    runSchLabelFetch(S, deps);
+    expect(S.schLabelFetchLane).toBe(-1);
+
+    // sentinel -1 → no-op
+    c.log.length = 0;
+    runSchLabelFetch(S, deps);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runCcGradientPalette writes palette + transport LEDs once per track on bank 6", () => {
+    const c = calls();
+    const deps = {
+      PAD_MODE_DRUM: 1,
+      CC_GRADIENT_LEVELS: 2,
+      CC_GRADIENT_SCALARS: [0.5, 1.0],
+      CC_GRADIENT_BASE: 60,
+      MovePlay: 91,
+      MoveRec: 93,
+      MoveSample: 94,
+      Green: 1,
+      Red: 2,
+      LED_OFF: 0,
+      setPaletteEntryRGB: c.fn("palette"),
+      reapplyPalette: c.fn("reapply"),
+      setButtonLED: c.fn("led"),
+      invalidateLEDCache: c.fn("invalidate"),
+    };
+    const S = {
+      activeBank: 6,
+      sessionView: false,
+      trackPadMode: [0],
+      activeTrack: 0,
+      ccGradPaletteTrack: -1,
+      playing: true,
+      recordArmed: false,
+      recordScheduledStop: false,
+      dspMergeState: 0,
+      _forceKnobReemit: false,
+    };
+    runCcGradientPalette(S, deps);
+    expect(S.ccGradPaletteTrack).toBe(0);
+    expect(S._forceKnobReemit).toBe(true);
+    expect(c.log.filter(([n]) => n === "palette")).toHaveLength(2);
+    expect(c.log).toContainEqual(["palette", 60, 128, 128, 128]);
+    expect(c.log).toContainEqual(["led", 91, 1, true]); // play green, force
+    expect(c.log).toContainEqual(["led", 93, 0, true]); // rec off, force
+
+    // already painted for this track → no-op
+    c.log.length = 0;
+    runCcGradientPalette(S, deps);
+    expect(c.log).toEqual([]);
+
+    // drum track swallows it
+    c.log.length = 0;
+    runCcGradientPalette({ ...S, ccGradPaletteTrack: -1, trackPadMode: [1] }, deps);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runPendingSetLoad sends state_load and arms the dsp resync, gated by the inherit picker", () => {
+    const c = calls();
+    const deps = {
+      host_module_set_param: c.fn("set"),
+      disarmRecord: c.fn("disarm"),
+    };
+    const make = () => ({
+      pendingSetLoad: true,
+      pendingInheritPicker: false,
+      stateLoading: false,
+      heldStep: 4,
+      heldStepBtn: 4,
+      heldStepNotes: [1],
+      stepWasEmpty: true,
+      stepWasHeld: true,
+      seqActiveNotes: new Set([1, 2]),
+      seqLastStep: 5,
+      seqLastClip: 1,
+      pendingDspSync: 0,
+      currentSetUuid: "abc",
+    });
+
+    const S = make();
+    runPendingSetLoad(S, deps);
+    expect(S.pendingSetLoad).toBe(false);
+    expect(S.stateLoading).toBe(true);
+    expect(S.heldStep).toBe(-1);
+    expect(S.seqActiveNotes.size).toBe(0);
+    expect(S.pendingDspSync).toBe(5);
+    expect(c.log).toEqual([["disarm"], ["set", "state_load", "abc"]]);
+
+    // suppressed while inherit picker is open
+    c.log.length = 0;
+    const picker = { ...make(), pendingInheritPicker: true };
+    runPendingSetLoad(picker, deps);
+    expect(picker.pendingSetLoad).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runGlobalMenuParamPreview previews on value change and re-commits on edit exit", () => {
+    const setCalls: number[] = [];
+    const item = { set: (v: number) => setCalls.push(v), get: () => 120 };
+    const S: any = {
+      globalMenuOpen: true,
+      globalMenuItems: [item],
+      globalMenuState: { selectedIndex: 0, editing: true, editValue: 100 },
+      lastSentMenuEditValue: null,
+      bpmWasEditing: false,
+      screenDirty: false,
+    };
+    runGlobalMenuParamPreview(S);
+    expect(setCalls).toEqual([100]);
+    expect(S.lastSentMenuEditValue).toBe(100);
+    expect(S.bpmWasEditing).toBe(true);
+    expect(S.screenDirty).toBe(true);
+
+    // same value → no duplicate set
+    runGlobalMenuParamPreview(S);
+    expect(setCalls).toEqual([100]);
+
+    // editing stops → re-commit via get() and reset preview memo
+    S.globalMenuState.editing = false;
+    runGlobalMenuParamPreview(S);
+    expect(setCalls).toEqual([100, 120]);
+    expect(S.bpmWasEditing).toBe(false);
+    expect(S.lastSentMenuEditValue).toBeNull();
+  });
+
+  test("runTransposePreviewSelfHeal cancels a stranded preview left off Key/Scale", () => {
+    const c = calls();
+    const deps = { xposeCancelPreview: c.fn("cancel") };
+
+    // stranded preview, menu closed → cancel
+    const closed = {
+      xposePrevKey: 2,
+      confirmXpose: false,
+      globalMenuOpen: false,
+      globalMenuState: null,
+      globalMenuItems: null,
+    };
+    runTransposePreviewSelfHeal(closed, deps);
+    expect(c.log).toEqual([["cancel"]]);
+
+    // stranded confirm dialog off Key/Scale → cancel + clear flag
+    c.log.length = 0;
+    const confirm = {
+      xposePrevKey: null,
+      confirmXpose: true,
+      globalMenuOpen: true,
+      globalMenuState: { selectedIndex: 0, editing: true },
+      globalMenuItems: [{ label: "Swing" }],
+    };
+    runTransposePreviewSelfHeal(confirm, deps);
+    expect(confirm.confirmXpose).toBe(false);
+    expect(c.log).toEqual([["cancel"]]);
+
+    // still on Key edit → leave preview alone
+    c.log.length = 0;
+    const onKey = {
+      xposePrevKey: 2,
+      confirmXpose: false,
+      globalMenuOpen: true,
+      globalMenuState: { selectedIndex: 0, editing: true },
+      globalMenuItems: [{ label: "Key" }],
+    };
+    runTransposePreviewSelfHeal(onKey, deps);
+    expect(c.log).toEqual([]);
   });
 });
