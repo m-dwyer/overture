@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  runAltModeFlash,
   runCcGradientPalette,
   runCcLiveValPoll,
   runDefaultSetParamDrain,
@@ -16,6 +17,7 @@ import {
   runMetroBeatDetect,
   runMetroNoteOffTask,
   runMoveCoRunTickTasks,
+  runOrphanPrune,
   runOverlayTimerExpiries,
   runPadMapSelfHealTask,
   runPendingEditSoundAdvance,
@@ -29,6 +31,7 @@ import {
   runSessionStepHoldToSave,
   runSessionViewEdgeTasks,
   runSideButtonHoldThreshold,
+  runSuspendDetection,
   runTransposePreviewSelfHeal,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
@@ -1410,5 +1413,137 @@ describe("render-cadence tick steps (batch B1-B6)", () => {
     expect(S.cachedSceneAnyPlaying[3]).toBe(true);
     expect(S.cachedSceneAnyPlaying[4]).toBe(false);
     expect(S.cachedSceneAllPlaying).toHaveLength(16);
+  });
+});
+
+describe("suspend + end-of-tick steps (batch A5, D)", () => {
+  const ORIG = () => {};
+  const NOOP = () => {};
+
+  function suspendDeps(c: ReturnType<typeof calls>, dspUuid = "old", picker = false) {
+    return {
+      clearScreen: ORIG,
+      saveState: c.fn("saveState"),
+      removeFlagsWrap: c.fn("removeFlags"),
+      host_ext_midi_remap_enable: c.fn("remapEnable"),
+      installFlagsWrap: c.fn("installFlags"),
+      applyExtMidiRemap: c.fn("remap"),
+      readActiveSet: () => ({ uuid: "new", name: "Set B" }),
+      host_module_get_param: () => dspUuid,
+      maybeShowInheritPicker: (...a: unknown[]) => {
+        c.log.push(["picker", ...a]);
+        return picker ? "picker" : "auto";
+      },
+      invalidateLEDCache: c.fn("invalidate"),
+      buildLedInitQueue: () => ["q"],
+      forceRedraw: c.fn("redraw"),
+    };
+  }
+
+  test("runSuspendDetection saves on the suspend edge and returns true", () => {
+    const c = calls();
+    const deps = suspendDeps(c);
+    deps.clearScreen = NOOP; // differs from _origClearScreen -> suspended
+    const S: any = { _origClearScreen: ORIG, _wasSuspended: false };
+    const result = runSuspendDetection(S, deps);
+    expect(result).toBeTruthy();
+    expect(S._wasSuspended).toBe(true);
+    expect(c.log).toEqual([
+      ["saveState"],
+      ["removeFlags"],
+      ["remapEnable", 0],
+    ]);
+  });
+
+  test("runSuspendDetection restores on the resume edge and loads a changed set", () => {
+    const c = calls();
+    const deps = suspendDeps(c, "old"); // dsp uuid "old" != active "new"
+    deps.clearScreen = ORIG; // matches -> not suspended
+    const S: any = {
+      _origClearScreen: ORIG,
+      _wasSuspended: true,
+      shiftHeld: true,
+      heldStep: 5,
+      currentSetUuid: "old",
+      pendingSetLoad: false,
+    };
+    const result = runSuspendDetection(S, deps);
+    expect(result).toBeFalsy();
+    expect(S._wasSuspended).toBe(false);
+    expect(S.shiftHeld).toBe(false);
+    expect(S.heldStep).toBe(-1);
+    expect(S.currentSetUuid).toBe("new");
+    expect(S.pendingSetLoad).toBe(true); // auto-inherit -> immediate load
+    expect(S.ledInitComplete).toBe(false);
+    expect(S.ledInitQueue).toEqual(["q"]);
+    expect(c.log).toContainEqual(["installFlags"]);
+    expect(c.log).toContainEqual(["redraw"]);
+  });
+
+  test("runSuspendDetection defers state_load when the inherit picker opens", () => {
+    const c = calls();
+    const deps = suspendDeps(c, "old", true); // picker path
+    deps.clearScreen = ORIG;
+    const S: any = { _origClearScreen: ORIG, _wasSuspended: true, pendingSetLoad: false };
+    runSuspendDetection(S, deps);
+    expect(S.currentSetUuid).toBe("new");
+    expect(S.pendingSetLoad).toBe(false); // suppressed while picker decides
+  });
+
+  test("runSuspendDetection is a no-op in steady suspended state", () => {
+    const c = calls();
+    const deps = suspendDeps(c);
+    deps.clearScreen = NOOP;
+    const S: any = { _origClearScreen: ORIG, _wasSuspended: true };
+    const result = runSuspendDetection(S, deps);
+    expect(result).toBeTruthy();
+    expect(c.log).toEqual([]); // no edge -> nothing fires
+  });
+
+  test("runOrphanPrune sends the prune command and drops stale index entries", () => {
+    const c = calls();
+    const deps = {
+      host_module_set_param: c.fn("set"),
+      host_file_exists: (path: string) => path.includes("keep"),
+      loadNameIndex: () => ({ A: "keep-uuid", B: "gone-uuid" }),
+      uuidToStatePath: (u: string) => `/state/${u}`,
+      saveNameIndex: c.fn("save"),
+    };
+    const S: any = {
+      pendingPruneOrphans: true,
+      pendingSetLoad: false,
+      pendingDspSync: 0,
+      nameIndexCache: null,
+    };
+    runOrphanPrune(S, deps);
+    expect(S.pendingPruneOrphans).toBe(false);
+    expect(c.log[0]).toEqual(["set", "prune_orphan_states", "1"]);
+    expect(S.nameIndexCache).toEqual({ A: "keep-uuid" }); // B dropped (no state file)
+    expect(c.log).toContainEqual(["save", { A: "keep-uuid" }]);
+
+    // gated while a state_load is still pending
+    c.log.length = 0;
+    const blocked = { pendingPruneOrphans: true, pendingSetLoad: true, pendingDspSync: 0 };
+    runOrphanPrune(blocked, deps);
+    expect(blocked.pendingPruneOrphans).toBe(true);
+    expect(c.log).toEqual([]);
+  });
+
+  test("runAltModeFlash repaints only on a blink-phase edge while the indicator is active", () => {
+    const deps = { altIndicatorActive: () => true };
+    const S: any = { activeTrack: 0, activeBank: 4, tickCount: 24, _altBlinkPhase: 0, screenDirty: false };
+    runAltModeFlash(S, deps); // tickCount 24 -> phase 1, edge from 0
+    expect(S._altBlinkPhase).toBe(1);
+    expect(S.screenDirty).toBe(true);
+
+    // same phase -> no repaint
+    S.screenDirty = false;
+    runAltModeFlash(S, deps);
+    expect(S.screenDirty).toBe(false);
+
+    // indicator inactive -> no-op
+    const off = { activeTrack: 0, activeBank: 0, tickCount: 48, _altBlinkPhase: 0, screenDirty: false };
+    runAltModeFlash(off, { altIndicatorActive: () => false });
+    expect(off.screenDirty).toBe(false);
   });
 });
