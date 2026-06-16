@@ -32,7 +32,9 @@ import {
   runSessionViewEdgeTasks,
   runSideButtonHoldThreshold,
   runSuspendDetection,
+  runTransportButtonLEDs,
   runTransposePreviewSelfHeal,
+  runViewLEDsAndBlinks,
 } from "@tool-ui/ui_tick_tasks.mjs";
 
 function calls() {
@@ -1545,5 +1547,280 @@ describe("suspend + end-of-tick steps (batch A5, D)", () => {
     const off = { activeTrack: 0, activeBank: 0, tickCount: 48, _altBlinkPhase: 0, screenDirty: false };
     runAltModeFlash(off, { altIndicatorActive: () => false });
     expect(off.screenDirty).toBe(false);
+  });
+});
+
+describe("LED-paint tick steps (batch B7-B8)", () => {
+  // B7: setButtonLED recorded as ["btn", cc, color, force?]; colors/CCs are
+  // distinct string sentinels so each branch's paint is unambiguous.
+  function ledDeps(c: ReturnType<typeof calls>, over: any = {}): any {
+    return {
+      setButtonLED: (...a: unknown[]) => c.log.push(["btn", ...a] as any),
+      flashAtRate: () => true,
+      host_module_get_param: () => null,
+      POLL_INTERVAL: 8,
+      Green: "GREEN", LED_OFF: "OFF", Red: "RED", DarkGrey: "DGREY",
+      White: "WHITE", VividYellow: "VYELLOW",
+      TRACK_COLORS: ["TC0", "TC1", "TC2", "TC3", "TC4", "TC5", "TC6", "TC7"],
+      MovePlay: "PLAY", MoveRec: "REC", MoveSample: "SAMPLE", MoveLoop: "LOOP",
+      MoveCapture: "CAP", MoveMute: "MUTE", MoveShift: "SHIFT", MoveNoteSession: "NOTE",
+      MoveUndo: "UNDO", MoveDelete: "DEL", MoveCopy: "COPY",
+      MoveUp: "UP", MoveDown: "DOWN", MoveLeft: "LEFT", MoveRight: "RIGHT",
+      ...over,
+    };
+  }
+
+  function b7State(over: any = {}): any {
+    return {
+      playing: false,
+      schwungCoRunSlot: -1, moveCoRunTrack: -1,
+      recordScheduledStop: false, recordPendingPage: false, recordArmed: false,
+      tickCount: 0,
+      dspMergeState: 0,
+      activeTrack: 0,
+      drumRepeatLatched: [false, false, false, false],
+      drumRepeat2LatchedLanes: [new Set(), new Set(), new Set(), new Set()],
+      sessionView: false, perfViewLocked: false, perfLatchMode: false,
+      trackMuted: [false, false, false, false],
+      trackSoloed: [false, false, false, false],
+      globalMenuOpen: false, tapTempoOpen: false,
+      shiftHeld: false,
+      ...over,
+    };
+  }
+
+  // Hardware honors the last paint per CC; return the final ["btn", cc, ...] entry.
+  function lastBtn(c: ReturnType<typeof calls>, cc: string) {
+    const hits = c.log.filter((e) => e[0] === "btn" && e[1] === cc);
+    return hits.length ? hits[hits.length - 1] : undefined;
+  }
+
+  test("runTransportButtonLEDs paints Play and the idle contextual buttons", () => {
+    const c = calls();
+    runTransportButtonLEDs(b7State({ playing: true }), ledDeps(c));
+    expect(lastBtn(c, "PLAY")).toEqual(["btn", "PLAY", "GREEN"]);
+    expect(lastBtn(c, "CAP")).toEqual(["btn", "CAP", "DGREY"]);
+    expect(lastBtn(c, "UNDO")).toEqual(["btn", "UNDO", 16]);
+    expect(lastBtn(c, "DELETE" as any)).toBeUndefined();
+    expect(lastBtn(c, "DEL")).toEqual(["btn", "DEL", 16]);
+    // track view -> arrows lit; idle Loop falls to the dim idx-60 ambient
+    expect(lastBtn(c, "LEFT")).toEqual(["btn", "LEFT", 16]);
+    expect(lastBtn(c, "LOOP")).toEqual(["btn", "LOOP", 60]);
+
+    const c2 = calls();
+    runTransportButtonLEDs(b7State({ playing: false }), ledDeps(c2));
+    expect(lastBtn(c2, "PLAY")).toEqual(["btn", "PLAY", "OFF"]);
+  });
+
+  test("runTransportButtonLEDs Rec is four-way and forwards the co-run force flag", () => {
+    // co-run: OFF + force arg (tickCount 0 % POLL 8 === 0 -> true)
+    const c = calls();
+    runTransportButtonLEDs(b7State({ schwungCoRunSlot: 0, tickCount: 0 }), ledDeps(c));
+    expect(lastBtn(c, "REC")).toEqual(["btn", "REC", "OFF", true]);
+
+    // scheduled stop -> blink Red (floor(0/8)%2===0)
+    const c2 = calls();
+    runTransportButtonLEDs(b7State({ recordScheduledStop: true, tickCount: 0 }), ledDeps(c2));
+    expect(lastBtn(c2, "REC")).toEqual(["btn", "REC", "RED"]);
+
+    // armed -> Red; idle -> OFF
+    const c3 = calls();
+    runTransportButtonLEDs(b7State({ recordArmed: true }), ledDeps(c3));
+    expect(lastBtn(c3, "REC")).toEqual(["btn", "REC", "RED"]);
+    const c4 = calls();
+    runTransportButtonLEDs(b7State(), ledDeps(c4));
+    expect(lastBtn(c4, "REC")).toEqual(["btn", "REC", "OFF"]);
+  });
+
+  test("runTransportButtonLEDs Sample is tri-state on dspMergeState", () => {
+    for (const [ms, color] of [[0, "DGREY"], [1, "RED"], [2, "GREEN"]] as const) {
+      const c = calls();
+      runTransportButtonLEDs(b7State({ dspMergeState: ms }), ledDeps(c));
+      expect(lastBtn(c, "SAMPLE")).toEqual(["btn", "SAMPLE", color]);
+    }
+  });
+
+  test("runTransportButtonLEDs Loop ladder covers each priority branch", () => {
+    // perfViewLocked (session) -> flash White
+    const c = calls();
+    runTransportButtonLEDs(b7State({ sessionView: true, perfViewLocked: true }), ledDeps(c));
+    expect(lastBtn(c, "LOOP")).toEqual(["btn", "LOOP", "WHITE"]);
+
+    // drum-repeat latched -> flash White
+    const c2 = calls();
+    runTransportButtonLEDs(b7State({ drumRepeatLatched: [true, false, false, false] }), ledDeps(c2));
+    expect(lastBtn(c2, "LOOP")).toEqual(["btn", "LOOP", "WHITE"]);
+
+    // TARP latched (tarp_on=1, tarp_latch=1, fc=2 even -> on) -> track color
+    const c3 = calls();
+    const tarpGet = (key: string) =>
+      key.endsWith("_tarp_fc") ? "2" : "1";
+    runTransportButtonLEDs(
+      b7State({ activeTrack: 3 }),
+      ledDeps(c3, { host_module_get_param: tarpGet }),
+    );
+    expect(lastBtn(c3, "LOOP")).toEqual(["btn", "LOOP", "TC3"]);
+
+    // perf latch mode (session, no higher branch) -> VividYellow
+    const c4 = calls();
+    runTransportButtonLEDs(b7State({ sessionView: true, perfLatchMode: true }), ledDeps(c4));
+    expect(lastBtn(c4, "LOOP")).toEqual(["btn", "LOOP", "VYELLOW"]);
+  });
+
+  test("runTransportButtonLEDs Mute reflects mute / solo-blink / idle", () => {
+    const c = calls();
+    runTransportButtonLEDs(b7State({ trackMuted: [true, false, false, false] }), ledDeps(c));
+    expect(lastBtn(c, "MUTE")).toEqual(["btn", "MUTE", 124]);
+    // soloed, blink on (tick 24 -> floor/24%2 === 1)
+    const c2 = calls();
+    runTransportButtonLEDs(b7State({ trackSoloed: [true, false, false, false], tickCount: 24 }), ledDeps(c2));
+    expect(lastBtn(c2, "MUTE")).toEqual(["btn", "MUTE", 124]);
+    // soloed, blink off (tick 0)
+    const c3 = calls();
+    runTransportButtonLEDs(b7State({ trackSoloed: [true, false, false, false], tickCount: 0 }), ledDeps(c3));
+    expect(lastBtn(c3, "MUTE")).toEqual(["btn", "MUTE", 0]);
+    // idle
+    const c4 = calls();
+    runTransportButtonLEDs(b7State(), ledDeps(c4));
+    expect(lastBtn(c4, "MUTE")).toEqual(["btn", "MUTE", 16]);
+  });
+
+  test("runTransportButtonLEDs NoteSession resolves co-run vs menu-exit overrides", () => {
+    // Schwung co-run -> White + force
+    const c = calls();
+    runTransportButtonLEDs(b7State({ schwungCoRunSlot: 0, tickCount: 0 }), ledDeps(c));
+    expect(lastBtn(c, "NOTE")).toEqual(["btn", "NOTE", "WHITE", true]);
+
+    // Move co-run -> OFF + force
+    const c2 = calls();
+    runTransportButtonLEDs(b7State({ moveCoRunTrack: 1, tickCount: 0 }), ledDeps(c2));
+    expect(lastBtn(c2, "NOTE")).toEqual(["btn", "NOTE", "OFF", true]);
+
+    // Global menu open, blink off (tick 0) -> distinguishable OFF over default 16
+    const c3 = calls();
+    runTransportButtonLEDs(b7State({ globalMenuOpen: true, tickCount: 0 }), ledDeps(c3));
+    expect(lastBtn(c3, "NOTE")).toEqual(["btn", "NOTE", "OFF"]);
+  });
+
+  test("runTransportButtonLEDs Shift-flash overrides Sample/Loop while Shift held", () => {
+    // tick 24 -> flash phase 1; sessionView so Loop gets the shift-flash
+    const c = calls();
+    runTransportButtonLEDs(
+      b7State({ shiftHeld: true, sessionView: true, tickCount: 24, dspMergeState: 2 }),
+      ledDeps(c),
+    );
+    expect(lastBtn(c, "SAMPLE")).toEqual(["btn", "SAMPLE", "DGREY"]); // overrode Green
+    expect(lastBtn(c, "LOOP")).toEqual(["btn", "LOOP", 16]); // overrode idle 60
+    expect(lastBtn(c, "NOTE")).toEqual(["btn", "NOTE", 16]);
+    expect(lastBtn(c, "UNDO")).toEqual(["btn", "UNDO", 16]);
+  });
+
+  // B8: LED-update fns + setLED recorded by name; colors/PAD_MODE are sentinels.
+  function viewDeps(c: ReturnType<typeof calls>): any {
+    return {
+      updateSessionLEDs: () => c.log.push(["session"]),
+      updatePerfModeLEDs: () => c.log.push(["perf"]),
+      updateSceneMapLEDs: () => c.log.push(["scenemap"]),
+      updateStepLEDs: () => c.log.push(["step"]),
+      updateTrackLEDs: () => c.log.push(["track"]),
+      setLED: (...a: unknown[]) => c.log.push(["led", ...a] as any),
+      PAD_MODE_DRUM: 1,
+      White: "WHITE", LED_OFF: "OFF",
+    };
+  }
+
+  function b8State(over: any = {}): any {
+    return {
+      sessionView: false, loopHeld: false, perfViewLocked: false,
+      recordArmed: false, recordCountingIn: false, countInQuarterTicks: 0,
+      tickCount: 0, countInBeatStartTick: 0,
+      sessionOverlayHeld: false, flashEighth: false, lastBlinkOn: null,
+      trackSoloed: [false, false, false, false], lastSoloBlink: null,
+      loopJogActive: false, loopJogLastTick: undefined, lastAllLanesBlink: null,
+      activeBank: 0, activeTrack: 0, trackPadMode: [0, 0, 0, 0],
+      screenDirty: false,
+      ...over,
+    };
+  }
+
+  test("runViewLEDsAndBlinks session view dispatches perf vs scene-map", () => {
+    const c = calls();
+    runViewLEDsAndBlinks(b8State({ sessionView: true, loopHeld: true }), viewDeps(c));
+    expect(c.log).toContainEqual(["session"]);
+    expect(c.log).toContainEqual(["perf"]);
+    expect(c.log).not.toContainEqual(["scenemap"]);
+    expect(c.log).toContainEqual(["track"]);
+
+    const c2 = calls();
+    runViewLEDsAndBlinks(b8State({ sessionView: true, loopHeld: false, perfViewLocked: false }), viewDeps(c2));
+    expect(c2.log).toContainEqual(["scenemap"]);
+    expect(c2.log).not.toContainEqual(["perf"]);
+  });
+
+  test("runViewLEDsAndBlinks track view paints steps + count-in flash", () => {
+    const c = calls();
+    runViewLEDsAndBlinks(
+      b8State({ sessionView: false, recordArmed: true, recordCountingIn: true,
+        countInQuarterTicks: 24, tickCount: 0, countInBeatStartTick: 0 }),
+      viewDeps(c),
+    );
+    expect(c.log).toContainEqual(["step"]);
+    const flashes = c.log.filter((e) => e[0] === "led");
+    expect(flashes).toHaveLength(16);
+    expect(flashes[0]).toEqual(["led", 16, "WHITE"]);
+    expect(flashes[15]).toEqual(["led", 31, "WHITE"]);
+
+    // not armed -> no count-in flash
+    const c2 = calls();
+    runViewLEDsAndBlinks(b8State({ sessionView: false }), viewDeps(c2));
+    expect(c2.log.filter((e) => e[0] === "led")).toHaveLength(0);
+  });
+
+  test("runViewLEDsAndBlinks session-overlay blink dirties only on a phase edge", () => {
+    const S = b8State({ sessionView: false, sessionOverlayHeld: true, flashEighth: true, lastBlinkOn: false });
+    runViewLEDsAndBlinks(S, viewDeps(calls()));
+    expect(S.lastBlinkOn).toBe(true);
+    expect(S.screenDirty).toBe(true);
+    // same phase -> no dirty
+    S.screenDirty = false;
+    runViewLEDsAndBlinks(S, viewDeps(calls()));
+    expect(S.screenDirty).toBe(false);
+    // not held -> reset to null
+    const S2 = b8State({ sessionView: false, sessionOverlayHeld: false, lastBlinkOn: true });
+    runViewLEDsAndBlinks(S2, viewDeps(calls()));
+    expect(S2.lastBlinkOn).toBeNull();
+  });
+
+  test("runViewLEDsAndBlinks solo blink dirties on toggle, clears when none soloed", () => {
+    const S = b8State({ sessionView: false, trackSoloed: [true, false, false, false], tickCount: 24, lastSoloBlink: 0 });
+    runViewLEDsAndBlinks(S, viewDeps(calls()));
+    expect(S.lastSoloBlink).toBe(1); // floor(24/24)%2
+    expect(S.screenDirty).toBe(true);
+
+    const S2 = b8State({ sessionView: false, trackSoloed: [false, false, false, false], lastSoloBlink: 1 });
+    runViewLEDsAndBlinks(S2, viewDeps(calls()));
+    expect(S2.lastSoloBlink).toBeNull();
+  });
+
+  test("runViewLEDsAndBlinks loopJog OOB reverts after >70 idle ticks", () => {
+    const S = b8State({ sessionView: false, loopJogActive: true, loopHeld: true, loopJogLastTick: 0, tickCount: 71 });
+    runViewLEDsAndBlinks(S, viewDeps(calls()));
+    expect(S.loopJogActive).toBe(false);
+    expect(S.screenDirty).toBe(true);
+
+    const S2 = b8State({ sessionView: false, loopJogActive: true, loopHeld: true, loopJogLastTick: 0, tickCount: 50 });
+    runViewLEDsAndBlinks(S2, viewDeps(calls()));
+    expect(S2.loopJogActive).toBe(true);
+  });
+
+  test("runViewLEDsAndBlinks ALL-lanes blink dirties on bank-7 drum-mode toggle", () => {
+    const S = b8State({ sessionView: false, activeBank: 7, activeTrack: 0, trackPadMode: [1, 1, 1, 1], tickCount: 24, lastAllLanesBlink: 0 });
+    runViewLEDsAndBlinks(S, viewDeps(calls())); // PAD_MODE_DRUM === 1
+    expect(S.lastAllLanesBlink).toBe(1);
+    expect(S.screenDirty).toBe(true);
+
+    const S2 = b8State({ sessionView: false, activeBank: 6, lastAllLanesBlink: 1 });
+    runViewLEDsAndBlinks(S2, viewDeps(calls()));
+    expect(S2.lastAllLanesBlink).toBeNull();
   });
 });
