@@ -16,8 +16,11 @@ node = "lts"
 _.file = ".env"
 
 [tasks.setup]
-description = "Install web emulator dependencies"
-run = "pnpm -C web install"
+description = "Install host deps: web emulator + tool UI bundler (esbuild)"
+run = """
+pnpm -C web install
+pnpm -C tool install
+"""
 
 [tasks.dev]
 description = "Serve the Overture emulator (real tool UI + mock host)"
