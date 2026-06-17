@@ -95,6 +95,13 @@ declare module "@tool-ui/ui_input_adapters.mjs" {
   export function optionalMoveMidiExternalSend(): HostFn | null;
   export function optionalShadowSendMidiToDsp(): HostFn | null;
   export function createExtMidiRemapHostAdapters(): { clear: HostFn | null; set: HostFn | null; enable: HostFn | null };
+  export function createButtonCcHardwareAdapters(): Record<string, number>;
+  export function createInputDispatchHardwareAdapters(): Record<string, number>;
+  export function createJogCcHardwareAdapters(): Record<string, number>;
+  export function createMidiInternalHardwareAdapters(): Record<string, number>;
+  export function createNavigationCcHardwareAdapters(): Record<string, number>;
+  export function createPadHardwareAdapters(): Record<string, number>;
+  export function createTransportCcHardwareAdapters(): Record<string, number>;
 }
 
 declare module "@tool-ui/ui_tick_adapters.mjs" {

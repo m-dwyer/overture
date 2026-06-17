@@ -6,7 +6,14 @@ import {
   optionalHostModuleSetParam,
 } from "@tool-ui/ui_sync_adapters.mjs";
 import {
+  createButtonCcHardwareAdapters,
   createExtMidiRemapHostAdapters,
+  createInputDispatchHardwareAdapters,
+  createJogCcHardwareAdapters,
+  createMidiInternalHardwareAdapters,
+  createNavigationCcHardwareAdapters,
+  createPadHardwareAdapters,
+  createTransportCcHardwareAdapters,
   optionalMoveMidiInjectToMove,
 } from "@tool-ui/ui_input_adapters.mjs";
 import { createTickHostAdapters } from "@tool-ui/ui_tick_adapters.mjs";
@@ -93,5 +100,47 @@ describe("dependency adapters", () => {
 
     adapters.setFlagsFn(nextGetFlags);
     expect(adapters.getFlagsFn()).toBe(nextGetFlags);
+  });
+
+  test("groups input dispatch hardware constants by surface concept", () => {
+    expect(createButtonCcHardwareAdapters()).toEqual({
+      moveCapture: 52,
+      moveCopy: 60,
+      moveDelete: 119,
+      moveLoop: 58,
+      moveMenu: 50,
+      moveMute: 88,
+      moveNoteSession: 50,
+      moveShift: 49,
+    });
+    expect(createTransportCcHardwareAdapters()).toEqual({
+      moveBack: 51,
+      movePlay: 85,
+      moveMute: 88,
+      moveRec: 86,
+      moveSample: 118,
+      moveUndo: 56,
+    });
+    expect(createNavigationCcHardwareAdapters()).toEqual({
+      moveDown: 54,
+      moveLeft: 62,
+      moveRight: 63,
+      moveUp: 55,
+    });
+    expect(createJogCcHardwareAdapters()).toEqual({ moveMainKnob: 14 });
+    expect(createPadHardwareAdapters()).toEqual({ trackPadBase: 68 });
+    expect(createInputDispatchHardwareAdapters()).toEqual({
+      moveCapture: 52,
+      moveShift: 49,
+      trackPadBase: 68,
+    });
+    expect(createMidiInternalHardwareAdapters()).toEqual({
+      moveDelete: 119,
+      moveDown: 54,
+      moveMainKnob: 14,
+      moveNoteSession: 50,
+      moveUp: 55,
+      trackPadBase: 68,
+    });
   });
 });
