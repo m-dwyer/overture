@@ -76,6 +76,32 @@ declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runEndOfTickPersistenceTasks(S: any, deps: any): void;
 }
 
+declare module "@tool-ui/ui_sync_adapters.mjs" {
+  type HostFn = (...args: unknown[]) => unknown;
+  export function optionalHostModuleGetParam(): HostFn | null;
+  export function optionalHostModuleGetParamUndefined(): HostFn | undefined;
+  export function optionalHostModuleSetParam(): HostFn | null;
+  export function optionalHostReadFile(): HostFn | null;
+  export function optionalHostWriteFile(): HostFn | null;
+  export function optionalHostFileExists(): HostFn | null;
+  export function hasShadowSetParam(): boolean;
+  export function createHostParamAdapters(): { getParam: HostFn | null; setParam: HostFn | null };
+  export function createUiFlagAdapters(): { clearFlags: HostFn | null; getFlagsFn: () => unknown; setFlagsFn: (fn: unknown) => void };
+}
+
+declare module "@tool-ui/ui_input_adapters.mjs" {
+  type HostFn = (...args: unknown[]) => unknown;
+  export function optionalMoveMidiInjectToMove(): HostFn | null;
+  export function optionalMoveMidiExternalSend(): HostFn | null;
+  export function optionalShadowSendMidiToDsp(): HostFn | null;
+  export function createExtMidiRemapHostAdapters(): { clear: HostFn | null; set: HostFn | null; enable: HostFn | null };
+}
+
+declare module "@tool-ui/ui_tick_adapters.mjs" {
+  type HostFn = (...args: unknown[]) => unknown;
+  export function createTickHostAdapters(): Record<string, HostFn | null>;
+}
+
 declare module "@tool-ui/ui_input_dispatch_workflow.mjs" {
   export function onCcButtonsImpl(S: any, deps: any, d1: number, d2: number): void;
   export function onCcJogImpl(S: any, deps: any, d1: number, d2: number): void;
