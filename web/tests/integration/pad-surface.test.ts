@@ -546,7 +546,7 @@ describe("pad surface", () => {
     expect(S.lastPushedMuted).toBe(true);
   });
 
-  test("pad surface runtime computes pad map through optional host setter", () => {
+  test("pad surface runtime computes pad map and reports dispatch mute through pad policy", () => {
     const S = baseState();
     const c = calls();
     S.dspInboundEnabled = true;
@@ -559,6 +559,7 @@ describe("pad surface", () => {
 
     runtime.computePadNoteMap();
 
+    expect(runtime.padDispatchMuted()).toBe(true);
     expect(c.log).toHaveLength(1);
     expect(c.log[0][0]).toBe("setParam");
     expect(c.log[0][1]).toBe("t0_padmap");
