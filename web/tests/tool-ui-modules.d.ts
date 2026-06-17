@@ -103,6 +103,14 @@ declare module "@tool-ui/ui_live_note_workflow.mjs" {
   export function extNoteOffAllImpl(S: any, state: any, deps: any): void;
 }
 
+declare module "@tool-ui/ui_recording_workflow.mjs" {
+  export function createRecordingWorkflowState(): any;
+  export function clearRecordingNoteBuffers(S: any, workflowState: any): void;
+  export function clearPendingPrerollRecording(S: any): void;
+  export function disarmRecordImpl(S: any, workflowState: any, deps: any): void;
+  export function handoffRecordingToTrackImpl(S: any, workflowState: any, deps: any, newTrack: number): void;
+}
+
 declare module "@tool-ui/ui_track_selection_workflow.mjs" {
   export function clipIsEmptyImpl(S: any, deps: any, track: number, clip: number): boolean;
   export function focusedClipIsEmptyImpl(S: any, deps: any, track: number): boolean;
