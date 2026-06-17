@@ -67,6 +67,7 @@ export interface UiState {
   trackAtMode: number[];
   padLayoutChromatic: boolean[];
   beatMarkersEnabled: boolean;
+  actionPopupLines: string[];
   trackClipPlaying: boolean[];
   trackQueuedClip: number[];
   drumClipNonEmpty: boolean[][];
@@ -109,6 +110,15 @@ export interface Harness {
   /** Resume: re-run init() in the same runtime (Move's Shift+Back resume
    * model) so restoreUiSidecar re-reads the sidecar, then settle. */
   resume(n?: number): void;
+  /** Open the global menu (Shift+NoteSession, CC 49+50). */
+  menuOpen(): void;
+  /** Move the open menu's selection to the item with this label (by label, like
+   * the production jumpToMenuLabel shortcut). Throws if not found. */
+  menuSelect(label: string): void;
+  /** Jog-wheel click (CC 3) — activates the selected menu item / confirms a dialog. */
+  jogClick(): void;
+  /** Jog-wheel rotate one detent (CC 14); dir>0 = CW. Toggles Yes/No in confirms. */
+  jogTurn(dir: 1 | -1): void;
 }
 
 const BLOCKS_PER_TICK = 4;
@@ -151,5 +161,24 @@ export async function createHarness(): Promise<Harness> {
       step(2); // drain pendingSuspendSave (DSP `save`) + pendingHideAfterSave
     },
     resume(n = 400) { emu.init(); step(n); },
+    menuOpen() {
+      emu.sendInternal(0xb0, 49, 127);  // Shift down
+      emu.sendInternal(0xb0, 50, 127);  // NoteSession press → openGlobalMenu under Shift
+      step(1);
+      emu.sendInternal(0xb0, 50, 0);
+      emu.sendInternal(0xb0, 49, 0);    // Shift up
+      step(1);
+    },
+    menuSelect(label) {
+      const st = globalThis.overtureUiState as UiState | undefined;
+      const items = st?.globalMenuItems as Array<{ label?: string }> | undefined;
+      const state = st?.globalMenuState as { selectedIndex: number } | undefined;
+      if (!items || !state) throw new Error("global menu is not open");
+      const idx = items.findIndex((it) => it && it.label === label);
+      if (idx < 0) throw new Error(`menu item not found: ${label}`);
+      state.selectedIndex = idx;
+    },
+    jogClick() { emu.sendInternal(0xb0, 3, 127); step(1); },
+    jogTurn(dir) { emu.sendInternal(0xb0, 14, dir > 0 ? 1 : 127); step(1); },
   };
 }
