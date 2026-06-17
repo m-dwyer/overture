@@ -76,6 +76,14 @@ declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runEndOfTickPersistenceTasks(S: any, deps: any): void;
 }
 
+declare module "@tool-ui/ui_live_note_workflow.mjs" {
+  export function createLiveNoteRecordingState(): { recordingNoteTrack: Map<number, number>; extHeldNotes: Map<number, any> };
+  export function recordNoteOnImpl(S: any, state: any, pitch: number, velocity: number, rt: number): void;
+  export function recordNoteOffImpl(S: any, state: any, pitch: number): void;
+  export function liveSendNoteImpl(S: any, deps: any, t: number, type: number, pitch: number, vel: number, rawVel?: unknown): void;
+  export function extNoteOffAllImpl(S: any, state: any, deps: any): void;
+}
+
 declare module "@tool-ui/ui_clip_track_sync.mjs" {
   export function readMelodicClipFromDsp(S: any, deps: any, track: number, clip: number, opts: any): void;
   export function readDrumActiveLaneFromDsp(S: any, deps: any, track: number): void;
