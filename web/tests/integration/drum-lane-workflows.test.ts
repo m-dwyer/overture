@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
+  copyDrumClipImpl,
+  copyDrumLaneImpl,
+  cutDrumClipImpl,
+  cutDrumLaneImpl,
   handleDeleteDrumLaneClear,
   handleDrumLaneFactoryReset,
   handleDrumLaneCopyPaste,
@@ -35,7 +39,170 @@ function baseState() {
   };
 }
 
+function clipboardState() {
+  const S = {
+    ...baseState(),
+    pendingDefaultSetParams: [] as Array<{ key: string; val: string }>,
+    pendingDrumLaneResync: 0,
+    pendingDrumLaneResyncTrack: -1,
+    pendingDrumLaneResyncLane: -1,
+    pendingDrumResync: 0,
+    pendingDrumResyncTrack: -1,
+    drumLaneLength: [48, 64],
+    drumLaneTPS: [12, 36],
+    drumRepeatGate: [Array.from({ length: 32 }, (_, lane) => lane)],
+    drumRepeatGateLen: [Array.from({ length: 32 }, (_, lane) => lane + 1)],
+    drumRepeatVelScale: [
+      Array.from({ length: 32 }, (_, lane) => Array.from({ length: 8 }, (_, step) => lane * 10 + step)),
+    ],
+    drumRepeatNudge: [
+      Array.from({ length: 32 }, (_, lane) => Array.from({ length: 8 }, (_, step) => -lane * 10 - step)),
+    ],
+    drumRepeat2RatePerLane: [Array.from({ length: 32 }, (_, lane) => lane + 3)],
+  };
+  S.drumLaneSteps[0][3][0] = "A";
+  S.drumLaneSteps[0][3][1] = "B";
+  S.drumLaneSteps[0][7][0] = "Z";
+  return S;
+}
+
 describe("drum lane workflows", () => {
+  test("copyDrumLane copies step and repeat-groove mirrors, marks undo, and schedules lane resync", () => {
+    const S = clipboardState();
+    S.drumLaneHasNotes[0][3] = true;
+    S.drumLaneHasNotes[0][7] = false;
+    S.drumClipNonEmpty[0][2] = false;
+
+    copyDrumLaneImpl(S, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 3, 7);
+
+    expect(S.undoAvailable).toBe(true);
+    expect(S.redoAvailable).toBe(false);
+    expect(S.undoSeqArpSnapshot).toBe(null);
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "t0_l3_copy_to", val: "7" }]);
+    expect(S.drumLaneSteps[0][7][0]).toBe("A");
+    expect(S.drumLaneSteps[0][7][1]).toBe("B");
+    expect(S.drumLaneHasNotes[0][7]).toBe(true);
+    expect(S.drumClipNonEmpty[0][2]).toBe(true);
+    expect(S.drumRepeatGate[0][7]).toBe(3);
+    expect(S.drumRepeatGateLen[0][7]).toBe(4);
+    expect(S.drumRepeatVelScale[0][7]).toEqual([30, 31, 32, 33, 34, 35, 36, 37]);
+    expect(S.drumRepeatNudge[0][7]).toEqual([-30, -31, -32, -33, -34, -35, -36, -37]);
+    expect(S.drumRepeat2RatePerLane[0][7]).toBe(10);
+    expect(S.pendingDrumLaneResync).toBe(2);
+    expect(S.pendingDrumLaneResyncTrack).toBe(0);
+    expect(S.pendingDrumLaneResyncLane).toBe(7);
+  });
+
+  test("copyDrumLane is a no-op for same lane or missing host set_param", () => {
+    const sameLane = clipboardState();
+    copyDrumLaneImpl(sameLane, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 3, 3);
+    expect(sameLane.pendingDefaultSetParams).toEqual([]);
+    expect(sameLane.undoAvailable).toBe(false);
+
+    const noHost = clipboardState();
+    copyDrumLaneImpl(noHost, { DRUM_LANES: 32, host_module_set_param: null }, 0, 3, 7);
+    expect(noHost.pendingDefaultSetParams).toEqual([]);
+    expect(noHost.drumLaneSteps[0][7][0]).toBe("Z");
+  });
+
+  test("cutDrumLane moves step and repeat-groove mirrors, recomputes clip non-empty, and schedules lane resync", () => {
+    const S = clipboardState();
+    S.drumLaneHasNotes[0][3] = true;
+    S.drumLaneHasNotes[0][7] = false;
+
+    cutDrumLaneImpl(S, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 3, 7);
+
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "t0_l3_cut_to", val: "7" }]);
+    expect(S.drumLaneSteps[0][7][0]).toBe("A");
+    expect(S.drumLaneSteps[0][3]).toEqual(new Array(256).fill("0"));
+    expect(S.drumLaneHasNotes[0][7]).toBe(true);
+    expect(S.drumLaneHasNotes[0][3]).toBe(false);
+    expect(S.drumClipNonEmpty[0][2]).toBe(true);
+    expect(S.drumRepeatGate[0][7]).toBe(3);
+    expect(S.drumRepeatGate[0][3]).toBe(0xff);
+    expect(S.drumRepeatGateLen[0][3]).toBe(8);
+    expect(S.drumRepeatVelScale[0][3]).toEqual([100, 100, 100, 100, 100, 100, 100, 100]);
+    expect(S.drumRepeatNudge[0][3]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(S.drumRepeat2RatePerLane[0][3]).toBe(0);
+    expect(S.pendingDrumLaneResyncTrack).toBe(0);
+    expect(S.pendingDrumLaneResyncLane).toBe(7);
+  });
+
+  test("cutDrumLane recomputes active clip empty when an empty source overwrites the only hit lane", () => {
+    const S = clipboardState();
+    S.drumLaneHasNotes[0] = Array.from({ length: 32 }, (_, lane) => lane === 7);
+    S.drumClipNonEmpty[0][2] = true;
+
+    cutDrumLaneImpl(S, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 3, 7);
+
+    expect(S.drumLaneHasNotes[0][3]).toBe(false);
+    expect(S.drumLaneHasNotes[0][7]).toBe(false);
+    expect(S.drumClipNonEmpty[0][2]).toBe(false);
+  });
+
+  test("copyDrumClip mirrors clip content and schedules active destination resync", () => {
+    const S = clipboardState();
+    S.trackActiveClip = [2, 1];
+    S.drumClipNonEmpty = [
+      [false, true, true, false],
+      [false, false, false, false],
+    ];
+
+    copyDrumClipImpl(S, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 2, 1, 1);
+
+    expect(S.undoAvailable).toBe(true);
+    expect(S.redoAvailable).toBe(false);
+    expect(S.undoSeqArpSnapshot).toBe(null);
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "drum_clip_copy", val: "0 2 1 1" }]);
+    expect(S.drumClipNonEmpty[1][1]).toBe(true);
+    expect(S.pendingDrumResync).toBe(2);
+    expect(S.pendingDrumResyncTrack).toBe(1);
+  });
+
+  test("copyDrumClip is a no-op for same clip or missing host set_param", () => {
+    const sameClip = clipboardState();
+    copyDrumClipImpl(sameClip, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 2, 0, 2);
+    expect(sameClip.pendingDefaultSetParams).toEqual([]);
+
+    const noHost = clipboardState();
+    copyDrumClipImpl(noHost, { DRUM_LANES: 32, host_module_set_param: null }, 0, 2, 0, 3);
+    expect(noHost.pendingDefaultSetParams).toEqual([]);
+    expect(noHost.drumClipNonEmpty[0][3]).toBe(false);
+  });
+
+  test("cutDrumClip mirrors destination, clears active source lane mirrors, and schedules destination resync", () => {
+    const S = clipboardState();
+    S.trackActiveClip = [2, 1];
+    S.drumClipNonEmpty = [
+      [false, false, true, false],
+      [false, false, false, false],
+    ];
+
+    cutDrumClipImpl(S, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 2, 1, 1);
+
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "drum_clip_cut", val: "0 2 1 1" }]);
+    expect(S.drumClipNonEmpty[1][1]).toBe(true);
+    expect(S.drumClipNonEmpty[0][2]).toBe(false);
+    expect(S.drumLaneSteps[0][3]).toEqual(new Array(256).fill("0"));
+    expect(S.drumLaneHasNotes[0].every(Boolean)).toBe(false);
+    expect(S.drumLaneLength[0]).toBe(16);
+    expect(S.drumLaneTPS[0]).toBe(24);
+    expect(S.pendingDrumResync).toBe(2);
+    expect(S.pendingDrumResyncTrack).toBe(1);
+  });
+
+  test("cutDrumClip preserves active lane mirrors when cutting an inactive source clip", () => {
+    const S = clipboardState();
+    S.trackActiveClip = [1];
+
+    cutDrumClipImpl(S, { DRUM_LANES: 32, host_module_set_param: () => {} }, 0, 2, 0, 3);
+
+    expect(S.pendingDefaultSetParams).toEqual([{ key: "drum_clip_cut", val: "0 2 0 3" }]);
+    expect(S.drumLaneSteps[0][3][0]).toBe("A");
+    expect(S.drumLaneLength[0]).toBe(48);
+    expect(S.drumLaneTPS[0]).toBe(12);
+  });
+
   test("Shift+Delete+lane factory reset clears lane mirrors, repeat defaults, and schedules delayed resync", () => {
     const c = calls();
     const S = {
@@ -431,7 +598,7 @@ describe("drum lane workflows", () => {
 
   test("Copy+lane swallows unrelated or cross-track copy sources", () => {
     const c = calls();
-    const S = {
+    const S: { copySrc: any; shiftHeld: boolean } = {
       copySrc: { kind: "drum_lane", track: 1, lane: 4 },
       shiftHeld: false,
     };

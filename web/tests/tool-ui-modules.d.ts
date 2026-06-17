@@ -111,6 +111,17 @@ declare module "@tool-ui/ui_recording_workflow.mjs" {
   export function handoffRecordingToTrackImpl(S: any, workflowState: any, deps: any, newTrack: number): void;
 }
 
+declare module "@tool-ui/ui_drum_lane_workflows.mjs" {
+  export function copyDrumClipImpl(S: any, deps: any, srcT: number, srcC: number, dstT: number, dstC: number): void;
+  export function copyDrumLaneImpl(S: any, deps: any, track: number, srcLane: number, dstLane: number): void;
+  export function cutDrumClipImpl(S: any, deps: any, srcT: number, srcC: number, dstT: number, dstC: number): void;
+  export function cutDrumLaneImpl(S: any, deps: any, track: number, srcLane: number, dstLane: number): void;
+  export function handleDeleteDrumLaneClear(S: any, deps: any, track: number, lane: number, options?: any): boolean;
+  export function handleDrumLaneCopyPaste(S: any, deps: any, track: number, lane: number): boolean;
+  export function handleDrumLaneFactoryReset(S: any, deps: any, track: number, lane: number): boolean;
+  export function handleDrumLaneMuteSolo(S: any, deps: any, track: number, lane: number): boolean;
+}
+
 declare module "@tool-ui/ui_track_selection_workflow.mjs" {
   export function clipIsEmptyImpl(S: any, deps: any, track: number, clip: number): boolean;
   export function focusedClipIsEmptyImpl(S: any, deps: any, track: number): boolean;
