@@ -14,6 +14,7 @@ import {
   createNavigationCcHardwareAdapters,
   createPadHardwareAdapters,
   createTransportCcHardwareAdapters,
+  optionalHostExitModule,
   optionalMoveMidiInjectToMove,
 } from "@tool-ui/ui_input_adapters.mjs";
 import { createTickHostAdapters } from "@tool-ui/ui_tick_adapters.mjs";
@@ -25,6 +26,7 @@ const globalNames = [
   "host_ext_midi_remap_clear",
   "host_ext_midi_remap_set",
   "host_file_exists",
+  "host_exit_module",
   "move_midi_inject_to_move",
   "move_midi_external_send",
   "shadow_get_param",
@@ -65,6 +67,7 @@ describe("dependency adapters", () => {
   test("late-binds input and tick host adapters", () => {
     const injectA = () => undefined;
     const injectB = () => undefined;
+    const exitModule = () => undefined;
     const remapEnable = () => undefined;
     const fileExists = () => true;
     const shadowGetParam = () => "1";
@@ -73,6 +76,9 @@ describe("dependency adapters", () => {
     expect(optionalMoveMidiInjectToMove()).toBe(injectA);
     globals.move_midi_inject_to_move = injectB;
     expect(optionalMoveMidiInjectToMove()).toBe(injectB);
+
+    globals.host_exit_module = exitModule;
+    expect(optionalHostExitModule()).toBe(exitModule);
 
     globals.host_ext_midi_remap_enable = remapEnable;
     expect(createExtMidiRemapHostAdapters().enable).toBe(remapEnable);

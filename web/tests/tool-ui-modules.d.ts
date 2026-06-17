@@ -94,6 +94,7 @@ declare module "@tool-ui/ui_input_adapters.mjs" {
   export function optionalMoveMidiInjectToMove(): HostFn | null;
   export function optionalMoveMidiExternalSend(): HostFn | null;
   export function optionalShadowSendMidiToDsp(): HostFn | null;
+  export function optionalHostExitModule(): HostFn | null;
   export function createExtMidiRemapHostAdapters(): { clear: HostFn | null; set: HostFn | null; enable: HostFn | null };
   export function createButtonCcHardwareAdapters(): Record<string, number>;
   export function createInputDispatchHardwareAdapters(): Record<string, number>;
