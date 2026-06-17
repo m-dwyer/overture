@@ -42,6 +42,13 @@ run = "pnpm -C overture-ui test"
 description = "Integration tests — real ui.js + seq8-wasm + emulator in Node (vitest, in web/)"
 run = "pnpm -C web test:node"
 
+[tasks.cover]
+description = "Code-coverage (vitest v8) for both headless tiers → overture-ui/coverage + web/coverage"
+run = """
+pnpm -C overture-ui test:coverage
+pnpm -C web test:coverage
+"""
+
 [tasks.screenshot]
 description = "Render the emulator headless (Playwright) → web/shot.png + shot-oled.png"
 run = "pnpm -C web exec playwright test"
