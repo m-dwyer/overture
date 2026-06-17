@@ -3,6 +3,7 @@ import {
   buildDspPadMapPayload,
   computePadNoteMap,
   createLiveNoteQueues,
+  createPadSurfaceRuntime,
   createPadRuntimeState,
   drumPadToLane,
   drumPadToVelZone,
@@ -537,6 +538,26 @@ describe("pad surface", () => {
     expect(c.log[0][1]).toBe("t0_padmap");
     expect(String(c.log[0][2]).split(" ").map(Number).slice(0, 32)).toEqual(new Array(32).fill(0xff));
     expect(String(c.log[0][2]).split(" ").map(Number).slice(-3)).toEqual([0, 1, 0]);
+    expect(S.lastPushedMuted).toBe(true);
+  });
+
+  test("pad surface runtime computes pad map through optional host setter", () => {
+    const S = baseState();
+    const c = calls();
+    S.dspInboundEnabled = true;
+    S.sessionView = true;
+
+    const runtime = createPadSurfaceRuntime(S, {
+      ...deps,
+      optionalHostModuleSetParam: () => c.fn("setParam"),
+    });
+
+    runtime.computePadNoteMap();
+
+    expect(c.log).toHaveLength(1);
+    expect(c.log[0][0]).toBe("setParam");
+    expect(c.log[0][1]).toBe("t0_padmap");
+    expect(String(c.log[0][2]).split(" ").map(Number).slice(0, 32)).toEqual(new Array(32).fill(0xff));
     expect(S.lastPushedMuted).toBe(true);
   });
 });
