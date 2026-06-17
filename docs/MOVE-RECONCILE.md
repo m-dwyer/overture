@@ -1,8 +1,8 @@
 # Reconciling dAVEBOx ↔ Ableton Move — Overture UX change plan
 
 Derived from a full read of the **Ableton Move manual** (`~/src/move-spike/move-manual.txt`)
-and the **dAVEBOx manual** (`tool/MANUAL.md`). This is a *design plan* (intent), not code —
-each item becomes `tool/` fork work later. Feeds `UX.md`.
+and the **dAVEBOx manual** (`overture-ui/MANUAL.md`). This is a *design plan* (intent), not code —
+each item becomes `overture-ui/` fork work later. Feeds `UX.md`.
 
 ## North star + principles
 1. **Overture-native coherence.** Move is an important reference, but not a law.

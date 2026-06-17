@@ -90,4 +90,4 @@ native per-step parameter automation. Overture's wedge is unified depth:
   export.
 - A single surface grammar for track selection, clip reveal, and sound editing.
 
-For detailed controls, read `docs/MANUAL.md` and `tool/MANUAL.md`.
+For detailed controls, read `docs/MANUAL.md` and `overture-ui/MANUAL.md`.

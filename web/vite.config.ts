@@ -8,9 +8,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 // The tool's ui.js imports by absolute on-device paths. Remap them to dev
 // sources so the emulator loads the REAL UI (with HMR) — no bundle_ui.py step.
-const TOOL_UI = resolve(here, "../tool/ui");
+const TOOL_UI = resolve(here, "../overture-ui/ui");
 // Behavior-tier wasm engine (gitignored build artifact from `mise run wasm`).
-const SEQ8_WASM = resolve(here, "../tool/dist/wasm/seq8.mjs");
+const SEQ8_WASM = resolve(here, "../overture-ui/dist/wasm/seq8.mjs");
 
 // Schwung shared/* modules: prefer the overture `schwung` submodule (future),
 // fall back to the sibling dev checkout. Override with SCHWUNG_SRC=/abs/path.

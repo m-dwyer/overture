@@ -19,7 +19,7 @@ _.file = ".env"
 description = "Install host deps: web emulator + tool UI bundler (esbuild)"
 run = """
 pnpm -C web install
-pnpm -C tool install
+pnpm -C overture-ui install
 """
 
 [tasks.dev]
@@ -35,8 +35,8 @@ description = "Production build of the web emulator"
 run = "pnpm -C web build"
 
 [tasks.utest]
-description = "Tool UI-module unit tests — ui/*.mjs with mock deps, no WASM (vitest, in tool/)"
-run = "pnpm -C tool test"
+description = "Tool UI-module unit tests — ui/*.mjs with mock deps, no WASM (vitest, in overture-ui/)"
+run = "pnpm -C overture-ui test"
 
 [tasks.itest]
 description = "Integration tests — real ui.js + seq8-wasm + emulator in Node (vitest, in web/)"
@@ -52,15 +52,15 @@ depends = ["utest", "itest", "screenshot"]
 
 [tasks.dsp]
 description = "Cross-compile the tool's device dsp.so (aarch64, GLIBC<=2.35) via Docker"
-run = "tool/scripts/build.sh"
+run = "overture-ui/scripts/build.sh"
 
 [tasks.wasm]
 description = "Build the tool's seq8 -> wasm target via emscripten Docker"
-run = "tool/scripts/build-wasm.sh"
+run = "overture-ui/scripts/build-wasm.sh"
 
 [tasks.smoke]
 description = "Run the seq8 wasm round-trip smoke test"
-run = "node tool/scripts/seq8-wasm-smoke.mjs"
+run = "node overture-ui/scripts/seq8-wasm-smoke.mjs"
 
 [tasks.restart]
 description = "Restart Move + Schwung stack on $MOVE_HOST"
@@ -85,7 +85,7 @@ depends = ["dsp"]
 run = '''
 set -euo pipefail
 SCHWUNG_INSTALL="${SCHWUNG_INSTALL_SCRIPT:-schwung/scripts/install.sh}"
-TARBALL="tool/dist/overture-module.tar.gz"
+TARBALL="overture-ui/dist/overture-module.tar.gz"
 [ -f "$SCHWUNG_INSTALL" ] || { echo "Missing Schwung installer: $SCHWUNG_INSTALL"; exit 1; }
 [ -f "$TARBALL" ] || { echo "Missing module tarball: $TARBALL"; exit 1; }
 bash "$SCHWUNG_INSTALL" install-module "$TARBALL" "--host=${MOVE_HOST:-move.local}"

@@ -21,7 +21,7 @@ only when persisted state format compatibility genuinely changes.
 
 ## Versioning Rule
 
-- `tool/module.json` and `tool/release.json` carry Overture's install/update
+- `overture-ui/module.json` and `overture-ui/release.json` carry Overture's install/update
   version.
 - `schwung/` is pinned independently to the upstream Schwung host version used
   for build/install integration.

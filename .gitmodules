@@ -1,5 +1,5 @@
-[submodule "tool"]
-	path = tool
+[submodule "overture-ui"]
+	path = overture-ui
 	url = git@github.com:m-dwyer/schwung-davebox.git
 [submodule "schwung"]
 	path = schwung

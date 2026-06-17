@@ -8,9 +8,9 @@ should be organized around Overture product seams such as track surface, sound
 edit, route health, motion, shortcut layer, and LED language rather than adding
 more one-off branches to the old dAVEBOx structure.
 
-The notes below are still relevant when touching `tool/` code. Names like
-`_onCC_side` / `S.activeTrack` refer to `tool/ui/ui.js`; LED work is
-`tool/ui/ui_leds.mjs`.
+The notes below are still relevant when touching `overture-ui/` code. Names like
+`_onCC_side` / `S.activeTrack` refer to `overture-ui/ui/ui.js`; LED work is
+`overture-ui/ui/ui_leds.mjs`.
 
 ## Master control map (current → Overture)
 Only the controls that change. Everything not listed is unchanged.
@@ -79,7 +79,7 @@ merge placement). The untangle is the bulk of the work — hence step 1 above.
   filters the track-button CC while Overture's UI is up), so it can't be driven from inside Overture.
   D-Bus exposes no mixer/volume set method (only a read-only "Track Volume" announcement). The only
   in-Overture path = scale the track in schwung's audio composite (`chain_slots[t].volume`, Link-Audio
-  rebuild) — a future build, and schwung's mix gain, not Move's fader. Matches `tool/MANUAL.md:976`
+  rebuild) — a future build, and schwung's mix gain, not Move's fader. Matches `overture-ui/MANUAL.md:976`
   ("per-track volume not available; adjust on the destination"). Detail: `WEDGE-EXPERIMENT.md`,
   `INJECT-PROBE.md`, memory `move-live-engine-seams`.
 - **#5 Demote jog-dive** — move DRUM LANE / NOTE FX / etc. menu pages onto Shift+Step where Move has
@@ -87,7 +87,7 @@ merge placement). The untangle is the bulk of the work — hence step 1 above.
 - **#6 Un-overload Loop** — audit Loop's many meanings; split by clearer context/gesture.
 
 ## Function-preservation checklist (the at-risk items)
-Authoritative inventory: `tool/MANUAL.md` §15 Cheat Sheet. These are the items the redesign *touches* —
+Authoritative inventory: `overture-ui/MANUAL.md` §15 Cheat Sheet. These are the items the redesign *touches* —
 each must keep a home before a change ships:
 - [x] side-button clip **switch** → hold-track → steps *(hold side button reveals the 16 clips on the steps)*
 - [x] side-button clip **launch** (Session) → Session pads *(Session side buttons unchanged)*

@@ -15,18 +15,18 @@ next-slice sections over appending contradictory plans.
 - Inspect current code before proposing or editing.
 - Add or strengthen tests before refactoring.
 - Keep behavior unchanged unless a bug is explicitly called out and covered.
-- Keep Overture-local `tool/ui` imports relative, for example
+- Keep Overture-local `overture-ui/ui` imports relative, for example
   `./ui_state.mjs`.
 - Keep Schwung shared imports absolute under
   `/data/UserData/schwung/shared/...`.
-- Add new `tool/ui` modules to `tool/scripts/bundle_ui.py` in dependency
+- Add new `overture-ui/ui` modules to `overture-ui/scripts/bundle_ui.py` in dependency
   order.
 - Run full verification before committing:
   - `npm run test:node -- behaviour.test.ts` from `web/`
   - `npm run test:node -- session-view-workflow.test.ts` from `web/`
   - `npm run test:node` from `web/`
-  - `python3 scripts/bundle_ui.py` from `tool/`
-  - `node --check dist/overture/ui.js` from `tool/`
+  - `python3 scripts/bundle_ui.py` from `overture-ui/`
+  - `node --check dist/overture/ui.js` from `overture-ui/`
   - `npm run build` from `web/`
 - Commit tool changes first, then commit the parent submodule pointer and
   parent-side tests/docs.
@@ -35,7 +35,7 @@ next-slice sections over appending contradictory plans.
 
 - `ui_routes.mjs`: route and motion UI descriptors.
 - `ui_sound_edit.mjs`: Edit Sound lifecycle and preflight/handoff state.
-- Relative imports for Overture-local `tool/ui` modules.
+- Relative imports for Overture-local `overture-ui/ui` modules.
 - `ui_route_check.mjs`: Route Check view model.
 - `ui_motion.mjs`: AUTO/Motion view models and Param Peek descriptors.
 - `ui_tick_tasks.mjs`: Move co-run tick injection, deferred content resync
@@ -63,7 +63,7 @@ next-slice sections over appending contradictory plans.
 
 ## Current Focus
 
-`tool/ui/ui.js` is still large, but several runtime concepts now have earned
+`overture-ui/ui/ui.js` is still large, but several runtime concepts now have earned
 module seams. The current focus has moved from Loop Gesture Workflow deepening
 to the first Track View Step Workflow slices.
 
