@@ -3,6 +3,7 @@ import {
   readDrumActiveLaneFromDsp,
   readDrumRepeatRatesFromDsp,
   readMelodicClipFromDsp,
+  resyncDrumTrackImpl,
   readTrackArpStepConfigFromDsp,
   readTrackConfigFromDsp,
   refreshDrumLaneBankParamsFromDsp,
@@ -81,6 +82,25 @@ function createDrumRepeatRatesState() {
 }
 
 describe("Track / Clip Sync melodic readback", () => {
+  test("drum-track resync preserves meta, active-lane steps, content, then bank ordering", () => {
+    const S = createState();
+    const calls: Array<[string, ...unknown[]]> = [];
+
+    resyncDrumTrackImpl(S, {
+      syncDrumLanesMeta: (track: number) => calls.push(["syncDrumLanesMeta", track]),
+      syncDrumLaneSteps: (track: number, lane: number) => calls.push(["syncDrumLaneSteps", track, lane]),
+      syncDrumClipContent: (track: number) => calls.push(["syncDrumClipContent", track]),
+      refreshDrumLaneBankParams: (track: number, lane: number) => calls.push(["refreshDrumLaneBankParams", track, lane]),
+    }, 1);
+
+    expect(calls).toEqual([
+      ["syncDrumLanesMeta", 1],
+      ["syncDrumLaneSteps", 1, 6],
+      ["syncDrumClipContent", 1],
+      ["refreshDrumLaneBankParams", 1, 6],
+    ]);
+  });
+
   test("updates steps, content, length, and TPS with deferred-readback inactive step mapping", () => {
     const S = createState();
     const reads: string[] = [];
