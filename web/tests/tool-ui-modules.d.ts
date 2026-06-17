@@ -91,6 +91,10 @@ declare module "@tool-ui/ui_input_dispatch_workflow.mjs" {
   export function switchViewCleanupImpl(S: any, deps: any): void;
 }
 
+declare module "@tool-ui/ui_init_workflow.mjs" {
+  export function runInitWorkflowImpl(S: any, deps: any): void;
+}
+
 declare module "@tool-ui/ui_live_note_workflow.mjs" {
   export function createLiveNoteRecordingState(): { recordingNoteTrack: Map<number, number>; extHeldNotes: Map<number, any> };
   export function recordNoteOnImpl(S: any, state: any, pitch: number, velocity: number, rt: number): void;
