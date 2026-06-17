@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  pollDspWorkflow,
   pollAutomationAtIndicator,
   pollCoRunReconcile,
   pollCountInEnd,
@@ -660,5 +661,102 @@ describe("pollDeferredSave (Block O)", () => {
     pollDeferredSave(S, makeDeps(c));
     expect(c.names()).not.toContain("getParam");
     expect(c.names()).not.toContain("writeFile");
+  });
+});
+
+describe("pollDspWorkflow orchestrator", () => {
+  test("co-run reconcile runs before the get-param guard", () => {
+    const c = calls();
+    const S = makeState({ schwungCoRunSlot: 3, globalMenuOpen: true, lastSentMenuEditValue: "x" });
+    const deps = {
+      ...makeDeps(c, { corunState: () => ({ target: 99, id: 5 }) }),
+      getParam: null,
+    };
+
+    pollDspWorkflow(S, deps);
+
+    expect(c.names()).toEqual(["exitSchwungCoRun"]);
+    expect(S.globalMenuOpen).toBe(false);
+    expect(S.lastSentMenuEditValue).toBeNull();
+  });
+
+  test("missing snapshot returns after state_snapshot get_param", () => {
+    const c = calls();
+    const S = makeState();
+
+    pollDspWorkflow(S, makeDeps(c));
+
+    expect(c.log).toEqual([["getParam", "state_snapshot"]]);
+    expect(S.playing).toBe(false);
+  });
+
+  test("short snapshot returns before snapshot mutation steps", () => {
+    const c = calls();
+    const S = makeState();
+
+    pollDspWorkflow(S, makeDeps(c, { getParamMap: { state_snapshot: "1 2 3" } }));
+
+    expect(c.log).toEqual([["getParam", "state_snapshot"]]);
+    expect(S.playing).toBe(false);
+    expect(S.masterPos).toBe(0);
+  });
+
+  test("runs the full reconcile shell in exact order", () => {
+    const c = calls();
+    const snapshot = snap({
+      0: "1",
+      1: "4",
+      2: "20",
+      17: "2",
+      18: "-1",
+      25: "0",
+      53: "600",
+    }).join(" ");
+    const S = makeState({
+      activeTrack: 1,
+      activeBank: 6,
+      playingPrev: false,
+      pendingBankRefresh: 1,
+      recordPendingPage: true,
+      recordArmedTrack: 1,
+      currentSetUuid: "abc",
+    });
+    (S.clipAtHas as boolean[][])[1][0] = false;
+    (S.trackClipPlaying as boolean[])[1] = true;
+    (S.clipSeqFollow as boolean[][])[1][0] = true;
+    (S.ccLaneTps as number[][][])[1][0][0] = 24;
+    (S.ccLaneResTps as number[][][])[1][0][0] = 24;
+    (S.ccLaneLength as number[][][])[1][0][0] = 32;
+    (S.bankParams as number[][][])[1][5][7] = 1;
+    (S.bankParams as number[][][])[1][5][0] = 1;
+
+    pollDspWorkflow(
+      S,
+      makeDeps(c, {
+        getParamMap: {
+          t1_c0_at_has: "1",
+          state_snapshot: snapshot,
+          t1_tarp_held: "60",
+          t1_recording_pending_page: "0",
+          state_full: "{state}",
+        },
+      }),
+    );
+
+    expect(c.log).toEqual([
+      ["getParam", "t1_c0_at_has"],
+      ["getParam", "state_snapshot"],
+      ["refreshPerClipBankParams", 1],
+      ["getParam", "t1_tarp_held"],
+      ["getParam", "t1_recording_pending_page"],
+      ["focusedClipIsEmpty", 1],
+      ["getParam", "state_full"],
+      ["writeFile", "/path/abc.json", "{state}"],
+      ["updateNameIndex"],
+    ]);
+    expect(S.playing).toBe(true);
+    expect((S.clipAtHas as boolean[][])[1][0]).toBe(true);
+    expect(S.recordPendingPage).toBe(false);
+    expect((S.tarpHeldNotes as Set<number>[])[1].has(60)).toBe(true);
   });
 });
