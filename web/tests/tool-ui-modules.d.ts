@@ -91,6 +91,12 @@ declare module "@tool-ui/ui_track_selection_workflow.mjs" {
   export function selectTrackGestureImpl(S: any, deps: any, track: number): void;
 }
 
+declare module "@tool-ui/ui_track_convert_workflow.mjs" {
+  export function trackHasAnyDataImpl(S: any, deps: any, track: number): boolean;
+  export function convertTrackTypeImpl(S: any, deps: any, track: number, toDrum: boolean): void;
+  export function closeConvertConfirmImpl(S: any): void;
+}
+
 declare module "@tool-ui/ui_clip_track_sync.mjs" {
   export function readMelodicClipFromDsp(S: any, deps: any, track: number, clip: number, opts: any): void;
   export function readDrumActiveLaneFromDsp(S: any, deps: any, track: number): void;
