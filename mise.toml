@@ -34,8 +34,12 @@ run = "pnpm -C web typecheck"
 description = "Production build of the web emulator"
 run = "pnpm -C web build"
 
+[tasks.utest]
+description = "Tool UI-module unit tests — ui/*.mjs with mock deps, no WASM (vitest, in tool/)"
+run = "pnpm -C tool test"
+
 [tasks.itest]
-description = "Headless integration tests — real ui.js + seq8-wasm in Node (vitest)"
+description = "Integration tests — real ui.js + seq8-wasm + emulator in Node (vitest, in web/)"
 run = "pnpm -C web test:node"
 
 [tasks.screenshot]
@@ -43,8 +47,8 @@ description = "Render the emulator headless (Playwright) → web/shot.png + shot
 run = "pnpm -C web exec playwright test"
 
 [tasks.test]
-description = "All web tests: integration (vitest) + visual/E2E (playwright)"
-depends = ["itest", "screenshot"]
+description = "All tests: tool unit (vitest) + web integration (vitest) + visual/E2E (playwright)"
+depends = ["utest", "itest", "screenshot"]
 
 [tasks.dsp]
 description = "Cross-compile the tool's device dsp.so (aarch64, GLIBC<=2.35) via Docker"
