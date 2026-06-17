@@ -1,135 +1,58 @@
-# Coverage Gap Map — Step 1 output
+# Coverage Gap Map — headless test coverage
 
-Produced by Step 1 of [`HEADLESS-COVERAGE-PLAN.md`](HEADLESS-COVERAGE-PLAN.md):
-vitest v8 coverage is now wired into **both** headless tiers. This is the
-measure-before-improving baseline that Step 2 (grow the behavior tier) targets.
+**This is a living artifact.** The numbers below are a snapshot; regenerate the
+table any time with **`mise run gap-map`** (reads both vitest v8 reports — run
+`mise run cover` first). Don't hand-edit the per-module numbers; they rot.
 
-**Reproduce:** `mise run cover` (runs both tiers; writes
-`overture-ui/coverage/` and `web/coverage/`, each with an HTML report at
-`coverage/index.html`). Per-tier: `pnpm -C overture-ui test:coverage`,
-`pnpm -C web test:coverage`.
+Two tiers measure different things; a module is only truly untested when **both**
+are low:
+- **Unit%** — `overture-ui/tests/**` drive `ui/*.mjs` with **mock `deps`** (logic, no engine).
+- **Behavior%** — `web/tests/integration/**` run the **real `ui.js` + seq8-wasm** (engine path).
+- **Union%** — covered by *either* tier (the honest "tested anywhere headless" number).
 
-**Snapshot:** 2026-06-17 — unit 1081 tests / 62 files, behavior 97 tests / 5 files.
+See [`HEADLESS-COVERAGE-PLAN.md`](HEADLESS-COVERAGE-PLAN.md) for the strategy and
+[`HARNESS-EVOLUTION.md`](HARNESS-EVOLUTION.md) for where the harness goes next
+(fidelity ceiling, real-Schwung-host tier, manual generation).
 
 ---
 
-## How to read this
+## Snapshot — 2026-06-18
 
-Two tiers measure different things, so a module is only truly "untested" when
-**both** are low:
+**Unit 77.4% · Behavior 63.4% · Union 89.9%** (statements). Since the Step-1
+baseline (behavior 57.3%), Step 2 took the persistence area and Step 3–4 the
+AUTO/CC p-lock *edit* path through the real engine.
 
-- **UNIT%** — `overture-ui/tests/**` drive the decomposed `ui/*.mjs` factory
-  modules with **mock `deps`**. High unit% = the module's branching logic is
-  exercised, but against a fake host. `ui/ui.js` (the composition root) is
-  *excluded* here — it's measured in the behavior tier. `all:true`, so a module
-  with no unit test shows as 0% rather than vanishing.
-- **BEHAVIOR%** — `web/tests/integration/**` run the **real `ui.js` + real
-  seq8-wasm** through the emulator. High behavior% = the real engine path
-  actually executes that code on device-equivalent plumbing. `all:false` — only
-  what the harness loads is counted (no synthetic 0% rows).
-- **UNION%** — a statement covered by *either* tier (computed from both
-  `coverage-final.json`, which key on the same absolute paths). This is the
-  honest "is it tested at all, anywhere headless" number.
+### Now well-covered (behavior tier)
+- `persist/ui_persistence.mjs` 95% · `sync/ui_clip_state_sync.mjs` 89% ·
+  `persist/ui_snapshot_workflow.mjs` 72% · `persist/ui_inherit_picker_workflow.mjs` 70%
+  — sidecar suspend→resume, set-duplicate inherit, clear/snapshot/export-entry.
+- `view/ui_track_view_step_workflow.mjs` 47% — sequenced per-step CC p-locks.
 
-### Aggregate (statements)
-
-| Tier | Covered | Total | % |
+### Still load-bearing and thin (the real backlog)
+| Area | Module(s) | Behavior% | Note |
 |---|---|---|---|
-| Unit (mock deps) | 11703 | 15122 | **77.4%** |
-| Behavior (real engine) | 9854 | 17189 | **57.3%** |
-| **Union** | 15053 | 17197 | **87.5%** |
+| AUTO/CC p-lock **output** | `input/ui_knob_cc_workflow.mjs` | 19% | edit/store done; **playback emission untested** (and partly device-only). |
+| Export packager | `persist/ui_export.mjs` | 25% | request/confirm only; `pollPendingExport` needs `host_system_cmd`. |
+| Tick pipeline | `tick/ui_tick_tasks.mjs` | 60% | deferred-queue drains / two-tick patterns — the riskiest *headless-able* seam. |
+| Drum lanes / repeat | `drum/ui_drum_lane_workflows.mjs` (11%), `*_repeat_workflows` | 11–21% | solid under mocks, thin through the engine. |
+| Perform | `perform/*` (mute/solo, transpose, tap, recording) | <30% | same — unit-proven, engine-unproven. |
 
-(Behavior/union denominators include `ui.js`'s 2075 statements, which unit excludes.)
-
----
-
-## Tier A — load-bearing paths untested in *either* tier (low UNION%)
-
-These are the real holes. Fix order is roughly top-down (gap × size).
-
-| Module | UNIT% | BEHAVIOR% | UNION% | Stmts | Note |
-|---|---|---|---|---|---|
-| `persist/ui_export.mjs` | 20.1 | 21.5 | **21.5** | 502 | **Biggest hole.** Set export/serialization barely touched by anything. |
-| `menu/ui_dialogs.mjs` | 0.0 | 29.2 | **29.2** | 209 | No unit test at all; only incidental behavior coverage. |
-| `persist/ui_persistence.mjs` | 22.6 | 30.9 | **30.9** | 327 | **Persistence roundtrip** (plan priority) — state save/load + sidecar mostly unproven headless. |
-| `input/ui_knob_cc_workflow.mjs` | 50.8 | 7.1 | **50.8** | 836 | **AUTO/CC p-locks live here** (cable-0 encoder-CC, the novel path). Huge file, half-tested even in unit; almost untouched by the real engine. |
-| `render/ui_leds.mjs` | 2.8 | 79.1 | **79.1** | 864 | LED rendering — only the real-engine path exercises it; no unit coverage. (Pixel/LED truth is partly device-only — see plan's irreducible list.) |
-
-`ui.js` itself: **83.0%** (2075 stmts, behavior-only). The remaining ~350
-uncovered statements in the composition root are the next-largest single target.
+> Run `mise run gap-map` for the full per-module table.
 
 ---
 
-## Tier B — behavior-tier gaps (high UNIT%, low BEHAVIOR%)
+## Honest caveats (what a green number does *not* mean)
 
-These are **proven only with mock `deps`, never through the real `ui.js` +
-seq8-wasm engine path** — exactly the class of bug the plan calls out (a wrong
-on-device path that compiles + passes all mock tests). This is the primary
-backlog for Step 2.
+- **Coalescing is invisible.** The harness has no audio buffer, so it never
+  reproduces the device rule "only the last `set_param` per buffer reaches DSP."
+  A test can pass while the device drops the write. This is the #1 fidelity gap.
+- **The engine state roundtrip is partly faked.** The wasm DSP keeps state
+  in-memory and never writes `seq8-state.json`; the snapshot test *seeds* the
+  file, so it proves the JS orchestration, not the real save→file→load path.
+- **V8 ≠ QuickJS, Node ≠ device.** Runtime divergence, RT timing, 94 Hz tick,
+  real audio/LED/OLED are all out of reach here — see
+  [`DEVICE-SMOKE.md`](DEVICE-SMOKE.md) for the device-only complement.
 
-| Module | UNIT% | BEHAVIOR% | Concept (plan priority) |
-|---|---|---|---|
-| `drum/ui_drum_lane_workflows.mjs` | 100 | **11.2** | Drum lanes |
-| `drum/ui_drum_repeat_workflows.mjs` | 98.1 | **21.0** | Drum repeat |
-| `pad/ui_pad_surface.mjs` | 98.0 | **53.1** | Pad Surface |
-| `perform/ui_tap_tempo_workflow.mjs` | 100 | **7.3** | — |
-| `perform/ui_mute_solo_workflow.mjs` | 100 | **11.4** | — |
-| `perform/ui_transpose_workflow.mjs` | 100 | **12.1** | — |
-| `perform/ui_recording_workflow.mjs` | 100 | **25.8** | — |
-| `menu/ui_clear_auto_workflow.mjs` | 100 | **8.7** | AUTO/CC p-locks (clear) |
-| `input/ui_transport_cc_workflow.mjs` | 94.8 | **16.1** | Transport |
-| `input/ui_navigation_cc_workflow.mjs` | 96.6 | **17.7** | Navigation |
-| `midi/ui_midi_external_workflow.mjs` | 97.6 | **1.2** | External MIDI / ROUTE_MOVE |
-| `pad/ui_pad_aftertouch_workflow.mjs` | 100 | **2.9** | Poly-AT (a measured live seam) |
-| `view/ui_track_view_step_workflow.mjs` | 99.7 | **40.2** | Step editing |
-| `tick/ui_tick_tasks.mjs` | 98.4 | **53.2** | **Tick Pipeline** drains / two-tick deferred |
-| `sync/ui_polldsp_workflow.mjs` | 95.4 | **64.8** | `set_param` coalescing / deferred saves |
-| `render/ui_session_overview_render.mjs` | 100 | **5.7** | Session overview render |
-| `persist/ui_snapshot_workflow.mjs` | 100 | **7.2** | Snapshot persistence |
-
----
-
-## Plan priority concepts → current coverage
-
-Mapping the plan's named load-bearing paths to where they live:
-
-- **Tick Pipeline ordering / deferred-queue drains** — `tick/ui_tick_tasks.mjs`
-  (unit 98 / behavior 53), `tick/ui_tick_workflow.mjs` (unit 70 / behavior 100).
-  Ordering invariants are exercised by the real engine but `tick_tasks` internals
-  largely are not.
-- **`set_param` coalescing & two-tick deferred patterns** —
-  `sync/ui_polldsp_workflow.mjs` (behavior 65), `tick/ui_tick_tasks.mjs`. The
-  coalescing/deferred drains are the riskiest device-only seam; behavior coverage
-  is the only headless proof and it's partial.
-- **Persistence roundtrip (state v=36 save/load, UI sidecar)** —
-  `persist/ui_persistence.mjs` (union **31%**), `persist/ui_export.mjs` (union
-  **22%**), `persist/ui_snapshot_workflow.mjs` (behavior 7%). **Weakest priority
-  area overall.** (Note: one `state-roundtrip` behavior test exists but covers
-  little of these modules.)
-- **Drum lanes / drum repeat / Pad Surface** — `drum/ui_drum_lane_workflows.mjs`
-  (behavior 11), `drum/ui_drum_repeat_workflows.mjs` (behavior 21),
-  `pad/ui_pad_surface.mjs` (behavior 53). Unit-solid, real-engine-thin.
-- **Move Co-Run enter/exit + reconcile** — `corun/ui_corun_workflow.mjs`
-  (union **100%**, behavior 98). **Already well covered** in both tiers — the
-  exception, not the gap. (Cross-check device reconcile against
-  [`MOVE-RECONCILE.md`](MOVE-RECONCILE.md).)
-- **AUTO/CC p-locks (cable-0 encoder-CC)** — `input/ui_knob_cc_workflow.mjs`
-  (union **51%**, behavior **7%**), `menu/ui_clear_auto_workflow.mjs` (behavior
-  9%). The novel product path, and one of the least-covered. High-value Step 2
-  target.
-
----
-
-## Notes / caveats
-
-- Union assumes the two tiers' per-file statement maps align (they do — both
-  transform the same source via vite). Treat union% as a close approximation, not
-  a merged-istanbul report.
-- **Don't chase the number.** Per the plan, several low-behavior modules
-  (`ui_leds`, pad/LED render) are partly **device-only** (OLED/LED truth, palette
-  SysEx, 94 Hz tick) and belong on the Step 3 device-smoke checklist, not the
-  headless backlog.
-- The behavior tier currently has only **5 test files** — its low totals reflect
-  *test breadth*, not unreachable code. The engine is reachable; Step 2 is about
-  writing the flows.
+These ceilings — not the remaining % — are the real limit, and the subject of
+[`HARNESS-EVOLUTION.md`](HARNESS-EVOLUTION.md).
 </content>

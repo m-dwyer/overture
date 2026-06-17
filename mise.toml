@@ -49,6 +49,10 @@ pnpm -C overture-ui test:coverage
 pnpm -C web test:coverage
 """
 
+[tasks.gap-map]
+description = "Regenerate the coverage gap-map table from both vitest reports (run `cover` first)"
+run = "python3 scripts/coverage_gapmap.py"
+
 [tasks.screenshot]
 description = "Render the emulator headless (Playwright) → web/shot.png + shot-oled.png"
 run = "pnpm -C web exec playwright test"
