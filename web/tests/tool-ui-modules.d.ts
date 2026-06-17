@@ -84,6 +84,13 @@ declare module "@tool-ui/ui_live_note_workflow.mjs" {
   export function extNoteOffAllImpl(S: any, state: any, deps: any): void;
 }
 
+declare module "@tool-ui/ui_track_selection_workflow.mjs" {
+  export function clipIsEmptyImpl(S: any, deps: any, track: number, clip: number): boolean;
+  export function focusedClipIsEmptyImpl(S: any, deps: any, track: number): boolean;
+  export function switchActiveTrackImpl(S: any, deps: any, track: number): void;
+  export function selectTrackGestureImpl(S: any, deps: any, track: number): void;
+}
+
 declare module "@tool-ui/ui_clip_track_sync.mjs" {
   export function readMelodicClipFromDsp(S: any, deps: any, track: number, clip: number, opts: any): void;
   export function readDrumActiveLaneFromDsp(S: any, deps: any, track: number): void;
