@@ -3,6 +3,7 @@ build/
 dist/
 out/
 bin/
+coverage/
 obj/
 
 # C objects / shared libs

@@ -39,5 +39,17 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    coverage: {
+      provider: "v8",
+      // The unit tier drives the decomposed ui/*.mjs factory modules directly with
+      // mock deps. The composition root ui/ui.js is exercised in the behavior tier
+      // (real ui.js + wasm), not here, so it's excluded from this tier's numbers.
+      // all:true so modules with NO unit test still appear as 0% — that's the gap map.
+      include: ["ui/**/*.mjs"],
+      exclude: ["ui/ui.js"],
+      all: true,
+      reporter: ["text", "json-summary", "json", "html"],
+      reportsDirectory: "coverage",
+    },
   },
 });
