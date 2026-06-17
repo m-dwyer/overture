@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   buildDspPadMapPayload,
+  computePadNoteMap,
   createLiveNoteQueues,
   drumPadToLane,
   drumPadToVelZone,
@@ -12,6 +13,7 @@ import {
   queueLiveNoteOff,
   queueLiveNoteOn,
   selectDrumLaneSurface,
+  padDispatchMutedNow,
   updatePadNoteMap,
 } from "@tool-ui/ui_pad_surface.mjs";
 
@@ -32,8 +34,21 @@ function baseState() {
     padNoteMap: new Array(32).fill(0),
     trackOctave: [0],
     sessionView: false,
-    extSendAsyncEnabled: false,
+    shiftHeld: false,
     deleteHeld: false,
+    muteHeld: false,
+    copyHeld: false,
+    captureHeld: false,
+    loopHeld: false,
+    tapTempoOpen: false,
+    activeBank: 0,
+    knobTouched: -1,
+    bankParams: [[[0, 0, 0, 0, 0, 0]]],
+    stepIntervalMode: false,
+    globalMenuOpen: false,
+    extSendAsyncEnabled: false,
+    dspInboundEnabled: false,
+    lastPushedMuted: null,
   };
 }
 
@@ -447,5 +462,67 @@ describe("pad surface", () => {
 
     expect(parts.slice(0, 32)).toEqual(new Array(32).fill(0xff));
     expect(parts.slice(-3)).toEqual([0, 1, 0]);
+  });
+
+  test("pad dispatch mute policy suppresses modal pad owners", () => {
+    for (const key of ["sessionView", "shiftHeld", "deleteHeld", "muteHeld", "copyHeld", "captureHeld", "loopHeld", "tapTempoOpen"] as const) {
+      const S = baseState();
+      S[key] = true;
+      expect(padDispatchMutedNow(S), key).toBe(true);
+    }
+  });
+
+  test("pad dispatch mute policy suppresses Arp Steps pad editors", () => {
+    const touched = baseState();
+    touched.activeBank = 4;
+    touched.knobTouched = 4;
+    touched.bankParams[0][4] = [0, 0, 0, 0, 2, 0];
+
+    const overlay = baseState();
+    overlay.activeBank = 5;
+    overlay.stepIntervalMode = true;
+
+    expect(padDispatchMutedNow(touched)).toBe(true);
+    expect(padDispatchMutedNow(overlay)).toBe(true);
+  });
+
+  test("pad dispatch mute policy leaves global menu playable in Track View", () => {
+    const S = baseState();
+    S.globalMenuOpen = true;
+
+    expect(padDispatchMutedNow(S)).toBe(false);
+  });
+
+  test("compute pad note map is a stock Schwung no-op for DSP push", () => {
+    const S = baseState();
+    const c = calls();
+
+    computePadNoteMap(S, {
+      ...deps,
+      host_module_set_param: c.fn("setParam"),
+    });
+
+    expect(S.padNoteMap[0]).toBe(36);
+    expect(c.log).toEqual([]);
+    expect(S.lastPushedMuted).toBe(null);
+  });
+
+  test("compute pad note map pushes patched Schwung payload with mute policy flag", () => {
+    const S = baseState();
+    const c = calls();
+    S.dspInboundEnabled = true;
+    S.sessionView = true;
+
+    computePadNoteMap(S, {
+      ...deps,
+      host_module_set_param: c.fn("setParam"),
+    });
+
+    expect(c.log).toHaveLength(1);
+    expect(c.log[0][0]).toBe("setParam");
+    expect(c.log[0][1]).toBe("t0_padmap");
+    expect(String(c.log[0][2]).split(" ").map(Number).slice(0, 32)).toEqual(new Array(32).fill(0xff));
+    expect(String(c.log[0][2]).split(" ").map(Number).slice(-3)).toEqual([0, 1, 0]);
+    expect(S.lastPushedMuted).toBe(true);
   });
 });
