@@ -74,6 +74,7 @@ export interface UiState {
   activeDrumLane: number[];
   trackCCType: number[][];
   trackCCAssign: number[][];
+  trackCCAutoBits: number[][];
   clipCCVal: number[][][];
   ccLaneLength: number[][][];
   ccLaneTps: number[][][];

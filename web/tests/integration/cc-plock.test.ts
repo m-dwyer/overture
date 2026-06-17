@@ -15,6 +15,7 @@ const DELETE = 119; // MoveDelete
  * S.activeBank/activeTrack directly; track 1 is melodic by default. */
 function enterCcBank(h: Harness, track = 1): number {
   const s = h.ui();
+  s.sessionView = false; // Track View — held-step CC editing is Track-View only
   s.activeTrack = track;
   s.activeBank = 6;
   s.trackActiveBank[track] = 6;
@@ -77,5 +78,56 @@ describe("AUTO/CC p-locks — knob path (real ui.js + seq8-wasm)", () => {
     expect(h.ui().trackCCType[1][0]).toBe(0); // still a plain CC
     expect(Number((h.get("t1_cc_assigns") as string).split(" ")[0])).toBe(9);
     expect(Number((h.get("t1_cc_types") as string).split(" ")[0])).toBe(0);
+  });
+});
+
+// The sequenced part: holding a step + turning a knob writes a CC automation
+// POINT at that step (cc_auto_set2 at heldStep*tps) — the per-step param-lock.
+// heldStep registers after a hold threshold (~STEP_HOLD_TICKS), at which point
+// the step-edit state initializes; the knob then writes/edits the point.
+// Targets view/ui_track_view_step_workflow.mjs handleTrackViewCcStepEditKnob.
+const ccStepInfo = (h: Harness, t: number, c: number, s: number): number[] =>
+  (h.get(`t${t}_c${c}_ccstepinfo_${s}`) as string).split(" ").map(Number);
+
+describe("AUTO/CC p-locks — sequenced per-step (real ui.js + seq8-wasm)", () => {
+  let h: Harness;
+  beforeEach(async () => {
+    h = await createHarness();
+  }, 60_000);
+
+  const stepDown = (i: number) => h.emu.sendInternal(0x90, 16 + i, 127);
+  const stepUp = (i: number) => h.emu.sendInternal(0x80, 16 + i, 0);
+
+  test("hold-step + knob writes a per-step CC point in the engine", () => {
+    const ac = enterCcBank(h, 1);
+    const sidx = 4;
+
+    stepDown(sidx);
+    h.step(25); // exceed the hold threshold → step-edit state initializes
+    turnUp(h, KNOB0, 12); // write/raise the point at step 4, knob 0
+    stepUp(sidx);
+
+    // Engine: a recorded point exists at step 4 for knob 0 (index 0..7 = point val).
+    expect(ccStepInfo(h, 1, ac, sidx)[0]).toBeGreaterThanOrEqual(0);
+    expect((h.ui().trackCCAutoBits[1][ac] >> 0) & 1).toBe(1);
+    // Sequenced: a neighbouring step has no point for that knob.
+    expect(ccStepInfo(h, 1, ac, sidx + 1)[0]).toBe(-1);
+  });
+
+  test("turning the held-step knob down past zero clears the point", () => {
+    const ac = enterCcBank(h, 1);
+    const sidx = 6;
+
+    stepDown(sidx);
+    h.step(25);
+    turnUp(h, KNOB0, 12); // set a point
+    expect(ccStepInfo(h, 1, ac, sidx)[0]).toBeGreaterThanOrEqual(0);
+
+    // Drive the value back below zero → cc_auto_clear_range removes the point.
+    for (let i = 0; i < 40; i++) h.cc(KNOB0, 127); // knob CCW
+    h.step(1);
+    stepUp(sidx);
+
+    expect(ccStepInfo(h, 1, ac, sidx)[0]).toBe(-1);
   });
 });
