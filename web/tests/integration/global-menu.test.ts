@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { buildGlobalMenuItemsImpl } from "@tool-ui/ui_global_menu.mjs";
+import {
+  buildGlobalMenuItemsImpl,
+  doShiftStepCommonImpl,
+  ensureGlobalMenuFreshImpl,
+  jumpToMenuLabelImpl,
+  openGlobalMenuImpl,
+} from "@tool-ui/ui_global_menu.mjs";
 
 // buildGlobalMenuItems is a pure BUILDER: it returns the flat list of global
 // menu-item descriptors whose get/set/onAction closures capture host state via
@@ -293,5 +299,194 @@ describe("buildGlobalMenuItems — Layout gating + format helpers", () => {
     expect(byLabel(items, "Route").format(2)).toBe("Ext");
     expect(byLabel(items, "VelIn").format(0)).toBe("Live");
     expect(byLabel(items, "VelIn").format(64)).toBe("64");
+  });
+});
+
+function workflowDeps(c: ReturnType<typeof calls>, opts: {
+  items?: Array<{ label: string }>;
+  nextItems?: Array<Array<{ label: string }>>;
+  menuState?: Record<string, unknown>;
+  stack?: unknown[];
+  setParam?: ((key: string, val: string) => void) | null;
+} = {}) {
+  const queued = opts.nextItems ? [...opts.nextItems] : null;
+  return {
+    buildGlobalMenuItems: () => {
+      c.log.push(["buildGlobalMenuItems"]);
+      return queued && queued.length ? queued.shift() : (opts.items || []);
+    },
+    createMenuState: () => {
+      c.log.push(["createMenuState"]);
+      return opts.menuState || { selectedIndex: 0, editing: false, editValue: null };
+    },
+    createMenuStack: () => {
+      c.log.push(["createMenuStack"]);
+      return opts.stack || [];
+    },
+    exitMoveNativeCoRun: c.fn("exitMoveNativeCoRun"),
+    exitSchwungCoRun: c.fn("exitSchwungCoRun"),
+    openTapTempo: c.fn("openTapTempo"),
+    setParam: opts.setParam === undefined ? c.fn("setParam") : opts.setParam,
+    showActionPopup: c.fn("showActionPopup"),
+  };
+}
+
+describe("global menu open/freshen workflow", () => {
+  test("open exits co-run, initializes menu state, and marks the menu dirty", () => {
+    const c = calls();
+    const S = makeState({
+      schwungCoRunSlot: 2,
+      moveCoRunTrack: 1,
+      activeTrack: 3,
+      lastSentMenuEditValue: 99,
+      jogTouched: true,
+      screenDirty: false,
+    });
+    const items = [{ label: "Global" }];
+    const menuState = { selectedIndex: 4, editing: false, editValue: null };
+    const stack = [{ page: 1 }];
+
+    openGlobalMenuImpl(S, workflowDeps(c, { items, menuState, stack }));
+
+    expect(c.log).toEqual([
+      ["exitSchwungCoRun"],
+      ["exitMoveNativeCoRun"],
+      ["buildGlobalMenuItems"],
+      ["createMenuState"],
+      ["createMenuStack"],
+    ]);
+    expect(S.globalMenuItems).toBe(items);
+    expect(S.globalMenuState).toBe(menuState);
+    expect(S.globalMenuStack).toBe(stack);
+    expect(S.globalMenuOpen).toBe(true);
+    expect(S.globalMenuBuiltForTrack).toBe(3);
+    expect(S.lastSentMenuEditValue).toBeNull();
+    expect(S.screenDirty).toBe(true);
+    expect(S.jogTouched).toBe(false);
+  });
+
+  test("freshen is a no-op when closed or already built for the active track", () => {
+    const c = calls();
+    const S = makeState({ globalMenuOpen: false, globalMenuBuiltForTrack: 0, activeTrack: 1 });
+    ensureGlobalMenuFreshImpl(S, workflowDeps(c, { items: [{ label: "Global" }] }));
+    expect(c.log).toEqual([]);
+
+    S.globalMenuOpen = true;
+    S.globalMenuBuiltForTrack = 1;
+    ensureGlobalMenuFreshImpl(S, workflowDeps(c, { items: [{ label: "Global" }] }));
+    expect(c.log).toEqual([]);
+  });
+
+  test("freshen rebuilds for active-track changes and restores cursor by label", () => {
+    const c = calls();
+    const S = makeState({
+      activeTrack: 2,
+      globalMenuOpen: true,
+      globalMenuBuiltForTrack: 0,
+      globalMenuItems: [{ label: "Channel" }, { label: "Edit Sound..." }, { label: "Global" }],
+      globalMenuState: { selectedIndex: 1, editing: false, editValue: null },
+    });
+
+    ensureGlobalMenuFreshImpl(S, workflowDeps(c, {
+      items: [{ label: "Channel" }, { label: "Global" }, { label: "Edit Sound..." }],
+    }));
+
+    expect(c.names()).toEqual(["buildGlobalMenuItems"]);
+    expect((S.globalMenuState as { selectedIndex: number }).selectedIndex).toBe(2);
+    expect(S.globalMenuBuiltForTrack).toBe(2);
+  });
+
+  test("freshen clamps cursor when the previous label disappears", () => {
+    const c = calls();
+    const S = makeState({
+      activeTrack: 2,
+      globalMenuOpen: true,
+      globalMenuBuiltForTrack: 0,
+      globalMenuItems: [{ label: "Channel" }, { label: "Edit Sound..." }, { label: "Global" }],
+      globalMenuState: { selectedIndex: 2, editing: false, editValue: null },
+    });
+
+    ensureGlobalMenuFreshImpl(S, workflowDeps(c, {
+      items: [{ label: "Channel" }, { label: "Route" }],
+    }));
+
+    expect((S.globalMenuState as { selectedIndex: number }).selectedIndex).toBe(1);
+  });
+});
+
+describe("global menu shift-step shortcuts", () => {
+  test("jumpToMenuLabel opens the menu and selects the requested label", () => {
+    const c = calls();
+    const S = makeState({ globalMenuOpen: false, schwungCoRunSlot: -1, moveCoRunTrack: -1 });
+
+    jumpToMenuLabelImpl(S, workflowDeps(c, {
+      items: [{ label: "Global" }, { label: "Swing Amt" }, { label: "Scale" }],
+    }), "Swing Amt");
+
+    expect(S.globalMenuOpen).toBe(true);
+    expect((S.globalMenuState as { selectedIndex: number }).selectedIndex).toBe(1);
+  });
+
+  test("shortcut steps jump to global, swing, and scale labels", () => {
+    const c = calls();
+    const S = makeState({ globalMenuOpen: false, schwungCoRunSlot: -1, moveCoRunTrack: -1 });
+    const deps = workflowDeps(c, {
+      nextItems: [
+        [{ label: "Channel" }, { label: "Global" }, { label: "Scale" }],
+        [{ label: "Global" }, { label: "Swing Amt" }, { label: "Scale" }],
+        [{ label: "Global" }, { label: "Swing Amt" }, { label: "Scale" }],
+      ],
+    });
+
+    doShiftStepCommonImpl(S, deps, 1);
+    expect((S.globalMenuState as { selectedIndex: number }).selectedIndex).toBe(1);
+    doShiftStepCommonImpl(S, deps, 6);
+    expect((S.globalMenuState as { selectedIndex: number }).selectedIndex).toBe(1);
+    doShiftStepCommonImpl(S, deps, 8);
+    expect((S.globalMenuState as { selectedIndex: number }).selectedIndex).toBe(2);
+  });
+
+  test("shortcut step 3 queues edit entry only in Track View", () => {
+    const c = calls();
+    const S = makeState({ activeTrack: 2, sessionView: false });
+    doShiftStepCommonImpl(S, workflowDeps(c), 2);
+    expect(S.pendingEditEntryTrack).toBe(2);
+
+    const S2 = makeState({ activeTrack: 1, sessionView: true });
+    doShiftStepCommonImpl(S2, workflowDeps(c), 2);
+    expect(S2.pendingEditEntryTrack).toBeUndefined();
+  });
+
+  test("shortcut step 5 toggles metronome and writes the host param", () => {
+    const c = calls();
+    const S = makeState({ metronomeOn: 1 });
+    doShiftStepCommonImpl(S, workflowDeps(c), 5);
+    expect(S.metronomeOn).toBe(3);
+    expect(c.log).toEqual([
+      ["setParam", "metro_on", "3"],
+      ["showActionPopup", "Always"],
+    ]);
+
+    c.log.length = 0;
+    doShiftStepCommonImpl(S, workflowDeps(c), 5);
+    expect(S.metronomeOn).toBe(1);
+    expect(c.log).toEqual([
+      ["setParam", "metro_on", "1"],
+      ["showActionPopup", "Cnt-In"],
+    ]);
+  });
+
+  test("shortcut step 5 tolerates a missing host param writer", () => {
+    const c = calls();
+    const S = makeState({ metronomeOn: 1 });
+    doShiftStepCommonImpl(S, workflowDeps(c, { setParam: null }), 5);
+    expect(S.metronomeOn).toBe(3);
+    expect(c.log).toEqual([["showActionPopup", "Always"]]);
+  });
+
+  test("shortcut step 4 opens tap tempo", () => {
+    const c = calls();
+    doShiftStepCommonImpl(makeState(), workflowDeps(c), 4);
+    expect(c.log).toEqual([["openTapTempo"]]);
   });
 });
