@@ -110,6 +110,14 @@ declare module "@tool-ui/ui_tick_adapters.mjs" {
   export function createTickHostAdapters(): Record<string, HostFn | null>;
 }
 
+declare module "@tool-ui/ui_entrypoint_diagnostics.mjs" {
+  export const ENTRYPOINT_ERROR_LOG_PATH: string;
+  export function createEntrypointErrorWrapper(S: any): {
+    captureError(where: string, e: unknown): void;
+    runEntrypoint<T>(where: string, fn: () => T): T | undefined;
+  };
+}
+
 declare module "@tool-ui/ui_input_dispatch_workflow.mjs" {
   export function onCcButtonsImpl(S: any, deps: any, d1: number, d2: number): void;
   export function onCcJogImpl(S: any, deps: any, d1: number, d2: number): void;
