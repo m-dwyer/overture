@@ -76,6 +76,21 @@ declare module "@tool-ui/ui_tick_tasks.mjs" {
   export function runEndOfTickPersistenceTasks(S: any, deps: any): void;
 }
 
+declare module "@tool-ui/ui_input_dispatch_workflow.mjs" {
+  export function onCcButtonsImpl(S: any, deps: any, d1: number, d2: number): void;
+  export function onCcJogImpl(S: any, deps: any, d1: number, d2: number): void;
+  export function onCcKnobsImpl(S: any, deps: any, d1: number, d2: number): void;
+  export function onCcMsgImpl(deps: any, d1: number, d2: number): void;
+  export function onCcSideImpl(S: any, deps: any, d1: number, d2: number): void;
+  export function onCcStepEditImpl(S: any, deps: any, d1: number, d2: number): void;
+  export function onCcTransportImpl(S: any, deps: any, d1: number, d2: number): void;
+  export function onPadPressImpl(S: any, deps: any, status: number, d1: number, d2: number): void;
+  export function onPadPressTrackViewImpl(S: any, deps: any, status: number, d1: number, d2: number): void;
+  export function onPadReleaseImpl(S: any, deps: any, status: number, d1: number, d2: number): void;
+  export function onStepButtonsImpl(S: any, deps: any, d1: number, d2: number): void;
+  export function switchViewCleanupImpl(S: any, deps: any): void;
+}
+
 declare module "@tool-ui/ui_live_note_workflow.mjs" {
   export function createLiveNoteRecordingState(): { recordingNoteTrack: Map<number, number>; extHeldNotes: Map<number, any> };
   export function recordNoteOnImpl(S: any, state: any, pitch: number, velocity: number, rt: number): void;
