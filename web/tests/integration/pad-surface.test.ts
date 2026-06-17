@@ -3,6 +3,7 @@ import {
   buildDspPadMapPayload,
   computePadNoteMap,
   createLiveNoteQueues,
+  createPadRuntimeState,
   drumPadToLane,
   drumPadToVelZone,
   drumVelZoneToVelocity,
@@ -69,6 +70,19 @@ const deps = {
 };
 
 describe("pad surface", () => {
+  test("pad runtime state initializes pitch and press ticks as mutable 32-slot mirrors", () => {
+    const runtime = createPadRuntimeState();
+
+    expect(runtime.padPitch).toEqual(new Array(32).fill(-1));
+    expect(runtime.padPressTick).toEqual(new Array(32).fill(-1));
+
+    runtime.padPitch[4] = 60;
+    runtime.padPressTick[4] = 123;
+
+    expect(runtime.padPitch[4]).toBe(60);
+    expect(runtime.padPressTick[4]).toBe(123);
+  });
+
   test("drum pad geometry maps left-half pads to paged lanes", () => {
     expect(drumPadToLane(0, 0)).toBe(0);
     expect(drumPadToLane(3, 0)).toBe(3);
