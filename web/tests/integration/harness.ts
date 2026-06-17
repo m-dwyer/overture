@@ -3,7 +3,7 @@
 // hit engine truth (get_param), emitted MIDI, recorded OLED print() calls, and LEDs.
 import { createEmulator, type Emulator } from "../../src/host/emulator.js";
 import { createWasmDsp } from "../../src/wasm-dsp.js";
-import type { DisplaySink, LedSink } from "../../src/host/sinks.js";
+import { memFiles, type DisplaySink, type LedSink, type FileStore } from "../../src/host/sinks.js";
 
 export interface PrintCall { x: number; y: number; text: string; color: number; }
 
@@ -63,6 +63,10 @@ export interface UiState {
   trackChannel: number[];
   trackRoute: number[];
   trackPadMode: number[];
+  trackOctave: number[];
+  trackAtMode: number[];
+  padLayoutChromatic: boolean[];
+  beatMarkersEnabled: boolean;
   trackClipPlaying: boolean[];
   trackQueuedClip: number[];
   drumClipNonEmpty: boolean[][];
@@ -97,14 +101,23 @@ export interface Harness {
   set(key: string, val: string | number): void;
   /** Live Overture UI state (S) — see UiState. */
   ui(): UiState;
+  /** The in-memory host FileStore (state files / sidecar / snapshots). */
+  files: FileStore;
+  /** Suspend gesture: Shift+Back. Writes the UI sidecar synchronously and
+   * defers the DSP `save`; the steps here drain that deferred save. */
+  suspend(): void;
+  /** Resume: re-run init() in the same runtime (Move's Shift+Back resume
+   * model) so restoreUiSidecar re-reads the sidecar, then settle. */
+  resume(n?: number): void;
 }
 
 const BLOCKS_PER_TICK = 4;
 
 export async function createHarness(): Promise<Harness> {
   const rec = recorder();
+  const files = memFiles();
   const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => rec.midiOut.push([tag, b0, b1, b2, b3]));
-  const emu = await createEmulator({ dsp, display: rec.display, leds: rec.ledSink });
+  const emu = await createEmulator({ dsp, display: rec.display, leds: rec.ledSink, files });
   emu.init();
 
   const step = (n = 1): void => {
@@ -128,5 +141,15 @@ export async function createHarness(): Promise<Harness> {
       if (!state) throw new Error("overtureUiState is not initialized");
       return state;
     },
+    files,
+    suspend() {
+      emu.sendInternal(0xb0, 49, 127); // Shift down (MoveShift)
+      emu.sendInternal(0xb0, 51, 127); // Back press → saveState() under Shift
+      step(1);
+      emu.sendInternal(0xb0, 51, 0);
+      emu.sendInternal(0xb0, 49, 0);   // Shift up
+      step(2); // drain pendingSuspendSave (DSP `save`) + pendingHideAfterSave
+    },
+    resume(n = 400) { emu.init(); step(n); },
   };
 }
