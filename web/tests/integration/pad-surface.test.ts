@@ -15,6 +15,9 @@ import {
   queueLiveNoteOff,
   queueLiveNoteOn,
   selectDrumLaneSurface,
+  setActiveDrumLaneMirror,
+  setDrumLanePageMirror,
+  setDrumPerformModeMirror,
   padDispatchMutedNow,
   updatePadNoteMap,
 } from "@tool-ui/ui_pad_surface.mjs";
@@ -23,6 +26,8 @@ function baseState() {
   return {
     activeTrack: 0,
     trackPadMode: [0],
+    activeDrumLane: [0],
+    drumPerformMode: [0],
     drumLanePage: [0],
     drumLaneNote: [Array.from({ length: 32 }, (_, i) => 36 + i)],
     moveCoRunTrack: -1,
@@ -559,5 +564,74 @@ describe("pad surface", () => {
     expect(c.log[0][1]).toBe("t0_padmap");
     expect(String(c.log[0][2]).split(" ").map(Number).slice(0, 32)).toEqual(new Array(32).fill(0xff));
     expect(S.lastPushedMuted).toBe(true);
+  });
+
+  test("active drum lane mirror setter updates JS mirror before DSP push", () => {
+    const S = baseState();
+    const c = calls();
+
+    setActiveDrumLaneMirror(S, {
+      host_module_set_param: (key: string, val: string) => c.log.push(["setParam", key, val, S.activeDrumLane[0]]),
+    }, 0, 7);
+
+    expect(S.activeDrumLane[0]).toBe(7);
+    expect(c.log).toEqual([["setParam", "t0_active_drum_lane", "7", 7]]);
+  });
+
+  test("active drum lane mirror setter skips no-op writes and tolerates stock host", () => {
+    const S = baseState();
+    const c = calls();
+
+    setActiveDrumLaneMirror(S, { host_module_set_param: c.fn("setParam") }, 0, 0);
+    setActiveDrumLaneMirror(S, { host_module_set_param: null }, 0, 3);
+
+    expect(S.activeDrumLane[0]).toBe(3);
+    expect(c.log).toEqual([]);
+  });
+
+  test("drum perform mode mirror setter updates JS mirror before DSP push", () => {
+    const S = baseState();
+    const c = calls();
+
+    setDrumPerformModeMirror(S, {
+      host_module_set_param: (key: string, val: string) => c.log.push(["setParam", key, val, S.drumPerformMode[0]]),
+    }, 0, 2);
+
+    expect(S.drumPerformMode[0]).toBe(2);
+    expect(c.log).toEqual([["setParam", "t0_drum_perform_mode", "2", 2]]);
+  });
+
+  test("drum lane page mirror setter updates JS mirror before DSP push", () => {
+    const S = baseState();
+    const c = calls();
+
+    setDrumLanePageMirror(S, {
+      host_module_set_param: (key: string, val: string) => c.log.push(["setParam", key, val, S.drumLanePage[0]]),
+    }, 0, 1);
+
+    expect(S.drumLanePage[0]).toBe(1);
+    expect(c.log).toEqual([["setParam", "t0_drum_lane_page", "1", 1]]);
+  });
+
+  test("pad surface runtime exposes drum mirror setters through optional host setter", () => {
+    const S = baseState();
+    const c = calls();
+    const runtime = createPadSurfaceRuntime(S, {
+      ...deps,
+      optionalHostModuleSetParam: () => c.fn("setParam"),
+    });
+
+    runtime.setActiveDrumLane(0, 5);
+    runtime.setDrumPerformMode(0, 1);
+    runtime.setDrumLanePage(0, 1);
+
+    expect(S.activeDrumLane[0]).toBe(5);
+    expect(S.drumPerformMode[0]).toBe(1);
+    expect(S.drumLanePage[0]).toBe(1);
+    expect(c.log).toEqual([
+      ["setParam", "t0_active_drum_lane", "5"],
+      ["setParam", "t0_drum_perform_mode", "1"],
+      ["setParam", "t0_drum_lane_page", "1"],
+    ]);
   });
 });
