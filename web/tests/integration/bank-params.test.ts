@@ -2,12 +2,15 @@ import { describe, expect, test } from "vitest";
 import {
   applyBankParamImpl,
   applyTrackConfigImpl,
+  createParameterBankRuntime,
   readBankParamsImpl,
   resetFxBanksImpl,
   resetPerClipBankParamsToDefaultImpl,
   resetSingleFxBankImpl,
+  resetTarpImpl,
 } from "@tool-ui/ui_bank_params.mjs";
 import { BANKS, TPS_VALUES } from "@tool-ui/ui_constants.mjs";
+import { S as runtimeState } from "@tool-ui/ui_state.mjs";
 
 // Param-bank read/write/reset cluster. The resets/applies are
 // COALESCING-SENSITIVE set_param emitters: these tests pin the exact
@@ -81,6 +84,10 @@ function makeState(overrides: Record<string, unknown> = {}) {
     seqArpStepVel: grid([2, 2, 8], () => 0),
     seqArpStepInt: grid([2, 2, 8], () => 9),
     seqArpStepLoopLen: grid([2, 2], () => 0),
+    tarpStepVel: grid([2, 8], () => 0),
+    tarpStepInt: grid([2, 8], () => 9),
+    tarpStepLoopLen: [0, 0],
+    tarpHeldNotes: [new Set([60]), new Set()],
     trackChannel: [1, 1],
     trackRoute: [0, 0],
     trackAtMode: [0, 0],
@@ -199,6 +206,36 @@ describe("resetSingleFxBank", () => {
       { key: "t0_l2_pfx_set", val: "pfx_delay_reset 1" },
       { key: "t0_l2_pfx_set", val: "delay_level 127" },
     ]);
+  });
+});
+
+describe("resetTarp", () => {
+  test("no setParam → no-op", () => {
+    const c = calls();
+    const S = makeState();
+    resetTarpImpl(S, makeDeps(c, { noSet: true }), 0);
+    expect(S.pendingDefaultSetParams).toEqual([]);
+    expect(S.undoAvailable).toBe(false);
+  });
+
+  test("queues tarp reset and mirrors ARP IN defaults", () => {
+    const c = calls();
+    const S = makeState();
+    resetTarpImpl(S, makeDeps(c), 0);
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "t0_tarp_reset", val: "1" },
+    ]);
+    for (let k = 0; k < 8; k++) {
+      const pm = BANKS[5].knobs[k];
+      if (pm) expect((S.bankParams as any)[0][5][k]).toBe(pm.def);
+    }
+    expect((S.tarpStepVel as any)[0]).toEqual([4, 4, 4, 4, 4, 4, 4, 4]);
+    expect((S.tarpStepInt as any)[0]).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+    expect((S.tarpStepLoopLen as any)[0]).toBe(8);
+    expect((S.tarpHeldNotes as any)[0].size).toBe(0);
+    expect(S.undoAvailable).toBe(true);
+    expect(S.redoAvailable).toBe(false);
+    expect(S.screenDirty).toBe(true);
   });
 });
 
@@ -356,6 +393,45 @@ describe("applyTrackConfig", () => {
     ]);
     expect(S.pendingPadNoteMapRecompute).toBe(true);
     expect(c.names()).toContain("forceRedraw");
+  });
+});
+
+describe("Parameter Bank runtime", () => {
+  test("applyTrackConfig keeps route-check popup linkage behind the runtime", () => {
+    const c = calls();
+    const oldRoute = [...runtimeState.trackRoute];
+    const oldChannel = [...runtimeState.trackChannel];
+    const oldAtMode = [...runtimeState.trackAtMode];
+    try {
+      runtimeState.trackRoute[0] = 1;
+      runtimeState.trackChannel[0] = 1;
+      runtimeState.trackAtMode[0] = 0;
+      const runtime = createParameterBankRuntime(runtimeState, {
+        createHostParamAdapters: () => ({
+          getParam: c.fn("getParam"),
+          setParam: c.fn("setParam"),
+        }),
+        hasShadowSetParam: () => false,
+        refreshDrumLaneBankParams: c.fn("refreshDrumLaneBankParams"),
+        syncDrumLanesMeta: c.fn("syncDrumLanesMeta"),
+        syncDrumLaneSteps: c.fn("syncDrumLaneSteps"),
+        syncDrumClipContent: c.fn("syncDrumClipContent"),
+        computePadNoteMap: c.fn("computePadNoteMap"),
+        forceRedraw: c.fn("forceRedraw"),
+        showActionPopup: c.fn("showActionPopup"),
+      });
+
+      runtime.applyTrackConfig(0, "route", 0);
+
+      expect(c.log).toEqual([
+        ["setParam", "t0_route", "schwung"],
+        ["showActionPopup", "ROUTE CHECK", "T1 Move Ch1"],
+      ]);
+    } finally {
+      runtimeState.trackRoute.splice(0, runtimeState.trackRoute.length, ...oldRoute);
+      runtimeState.trackChannel.splice(0, runtimeState.trackChannel.length, ...oldChannel);
+      runtimeState.trackAtMode.splice(0, runtimeState.trackAtMode.length, ...oldAtMode);
+    }
   });
 });
 
