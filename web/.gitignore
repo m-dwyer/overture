@@ -3,6 +3,7 @@ dist/
 coverage/
 *.log
 shot*.png
+manual-shots/
 test-results/
 playwright-report/
 .DS_Store
