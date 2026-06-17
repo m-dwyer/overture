@@ -65,6 +65,24 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(h.rec.litLeds()).toBeGreaterThan(0);
   });
 
+  test("tick drains pending default set params into the real DSP one tick after clearDrainHold", () => {
+    const ui = h.ui();
+    h.set("t0_delay_retrig", "0");
+    ui.pendingDefaultSetParams = [{ key: "t0_delay_retrig", val: "1" }];
+    ui.clearDrainHold = 1;
+    ui.pendingSetLoad = false;
+    ui.pendingDspSync = 0;
+
+    h.step(1);
+    expect(ui.clearDrainHold).toBe(0);
+    expect(ui.pendingDefaultSetParams).toHaveLength(1);
+    expect(h.get("t0_delay_retrig")).toBe("0");
+
+    h.step(1);
+    expect(ui.pendingDefaultSetParams).toHaveLength(0);
+    expect(h.get("t0_delay_retrig")).toBe("1");
+  });
+
   test("Shift+Menu opens the global menu; the jog navigates it (not the K-encoders)", () => {
     // Open: Shift held while Menu is pressed.
     openGlobalMenu();
@@ -295,6 +313,72 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     }
   });
 
+  test("Edit Sound keeps current invalid Move-channel preflight behavior", () => {
+    const ui = h.ui();
+    const oldChannel = ui.trackChannel[0];
+    ui.activeTrack = 0;
+    ui.trackChannel[0] = 5;
+    h.set("t0_channel", 5);
+    try {
+      openEditSoundFromGlobalMenu();
+      expect(h.rec.text()).toMatch(/MOVE CH>4/);
+      expect(h.rec.text()).toMatch(/Ch5/);
+      expect(ui.pendingEditSoundEntry).toBeTruthy();
+
+      h.step(36);
+      expect(ui.moveCoRunTrack).toBe(0);
+      expect(ui.pendingMoveCoRunInject).toBe(0);
+      expect(ui.moveCoRunPressQueue == null || (ui.moveCoRunPressQueue as unknown[]).length === 0).toBe(true);
+      globalThis.shadow_corun_end?.();
+      h.step(10);
+      expect(ui.moveCoRunTrack).toBe(-1);
+    } finally {
+      globalThis.shadow_corun_end?.();
+      ui.moveCoRunTrack = -1;
+      ui.pendingMoveCoRunInject = 0;
+      ui.moveCoRunPressQueue = null;
+      ui.globalMenuOpen = false;
+      ui.trackChannel[0] = oldChannel;
+      h.set("t0_channel", oldChannel);
+      h.step(10);
+    }
+  });
+
+  test("pending Edit Sound entry cancels if the active track changes before handoff", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    openEditSoundFromGlobalMenu();
+    expect(ui.pendingEditSoundEntry).toBeTruthy();
+
+    ui.activeTrack = 1;
+    h.step(30);
+
+    expect(ui.pendingEditSoundEntry).toBeNull();
+    expect(ui.moveCoRunTrack).toBe(-1);
+    expect(globalThis.shadow_corun_state()).toBeNull();
+  });
+
+  test("external routes do not expose Edit Sound in the global menu", () => {
+    const ui = h.ui() as ReturnType<Harness["ui"]> & {
+      globalMenuItems?: Array<{ label?: string }>;
+      globalMenuOpen?: boolean;
+    };
+    const oldRoute = ui.trackRoute[0];
+    ui.activeTrack = 0;
+    ui.trackRoute[0] = 2;
+    h.set("t0_route", "external");
+    try {
+      openGlobalMenu();
+      const labels = ui.globalMenuItems?.map((item) => item?.label) ?? [];
+      expect(labels).not.toContain("Edit Sound...");
+      h.cc(50, 127); h.step(2); h.cc(50, 0); h.step(3);
+    } finally {
+      ui.trackRoute[0] = oldRoute;
+      h.set("t0_route", oldRoute === 2 ? "external" : oldRoute === 1 ? "move" : "schwung");
+      ui.globalMenuOpen = false;
+    }
+  });
+
   test("AUTO knob touch shows Param Peek with lane label, value, and scope without mutating", () => {
     const ui = h.ui();
     ui.activeTrack = 0;
@@ -437,6 +521,26 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     }
   });
 
+  test("Param Peek has a non-AUTO bank fallback for unassigned knobs", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    ui.activeBank = 1;
+    ui.sessionView = false;
+    ui.trackPadMode[0] = 0;
+    ui.knobTouched = -1;
+
+    try {
+      touchKnob(6, true);
+      const text = h.rec.text();
+      expect(text).toMatch(/NOTE FX T1/);
+      expect(text).toMatch(/No target assigned/);
+      expect(text).toMatch(/Knob 7/);
+      expect(text).toMatch(/Route: Move Ch1/);
+    } finally {
+      touchKnob(6, false);
+    }
+  });
+
   test("Shift held in Track View shows compact shortcut help", () => {
     const ui = h.ui();
     ui.sessionView = false;
@@ -460,5 +564,63 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.release(49);
       h.step(2);
     }
+  });
+
+  test("malformed last_restore falls back to full clip sync", () => {
+    const ui = h.ui();
+    h.set("t1_c0_step_3_add", "64 0 100");
+    expect(h.get("t1_c0_steps")?.[3]).toBe("1");
+
+    (ui.clipSteps as number[][][])[1][0][3] = 0;
+    (ui.clipNonEmpty as boolean[][])[1][0] = false;
+    ui.pendingUndoSync = 1;
+    ui.recordArmed = false;
+    ui.recordCountingIn = false;
+    ui.recordArmedTrack = -1;
+
+    const originalGet = globalThis.host_module_get_param;
+    globalThis.host_module_get_param = (key: string): string | null =>
+      key === "last_restore" ? "malformed" : originalGet(key);
+    try {
+      h.step(1);
+    } finally {
+      globalThis.host_module_get_param = originalGet;
+      h.set("t1_c0_step_3_clear", "1");
+      h.step(2);
+    }
+
+    expect(ui.pendingUndoSync).toBe(0);
+    expect((ui.clipSteps as number[][][])[1][0][3]).toBe(1);
+    expect((ui.clipNonEmpty as boolean[][])[1][0]).toBe(true);
+  });
+
+  test("targeted DR row sync keeps active-row lane readback selection in UI caller", () => {
+    const ui = h.ui();
+    ui.trackActiveClip = [2, 1, 2, 3, 2, 5, 6, 7];
+    ui.activeDrumLane = [1, 2, 3, 4, 5, 6, 7, 8];
+    ui.pendingUndoSync = 1;
+    ui.recordArmed = false;
+    ui.recordCountingIn = false;
+    ui.recordArmedTrack = -1;
+
+    const reads: string[] = [];
+    const originalGet = globalThis.host_module_get_param;
+    globalThis.host_module_get_param = (key: string): string | null => {
+      reads.push(key);
+      return key === "last_restore" ? "d 99 99 DR 2" : originalGet(key);
+    };
+    try {
+      h.step(1);
+    } finally {
+      globalThis.host_module_get_param = originalGet;
+    }
+
+    expect(ui.pendingUndoSync).toBe(0);
+    expect(reads).toContain("t0_l1_pfx_snapshot");
+    expect(reads).toContain("t2_l3_pfx_snapshot");
+    expect(reads).toContain("t4_l5_pfx_snapshot");
+    expect(reads).not.toContain("t1_l2_pfx_snapshot");
+    expect(reads).not.toContain("t3_l4_pfx_snapshot");
+    expect(reads).not.toContain("t5_l6_pfx_snapshot");
   });
 });

@@ -1,6 +1,6 @@
 # Inject Probe — the reusable JS injection harness
 
-`overture/tool/tools/inject-probe/` (in the `m-dwyer/schwung-davebox` submodule) — a **pure-JS**, parametric MIDI-injection
+`overture/overture-ui/tools/inject-probe/` (in the `m-dwyer/schwung-davebox` submodule) — a **pure-JS**, parametric MIDI-injection
 probe for mapping Move's live engine/control seams. It replaces the slow DSP loop of the older
 `engine-probe`: there's **no `dsp.so`, no docker, no aarch64 cross-compile**. Inject runs straight
 from `ui.js` via the host's `move_midi_inject_to_move()` global, so the dev loop is just:

@@ -1,8 +1,8 @@
-// Behavior-tier DSP: the real seq8 engine compiled to wasm (tool/dist/wasm/seq8).
+// Behavior-tier DSP: the real seq8 engine compiled to wasm (overture-ui/dist/wasm/seq8).
 // Boots the plugin, creates an instance, and exposes the flat ABI (see
-// tool/dsp/seq8_wasm_glue.c) as the common Dsp interface. MIDI the sequencer
+// overture-ui/dsp/seq8_wasm_glue.c) as the common Dsp interface. MIDI the sequencer
 // emits is forwarded to onMidi.
-// "seq8-wasm" is a Vite alias → tool/dist/wasm/seq8.mjs (a gitignored build
+// "seq8-wasm" is a Vite alias → overture-ui/dist/wasm/seq8.mjs (a gitignored build
 // artifact). The bare specifier keeps TS on the ambient declaration so a fresh
 // checkout typechecks before the wasm is built. Run `mise run wasm` to produce it.
 import Seq8Module from "seq8-wasm";

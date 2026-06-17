@@ -2,7 +2,7 @@
 
 The emulator runs the **real** dAVEBOx/Overture `ui.js` (and shared Schwung modules)
 against a browser mock of the Schwung `shadow_ui` host. This file pins the exact
-contract, extracted from `tool/ui/*` and `schwung/src/shared/*`. Keep it in sync.
+contract, extracted from `overture-ui/ui/*` and `schwung/src/shared/*`. Keep it in sync.
 
 ## Entry points (host → tool)
 The tool registers these on `globalThis`; the emulator host loop calls them:
@@ -58,14 +58,14 @@ Call counts are from a static scan of `ui/*` (rough frequency → priority):
 ## Module resolution
 The tool's `ui.js` imports by absolute on-device paths. The emulator remaps (Vite plugin):
 - `/data/UserData/schwung/shared/*`            → `schwung/src/shared/*`  (7+ modules, transitive)
-- `/data/UserData/schwung/modules/tools/davebox/*` → `tool/ui/*`
+- `/data/UserData/schwung/modules/tools/overture/*` → `overture-ui/ui/*`
 
 This loads the dev sources directly (HMR), so no `bundle_ui.py` step is needed for the emulator.
 
 ## Fidelity ladder
 1. **Layout tier** (start): real UI JS + JS-mock DSP (`src/mock-dsp.js`) — enough clip/step/playhead
    state to design modes, the motion lane, the co-run zoom gesture.
-2. **Behavior tier**: real UI JS + real `seq8`-wasm (`tool/dist/wasm/seq8.{js,wasm}`, built by
-   `tool/scripts/build-wasm.sh`). The wasm flat ABI: `seq8_boot/create/on_midi/set_param/get_param/
-   render/set_bpm/destroy` (see `tool/dsp/seq8_wasm_glue.c`). Swap the mock for a wasm-backed
+2. **Behavior tier**: real UI JS + real `seq8`-wasm (`overture-ui/dist/wasm/seq8.{js,wasm}`, built by
+   `overture-ui/scripts/build-wasm.sh`). The wasm flat ABI: `seq8_boot/create/on_midi/set_param/get_param/
+   render/set_bpm/destroy` (see `overture-ui/dsp/seq8_wasm_glue.c`). Swap the mock for a wasm-backed
    `host_module_*` adapter.

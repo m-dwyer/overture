@@ -36,7 +36,7 @@ the object they affect.
 The following work is already part of the baseline and should not remain as
 active roadmap phases:
 
-- Overture is a thick fork of dAVEBOx's `tool/`.
+- Overture is a thick fork of dAVEBOx's `overture-ui/`.
 - The browser emulator runs the real tool UI with `seq8.wasm`.
 - Side buttons select tracks in Track View.
 - Shift + side buttons select tracks 5-8.
@@ -76,7 +76,7 @@ Changes:
   `typeof shadow_corun_begin === 'function'`.
 - Verify `shadow_corun_begin`, `shadow_corun_end`, and
   `shadow_corun_state` behavior against the upstream host.
-- Preserve the current `tool/` fork as the main product divergence.
+- Preserve the current `overture-ui/` fork as the main product divergence.
 
 Acceptance:
 
@@ -91,6 +91,7 @@ Acceptance:
 
 **Priority:** P0
 **Branch:** `refactor/overture-ui-product-seams`
+**Execution notes:** `docs/REFACTOR_ROADMAP.md`
 
 Refactor only where it creates leverage for the Overture-native UX. The goal is
 not more files; the goal is deeper modules with smaller interfaces.
@@ -422,4 +423,4 @@ Acceptance:
   happens if I turn or press something?
 - dAVEBOx depth remains available and easier to grow into.
 - Schwung divergence is minimized; Overture product divergence lives primarily
-  in `tool/`.
+  in `overture-ui/`.

@@ -60,8 +60,8 @@ confirm those items on device for the relevant `ROADMAP.md` phase.
 
 ## Build / run
 The emulator lives in `web/`, but Vite remaps the tool's on-device imports to
-the live sources in `tool/ui/`. The behavior tier expects the real DSP build at
-`tool/dist/wasm/seq8.mjs`.
+the live sources in `overture-ui/ui/`. The behavior tier expects the real DSP build at
+`overture-ui/dist/wasm/seq8.mjs`.
 
 Common loop:
 
@@ -71,7 +71,7 @@ mise run wasm
 pnpm -C web dev
 ```
 
-Then open the Vite URL, normally `http://localhost:5173/`. Edit `tool/ui/*` or
+Then open the Vite URL, normally `http://localhost:5173/`. Edit `overture-ui/ui/*` or
 `web/src/*`; Vite reloads without bundling or installing on the device.
 
 Checks:
@@ -84,7 +84,7 @@ pnpm -C web test:e2e
 
 Use `pnpm -C web dev` for UI/UX iteration, `pnpm -C web test:node` for the
 real `seq8` WASM behavior tests, and `pnpm -C web test:e2e` for browser smoke
-coverage. If `tool/dist/wasm/seq8.mjs` is missing, behavior-tier tests and the
+coverage. If `overture-ui/dist/wasm/seq8.mjs` is missing, behavior-tier tests and the
 real-DSP browser path fail early; rebuild it with `mise run wasm`.
 
 Only compile/install to the Move after the browser path proves the interaction
