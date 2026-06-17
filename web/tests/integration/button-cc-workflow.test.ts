@@ -9,7 +9,7 @@ import {
   handleUiMuteModifierButton,
   handleUiNoteSessionButton,
   handleUiShiftButton,
-} from "@tool-ui/ui_button_cc_workflow.mjs";
+} from "@tool-ui/input/ui_button_cc_workflow.mjs";
 
 const CAPTURE = 52;
 const COPY = 60;

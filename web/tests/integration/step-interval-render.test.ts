@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
-import { renderStepIntervalOverlay } from "@tool-ui/ui_step_interval_render.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
+import { renderStepIntervalOverlay } from "@tool-ui/render/ui_step_interval_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

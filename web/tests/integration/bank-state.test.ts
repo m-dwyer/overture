@@ -3,13 +3,13 @@ import {
   altIndicatorActiveImpl,
   bankHasAltParamsImpl,
   ccKnobDeltaImpl,
-} from "@tool-ui/ui_bank_state.mjs";
+} from "@tool-ui/bank/ui_bank_state.mjs";
 import {
   defaultStepNoteImpl,
   drumNoteLabelImpl,
   scaleNudgeNoteImpl,
   stepEntryVelocityImpl,
-} from "@tool-ui/ui_note_edit_helpers.mjs";
+} from "@tool-ui/core/ui_note_edit_helpers.mjs";
 
 function state(overrides: Record<string, unknown> = {}) {
   return {

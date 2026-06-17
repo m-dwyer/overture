@@ -20,7 +20,7 @@ import {
   setDrumPerformModeMirror,
   padDispatchMutedNow,
   updatePadNoteMap,
-} from "@tool-ui/ui_pad_surface.mjs";
+} from "@tool-ui/pad/ui_pad_surface.mjs";
 
 function baseState() {
   return {

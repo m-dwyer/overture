@@ -5,7 +5,7 @@ import {
   ensureGlobalMenuFreshImpl,
   jumpToMenuLabelImpl,
   openGlobalMenuImpl,
-} from "@tool-ui/ui_global_menu.mjs";
+} from "@tool-ui/menu/ui_global_menu.mjs";
 
 // buildGlobalMenuItems is a pure BUILDER: it returns the flat list of global
 // menu-item descriptors whose get/set/onAction closures capture host state via

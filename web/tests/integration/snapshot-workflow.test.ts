@@ -5,7 +5,7 @@ import {
   openSaveSnapshotImpl,
   snapshotPickerClickImpl,
   snapshotPickerRotateImpl,
-} from "@tool-ui/ui_snapshot_workflow.mjs";
+} from "@tool-ui/persist/ui_snapshot_workflow.mjs";
 
 const STATE_VERSION = 36;
 const SNAPSHOT_CAP = 3;

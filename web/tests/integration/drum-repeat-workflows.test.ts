@@ -20,7 +20,7 @@ import {
   editDrumRepeatGrooveStep,
   handleDrumRepeatPadPress,
   handleDrumRepeatPadRelease,
-} from "@tool-ui/ui_drum_repeat_workflows.mjs";
+} from "@tool-ui/drum/ui_drum_repeat_workflows.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

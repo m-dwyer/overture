@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { drawUIImpl } from "@tool-ui/ui_screen_router_workflow.mjs";
+import { drawUIImpl } from "@tool-ui/render/ui_screen_router_workflow.mjs";
 
 type DrawCall = [string, ...unknown[]];
 
@@ -101,19 +101,9 @@ function deps(calls: DrawCall[], stepEditResult = true) {
     renderTrackBankOverview: render("renderTrackBankOverview"),
     renderDrumTrackIdleView: render("renderDrumTrackIdleView"),
     renderMelodicTrackIdleView: render("renderMelodicTrackIdleView"),
-    createSessionOverviewRenderDeps: factory("sessionOverview"),
-    createPromptRenderDeps: factory("prompt"),
-    createPerfModeRenderDeps: factory("perfMode"),
-    createSplashRenderDeps: factory("splash"),
-    createPopupRenderDeps: factory("popup"),
-    createSessionIdleRenderDeps: factory("sessionIdle"),
-    createCcStepEditRenderDeps: factory("ccStepEdit"),
-    createStepEditRenderDeps: factory("stepEdit"),
-    createLoopRenderDeps: factory("loop"),
-    createStepIntervalRenderDeps: factory("stepInterval"),
-    createMotionIdleRenderDeps: factory("motionIdle"),
-    createBankRenderDeps: factory("bank"),
-    createTrackIdleRenderDeps: factory("trackIdle"),
+    // One Render Surface replaces the former 16 per-render deps factories; the
+    // router calls deps.renderSurface() wherever it used to build a bespoke bag.
+    renderSurface: factory("renderSurface"),
   };
 }
 

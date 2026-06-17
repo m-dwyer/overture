@@ -8,7 +8,7 @@ import {
   handleDrumLaneFactoryReset,
   handleDrumLaneCopyPaste,
   handleDrumLaneMuteSolo,
-} from "@tool-ui/ui_drum_lane_workflows.mjs";
+} from "@tool-ui/drum/ui_drum_lane_workflows.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

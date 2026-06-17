@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   sendPerfModsImpl,
   updatePerfModeLEDsImpl,
-} from "@tool-ui/ui_perf_leds.mjs";
+} from "@tool-ui/render/ui_perf_leds.mjs";
 import {
   Red,
   Green,
@@ -16,7 +16,7 @@ import {
   PurpleBlue,
   White,
 } from "/data/UserData/schwung/shared/constants.mjs";
-import { TRACK_COLORS, TRACK_DIM_COLORS } from "@tool-ui/ui_constants.mjs";
+import { TRACK_COLORS, TRACK_DIM_COLORS } from "@tool-ui/core/ui_constants.mjs";
 
 type LedCall = ["setLED", number, number];
 

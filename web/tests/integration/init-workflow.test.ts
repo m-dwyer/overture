@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { runInitWorkflowImpl } from "@tool-ui/ui_init_workflow.mjs";
+import { runInitWorkflowImpl } from "@tool-ui/lifecycle/ui_init_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

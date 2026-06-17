@@ -15,7 +15,7 @@ import {
   pollSnapshotTracks,
   pollStepLedRefresh,
   pollTransportTransitions,
-} from "@tool-ui/ui_polldsp_workflow.mjs";
+} from "@tool-ui/sync/ui_polldsp_workflow.mjs";
 
 // pollDSP is an ORDERED reconcile pipeline, not a dispatch ladder: each step
 // runs unconditionally and mutates S. These tests pin the per-step S mutations,

@@ -3,7 +3,7 @@ import {
   closeTapTempoImpl,
   openTapTempoImpl,
   registerTapTempoImpl,
-} from "@tool-ui/ui_tap_tempo_workflow.mjs";
+} from "@tool-ui/perform/ui_tap_tempo_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

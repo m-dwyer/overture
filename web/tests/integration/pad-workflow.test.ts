@@ -18,7 +18,7 @@ import {
   handleUiPadTrackViewDrumLaneReset,
   handleUiPadTrackViewDrumOrMelodic,
   handleUiPadTrackViewDrumRepeat,
-} from "@tool-ui/ui_pad_workflow.mjs";
+} from "@tool-ui/pad/ui_pad_workflow.mjs";
 
 const DRUM = 1;
 const PAD_BASE = 68; // TRACK_PAD_BASE

@@ -4,7 +4,7 @@ import {
   focusedClipIsEmptyImpl,
   selectTrackGestureImpl,
   switchActiveTrackImpl,
-} from "@tool-ui/ui_track_selection_workflow.mjs";
+} from "@tool-ui/view/ui_track_selection_workflow.mjs";
 
 const DRUM = 1;
 

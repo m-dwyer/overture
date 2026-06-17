@@ -1,9 +1,9 @@
 import { describe, beforeEach, test, expect } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
-import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@tool-ui/ui_routes.mjs";
-import { routeCheckStatus, routeCheckViewModel } from "@tool-ui/ui_route_check.mjs";
-import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "@tool-ui/ui_sound_edit.mjs";
-import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@tool-ui/ui_motion.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
+import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@tool-ui/core/ui_routes.mjs";
+import { routeCheckStatus, routeCheckViewModel } from "@tool-ui/core/ui_route_check.mjs";
+import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "@tool-ui/core/ui_sound_edit.mjs";
+import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@tool-ui/core/ui_motion.mjs";
 
 describe("UI descriptor seams", () => {
   beforeEach(() => {

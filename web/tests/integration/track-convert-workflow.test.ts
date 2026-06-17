@@ -3,7 +3,7 @@ import {
   closeConvertConfirmImpl,
   convertTrackTypeImpl,
   trackHasAnyDataImpl,
-} from "@tool-ui/ui_track_convert_workflow.mjs";
+} from "@tool-ui/view/ui_track_convert_workflow.mjs";
 
 const MELODIC = 0;
 const DRUM = 1;

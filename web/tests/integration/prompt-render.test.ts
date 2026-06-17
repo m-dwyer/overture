@@ -5,7 +5,7 @@ import {
   renderNoNoteFlashNotice,
   renderSceneBakePickerPrompt,
   renderShiftStepHelp,
-} from "@tool-ui/ui_prompt_render.mjs";
+} from "@tool-ui/render/ui_prompt_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

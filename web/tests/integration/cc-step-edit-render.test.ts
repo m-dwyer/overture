@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
-import { renderCcStepEditView } from "@tool-ui/ui_cc_step_edit_render.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
+import { renderCcStepEditView } from "@tool-ui/render/ui_cc_step_edit_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

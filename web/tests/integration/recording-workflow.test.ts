@@ -4,7 +4,7 @@ import {
   createRecordingWorkflowState,
   disarmRecordImpl,
   handoffRecordingToTrackImpl,
-} from "@tool-ui/ui_recording_workflow.mjs";
+} from "@tool-ui/perform/ui_recording_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
-import { renderParamPeek } from "@tool-ui/ui_param_peek_render.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
+import { renderParamPeek } from "@tool-ui/render/ui_param_peek_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

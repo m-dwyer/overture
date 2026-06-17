@@ -8,9 +8,9 @@ import {
   resetPerClipBankParamsToDefaultImpl,
   resetSingleFxBankImpl,
   resetTarpImpl,
-} from "@tool-ui/ui_bank_params.mjs";
-import { BANKS, TPS_VALUES } from "@tool-ui/ui_constants.mjs";
-import { S as runtimeState } from "@tool-ui/ui_state.mjs";
+} from "@tool-ui/bank/ui_bank_params.mjs";
+import { BANKS, TPS_VALUES } from "@tool-ui/core/ui_constants.mjs";
+import { S as runtimeState } from "@tool-ui/core/ui_state.mjs";
 
 // Param-bank read/write/reset cluster. The resets/applies are
 // COALESCING-SENSITIVE set_param emitters: these tests pin the exact

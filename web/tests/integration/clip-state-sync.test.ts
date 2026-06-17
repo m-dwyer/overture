@@ -5,8 +5,8 @@ import {
   syncClipsFromDspImpl,
   syncClipsTargetedImpl,
   syncMuteSoloFromDspImpl,
-} from "@tool-ui/ui_clip_state_sync.mjs";
-import { DRUM_LANES, NUM_CLIPS, NUM_STEPS, NUM_TRACKS, PAD_MODE_DRUM } from "@tool-ui/ui_constants.mjs";
+} from "@tool-ui/sync/ui_clip_state_sync.mjs";
+import { DRUM_LANES, NUM_CLIPS, NUM_STEPS, NUM_TRACKS, PAD_MODE_DRUM } from "@tool-ui/core/ui_constants.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

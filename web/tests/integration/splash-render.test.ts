@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { renderSplashFrame, renderSplashScreen, SPLASH_COUNT } from "@tool-ui/ui_splash.mjs";
+import { renderSplashFrame, renderSplashScreen, SPLASH_COUNT } from "@tool-ui/render/ui_splash.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

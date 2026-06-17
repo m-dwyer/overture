@@ -4,7 +4,7 @@ import {
   xposeCancelPreviewImpl,
   xposeCommitImpl,
   xposePreviewSetImpl,
-} from "@tool-ui/ui_transpose_workflow.mjs";
+} from "@tool-ui/perform/ui_transpose_workflow.mjs";
 
 const DRUM = 1;
 const MELODIC = 0;

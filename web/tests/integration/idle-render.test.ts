@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
 import {
   renderSessionIdleView,
   renderDrumTrackIdleView,
   renderMelodicTrackIdleView,
   renderMotionIdleView,
   renderDrumPositionBar,
-} from "@tool-ui/ui_idle_render.mjs";
-import { renderMetroIndicator, renderTrackRow } from "@tool-ui/ui_track_chrome_render.mjs";
+} from "@tool-ui/render/ui_idle_render.mjs";
+import { renderMetroIndicator, renderTrackRow } from "@tool-ui/render/ui_track_chrome_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

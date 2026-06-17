@@ -16,7 +16,7 @@ import {
   handleUiJogStepIntervalExit,
   handleUiJogStepIntervalToggle,
   handleUiJogTapTempo,
-} from "@tool-ui/ui_jog_cc_workflow.mjs";
+} from "@tool-ui/input/ui_jog_cc_workflow.mjs";
 
 const DRUM = 1;
 const MAIN_KNOB = 14; // MoveMainKnob (jog rotate)

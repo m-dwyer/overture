@@ -4,7 +4,7 @@ import {
   extNoteOffAllImpl,
   liveSendNoteImpl,
   recordNoteOnImpl,
-} from "@tool-ui/ui_live_note_workflow.mjs";
+} from "@tool-ui/perform/ui_live_note_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

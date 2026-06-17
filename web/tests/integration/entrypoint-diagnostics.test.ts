@@ -2,7 +2,7 @@ import { describe, expect, test, afterEach } from "vitest";
 import {
   ENTRYPOINT_ERROR_LOG_PATH,
   createEntrypointErrorWrapper,
-} from "@tool-ui/ui_entrypoint_diagnostics.mjs";
+} from "@tool-ui/lifecycle/ui_entrypoint_diagnostics.mjs";
 
 const originalHostWriteFile = globalThis.host_write_file;
 const mutableGlobal = globalThis as typeof globalThis & {

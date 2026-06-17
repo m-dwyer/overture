@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { applyExtMidiRemapImpl } from "@tool-ui/ui_ext_midi_remap_workflow.mjs";
+import { applyExtMidiRemapImpl } from "@tool-ui/midi/ui_ext_midi_remap_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

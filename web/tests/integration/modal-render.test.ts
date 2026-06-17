@@ -9,7 +9,7 @@ import {
   renderSnapshotPicker,
   renderStateWipeConfirm,
   renderXposeConfirm,
-} from "@tool-ui/ui_modal_render.mjs";
+} from "@tool-ui/render/ui_modal_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

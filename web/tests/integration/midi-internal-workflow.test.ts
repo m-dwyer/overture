@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { handleUiMidiInternalMessage } from "@tool-ui/ui_midi_internal_workflow.mjs";
+import { handleUiMidiInternalMessage } from "@tool-ui/midi/ui_midi_internal_workflow.mjs";
 
 const MOVE_DELETE = 119;
 const MOVE_DOWN = 85;

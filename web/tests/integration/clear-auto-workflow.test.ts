@@ -4,7 +4,7 @@ import {
   clearAutoMenuRotateImpl,
   closeClearAutoMenuImpl,
   openClearAutoMenuImpl,
-} from "@tool-ui/ui_clear_auto_workflow.mjs";
+} from "@tool-ui/menu/ui_clear_auto_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

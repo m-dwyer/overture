@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { handleUiCcMessage } from "@tool-ui/ui_cc_message_workflow.mjs";
+import { handleUiCcMessage } from "@tool-ui/input/ui_cc_message_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

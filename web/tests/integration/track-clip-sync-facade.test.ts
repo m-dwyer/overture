@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createTrackClipSyncFacade } from "@tool-ui/ui_track_clip_sync_facade.mjs";
+import { createTrackClipSyncFacade } from "@tool-ui/sync/ui_track_clip_sync_facade.mjs";
 
 function createFacadeState() {
   return {

@@ -4,7 +4,7 @@ import {
   enterSchwungCoRunImpl,
   exitMoveNativeCoRunImpl,
   exitSchwungCoRunImpl,
-} from "@tool-ui/ui_corun_workflow.mjs";
+} from "@tool-ui/corun/ui_corun_workflow.mjs";
 
 const CORUN_TARGET_CHAIN_EDIT = 1;
 const CORUN_TARGET_MOVE_NATIVE = 2;

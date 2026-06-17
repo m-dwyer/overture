@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { unlatchAllTracks } from "@tool-ui/ui_latch_workflows.mjs";
+import { unlatchAllTracks } from "@tool-ui/perform/ui_latch_workflows.mjs";
 
 function latchState(trackCount = 3) {
   return {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
-import { renderSessionOverview } from "@tool-ui/ui_session_overview_render.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
+import { renderSessionOverview } from "@tool-ui/render/ui_session_overview_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

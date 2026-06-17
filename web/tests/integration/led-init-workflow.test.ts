@@ -5,8 +5,8 @@ import {
   drainLedInitImpl,
   installFlagsWrapImpl,
   removeFlagsWrapImpl,
-} from "@tool-ui/ui_led_init_workflow.mjs";
-import { LEDS_PER_FRAME, SEQ8_NAV_FLAGS } from "@tool-ui/ui_constants.mjs";
+} from "@tool-ui/render/ui_led_init_workflow.mjs";
+import { LEDS_PER_FRAME, SEQ8_NAV_FLAGS } from "@tool-ui/core/ui_constants.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

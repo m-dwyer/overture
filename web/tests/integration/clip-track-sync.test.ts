@@ -10,7 +10,7 @@ import {
   refreshPerClipBankParamsFromDsp,
   readTargetedClipAutomationFromDsp,
   readTargetedClipRestorePairFromDsp,
-} from "@tool-ui/ui_clip_track_sync.mjs";
+} from "@tool-ui/sync/ui_clip_track_sync.mjs";
 
 function createState() {
   return {

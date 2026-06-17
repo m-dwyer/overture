@@ -3,7 +3,7 @@ import {
   handleUiSideButton,
   pressTrackViewSideButton,
   releaseUiSideButtonHoldReveal,
-} from "@tool-ui/ui_side_button_workflow.mjs";
+} from "@tool-ui/input/ui_side_button_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

@@ -36,7 +36,7 @@ import {
   runTransportButtonLEDs,
   runTransposePreviewSelfHeal,
   runViewLEDsAndBlinks,
-} from "@tool-ui/ui_tick_tasks.mjs";
+} from "@tool-ui/tick/ui_tick_tasks.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

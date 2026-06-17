@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
 import {
   drawAltArrow,
   drawBankHeaderRight,
   drawBankHeading,
   drawBankHeadingInverted,
   drawBankStrip,
-} from "@tool-ui/ui_bank_chrome_render.mjs";
+} from "@tool-ui/render/ui_bank_chrome_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

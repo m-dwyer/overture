@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { handleUiKnobTouch } from "@tool-ui/ui_knob_touch_workflow.mjs";
+import { handleUiKnobTouch } from "@tool-ui/input/ui_knob_touch_workflow.mjs";
 
 const DRUM = 1;
 const MOVE_MAIN_TOUCH = 9;

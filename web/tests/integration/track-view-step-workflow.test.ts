@@ -14,7 +14,7 @@ import {
   handleTrackViewDrumStepKnob,
   handleTrackViewCcStepEditKnob,
   handleTrackViewStepEditKnob,
-} from "@tool-ui/ui_track_view_step_workflow.mjs";
+} from "@tool-ui/view/ui_track_view_step_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

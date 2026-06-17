@@ -5,7 +5,7 @@ import {
   onPadPressImpl,
   onStepButtonsImpl,
   switchViewCleanupImpl,
-} from "@tool-ui/ui_input_dispatch_workflow.mjs";
+} from "@tool-ui/input/ui_input_dispatch_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

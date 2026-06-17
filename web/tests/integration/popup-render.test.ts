@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
 import {
   renderSessionActionPopup,
   renderTrackActionPopup,
-} from "@tool-ui/ui_popup_render.mjs";
+} from "@tool-ui/render/ui_popup_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

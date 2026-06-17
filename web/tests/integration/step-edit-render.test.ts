@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
-import { S } from "@tool-ui/ui_state.mjs";
-import { PAD_MODE_DRUM } from "@tool-ui/ui_constants.mjs";
-import { renderTrackStepEditView } from "@tool-ui/ui_step_edit_render.mjs";
+import { S } from "@tool-ui/core/ui_state.mjs";
+import { PAD_MODE_DRUM } from "@tool-ui/core/ui_constants.mjs";
+import { renderTrackStepEditView } from "@tool-ui/render/ui_step_edit_render.mjs";
 
 type DrawCall = [string, ...unknown[]];
 

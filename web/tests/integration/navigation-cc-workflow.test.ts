@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   handleUiPageNavButton,
   handleUiSceneNavButton,
-} from "@tool-ui/ui_navigation_cc_workflow.mjs";
+} from "@tool-ui/input/ui_navigation_cc_workflow.mjs";
 
 // Real Move CC values for the nav buttons (injected via deps, so only matter
 // for readability here).

@@ -4,7 +4,7 @@ import {
   createUiFlagAdapters,
   optionalHostModuleGetParam,
   optionalHostModuleSetParam,
-} from "@tool-ui/ui_sync_adapters.mjs";
+} from "@tool-ui/sync/ui_sync_adapters.mjs";
 import {
   createButtonCcHardwareAdapters,
   createExtMidiRemapHostAdapters,
@@ -16,8 +16,8 @@ import {
   createTransportCcHardwareAdapters,
   optionalHostExitModule,
   optionalMoveMidiInjectToMove,
-} from "@tool-ui/ui_input_adapters.mjs";
-import { createTickHostAdapters } from "@tool-ui/ui_tick_adapters.mjs";
+} from "@tool-ui/input/ui_input_adapters.mjs";
+import { createTickHostAdapters } from "@tool-ui/tick/ui_tick_adapters.mjs";
 
 const globalNames = [
   "host_module_get_param",

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   maybeShowInheritPickerImpl,
   resolveInheritPickerImpl,
-} from "@tool-ui/ui_inherit_picker_workflow.mjs";
+} from "@tool-ui/persist/ui_inherit_picker_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

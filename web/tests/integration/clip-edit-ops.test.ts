@@ -10,8 +10,8 @@ import {
   doDoubleFillImpl,
   hardResetClipImpl,
   selectClipOnTrackImpl,
-} from "@tool-ui/ui_clip_edit_ops.mjs";
-import { NUM_TRACKS } from "@tool-ui/ui_constants.mjs";
+} from "@tool-ui/sync/ui_clip_edit_ops.mjs";
+import { NUM_TRACKS } from "@tool-ui/core/ui_constants.mjs";
 
 // Clip/row/step clipboard ops. COALESCING-SENSITIVE set_param emitters: these
 // pin the exact pendingDefaultSetParams sequences (push vs unshift), the JS

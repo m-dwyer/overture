@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { onMidiExternalImpl } from "@tool-ui/ui_midi_external_workflow.mjs";
+import { onMidiExternalImpl } from "@tool-ui/midi/ui_midi_external_workflow.mjs";
 
 const PAD_MODE_DRUM = 1;
 

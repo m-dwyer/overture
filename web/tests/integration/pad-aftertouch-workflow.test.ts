@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { onPadAftertouchImpl } from "@tool-ui/ui_pad_aftertouch_workflow.mjs";
+import { onPadAftertouchImpl } from "@tool-ui/pad/ui_pad_aftertouch_workflow.mjs";
 
 const PAD_MODE_DRUM = 1;
 const TRACK_PAD_BASE = 36;

@@ -3,8 +3,8 @@ import {
   syncDrumClipContentImpl,
   syncDrumLaneStepsImpl,
   syncDrumLanesMetaImpl,
-} from "@tool-ui/ui_drum_clip_sync.mjs";
-import { DRUM_BASE_NOTE, DRUM_LANES, NUM_CLIPS } from "@tool-ui/ui_constants.mjs";
+} from "@tool-ui/drum/ui_drum_clip_sync.mjs";
+import { DRUM_BASE_NOTE, DRUM_LANES, NUM_CLIPS } from "@tool-ui/core/ui_constants.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

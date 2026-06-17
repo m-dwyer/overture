@@ -4,7 +4,7 @@ import {
   effectiveMuteImpl,
   setTrackMuteImpl,
   setTrackSoloImpl,
-} from "@tool-ui/ui_mute_solo_workflow.mjs";
+} from "@tool-ui/perform/ui_mute_solo_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

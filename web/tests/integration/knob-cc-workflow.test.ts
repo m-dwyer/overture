@@ -11,7 +11,7 @@ import {
   handleUiKnobMelodicInQ,
   handleUiKnobOverlaySwallow,
   handleUiKnobStepInterval,
-} from "@tool-ui/ui_knob_cc_workflow.mjs";
+} from "@tool-ui/input/ui_knob_cc_workflow.mjs";
 
 const DRUM = 1;
 const STRETCH_BLOCKED_TICKS = 294;

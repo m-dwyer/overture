@@ -6,7 +6,7 @@ import {
   handleUiRecordButton,
   handleUiSampleButton,
   handleUiUndoButton,
-} from "@tool-ui/ui_transport_cc_workflow.mjs";
+} from "@tool-ui/input/ui_transport_cc_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];
