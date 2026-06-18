@@ -29,15 +29,17 @@ export function Shell({ send, onReady }: { send: Send; onReady: (leds: LedSink) 
       el.style.background = "";
       el.style.borderColor = "";
       el.style.boxShadow = "";
+      el.style.color = "";
     };
     // Pads / steps / track strips: a glossy lit surface that glows in its colour.
     const fill = (el: HTMLElement | undefined, color: number): void => {
       if (!el) return;
       if (color <= 0) return reset(el);
       const c = ledColor(color);
-      el.style.background = c;
+      el.style.background = `linear-gradient(180deg, color-mix(in srgb, ${c} 88%, white 12%), color-mix(in srgb, ${c} 76%, black 24%))`;
       el.style.borderColor = c;
-      el.style.boxShadow = `inset 0 1px 2px rgba(255,255,255,0.35), 0 0 9px -3px ${c}`;
+      el.style.boxShadow = `inset 0 1px 2px rgba(255,255,255,0.45), inset 0 -1px 3px rgba(0,0,0,0.22), 0 0 13px -4px ${c}`;
+      el.style.color = "#111827";
     };
     // Round icon buttons: dark backlit plastic — a faint tint, a colour ring and a
     // soft outer glow, so the icon stays readable instead of a flat saturated disc.
@@ -45,9 +47,10 @@ export function Shell({ send, onReady }: { send: Send; onReady: (leds: LedSink) 
       if (!el) return;
       if (color <= 0) return reset(el);
       const c = ledColor(color);
-      el.style.background = `color-mix(in srgb, ${c} 24%, #14150f)`;
-      el.style.borderColor = `color-mix(in srgb, ${c} 70%, transparent)`;
-      el.style.boxShadow = `inset 0 0 7px -2px ${c}, 0 0 10px -4px ${c}`;
+      el.style.background = `linear-gradient(180deg, color-mix(in srgb, ${c} 38%, #2b3038), color-mix(in srgb, ${c} 22%, #161a20))`;
+      el.style.borderColor = `color-mix(in srgb, ${c} 82%, white 8%)`;
+      el.style.boxShadow = `inset 0 0 9px -2px ${c}, 0 0 14px -4px ${c}`;
+      el.style.color = "#f8fafc";
     };
     const isTrack = (cc: number): boolean => (ROW_CC as readonly number[]).includes(cc);
     return {

@@ -19,7 +19,7 @@ export function StepRow({ send }: { send: Send }) {
             send={send}
             aria-label={`Step ${i + 1}`}
             refCb={ledRef(reg.steps, note)}
-            className="step h-8 w-8 rounded-full bg-panel-2 border border-line text-[9px] text-muted hover:border-muted"
+            className="step h-8 w-8 rounded-full bg-panel-2 border border-line text-[9px] font-semibold text-muted hover:border-muted"
           >
             {i + 1}
           </NoteButton>

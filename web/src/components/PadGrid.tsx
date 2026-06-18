@@ -21,7 +21,7 @@ export function PadGrid({ send }: { send: Send }) {
           send={send}
           aria-label={`Pad ${idx + 1}`}
           refCb={ledRef(reg.pads, note)}
-          className="aspect-[7/6] rounded-md bg-[#191b16] border border-line hover:border-muted"
+          className="aspect-[7/6] rounded-md bg-[#242a2f] border border-line hover:border-muted"
         />
       );
     }

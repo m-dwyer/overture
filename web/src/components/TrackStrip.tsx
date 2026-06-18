@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { MomentaryButton } from "./controls";
 import { ledRef, useLedRegistry } from "./led-registry";
 
-const UNLIT = "bg-[#1a1c18]";
+const UNLIT = "bg-[#242a2f]";
 
 export function TrackStrip({ send }: { send: Send }) {
   const reg = useLedRegistry();
