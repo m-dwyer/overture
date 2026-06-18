@@ -52,7 +52,7 @@
   }
 
   #manual-capture .manual-target {
-    outline: 4px solid #ffd84d !important;
+    outline: 4px solid #23d7ff !important;
     outline-offset: 4px;
     position: relative;
     z-index: 20;

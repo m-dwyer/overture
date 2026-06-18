@@ -8,13 +8,13 @@ This guide is a screenshot-driven introduction to Overture's current UI. It is i
 
 The emulator mirrors the Move control surface: OLED on the left, encoders across the top, a 4x8 pad grid, four side buttons, and sixteen step buttons along the bottom.
 
-Treat the screenshots as executable documentation: each one is produced by the real Overture UI running in the browser emulator.
+Treat the screenshots as executable documentation: each one is produced by the real Overture UI running in the browser emulator. Cyan outlines mark controls pressed for the named action; colored button fills are Overture's own live LED state.
 
 ### The Overture surface
 
 ![The Overture surface](assets/01-orientation.png)
 
-Start here: the OLED tells you the current mode and parameter bank; pads, steps, side buttons, jog, and encoders drive the same MIDI entry points as the hardware.
+Start here: the OLED tells you the current mode and parameter bank. The yellow Loop LED is Overture's live Session Performance latch indicator, not a pressed-control marker.
 
 ## The Two Main Views
 

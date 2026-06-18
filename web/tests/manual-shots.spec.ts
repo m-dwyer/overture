@@ -179,7 +179,7 @@ async function capture(page: Page, file: string): Promise<void> {
 async function annotate(page: Page, actionText: string, showingText: string, targets: Target[] = []) {
   const missing = await page.evaluate(({ gesture, showing, controls }) => {
     globalThis.__OVT_MANUAL_GESTURE = gesture;
-    globalThis.__OVT_MANUAL_CONTROLS = controls.map((target) => target.name).join(", ");
+    globalThis.__OVT_MANUAL_CONTROLS = controls.length > 0 ? controls.map((target) => target.name).join(", ") : "none";
     globalThis.__OVT_MANUAL_SHOWING = showing;
     for (const el of document.querySelectorAll(".manual-target")) {
       el.classList.remove("manual-target");
@@ -195,7 +195,7 @@ async function annotate(page: Page, actionText: string, showingText: string, tar
         continue;
       }
       el.classList.add("manual-target");
-      el.style.outline = "4px solid #ffd84d";
+      el.style.outline = "4px solid #23d7ff";
       el.style.outlineOffset = "4px";
     }
     return missingControls;
@@ -239,13 +239,13 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
     title: "Orientation",
     body: [
       "The emulator mirrors the Move control surface: OLED on the left, encoders across the top, a 4x8 pad grid, four side buttons, and sixteen step buttons along the bottom.",
-      "Treat the screenshots as executable documentation: each one is produced by the real Overture UI running in the browser emulator.",
+      "Treat the screenshots as executable documentation: each one is produced by the real Overture UI running in the browser emulator. Cyan outlines mark controls pressed for the named action; colored button fills are Overture's own live LED state.",
     ],
     shots: [
       {
         title: "The Overture surface",
         file: "01-orientation.png",
-        caption: "Start here: the OLED tells you the current mode and parameter bank; pads, steps, side buttons, jog, and encoders drive the same MIDI entry points as the hardware.",
+        caption: "Start here: the OLED tells you the current mode and parameter bank. The yellow Loop LED is Overture's live Session Performance latch indicator, not a pressed-control marker.",
       },
     ],
   });
