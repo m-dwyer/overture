@@ -6,9 +6,24 @@ import { createWasmDsp } from "../../src/wasm-dsp.js";
 import { memFiles, type DisplaySink, type LedSink, type FileStore } from "../../src/host/sinks.js";
 
 export interface PrintCall { x: number; y: number; text: string; color: number; }
+export interface RectCall { kind: "fill" | "draw"; x: number; y: number; w: number; h: number; value: number | boolean; }
+export interface PixelCall { x: number; y: number; value: number | boolean; }
+
+/** A complete OLED frame captured at one tick — the deterministic alternative to
+ * a real-time Playwright screenshot. `text` is the joined print content; the
+ * structured arrays hold every draw op since the last clearScreen(). */
+export interface OledFrame {
+  tick: number;
+  text: string;
+  prints: PrintCall[];
+  rects: RectCall[];
+  pixels: PixelCall[];
+}
 
 export interface Recorder {
   prints: PrintCall[];
+  rects: RectCall[];
+  pixels: PixelCall[];
   leds: Map<number, number>;
   buttonLeds: Map<number, number>;
   midiOut: number[][]; // engine-emitted [tag, b0, b1, b2, b3]
@@ -21,12 +36,16 @@ export interface Recorder {
 
 function recorder(): Recorder {
   const prints: PrintCall[] = [];
+  const rects: RectCall[] = [];
+  const pixels: PixelCall[] = [];
   const leds = new Map<number, number>();
   const buttonLeds = new Map<number, number>();
   const midiOut: number[][] = [];
   const display: DisplaySink = {
-    clearScreen() { prints.length = 0; }, // new frame
-    fillRect() {}, drawRect() {}, setPixel() {},
+    clearScreen() { prints.length = 0; rects.length = 0; pixels.length = 0; }, // new frame
+    fillRect(x, y, w, h, value) { rects.push({ kind: "fill", x, y, w, h, value }); },
+    drawRect(x, y, w, h, value) { rects.push({ kind: "draw", x, y, w, h, value }); },
+    setPixel(x, y, value) { pixels.push({ x, y, value }); },
     print(x, y, text, color) { prints.push({ x, y, text, color }); },
     textWidth(t) { return t.length * 6; },
     flush() {},
@@ -37,7 +56,7 @@ function recorder(): Recorder {
     clearAll() { leds.clear(); buttonLeds.clear(); },
   };
   return {
-    prints, leds, buttonLeds, midiOut, display, ledSink,
+    prints, rects, pixels, leds, buttonLeds, midiOut, display, ledSink,
     text() { return prints.map((p) => p.text).join(" "); },
     litLeds() {
       let n = 0;
@@ -103,6 +122,13 @@ export interface Harness {
   set(key: string, val: string | number): void;
   /** Live Overture UI state (S) — see UiState. */
   ui(): UiState;
+  /** Capture the current OLED frame deterministically. Forces one redraw of the
+   * present state (screenDirty + a bare tick — no audio advance) so the recorder
+   * holds a fresh frame, then returns it. This is how you snapshot a *momentary*
+   * screen (action popup, bank overlay, momentary view) that a real-time
+   * Playwright screenshot would race past: step to the tick it's active, then
+   * snapshot(). The +1 tick is negligible vs overlay lifetimes (popup = 49 ticks). */
+  snapshot(): OledFrame;
   /** The in-memory host FileStore (state files / sidecar / snapshots). */
   files: FileStore;
   /** Suspend gesture: Shift+Back. Writes the UI sidecar synchronously and
@@ -155,6 +181,21 @@ export async function createHarness(): Promise<Harness> {
       const state = globalThis.overtureUiState;
       if (!state) throw new Error("overtureUiState is not initialized");
       return state;
+    },
+    snapshot() {
+      const state = globalThis.overtureUiState;
+      if (!state) throw new Error("overtureUiState is not initialized");
+      // drawUI() runs inside tick() gated on screenDirty; force it so the
+      // recorder reflects the present state, without advancing playback.
+      (state as { screenDirty?: boolean }).screenDirty = true;
+      emu.tick();
+      return {
+        tick: (state as { tickCount?: number }).tickCount ?? -1,
+        text: rec.text(),
+        prints: rec.prints.slice(),
+        rects: rec.rects.slice(),
+        pixels: rec.pixels.slice(),
+      };
     },
     files,
     suspend() {
