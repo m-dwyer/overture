@@ -161,6 +161,13 @@ async function capture(page: Page, file: string): Promise<void> {
   expect(existsSync(out)).toBe(true);
 }
 
+async function gesture(page: Page, text: string) {
+  await page.evaluate((label) => {
+    globalThis.__OVT_MANUAL_GESTURE = label;
+  }, text);
+  await settle(page, 150);
+}
+
 function writeGuide(sections: Section[]) {
   const lines = [
     "# Overture Beginner Guide",
@@ -190,6 +197,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   const sections: Section[] = [];
 
   await boot(page);
+  await gesture(page, "Open Overture");
   await capture(page, "01-orientation.png");
   sections.push({
     title: "Orientation",
@@ -208,8 +216,10 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
 
   await boot(page);
   await enterTrackView(page);
+  await gesture(page, "Note/Session -> Track View");
   await capture(page, "02-track-view.png");
   await enterSessionView(page);
+  await gesture(page, "Note/Session -> Session View");
   await capture(page, "03-session-view.png");
   sections.push({
     title: "The Two Main Views",
@@ -238,6 +248,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await tapStep(page, 5);
   await tapStep(page, 9);
   await tapStep(page, 13);
+  await gesture(page, "Tap drum pad, then tap Steps 1, 5, 9, 13");
   await capture(page, "04-drum-pattern.png");
   sections.push({
     title: "Make a First Drum Pattern",
@@ -257,8 +268,10 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await boot(page);
   await enterSessionView(page);
   await tapPad(page, 1);
+  await gesture(page, "Session View: tap clip pad");
   await capture(page, "05-session-launch.png");
   await enterTrackView(page);
+  await gesture(page, "Return to Track View");
   await capture(page, "06-return-track-view.png");
   sections.push({
     title: "Move Between Clips and Editing",
@@ -286,12 +299,14 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await settle(page);
   await pkt(page, CC, 42, 0);
   await settle(page);
+  await gesture(page, "Track View: tap side button 2");
   await capture(page, "07-track-select.png");
   await holdCc(page, SHIFT);
   await pkt(page, CC, 43, 127);
   await settle(page);
   await pkt(page, CC, 43, 0);
   await releaseCc(page, SHIFT);
+  await gesture(page, "Hold Shift + tap side button 1");
   await capture(page, "08-shift-track-select.png");
   sections.push({
     title: "Select Tracks",
@@ -317,6 +332,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await enterTrackView(page);
   await turnJog(page, 2);
   await turnEncoder(page, 3, 5);
+  await gesture(page, "Turn jog to bank, then turn K3");
   await capture(page, "09-parameter-bank.png");
   sections.push({
     title: "Edit Parameters",
@@ -335,8 +351,10 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
 
   await boot(page);
   await openGlobalMenu(page);
+  await gesture(page, "Hold Shift + tap Note/Session");
   await capture(page, "10-global-menu.png");
   await selectMenuLabel(page, ["Save state", "Load state", "Export to Ableton"]);
+  await gesture(page, "Rotate jog to Export / Save entries");
   await capture(page, "11-global-menu-scrolled.png");
   sections.push({
     title: "Save and Export Entry Points",

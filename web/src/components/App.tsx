@@ -4,7 +4,7 @@
 // DSP (real seq8-wasm, or the JS mock via ?mock), boots the emulator core, runs the
 // ~94 Hz loop, and exposes globalThis.OVT. The host core stays untouched — this is
 // just the browser binding, now expressed as React + an imperative effect.
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createEmulator, type Emulator } from "@/host/emulator.js";
 import type { DisplaySink, FileStore, LedSink } from "@/host/sinks.js";
 import { createMockDsp } from "@/mock-dsp.js";
@@ -36,6 +36,7 @@ export function App() {
   const emuRef = useRef<Emulator | null>(null);
   const shellLedsRef = useRef<LedSink | null>(null);
   const manualMode = new URLSearchParams(location.search).has("manual");
+  const [manualGesture, setManualGesture] = useState("");
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
   const ledsMap = useRef(new Map<number, number>()).current;
@@ -234,6 +235,12 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!manualMode) return;
+    const interval = setInterval(() => setManualGesture(globalThis.__OVT_MANUAL_GESTURE ?? ""), 100);
+    return () => clearInterval(interval);
+  }, [manualMode]);
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex min-h-[100dvh] w-full flex-col gap-3 p-4 font-mono">
@@ -246,7 +253,7 @@ export function App() {
         <div className="flex flex-1 items-center justify-center">
           <div
             id={manualMode ? "manual-capture" : undefined}
-            className="flex w-full flex-col items-center gap-6 min-[1360px]:w-auto min-[1360px]:flex-row min-[1360px]:items-stretch"
+            className="relative flex w-full flex-col items-center gap-6 min-[1360px]:w-auto min-[1360px]:flex-row min-[1360px]:items-stretch"
           >
             {/* Screen pinned at the top, log grows to fill so its bottom lines up
                 with the bottom of the panel. */}
@@ -267,6 +274,11 @@ export function App() {
               </div>
             </div>
             <Shell send={send} onReady={onReady} />
+            {manualMode && manualGesture ? (
+              <div className="order-last w-[min(92vw,940px)] rounded-md border border-line bg-panel px-3 py-2 text-center text-sm font-semibold text-text shadow-xl">
+                Gesture: {manualGesture}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
