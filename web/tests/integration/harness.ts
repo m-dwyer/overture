@@ -129,6 +129,10 @@ export async function createHarness(): Promise<Harness> {
   const files = memFiles();
   const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => rec.midiOut.push([tag, b0, b1, b2, b3]));
   const emu = await createEmulator({ dsp, display: rec.display, leds: rec.ledSink, files });
+  // Teardown the prior test's leaked UI state: ui.js is a module singleton reused
+  // across createHarness() calls, and init() preserves most of S by design (the
+  // on-device Shift+Back resume model). Reset to pristine so each test is isolated.
+  (globalThis as { __overtureResetState?: () => void }).__overtureResetState?.();
   emu.init();
 
   const step = (n = 1): void => {

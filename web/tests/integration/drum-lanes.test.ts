@@ -26,9 +26,6 @@ function drumTrackView(h: Harness, lane = 0): void {
   s.activeBank = 0;
   s.activeDrumLane[0] = lane;
   s.drumStepPage[0] = 0;
-  // copySrc lives on the ui.js module singleton and is NOT cleared by init(),
-  // so a prior test's copy/cut arming leaks across harnesses (see behaviour.test.ts).
-  s.copySrc = null;
   h.step(1);
 }
 
