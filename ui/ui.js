@@ -1809,11 +1809,23 @@ function runEntrypoint(where, fn) {
     return _entrypointDiagnostics.runEntrypoint(where, fn);
 }
 
-globalThis.init = function () { runEntrypoint('init', function () { runInitWorkflowImpl(S, createInitWorkflowDeps()); }); };
+globalThis.init = function () {
+    /* Rebind the memoized render surface to the host's current draw primitives.
+     * The surface caches print/fill_rect/clear_screen by value (a per-frame
+     * allocation optimization — see renderSurface()), valid because they're
+     * stable for a runtime's life. init() is the runtime's (re)bind point: once
+     * at launch, once per Shift+Back resume (a cheap one-off rebuild). It also
+     * lets the headless harness swap host primitives per createHarness() without
+     * rendering into a stale recorder. */
+    _renderSurface = null;
+    runEntrypoint('init', function () { runInitWorkflowImpl(S, createInitWorkflowDeps()); });
+};
 
 /* Headless-test teardown hook: the vitest behaviour harness reuses one ui.js
  * runtime across createHarness() calls, so it resets the S singleton before each
- * init() to isolate tests. Unused on device (an extra global, like exposeState). */
+ * init() to isolate tests (init() preserves most state by design — the on-device
+ * Shift+Back resume model). Unused on device (an extra global, like exposeState).
+ * The render surface is NOT reset here — init() rebinds it (see below). */
 if (typeof globalThis !== 'undefined') globalThis.__overtureResetState = resetUiState;
 
 function createTickWorkflowDeps() {
