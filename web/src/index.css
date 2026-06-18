@@ -50,17 +50,49 @@
     outline: 3px solid var(--accent);
     outline-offset: 2px;
   }
+}
 
-  #manual-capture .manual-target {
-    outline: 4px solid #23d7ff !important;
-    outline-offset: 4px;
-    position: relative;
-    z-index: 20;
-  }
-  #manual-capture #shell {
-    overflow: visible;
-  }
-  #manual-capture [aria-label^="Track "] {
-    min-width: 1rem;
-  }
+/* Manual-capture callout styling. Kept OUTSIDE @layer so Tailwind never
+   tree-shakes it: the `.manual-target*` classes are added at runtime by the
+   manual-shots generator (tests/manual/annotate.ts), so they never appear in
+   Tailwind's `content` source scan and would be purged from any @layer block.
+   annotate() only toggles these classes + sets data attributes + badge text. */
+#manual-capture .manual-target {
+  position: relative;
+  z-index: 20;
+  /* Solid cyan ring + soft glow so a pressed control clearly reads as
+     highlighted (matches the numbered legend pills in the banner). box-shadow
+     follows the element's own border-radius, so it hugs round pads and square
+     step buttons alike, and overrides any inline LED glow on the control. */
+  box-shadow: 0 0 0 3px #23d7ff, 0 0 16px 4px rgb(35 215 255 / 55%) !important;
+}
+#manual-capture .manual-target-badge {
+  position: absolute;
+  /* Float at the top-right corner, outside the control, so the number never
+     merges with an index printed on the control itself (e.g. step buttons). */
+  top: -9px;
+  right: -9px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 2px solid #071013;
+  background: #23d7ff;
+  color: #071013;
+  font: 700 11px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  box-shadow: 0 0 10px rgb(35 215 255 / 65%);
+  pointer-events: none;
+}
+/* Let the corner badges and glow spill outside their controls instead of
+   being clipped by the shell or any intermediate container. */
+#manual-capture #shell,
+#manual-capture #shell * {
+  overflow: visible;
+}
+#manual-capture [aria-label^="Track "] {
+  min-width: 1rem;
 }
