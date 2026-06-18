@@ -150,11 +150,15 @@ export interface Harness {
 
 const BLOCKS_PER_TICK = 4;
 
-export async function createHarness(): Promise<Harness> {
+export interface HarnessOptions {
+  strict?: boolean;
+}
+
+export async function createHarness(opts: HarnessOptions = {}): Promise<Harness> {
   const rec = recorder();
   const files = memFiles();
   const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => rec.midiOut.push([tag, b0, b1, b2, b3]));
-  const emu = await createEmulator({ dsp, display: rec.display, leds: rec.ledSink, files });
+  const emu = await createEmulator({ dsp, display: rec.display, leds: rec.ledSink, files, strict: opts.strict });
   // Teardown the prior test's leaked UI state: ui.js is a module singleton reused
   // across createHarness() calls, and init() preserves most of S by design (the
   // on-device Shift+Back resume model). Reset to pristine so each test is isolated.

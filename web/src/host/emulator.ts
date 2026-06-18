@@ -9,6 +9,8 @@ export interface EmulatorOptions {
   dsp: Dsp;
   display: DisplaySink;
   leds: LedSink;
+  /** Opt-in fidelity shims for device-host edge cases. Default keeps friendly host behavior. */
+  strict?: boolean;
   midi?: MidiSink;
   files?: FileStore;
   slots?: Array<Record<string, unknown>>;
@@ -27,6 +29,7 @@ export interface Emulator {
 
 export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const { dsp, display, leds } = opts;
+  const strict = opts.strict ?? false;
   const log = opts.log ?? (() => {});
   const files = opts.files ?? memFiles();
   const midi: MidiSink = opts.midi ?? { inject: () => {}, toChain: () => {} };
@@ -60,9 +63,22 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
 
   // Params → DSP (keep host get_bpm in sync when the UI sets bpm).
   const host_module_get_param = (key: string): string | null => dsp.get(key);
-  const host_module_set_param = (key: string, val: string | number): void => {
+  const pendingSetParams = new Map<string, string | number>();
+  const applySetParam = (key: string, val: string | number): void => {
     if (key === "bpm") dsp.setBpm(Number(val));
     dsp.set(key, val);
+  };
+  const flushSetParams = (): void => {
+    if (pendingSetParams.size === 0) return;
+    for (const [key, val] of pendingSetParams) applySetParam(key, val);
+    pendingSetParams.clear();
+  };
+  const host_module_set_param = (key: string, val: string | number): void => {
+    if (strict) {
+      pendingSetParams.set(key, val);
+      return;
+    }
+    applySetParam(key, val);
   };
 
   // State persistence + MIDI out + co-run.
@@ -103,7 +119,15 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
 
   return {
     init() { globalThis.init?.(); },
-    tick() { globalThis.tick?.(); },
+    tick() {
+      // Strict mode treats each tick as the harness's simulated audio-buffer
+      // boundary. Writes queued before the tick become DSP truth at tick start;
+      // writes emitted by tick() are coalesced together and closed at tick end so
+      // the existing render-before-tick harness step observes post-tick truth.
+      if (strict) flushSetParams();
+      globalThis.tick?.();
+      if (strict) flushSetParams();
+    },
     renderBlocks(n: number) { for (let i = 0; i < n; i++) dsp.render(); },
     sendInternal(status, d1, d2) { globalThis.onMidiMessageInternal?.([status, d1, d2]); },
     sendExternal(status, d1, d2) { globalThis.onMidiMessageExternal?.([status, d1, d2]); },
