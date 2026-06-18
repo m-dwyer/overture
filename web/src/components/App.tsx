@@ -282,9 +282,9 @@ export function App() {
             <Shell send={send} onReady={onReady} />
             {manualMode && (manualGesture || manualControls || manualShowing) ? (
               <div className="order-first w-[min(92vw,940px)] rounded-md border border-line bg-panel px-3 py-2 text-center text-sm font-semibold text-text shadow-xl">
-                {manualGesture ? <div>Gesture: {manualGesture}</div> : null}
-                {manualControls ? <div className="mt-1 text-xs text-warn">Controls: {manualControls}</div> : null}
-                {manualShowing ? <div className="mt-1 text-xs text-muted">Showing: {manualShowing}</div> : null}
+                {manualGesture ? <div>Action: {manualGesture}</div> : null}
+                {manualControls ? <div className="mt-1 text-xs text-warn">Pressed: {manualControls}</div> : null}
+                {manualShowing ? <div className="mt-1 text-xs text-muted">OLED after action: {manualShowing}</div> : null}
               </div>
             ) : null}
           </div>

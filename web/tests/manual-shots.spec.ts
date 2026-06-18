@@ -176,7 +176,7 @@ async function capture(page: Page, file: string): Promise<void> {
   expect(existsSync(out)).toBe(true);
 }
 
-async function annotate(page: Page, gestureText: string, showingText: string, targets: Target[] = []) {
+async function annotate(page: Page, actionText: string, showingText: string, targets: Target[] = []) {
   const missing = await page.evaluate(({ gesture, showing, controls }) => {
     globalThis.__OVT_MANUAL_GESTURE = gesture;
     globalThis.__OVT_MANUAL_CONTROLS = controls.map((target) => target.name).join(", ");
@@ -199,8 +199,8 @@ async function annotate(page: Page, gestureText: string, showingText: string, ta
       el.style.outlineOffset = "4px";
     }
     return missingControls;
-  }, { gesture: gestureText, showing: showingText, controls: targets });
-  expect(missing, `manual callout target(s) missing for "${gestureText}"`).toEqual([]);
+  }, { gesture: actionText, showing: showingText, controls: targets });
+  expect(missing, `manual callout target(s) missing for "${actionText}"`).toEqual([]);
   await settle(page, 150);
 }
 
@@ -233,11 +233,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   const sections: Section[] = [];
 
   await boot(page);
-  await annotate(page, "Open Overture", "Startup overview: OLED summary, lit pads, side buttons, and step LEDs", [
-    { aria: "Toggle Session / Note", name: "Note/Session" },
-    { aria: "Step 1", name: "Steps" },
-    { aria: "Pad 1", name: "Pads" },
-  ]);
+  await annotate(page, "Open Overture", "Startup overview: current scene per track, lit pads, side buttons, and step LEDs");
   await capture(page, "01-orientation.png");
   sections.push({
     title: "Orientation",
@@ -258,15 +254,11 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await enterTrackView(page);
   await annotate(page, "Tap Note/Session until Track View is active", "Track View: edit one clip with pads, steps, jog, and encoders", [
     { aria: "Toggle Session / Note", name: "Note/Session" },
-    { aria: "Encoder 1", name: "K1-K8" },
-    { aria: "Step 1", name: "Steps edit clip" },
   ]);
   await capture(page, "02-track-view.png");
   await enterSessionView(page);
-  await annotate(page, "Tap Note/Session to switch to Session View", "Session View: pad grid is the clip launcher; steps/side buttons launch scenes", [
+  await annotate(page, "Tap Note/Session to switch to Session View", "Session View: numbers are tracks; letters are active scenes, so A means scene A is selected", [
     { aria: "Toggle Session / Note", name: "Note/Session" },
-    { aria: "Pad 1", name: "Clip pads" },
-    { aria: "Step 1", name: "Scene steps" },
   ]);
   await capture(page, "03-session-view.png");
   sections.push({
@@ -322,8 +314,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await boot(page);
   await enterSessionView(page);
   await tapPad(page, 1);
-  await annotate(page, "Tap Note/Session, then tap a clip pad", "Session View after a clip-pad tap: pad LEDs represent clip focus/content/launch state", [
-    { aria: "Toggle Session / Note", name: "Session View" },
+  await annotate(page, "Tap a clip pad in Session View", "Track 1 now shows D: the bottom-row clip pad selected scene D", [
     { aria: "Pad 1", name: "Clip pad" },
   ]);
   await capture(page, "05-session-launch.png");
@@ -343,7 +334,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
       {
         title: "Focus a clip in Session View",
         file: "05-session-launch.png",
-        caption: "A clip pad changes the active clip or queues a launch depending on transport state and clip content.",
+        caption: "The highlighted bottom-row clip pad selects scene D on track 1, which is why the OLED changes the track-1 scene letter to D.",
       },
       {
         title: "Return to detailed editing",

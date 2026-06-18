@@ -56,7 +56,7 @@ This split is central to Overture: arrangement lives in Session View; detailed e
 
 ![Focus a clip in Session View](assets/05-session-launch.png)
 
-A clip pad changes the active clip or queues a launch depending on transport state and clip content.
+The highlighted bottom-row clip pad selects scene D on track 1, which is why the OLED changes the track-1 scene letter to D.
 
 ### Return to detailed editing
 
