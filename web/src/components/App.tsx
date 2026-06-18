@@ -35,6 +35,7 @@ export function App() {
   const logRef = useRef<HTMLPreElement>(null);
   const emuRef = useRef<Emulator | null>(null);
   const shellLedsRef = useRef<LedSink | null>(null);
+  const manualMode = new URLSearchParams(location.search).has("manual");
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
   const ledsMap = useRef(new Map<number, number>()).current;
@@ -236,25 +237,28 @@ export function App() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex min-h-[100dvh] w-full flex-col gap-3 p-4 font-mono">
-        <h1 className="shrink-0 text-center text-xs font-semibold tracking-[0.2em] text-muted">
+        <h1 className={manualMode ? "sr-only" : "shrink-0 text-center text-xs font-semibold tracking-[0.2em] text-muted"}>
           OVERTURE — EMULATOR
         </h1>
         {/* Centring wrapper fills the viewport; the inner row stays the panel's
             natural height so only the left column is stretched to match it. On wide
             screens the screen + log sit beside the panel; they stack when narrow. */}
         <div className="flex flex-1 items-center justify-center">
-          <div className="flex w-full flex-col items-center gap-6 min-[1360px]:w-auto min-[1360px]:flex-row min-[1360px]:items-stretch">
+          <div
+            id={manualMode ? "manual-capture" : undefined}
+            className="flex w-full flex-col items-center gap-6 min-[1360px]:w-auto min-[1360px]:flex-row min-[1360px]:items-stretch"
+          >
             {/* Screen pinned at the top, log grows to fill so its bottom lines up
                 with the bottom of the panel. */}
             <div className="flex w-[min(92vw,440px)] flex-col items-center gap-2">
               <OledScreen canvasRef={canvasRef} />
-              <div id="status" ref={statusRef} className="min-h-[1.4em] shrink-0 text-xs text-accent">
+              <div id="status" ref={statusRef} className={manualMode ? "sr-only" : "min-h-[1.4em] shrink-0 text-xs text-accent"}>
                 booting…
               </div>
               {/* The log is absolutely positioned inside a flex-filled wrapper so
                   its growing content can never inflate the column (which would
                   otherwise drag the panel taller via items-stretch) — it scrolls. */}
-              <div className="relative min-h-[180px] w-full flex-1">
+              <div className={manualMode ? "hidden" : "relative min-h-[180px] w-full flex-1"}>
                 <pre
                   id="log"
                   ref={logRef}
