@@ -247,6 +247,17 @@ export function App() {
     return () => clearInterval(interval);
   }, [manualMode]);
 
+  // The callout legend: numbered control names whose number + cyan match the
+  // badges painted onto the controls (see tests/manual/annotate.ts).
+  const legend: { n: number; name: string }[] = (() => {
+    try {
+      const parsed = JSON.parse(manualControls || "[]") as unknown;
+      return Array.isArray(parsed) ? (parsed as { n: number; name: string }[]) : [];
+    } catch {
+      return [];
+    }
+  })();
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex min-h-[100dvh] w-full flex-col gap-3 p-4 font-mono">
@@ -280,11 +291,42 @@ export function App() {
               </div>
             </div>
             <Shell send={send} onReady={onReady} />
-            {manualMode && (manualGesture || manualControls || manualShowing) ? (
-              <div className="order-first w-[min(92vw,940px)] rounded-md border border-line bg-panel px-3 py-2 text-center text-sm font-semibold text-text shadow-xl">
-                {manualGesture ? <div>Action: {manualGesture}</div> : null}
-                {manualControls ? <div className="mt-1 text-xs text-accent">Pressed: {manualControls}</div> : null}
-                {manualShowing ? <div className="mt-1 text-xs text-muted">OLED after action: {manualShowing}</div> : null}
+            {manualMode && (manualGesture || legend.length > 0 || manualShowing) ? (
+              <div className="order-first w-[min(92vw,940px)] overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
+                {/* Brand strip */}
+                <div className="flex items-center gap-2 border-b border-line bg-panel-2 px-4 py-1.5">
+                  <span className="text-[11px] font-bold tracking-[0.25em] text-accent">OVERTURE</span>
+                  <span className="text-[11px] tracking-[0.2em] text-muted">BEGINNER GUIDE</span>
+                </div>
+                <div className="px-4 py-3 text-left">
+                  {manualGesture ? (
+                    <p className="text-[15px] font-semibold leading-snug text-text">
+                      <span className="text-muted">Do:&nbsp;</span>
+                      {manualGesture}
+                    </p>
+                  ) : null}
+                  {legend.length > 0 ? (
+                    <ul className="mt-2.5 flex flex-wrap gap-2">
+                      {legend.map((c) => (
+                        <li
+                          key={c.n}
+                          className="flex items-center gap-1.5 rounded-full bg-panel-2 py-0.5 pl-0.5 pr-2.5 text-xs text-text"
+                        >
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#23d7ff] text-[11px] font-bold text-[#071013]">
+                            {c.n}
+                          </span>
+                          {c.name}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {manualShowing ? (
+                    <p className="mt-2.5 text-xs leading-snug text-muted">
+                      <span className="font-semibold text-text">Showing:&nbsp;</span>
+                      {manualShowing}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
