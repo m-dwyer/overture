@@ -37,6 +37,7 @@ export function App() {
   const shellLedsRef = useRef<LedSink | null>(null);
   const manualMode = new URLSearchParams(location.search).has("manual");
   const [manualGesture, setManualGesture] = useState("");
+  const [manualShowing, setManualShowing] = useState("");
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
   const ledsMap = useRef(new Map<number, number>()).current;
@@ -237,7 +238,10 @@ export function App() {
 
   useEffect(() => {
     if (!manualMode) return;
-    const interval = setInterval(() => setManualGesture(globalThis.__OVT_MANUAL_GESTURE ?? ""), 100);
+    const interval = setInterval(() => {
+      setManualGesture(globalThis.__OVT_MANUAL_GESTURE ?? "");
+      setManualShowing(globalThis.__OVT_MANUAL_SHOWING ?? "");
+    }, 100);
     return () => clearInterval(interval);
   }, [manualMode]);
 
@@ -274,9 +278,10 @@ export function App() {
               </div>
             </div>
             <Shell send={send} onReady={onReady} />
-            {manualMode && manualGesture ? (
+            {manualMode && (manualGesture || manualShowing) ? (
               <div className="order-last w-[min(92vw,940px)] rounded-md border border-line bg-panel px-3 py-2 text-center text-sm font-semibold text-text shadow-xl">
-                Gesture: {manualGesture}
+                {manualGesture ? <div>Gesture: {manualGesture}</div> : null}
+                {manualShowing ? <div className="mt-1 text-xs text-muted">Showing: {manualShowing}</div> : null}
               </div>
             ) : null}
           </div>

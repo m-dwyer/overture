@@ -117,7 +117,23 @@ async function selectMenuLabel(page: Page, labels: string[]) {
   await settle(page);
 }
 
+async function sessionView(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const state = (globalThis as typeof globalThis & { overtureUiState?: Record<string, unknown> }).overtureUiState;
+    return Boolean(state?.sessionView);
+  });
+}
+
+async function redraw(page: Page) {
+  await page.evaluate(() => {
+    const state = (globalThis as typeof globalThis & { overtureUiState?: Record<string, unknown> }).overtureUiState;
+    if (state) state.screenDirty = true;
+  });
+  await settle(page);
+}
+
 async function enterTrackView(page: Page) {
+  if (await sessionView(page)) await pressCc(page, MENU);
   await page.evaluate(() => {
     const state = (globalThis as typeof globalThis & { overtureUiState?: Record<string, unknown> }).overtureUiState;
     if (!state) return;
@@ -130,10 +146,10 @@ async function enterTrackView(page: Page) {
 }
 
 async function enterDrumTrackView(page: Page) {
+  await enterTrackView(page);
   await page.evaluate(() => {
     const state = (globalThis as typeof globalThis & { overtureUiState?: Record<string, unknown> }).overtureUiState;
     if (!state) return;
-    state.sessionView = false;
     state.activeTrack = 0;
     state.activeBank = 0;
     (state.activeDrumLane as number[] | undefined)?.splice(0, 1, 0);
@@ -145,14 +161,8 @@ async function enterDrumTrackView(page: Page) {
 }
 
 async function enterSessionView(page: Page) {
-  await page.evaluate(() => {
-    const state = (globalThis as typeof globalThis & { overtureUiState?: Record<string, unknown> }).overtureUiState;
-    if (!state) return;
-    state.sessionView = true;
-    state.activeTrack = 0;
-    state.screenDirty = true;
-  });
-  await settle(page);
+  if (!(await sessionView(page))) await pressCc(page, MENU);
+  await redraw(page);
 }
 
 async function capture(page: Page, file: string): Promise<void> {
@@ -161,10 +171,11 @@ async function capture(page: Page, file: string): Promise<void> {
   expect(existsSync(out)).toBe(true);
 }
 
-async function gesture(page: Page, text: string) {
-  await page.evaluate((label) => {
-    globalThis.__OVT_MANUAL_GESTURE = label;
-  }, text);
+async function annotate(page: Page, gestureText: string, showingText: string) {
+  await page.evaluate(({ gesture, showing }) => {
+    globalThis.__OVT_MANUAL_GESTURE = gesture;
+    globalThis.__OVT_MANUAL_SHOWING = showing;
+  }, { gesture: gestureText, showing: showingText });
   await settle(page, 150);
 }
 
@@ -197,7 +208,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   const sections: Section[] = [];
 
   await boot(page);
-  await gesture(page, "Open Overture");
+  await annotate(page, "Open Overture", "Startup overview: OLED summary, lit pads, side buttons, and step LEDs");
   await capture(page, "01-orientation.png");
   sections.push({
     title: "Orientation",
@@ -216,16 +227,16 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
 
   await boot(page);
   await enterTrackView(page);
-  await gesture(page, "Note/Session -> Track View");
+  await annotate(page, "Tap Note/Session until Track View is active", "Track View: edit one clip with pads, steps, jog, and encoders");
   await capture(page, "02-track-view.png");
   await enterSessionView(page);
-  await gesture(page, "Note/Session -> Session View");
+  await annotate(page, "Tap Note/Session to switch to Session View", "Session View: pad grid is the clip launcher; steps/side buttons launch scenes");
   await capture(page, "03-session-view.png");
   sections.push({
     title: "The Two Main Views",
     body: [
       "Overture alternates between Track View for editing one clip in detail and Session View for launching or arranging clips across tracks.",
-      "Tap Note/Session on the hardware to switch views. In this generated guide the scenario sets the view directly so the screenshots stay deterministic.",
+      "Tap Note/Session on the hardware to switch views. These screenshots drive that real view-toggle path, then wait for the emulator to settle before capture.",
     ],
     shots: [
       {
@@ -248,7 +259,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await tapStep(page, 5);
   await tapStep(page, 9);
   await tapStep(page, 13);
-  await gesture(page, "Tap drum pad, then tap Steps 1, 5, 9, 13");
+  await annotate(page, "Tap drum pad, then tap Steps 1, 5, 9, 13", "A drum lane pattern: lit step buttons are hits on the active lane");
   await capture(page, "04-drum-pattern.png");
   sections.push({
     title: "Make a First Drum Pattern",
@@ -268,10 +279,10 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await boot(page);
   await enterSessionView(page);
   await tapPad(page, 1);
-  await gesture(page, "Session View: tap clip pad");
+  await annotate(page, "Tap Note/Session, then tap a clip pad", "Session View after a clip-pad tap: pad LEDs represent clip focus/content/launch state");
   await capture(page, "05-session-launch.png");
   await enterTrackView(page);
-  await gesture(page, "Return to Track View");
+  await annotate(page, "Tap Note/Session to return to Track View", "The focused clip is now back on the detailed edit surface");
   await capture(page, "06-return-track-view.png");
   sections.push({
     title: "Move Between Clips and Editing",
@@ -299,14 +310,14 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await settle(page);
   await pkt(page, CC, 42, 0);
   await settle(page);
-  await gesture(page, "Track View: tap side button 2");
+  await annotate(page, "Track View: tap side button 2", "Track selection: side-button LEDs indicate the active track bank");
   await capture(page, "07-track-select.png");
   await holdCc(page, SHIFT);
   await pkt(page, CC, 43, 127);
   await settle(page);
   await pkt(page, CC, 43, 0);
   await releaseCc(page, SHIFT);
-  await gesture(page, "Hold Shift + tap side button 1");
+  await annotate(page, "Hold Shift + tap side button 1", "Upper track bank: Shift + side buttons select tracks 5-8");
   await capture(page, "08-shift-track-select.png");
   sections.push({
     title: "Select Tracks",
@@ -332,7 +343,7 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await enterTrackView(page);
   await turnJog(page, 2);
   await turnEncoder(page, 3, 5);
-  await gesture(page, "Turn jog to bank, then turn K3");
+  await annotate(page, "Turn jog to a parameter bank, then turn K3", "Parameter editing: the OLED rows map to K1-K8 above the pad grid");
   await capture(page, "09-parameter-bank.png");
   sections.push({
     title: "Edit Parameters",
@@ -351,10 +362,10 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
 
   await boot(page);
   await openGlobalMenu(page);
-  await gesture(page, "Hold Shift + tap Note/Session");
+  await annotate(page, "Hold Shift + tap Note/Session", "Global Menu: jog selects rows; jog click edits or confirms");
   await capture(page, "10-global-menu.png");
   await selectMenuLabel(page, ["Save state", "Load state", "Export to Ableton"]);
-  await gesture(page, "Rotate jog to Export / Save entries");
+  await annotate(page, "Rotate jog to Export / Save entries", "Project actions live in the Global section; this guide only shows the entry points");
   await capture(page, "11-global-menu-scrolled.png");
   sections.push({
     title: "Save and Export Entry Points",

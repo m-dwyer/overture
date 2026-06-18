@@ -20,7 +20,7 @@ Start here: the OLED tells you the current mode and parameter bank; pads, steps,
 
 Overture alternates between Track View for editing one clip in detail and Session View for launching or arranging clips across tracks.
 
-Tap Note/Session on the hardware to switch views. In this generated guide the scenario sets the view directly so the screenshots stay deterministic.
+Tap Note/Session on the hardware to switch views. These screenshots drive that real view-toggle path, then wait for the emulator to settle before capture.
 
 ### Track View
 
