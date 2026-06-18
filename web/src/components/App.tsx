@@ -37,6 +37,7 @@ export function App() {
   const shellLedsRef = useRef<LedSink | null>(null);
   const manualMode = new URLSearchParams(location.search).has("manual");
   const [manualGesture, setManualGesture] = useState("");
+  const [manualControls, setManualControls] = useState("");
   const [manualShowing, setManualShowing] = useState("");
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
@@ -240,6 +241,7 @@ export function App() {
     if (!manualMode) return;
     const interval = setInterval(() => {
       setManualGesture(globalThis.__OVT_MANUAL_GESTURE ?? "");
+      setManualControls(globalThis.__OVT_MANUAL_CONTROLS ?? "");
       setManualShowing(globalThis.__OVT_MANUAL_SHOWING ?? "");
     }, 100);
     return () => clearInterval(interval);
@@ -278,9 +280,10 @@ export function App() {
               </div>
             </div>
             <Shell send={send} onReady={onReady} />
-            {manualMode && (manualGesture || manualShowing) ? (
-              <div className="order-last w-[min(92vw,940px)] rounded-md border border-line bg-panel px-3 py-2 text-center text-sm font-semibold text-text shadow-xl">
+            {manualMode && (manualGesture || manualControls || manualShowing) ? (
+              <div className="order-first w-[min(92vw,940px)] rounded-md border border-line bg-panel px-3 py-2 text-center text-sm font-semibold text-text shadow-xl">
                 {manualGesture ? <div>Gesture: {manualGesture}</div> : null}
+                {manualControls ? <div className="mt-1 text-xs text-warn">Controls: {manualControls}</div> : null}
                 {manualShowing ? <div className="mt-1 text-xs text-muted">Showing: {manualShowing}</div> : null}
               </div>
             ) : null}

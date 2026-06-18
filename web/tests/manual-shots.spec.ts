@@ -22,6 +22,11 @@ interface Section {
   shots: Shot[];
 }
 
+interface Target {
+  aria: string;
+  name: string;
+}
+
 const REPO_ROOT = path.resolve(process.cwd(), "..");
 const OUT_DIR = path.join(REPO_ROOT, "docs/generated");
 const ASSET_DIR = path.join(OUT_DIR, "assets");
@@ -171,11 +176,31 @@ async function capture(page: Page, file: string): Promise<void> {
   expect(existsSync(out)).toBe(true);
 }
 
-async function annotate(page: Page, gestureText: string, showingText: string) {
-  await page.evaluate(({ gesture, showing }) => {
+async function annotate(page: Page, gestureText: string, showingText: string, targets: Target[] = []) {
+  const missing = await page.evaluate(({ gesture, showing, controls }) => {
     globalThis.__OVT_MANUAL_GESTURE = gesture;
+    globalThis.__OVT_MANUAL_CONTROLS = controls.map((target) => target.name).join(", ");
     globalThis.__OVT_MANUAL_SHOWING = showing;
-  }, { gesture: gestureText, showing: showingText });
+    for (const el of document.querySelectorAll(".manual-target")) {
+      el.classList.remove("manual-target");
+      (el as HTMLElement).style.outline = "";
+      (el as HTMLElement).style.outlineOffset = "";
+    }
+    const missingControls: string[] = [];
+    for (const target of controls) {
+      const el = Array.from(document.querySelectorAll<HTMLElement>("[aria-label]"))
+        .find((node) => node.getAttribute("aria-label") === target.aria);
+      if (!el) {
+        missingControls.push(target.aria);
+        continue;
+      }
+      el.classList.add("manual-target");
+      el.style.outline = "4px solid #ffd84d";
+      el.style.outlineOffset = "4px";
+    }
+    return missingControls;
+  }, { gesture: gestureText, showing: showingText, controls: targets });
+  expect(missing, `manual callout target(s) missing for "${gestureText}"`).toEqual([]);
   await settle(page, 150);
 }
 
@@ -208,7 +233,11 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   const sections: Section[] = [];
 
   await boot(page);
-  await annotate(page, "Open Overture", "Startup overview: OLED summary, lit pads, side buttons, and step LEDs");
+  await annotate(page, "Open Overture", "Startup overview: OLED summary, lit pads, side buttons, and step LEDs", [
+    { aria: "Toggle Session / Note", name: "Note/Session" },
+    { aria: "Step 1", name: "Steps" },
+    { aria: "Pad 1", name: "Pads" },
+  ]);
   await capture(page, "01-orientation.png");
   sections.push({
     title: "Orientation",
@@ -227,10 +256,18 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
 
   await boot(page);
   await enterTrackView(page);
-  await annotate(page, "Tap Note/Session until Track View is active", "Track View: edit one clip with pads, steps, jog, and encoders");
+  await annotate(page, "Tap Note/Session until Track View is active", "Track View: edit one clip with pads, steps, jog, and encoders", [
+    { aria: "Toggle Session / Note", name: "Note/Session" },
+    { aria: "Encoder 1", name: "K1-K8" },
+    { aria: "Step 1", name: "Steps edit clip" },
+  ]);
   await capture(page, "02-track-view.png");
   await enterSessionView(page);
-  await annotate(page, "Tap Note/Session to switch to Session View", "Session View: pad grid is the clip launcher; steps/side buttons launch scenes");
+  await annotate(page, "Tap Note/Session to switch to Session View", "Session View: pad grid is the clip launcher; steps/side buttons launch scenes", [
+    { aria: "Toggle Session / Note", name: "Note/Session" },
+    { aria: "Pad 1", name: "Clip pads" },
+    { aria: "Step 1", name: "Scene steps" },
+  ]);
   await capture(page, "03-session-view.png");
   sections.push({
     title: "The Two Main Views",
@@ -259,7 +296,13 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await tapStep(page, 5);
   await tapStep(page, 9);
   await tapStep(page, 13);
-  await annotate(page, "Tap drum pad, then tap Steps 1, 5, 9, 13", "A drum lane pattern: lit step buttons are hits on the active lane");
+  await annotate(page, "Tap drum pad, then tap Steps 1, 5, 9, 13", "A drum lane pattern: lit step buttons are hits on the active lane", [
+    { aria: "Pad 1", name: "Drum lane pad" },
+    { aria: "Step 1", name: "Hit" },
+    { aria: "Step 5", name: "Hit" },
+    { aria: "Step 9", name: "Hit" },
+    { aria: "Step 13", name: "Hit" },
+  ]);
   await capture(page, "04-drum-pattern.png");
   sections.push({
     title: "Make a First Drum Pattern",
@@ -279,10 +322,16 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await boot(page);
   await enterSessionView(page);
   await tapPad(page, 1);
-  await annotate(page, "Tap Note/Session, then tap a clip pad", "Session View after a clip-pad tap: pad LEDs represent clip focus/content/launch state");
+  await annotate(page, "Tap Note/Session, then tap a clip pad", "Session View after a clip-pad tap: pad LEDs represent clip focus/content/launch state", [
+    { aria: "Toggle Session / Note", name: "Session View" },
+    { aria: "Pad 1", name: "Clip pad" },
+  ]);
   await capture(page, "05-session-launch.png");
   await enterTrackView(page);
-  await annotate(page, "Tap Note/Session to return to Track View", "The focused clip is now back on the detailed edit surface");
+  await annotate(page, "Tap Note/Session to return to Track View", "The focused clip is now back on the detailed edit surface", [
+    { aria: "Toggle Session / Note", name: "Back to Track View" },
+    { aria: "Step 1", name: "Clip steps" },
+  ]);
   await capture(page, "06-return-track-view.png");
   sections.push({
     title: "Move Between Clips and Editing",
@@ -310,14 +359,19 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await settle(page);
   await pkt(page, CC, 42, 0);
   await settle(page);
-  await annotate(page, "Track View: tap side button 2", "Track selection: side-button LEDs indicate the active track bank");
+  await annotate(page, "Track View: tap side button 2", "Track selection: side-button LEDs indicate the active track bank", [
+    { aria: "Track 2", name: "Side button 2" },
+  ]);
   await capture(page, "07-track-select.png");
   await holdCc(page, SHIFT);
   await pkt(page, CC, 43, 127);
   await settle(page);
   await pkt(page, CC, 43, 0);
   await releaseCc(page, SHIFT);
-  await annotate(page, "Hold Shift + tap side button 1", "Upper track bank: Shift + side buttons select tracks 5-8");
+  await annotate(page, "Hold Shift + tap side button 1", "Upper track bank: Shift + side buttons select tracks 5-8", [
+    { aria: "Shift", name: "Shift" },
+    { aria: "Track 1", name: "Side button 1" },
+  ]);
   await capture(page, "08-shift-track-select.png");
   sections.push({
     title: "Select Tracks",
@@ -343,7 +397,10 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
   await enterTrackView(page);
   await turnJog(page, 2);
   await turnEncoder(page, 3, 5);
-  await annotate(page, "Turn jog to a parameter bank, then turn K3", "Parameter editing: the OLED rows map to K1-K8 above the pad grid");
+  await annotate(page, "Turn jog to a parameter bank, then turn K3", "Parameter editing: the OLED rows map to K1-K8 above the pad grid", [
+    { aria: "Jog wheel", name: "Jog" },
+    { aria: "Encoder 3", name: "K3" },
+  ]);
   await capture(page, "09-parameter-bank.png");
   sections.push({
     title: "Edit Parameters",
@@ -362,10 +419,15 @@ test("generate beginner manual figures and markdown", async ({ page }) => {
 
   await boot(page);
   await openGlobalMenu(page);
-  await annotate(page, "Hold Shift + tap Note/Session", "Global Menu: jog selects rows; jog click edits or confirms");
+  await annotate(page, "Hold Shift + tap Note/Session", "Global Menu: jog selects rows; jog click edits or confirms", [
+    { aria: "Shift", name: "Shift" },
+    { aria: "Toggle Session / Note", name: "Note/Session" },
+  ]);
   await capture(page, "10-global-menu.png");
   await selectMenuLabel(page, ["Save state", "Load state", "Export to Ableton"]);
-  await annotate(page, "Rotate jog to Export / Save entries", "Project actions live in the Global section; this guide only shows the entry points");
+  await annotate(page, "Rotate jog to Export / Save entries", "Project actions live in the Global section; this guide only shows the entry points", [
+    { aria: "Jog wheel", name: "Jog rotate" },
+  ]);
   await capture(page, "11-global-menu-scrolled.png");
   sections.push({
     title: "Save and Export Entry Points",

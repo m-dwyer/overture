@@ -50,4 +50,17 @@
     outline: 3px solid var(--accent);
     outline-offset: 2px;
   }
+
+  #manual-capture .manual-target {
+    outline: 4px solid #ffd84d !important;
+    outline-offset: 4px;
+    position: relative;
+    z-index: 20;
+  }
+  #manual-capture #shell {
+    overflow: visible;
+  }
+  #manual-capture [aria-label^="Track "] {
+    min-width: 1rem;
+  }
 }

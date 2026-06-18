@@ -77,5 +77,6 @@ declare global {
   // Console-driven input handle until the Move shell is wired.
   var OVT: unknown;
   var __OVT_MANUAL_GESTURE: string | undefined;
+  var __OVT_MANUAL_CONTROLS: string | undefined;
   var __OVT_MANUAL_SHOWING: string | undefined;
 }
