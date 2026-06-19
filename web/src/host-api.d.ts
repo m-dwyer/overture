@@ -79,4 +79,7 @@ declare global {
   var __OVT_MANUAL_GESTURE: string | undefined;
   var __OVT_MANUAL_CONTROLS: string | undefined;
   var __OVT_MANUAL_SHOWING: string | undefined;
+  // Draw-order text of the current OLED frame; mirrored by the emulator's display
+  // sink so tests can assert what the screen actually shows.
+  var __OVT_OLED_TEXT: string | undefined;
 }

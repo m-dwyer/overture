@@ -26,6 +26,33 @@ export interface Section {
 
 export type CropMode = "panel" | "oled";
 
+// A curated read of the live emulator after a shot's gestures — the facts an
+// assertion can check. Kept small and JSON-serialisable (page.evaluate boundary).
+export interface Probe {
+  sessionView: boolean;
+  activeTrack: number; // 0-based
+  activeBank: number;
+  globalMenuOpen: boolean;
+  menuLabel?: string; // currently-selected global-menu item label
+  recordArmed: boolean;
+  recordCountingIn: boolean;
+  oled: string; // draw-order text of the current OLED frame
+}
+
+// Declarative expectation for a shot: the state/screen its caption claims. The
+// generator checks this right before capture, so a behaviour change that stops a
+// gesture reaching the depicted state fails the run instead of emitting a wrong
+// figure. Only the listed fields are checked; omit a field to ignore it.
+export interface ShotExpect {
+  sessionView?: boolean;
+  activeTrack?: number; // 0-based
+  activeBank?: number;
+  globalMenuOpen?: boolean;
+  menuLabel?: string; // selected global-menu item label
+  recording?: boolean; // recordArmed || recordCountingIn
+  oledIncludes?: string | string[]; // substring(s) that must appear on the OLED
+}
+
 // The imperative engine, bound to one Playwright Page. Scenario drive()/setup()
 // functions receive this and never touch the page directly. Navigation is all
 // real MIDI gestures; overtureUiState is only ever read, never mutated to move.
@@ -72,6 +99,8 @@ export interface Driver {
   // global menu
   openGlobalMenu(): Promise<void>;
   selectMenuLabel(labels: string[]): Promise<void>;
+  // read-only introspection for assertions
+  probe(): Promise<Probe>;
   // composite entry points
   enterTrackView(): Promise<void>;
   enterDrumTrackView(): Promise<void>;
@@ -88,6 +117,7 @@ export interface ShotSpec {
   targets?: Target[]; // numbered callouts → legend + DOM badges
   crop?: CropMode; // "oled" for a tight screen close-up; default "panel"
   drive?: (d: Driver) => Promise<void>; // steps to reach this figure's state
+  expect?: ShotExpect; // asserted state/screen after drive() — guards the figure + caption
 }
 
 // One H2 section: curated prose plus an ordered list of figures. The scene is
