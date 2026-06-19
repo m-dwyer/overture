@@ -78,3 +78,27 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
   expect(Buffer.compare(before, after), "OLED should change when input is received").not.toBe(0);
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
 });
+
+test("keyboard Shift plus number key sends Shift + Step", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForTimeout(3000);
+
+  await page.evaluate(() => {
+    const g = globalThis as PageGlobal;
+    const orig = g.onMidiMessageInternal;
+    g.__midi = [];
+    g.onMidiMessageInternal = (d: number[]) => { g.__midi.push([...d]); return orig?.(d); };
+  });
+
+  await page.keyboard.down("Shift");
+  await page.keyboard.press("3");
+  await page.keyboard.up("Shift");
+
+  const midi = await page.evaluate(() => (globalThis as PageGlobal).__midi);
+  expect(midi).toEqual([
+    [0xb0, 49, 127],
+    [0x90, 18, 127],
+    [0x80, 18, 0],
+    [0xb0, 49, 0],
+  ]);
+});
