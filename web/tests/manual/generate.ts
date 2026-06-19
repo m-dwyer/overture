@@ -46,8 +46,8 @@ export async function generateGuide(page: Page, scenes: Scene[], cfg: GuideConfi
     sections.push({ title: scene.title, body: scene.body, shots });
   }
 
-  writeGuide(sections, scenes, cfg);
-  writeGuideHtml(sections, scenes, cfg);
+  const markdown = writeGuide(sections, scenes, cfg);
+  await writeGuideHtml(markdown, scenes, cfg);
   expect(existsSync(cfg.mdPath)).toBe(true);
   expect(existsSync(cfg.htmlPath)).toBe(true);
 }

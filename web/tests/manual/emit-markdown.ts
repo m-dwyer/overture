@@ -2,11 +2,11 @@ import { writeFileSync } from "node:fs";
 import * as md from "./md";
 import type { GuideConfig, Scene, Section } from "./types";
 
-// Emit a markdown guide as a list of blocks (see md.ts): framing intro +
+// Build a markdown guide as a list of blocks (see md.ts): framing intro +
 // cross-links, a table of contents, a controls cheat-sheet, the captured
-// walkthrough sections, then a glossary. The same emitter serves the beginner
-// guide and the full reference — everything that differs comes from `cfg`.
-export function writeGuide(sections: Section[], scenes: Scene[], cfg: GuideConfig): void {
+// walkthrough sections, then a glossary. This markdown is the canonical document;
+// the standalone HTML guide is rendered from the same string.
+export function buildGuideMarkdown(sections: Section[], scenes: Scene[], cfg: GuideConfig): string {
   const linkLine = cfg.links.map((l) => `${md.link(l.label, l.href)} — ${l.note}`).join(" · ");
 
   const blocks: string[] = [
@@ -53,5 +53,11 @@ export function writeGuide(sections: Section[], scenes: Scene[], cfg: GuideConfi
   );
   if (linkLine) blocks.push("---", md.p(linkLine));
 
-  writeFileSync(cfg.mdPath, md.doc(blocks), "utf8");
+  return md.doc(blocks);
+}
+
+export function writeGuide(sections: Section[], scenes: Scene[], cfg: GuideConfig): string {
+  const markdown = buildGuideMarkdown(sections, scenes, cfg);
+  writeFileSync(cfg.mdPath, markdown, "utf8");
+  return markdown;
 }
