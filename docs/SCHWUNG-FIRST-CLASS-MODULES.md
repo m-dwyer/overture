@@ -2,18 +2,18 @@
 
 ## Status
 
-Draft follow-up from the Schwung Sound page spike.
+Architecture follow-up from the Schwung Sound page spike.
 
-The spike proved that Schwung-routed tracks can expose an Overture-owned Sound page for quick module selection while Schwung remains the audio/module backend. The next step is to decide what “first-class” means beyond selecting `MIDI FX`, `Synth`, `FX 1`, and `FX 2`.
+The spike proved that Schwung-routed tracks can expose an Overture-owned Sound page while Schwung remains the audio/module backend. Overture now owns the common Sound workflow for module selection and generic parameter editing, and preserves Schwung's chain editor as the deep-edit path.
 
 ## Problem
 
 Tracks 5-8 can route to Schwung modules, but the user experience still leaks the backend boundary:
 
 - module selection is only the first layer of sound ownership;
-- deeper module parameters still live in Schwung's chain editor;
+- bespoke module interfaces still live in Schwung's chain editor;
 - input ownership is split, especially the physical Back/`<` button returning to stock Move;
-- module names, identities, categories, and slot state are not yet modeled as Overture concepts;
+- module names and identities have a small Overture model, but categories, capability flags, and slot state still need broader real-module coverage;
 - missing slots and backend capability gaps need consistent Overture-facing states.
 
 If Schwung tracks are meant to feel like native Overture tracks, users should not need to think in terms of “jumping into Schwung” for common sound work.
@@ -30,13 +30,46 @@ Implemented and device-verified:
   - `fx2:module`
 - Current module names refresh from Schwung params.
 - The browser opens on the currently loaded module.
+- `Shift + jog-click` on a selected component opens an Overture-owned parameter detail page.
+- When a selected Schwung track has playable params, `Shift + Step 3` opens directly into parameter detail instead of stopping at the component overview.
+- While the Sound page is active, Step 1-4 jump directly to MIDI FX, Synth, FX 1, and FX 2; components with visible params open in detail immediately.
+- Overture remembers the selected component and param bank per track.
+- Parameter detail uses Schwung's declared `ui_hierarchy` when available, enriched with `chain_params` metadata.
+- If no curated hierarchy is available, Overture falls back to `chain_params`.
+- Detail pages follow Move/moveforge encoder-bank behavior: eight encoders edit the active bank.
+- `ui_hierarchy.levels.root.knobs` order is treated as the preferred encoder mapping when present; otherwise declared params are used in order.
+- Jog switches encoder banks when a component exposes more than eight mapped params.
+- K1-K8 edit the active bank.
+- Numeric, enum, and bool params are written through `shadow_set_param(slot, "<component>:<param>", value)`.
+- String, filepath, and canvas params are visible but intentionally read-only in Overture.
+- Parameter touch/turn feedback uses an Overture-owned focused param-peek view instead of debug CC/key diagnostics.
+- Helm was tested on device with curated params and encoder editing.
 - `Deep Edit` preserves access to Schwung's existing chain editor.
-- `Menu` is the supported Sound page exit.
+- `Menu` is the supported Sound page exit. Back/`<` is intentionally unclaimed for this page until there is an input ownership hook.
 - Move-native tracks keep their existing co-run behavior.
+- Schwung remains untouched and pinned to upstream v0.9.18.
+
+Current implementation shape:
+
+- Overture keeps the public Sound workflow facade in `ui/core/ui_sound_edit.mjs`.
+- Module/parameter normalization and edit math live in `ui/core/ui_sound_edit_model.mjs`.
+- OLED rendering lives in `ui/core/ui_sound_edit_render.mjs`.
+- Input dispatch continues to call the facade functions, including Sound-page Step 1-4 component selection, so public behavior stays owned by Overture.
 
 Known limitation:
 
 - Physical Back/`<` exits to stock Move from this context. Without a Schwung-side input ownership hook, Overture cannot safely claim it as a Sound page back action.
+- File/string/canvas params need bespoke editors before they should become writable from Overture.
+- The Sound detail focused peek is functional; broader OLED polish should come from more real-module sweeps rather than speculative layout work.
+- Remaining device sweep targets:
+  - one moveforge synth;
+  - one upstream Schwung synth;
+  - one audio FX;
+  - one MIDI FX.
+- Overture still depends on current Schwung APIs returning usable identity and metadata:
+  - `<component>:module` / `*_module`
+  - `<component>:ui_hierarchy`
+  - `<component>:chain_params`
 
 ## Goals
 
@@ -96,12 +129,22 @@ Overture should treat each Schwung slot as a track sound endpoint:
 
 First-class does not require exposing every module parameter immediately.
 
-Potential stages:
+Current stage:
 
-1. Module selection only.
-2. Show a read-only summary of key chain params.
-3. Add an Overture-owned generic param page for declared `chain_params`.
-4. Keep bespoke module UIs in Schwung Deep Edit unless modules declare enough metadata to render them safely in Overture.
+- curated `ui_hierarchy` params are preferred;
+- `chain_params` supplies ranges, steps, enum options, and fallback ordering;
+- the default Sound entry is parameter-first when a component has visible params;
+- generic numeric, enum, and bool editing is Overture-owned through active encoder banks;
+- touched/turned params temporarily replace the bank grid with a focused param-peek view showing name, value, range/status, and knob number;
+- string, filepath, and canvas params remain visible/read-only;
+- bespoke module UIs remain in Schwung Deep Edit.
+
+Potential next stages:
+
+1. Improve metadata coverage across moveforge/Schwung modules.
+2. Add explicit read-only affordances for string/file/canvas params.
+3. Add focused editors for filepath/string params only when the UX is clear.
+4. Keep module-specific visual/canvas editors in Schwung unless modules declare enough metadata to render them safely in Overture.
 
 ### 5. Input Ownership
 
@@ -127,8 +170,8 @@ Only add these if Overture cannot do the job through existing APIs:
   - lets a tool claim Back/`<` while active;
   - prevents claimed input from reaching stock Move;
   - still forwards the event to the tool UI.
-- optional module metadata hook:
-  - exposes declared params, presets, and display categories.
+- optional module metadata hook, if existing params prove too inconsistent:
+  - exposes declared params, presets, display categories, and read-only/editor capability flags.
 
 All hooks should be capability-gated from Overture with `typeof hook === "function"` checks.
 
@@ -136,15 +179,14 @@ All hooks should be capability-gated from Overture with `typeof hook === "functi
 
 - Should tracks 5-8 always be Schwung-owned, or should Overture support mixed backend assignment per track?
 - Should `Deep Edit` remain a Sound page row, or move to a secondary action/menu once the page grows?
-- How far should Overture go with generic module parameter editing before it becomes a second Schwung UI?
+- How far should Overture go with filepath/string editors before it becomes a second Schwung UI?
 - Should Back/`<` support wait for an upstream Schwung hook, or should Overture continue documenting Menu-only exit?
 - What is the minimum module metadata needed to make browsing feel polished?
 
 ## Suggested Next Milestones
 
-1. Document the final spike behavior and limitation in user-facing docs.
-2. Add Overture module identity types and normalize current module-list results.
-3. Add a compact module detail view for current slot state.
-4. Prototype generic `chain_params` rendering for one synth and one FX.
-5. Draft a small upstream Schwung issue/PR for input ownership and module enumeration, if existing APIs prove insufficient.
-
+1. Run the remaining device sweep across one moveforge synth, one upstream Schwung synth, one audio FX, and one MIDI FX.
+2. Broaden module fixture coverage for `ui_hierarchy` and `chain_params` shapes seen in real modules.
+3. Draft a small upstream Schwung issue/PR for input ownership if Back/`<` should become an Overture Sound page action.
+4. Decide whether module enumeration needs `shadow_list_modules_for_component(componentType)` or the current host list path is enough.
+5. Add bespoke editors only for read-only param families that have a clear Overture UX.

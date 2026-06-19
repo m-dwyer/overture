@@ -58,7 +58,7 @@
 <body>
 <div class="wrap">
 <header class="brand"><span class="name">OVERTURE</span><span class="sub">BEGINNER GUIDE</span></header>
-<nav><div class="label">Contents</div><ol><li><a href="#controls-cheat-sheet">Controls cheat-sheet</a></li><li><a href="#orientation">Orientation</a></li><li><a href="#the-two-main-views">The Two Main Views</a></li><li><a href="#make-a-first-drum-pattern">Make a First Drum Pattern</a></li><li><a href="#move-between-clips-and-editing">Move Between Clips and Editing</a></li><li><a href="#select-tracks">Select Tracks</a></li><li><a href="#edit-parameters">Edit Parameters</a></li><li><a href="#save-and-export-entry-points">Save and Export Entry Points</a></li><li><a href="#glossary">Glossary</a></li></ol></nav>
+<nav><div class="label">Contents</div><ol><li><a href="#controls-cheat-sheet">Controls cheat-sheet</a></li><li><a href="#orientation">Orientation</a></li><li><a href="#the-two-main-views">The Two Main Views</a></li><li><a href="#make-a-first-drum-pattern">Make a First Drum Pattern</a></li><li><a href="#move-between-clips-and-editing">Move Between Clips and Editing</a></li><li><a href="#select-tracks">Select Tracks</a></li><li><a href="#edit-parameters">Edit Parameters</a></li><li><a href="#edit-a-schwung-sound">Edit a Schwung Sound</a></li><li><a href="#save-and-export-entry-points">Save and Export Entry Points</a></li><li><a href="#glossary">Glossary</a></li></ol></nav>
 <main>
 <h1 id="overture-beginner-guide">Overture Beginner Guide</h1>
 <p>This guide is a screenshot-driven introduction to Overture's current UI. It is intentionally shorter than the inherited dAVEBOx manual — learn the main surfaces here first, then dive into the references below.</p>
@@ -73,6 +73,7 @@
 <li><a href="#move-between-clips-and-editing">Move Between Clips and Editing</a></li>
 <li><a href="#select-tracks">Select Tracks</a></li>
 <li><a href="#edit-parameters">Edit Parameters</a></li>
+<li><a href="#edit-a-schwung-sound">Edit a Schwung Sound</a></li>
 <li><a href="#save-and-export-entry-points">Save and Export Entry Points</a></li>
 <li><a href="#glossary">Glossary</a></li>
 </ul>
@@ -115,6 +116,11 @@
 <td>K1-K8</td>
 <td>Turn</td>
 <td>Edit the eight values in the visible bank</td>
+</tr>
+<tr>
+<td>Shift + Step 3</td>
+<td>Hold + tap</td>
+<td>Edit the active track's sound source</td>
 </tr>
 <tr>
 <td>Shift + Note/Session</td>
@@ -174,6 +180,15 @@
 <h3 id="the-bank-readout-up-close">The bank readout up close</h3>
 <p><img src="assets/09b-parameter-oled.png" alt="The bank readout up close"></p>
 <p>The OLED row order matches K1-K8 left to right. The close-up makes the active bank and its eight values legible.</p>
+<h2 id="edit-a-schwung-sound">Edit a Schwung Sound</h2>
+<p>Tracks 5-8 are Schwung/open-engine tracks in the default hybrid setup. Select one, then press Shift + Step 3 to open Overture's Sound page for that track.</p>
+<p>If the loaded Schwung module exposes parameters, the Sound page opens directly on its parameter detail. The eight encoders edit the visible params; touching or turning an encoder briefly shows a larger value readout. Turn the jog to move through additional 8-param banks. Menu exits the Sound page.</p>
+<h3 id="open-sound-on-a-schwung-track">Open Sound on a Schwung track</h3>
+<p><img src="assets/09c-schwung-sound.png" alt="Open Sound on a Schwung track"></p>
+<p>On a Schwung-routed track, Shift + Step 3 opens Overture's Sound page instead of dropping straight into Schwung's chain editor. Parameters exposed by the module are assigned to K1-K8.</p>
+<h3 id="edit-a-module-parameter">Edit a module parameter</h3>
+<p><img src="assets/09d-schwung-param-peek.png" alt="Edit a module parameter"></p>
+<p>Turning an encoder edits the visible Schwung parameter and temporarily replaces the grid with a focused value readout and range bar. The peek times out back to the overview.</p>
 <h2 id="save-and-export-entry-points">Save and Export Entry Points</h2>
 <p>The Global Menu contains track configuration plus project-level actions. Open it with Shift + Note/Session, rotate the jog to move, and press the jog to edit or confirm.</p>
 <p>This v1 guide only shows the entry points. It does not execute destructive or file-producing actions such as clearing a session or exporting.</p>
@@ -211,6 +226,10 @@
 <tr>
 <td>Drum lane</td>
 <td>One drum voice on a drum track; its 16 steps are edited on the step row.</td>
+</tr>
+<tr>
+<td>Sound page</td>
+<td>The route-aware sound editor opened with Shift + Step 3. On Schwung tracks it edits modules and their exposed params from Overture.</td>
 </tr>
 </tbody>
 </table>

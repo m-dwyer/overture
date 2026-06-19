@@ -24,6 +24,7 @@ Three things live only on real hardware and are noted where they appear: Move's 
 - [Parameter Banks](#parameter-banks)
 - [Effects Banks](#effects-banks)
 - [Automation](#automation)
+- [Editing Schwung Sounds](#editing-schwung-sounds)
 - [Launching and Arranging Clips](#launching-and-arranging-clips)
 - [Copy, Cut, and Delete Clips](#copy-cut-and-delete-clips)
 - [Recording and Transport](#recording-and-transport)
@@ -45,6 +46,7 @@ Three things live only on real hardware and are noted where they appear: Move's 
 | Step 1-16 | Hold | Open Step Edit for that step |
 | Step + Jog | Hold + turn | Adjust that step's length (Overture) |
 | Shift + Step | Hold + tap | Per-step shortcuts |
+| Shift + Step 3 | Hold + tap | Edit the active track's sound source |
 | Jog wheel | Turn | Move through parameter banks |
 | K1-K8 | Turn | Edit the eight values in the visible bank |
 | Copy + pads | Hold + tap src, then dst (Session) | Copy a clip — keep Copy held through both taps (Shift = cut) |
@@ -212,6 +214,32 @@ The edit surface is shown here. Automation *playback* — the recorded CCs being
 
 AUTO records per-step parameter values that ride with the clip. (Device-only: the recorded CCs emit during playback on hardware — the emulator shows the edit surface, not the live emission.)
 
+## Editing Schwung Sounds
+
+Shift + Step 3 edits the active track's sound source. On a Schwung-routed track, Overture opens its own Sound page for the matching Schwung slot instead of immediately handing you to Schwung's chain editor.
+
+The Sound page has four components: MIDI FX, Synth, FX 1, and FX 2. While the page is open, Step 1-4 jumps directly to those components. If the selected component exposes parameters through Schwung metadata, Overture opens directly in parameter detail.
+
+Parameter detail is an 8-encoder bank: K1-K8 edit the visible params, and turning the jog moves to the next or previous bank when a module exposes more than eight. Touching or turning an encoder briefly opens a focused param peek with a larger value and range bar. Numeric, enum, and bool params are editable; string, file, and canvas params are shown read-only. Menu exits this Overture Sound page. Deep Edit still enters Schwung's own chain editor for bespoke module UIs.
+
+### Open the Schwung Sound page
+
+![Open the Schwung Sound page](assets/ref-16-schwung-sound.png)
+
+Track 5 is Schwung-routed in the default setup. Shift + Step 3 opens Overture's Sound page for Slot 1. Because the Synth module exposes params, the page opens directly with K1-K8 assigned to the first parameter bank.
+
+### Param peek while editing
+
+![Param peek while editing](assets/ref-17-schwung-param-peek.png)
+
+Turning K1 edits the first visible module parameter. The focused peek makes the touched value easier to read while playing, then times out back to the 8-param overview.
+
+### Jump between Schwung components
+
+![Jump between Schwung components](assets/ref-18-schwung-components.png)
+
+Inside the Sound page, Step 1-4 are direct component jumps: MIDI FX, Synth, FX 1, and FX 2. Components with visible params open in detail; otherwise they show the module overview/browser path.
+
 ## Launching and Arranging Clips
 
 In Session View the pad grid is clips: columns are tracks, rows are scenes. Tap a clip pad to launch it; tap the side buttons to launch a whole scene row (Shift + side launches at the next bar boundary).
@@ -292,6 +320,8 @@ Scrolling the jog reaches the project actions: save, load, export, and global se
 | Trig condition | A per-step rule — Iter (every Nth loop), Prob (chance), Ratch (retrigger) — that varies when a step fires. |
 | Performance mode | A Loop-latched live layer for momentary loops and repeats over the playing pattern. |
 | Bank-position strip | The Track-View header tick strip showing how many banks exist and where the jog is (Overture). |
+| Sound page | The route-aware sound editor opened with Shift + Step 3. Move-routed tracks hand off to Move's editor; Schwung-routed tracks open Overture's module and parameter page. |
+| Schwung component | One slot in the Schwung Sound page: MIDI FX, Synth, FX 1, or FX 2. Step 1-4 jumps between them while the page is open. |
 
 ---
 

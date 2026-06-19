@@ -44,6 +44,28 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   chainParams.set("0:synth_module", "linein");
   chainParams.set("0:fx1_module", "freeverb");
   chainParams.set("0:fx2_module", "");
+  chainParams.set("0:synth:ui_hierarchy", JSON.stringify({
+    levels: {
+      root: {
+        knobs: [
+          { key: "gain", name: "Gain" },
+          { key: "tone", name: "Tone" },
+          { key: "filter_env_depth", name: "Filter Env Depth" },
+          { key: "enabled", name: "Enabled" },
+        ],
+      },
+    },
+  }));
+  chainParams.set("0:synth:chain_params", JSON.stringify([
+    { key: "gain", name: "Gain", type: "float", min: 0, max: 1 },
+    { key: "tone", name: "Tone", type: "enum", options: ["Dark", "Bright"] },
+    { key: "filter_env_depth", name: "Filter Env Depth", type: "float", rangeMin: -100, rangeMax: 100 },
+    { key: "enabled", name: "Enabled", type: "bool" },
+  ]));
+  chainParams.set("0:synth:gain", "0.5");
+  chainParams.set("0:synth:tone", "0");
+  chainParams.set("0:synth:filter_env_depth", "20");
+  chainParams.set("0:synth:enabled", "1");
   const installedModules = [
     { id: "arp", name: "Arpeggiator", version: "0.3.0", component_type: "midi_fx" },
     { id: "chord", name: "Chord", version: "0.1.0", component_type: "midi_fx" },

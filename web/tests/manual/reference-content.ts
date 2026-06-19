@@ -32,6 +32,7 @@ export const cheatSheet: CheatRow[] = [
   { control: "Step 1-16", gesture: "Hold", does: "Open Step Edit for that step" },
   { control: "Step + Jog", gesture: "Hold + turn", does: "Adjust that step's length (Overture)" },
   { control: "Shift + Step", gesture: "Hold + tap", does: "Per-step shortcuts" },
+  { control: "Shift + Step 3", gesture: "Hold + tap", does: "Edit the active track's sound source" },
   { control: "Jog wheel", gesture: "Turn", does: "Move through parameter banks" },
   { control: "K1-K8", gesture: "Turn", does: "Edit the eight values in the visible bank" },
   { control: "Copy + pads", gesture: "Hold + tap src, then dst (Session)", does: "Copy a clip — keep Copy held through both taps (Shift = cut)" },
@@ -55,6 +56,8 @@ export const glossary: GlossaryRow[] = [
   { term: "Trig condition", def: "A per-step rule — Iter (every Nth loop), Prob (chance), Ratch (retrigger) — that varies when a step fires." },
   { term: "Performance mode", def: "A Loop-latched live layer for momentary loops and repeats over the playing pattern." },
   { term: "Bank-position strip", def: "The Track-View header tick strip showing how many banks exist and where the jog is (Overture)." },
+  { term: "Sound page", def: "The route-aware sound editor opened with Shift + Step 3. Move-routed tracks hand off to Move's editor; Schwung-routed tracks open Overture's module and parameter page." },
+  { term: "Schwung component", def: "One slot in the Schwung Sound page: MIDI FX, Synth, FX 1, or FX 2. Step 1-4 jumps between them while the page is open." },
 ];
 
 // The full GuideConfig for the reference manual.

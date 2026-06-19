@@ -235,9 +235,9 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.release(49);
     h.step(3);
     expect(ui.pendingEditSoundEntry).toBeNull();
-    expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 0, selectedIndex: 1 });
-    expect(h.rec.text()).toMatch(/SOUND T5 Slot1/);
+    expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 0, selectedIndex: 1, paramDetail: true });
     expect(h.rec.text()).toMatch(/Synth linein/);
+    expect(h.rec.text()).toMatch(/K1 Gn 0\.5/);
     expect(globalThis.shadow_corun_state()).toBeNull();
     h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
     expect(ui.schwungSoundPage).toBeNull();
@@ -264,6 +264,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.tapStep(2);
     h.release(49);
     h.step(3);
+    h.press(3); // leave parameter detail for the component list
     h.cc(14, 1); h.step(1);
     h.cc(14, 1); h.step(1);
     h.cc(14, 1); h.step(1);
@@ -300,7 +301,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     }
   });
 
-  test("Sound page jog changes component and applies a Synth module", () => {
+  test("Sound page opens the Synth browser and applies a module", () => {
     const ui = h.ui();
     ui.activeTrack = 4;
     ui.sessionView = false;
@@ -310,6 +311,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(3);
 
     expect(ui.schwungSoundPage).toMatchObject({ selectedIndex: 1 });
+    h.press(3); // leave parameter detail for the Synth component row
     h.press(3);
     h.step(2);
     expect(h.rec.text()).toMatch(/Synth/);
@@ -336,6 +338,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.release(49);
       h.step(3);
 
+      if (ui.schwungSoundPage?.paramDetail) h.press(3); // leave parameter detail for the Synth component row
       h.press(3);
       h.step(2);
 
@@ -358,7 +361,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.release(49);
     h.step(3);
 
-    h.cc(14, 1); h.step(1); // FX 1
+    h.tapStep(2); h.step(1); // Step 3 = FX 1
     h.press(3);
     h.step(2);
     h.cc(14, 1); h.step(1);
@@ -379,7 +382,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.release(49);
     h.step(3);
 
-    h.cc(14, 127); h.step(1); // MIDI FX
+    h.tapStep(0); h.step(1); // Step 1 = MIDI FX
     h.press(3);
     h.step(2);
     h.cc(14, 1); h.step(1);
@@ -402,8 +405,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.release(49);
     h.step(3);
 
-    h.cc(14, 1); h.step(1); // FX 1
-    h.cc(14, 1); h.step(1); // FX 2
+    h.tapStep(3); h.step(1); // Step 4 = FX 2
     h.press(3);
     h.step(2);
     h.press(3);
@@ -429,8 +431,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.release(49);
       h.step(3);
 
-      expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 3 });
-      expect(h.rec.text()).toMatch(/SOUND T5 Slot4/);
+      expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 3, paramDetail: false });
+      expect(h.rec.text()).toMatch(/SOUND T5 Slot4|Synth --/);
     } finally {
       ui.trackChannel[4] = oldChannel;
       h.set("t4_channel", oldChannel);
