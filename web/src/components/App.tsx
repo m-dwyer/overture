@@ -293,10 +293,11 @@ export function App() {
             <Shell send={send} onReady={onReady} />
             {manualMode && (manualGesture || legend.length > 0 || manualShowing) ? (
               <div className="order-first w-[min(92vw,940px)] overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
-                {/* Brand strip */}
+                {/* Brand strip — guide-neutral: the generated doc supplies its own
+                    title (beginner vs reference), so the in-figure banner only
+                    carries the product brand, not a documentation label. */}
                 <div className="flex items-center gap-2 border-b border-line bg-panel-2 px-4 py-1.5">
                   <span className="text-[11px] font-bold tracking-[0.25em] text-accent">OVERTURE</span>
-                  <span className="text-[11px] tracking-[0.2em] text-muted">BEGINNER GUIDE</span>
                 </div>
                 <div className="px-4 py-3 text-left">
                   {manualGesture ? (

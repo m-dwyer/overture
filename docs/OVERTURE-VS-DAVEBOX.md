@@ -6,8 +6,11 @@ players already have muscle memory.** If a control isn't mentioned here, it work
 exactly like dAVEBOx.
 
 This page is the friendly overview — "I know dAVEBOx (or Move), what's different?".
-For the precise, living spec see [`MANUAL.md`](MANUAL.md); for the full dAVEBOx
-control inventory see [`../overture-ui/MANUAL.md`](../overture-ui/MANUAL.md).
+For the precise, per-change delta spec see [`MANUAL.md`](MANUAL.md). To learn the whole
+instrument Overture-natively, read the self-contained, screenshot-driven
+[`generated/overture-reference.html`](generated/overture-reference.html)
+(`pnpm -C web reference:generate`). The upstream dAVEBOx control inventory is vendored as a
+diff baseline at [`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md).
 
 ## At a glance
 
