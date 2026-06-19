@@ -2,6 +2,9 @@
 // from scenarios.ts (which owns the captured walkthrough) so the framing copy,
 // cheat-sheet, and glossary can be edited without touching the capture logic.
 
+import { GUIDE_PATH, HTML_PATH } from "./paths";
+import type { GuideConfig } from "./types";
+
 export const intro = [
   "This guide is a screenshot-driven introduction to Overture's current UI. It is intentionally shorter than the inherited dAVEBOx manual — learn the main surfaces here first, then dive into the references below.",
   "Each screenshot is produced by the real Overture UI running in the browser emulator, so it always reflects the current build. A cyan outline with a numbered badge marks each control you press for the action, and the numbers match the legend on the action banner. Coloured button fills are Overture's own live LED state.",
@@ -48,3 +51,19 @@ export const glossary: GlossaryRow[] = [
   { term: "Parameter bank", def: "A page of eight encoder (K1-K8) parameters shown on the OLED." },
   { term: "Drum lane", def: "One drum voice on a drum track; its 16 steps are edited on the step row." },
 ];
+
+// The full GuideConfig for the beginner guide — framing + output target in one
+// object so the spec just hands it to both emitters.
+export const beginnerGuide: GuideConfig = {
+  title: "Overture Beginner Guide",
+  brandName: "OVERTURE",
+  brandSub: "BEGINNER GUIDE",
+  generateCmd: "pnpm -C web manual:generate",
+  editHint: "Edit web/tests/manual/scenarios.ts (walkthrough) and content.ts (intro, cheat-sheet, glossary).",
+  mdPath: GUIDE_PATH,
+  htmlPath: HTML_PATH,
+  intro,
+  links,
+  cheatSheet,
+  glossary,
+};

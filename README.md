@@ -16,6 +16,8 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 
 ## Docs
 - `docs/generated/overture-beginner-guide.md` — screenshot-driven beginner guide generated from the browser emulator (`pnpm -C web manual:generate`).
+- `docs/generated/overture-reference.md` — the comprehensive, self-contained reference manual: a screenshot-driven tour of the whole surface, same emulator pipeline (`pnpm -C web reference:generate`).
+- `docs/reference/DAVEBOX-MANUAL.md` — the upstream dAVEBOx manual, vendored verbatim as our diff baseline (not a dependency of the manuals above).
 - `docs/QUICK-START.md` — first-run setup for Move channels, Schwung slots, track selection, clip reveal, and sound editing.
 - `docs/PHILOSOPHY.md` — what Overture is, what it isn't, the principles behind it.
 - `docs/ARCHITECTURE.md` — the runtime stack, the monorepo + fork strategy, moveforge, how to modify it.

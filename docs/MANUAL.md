@@ -7,9 +7,11 @@ for the how).
 
 This manual documents **only what Overture changes**. For everything not listed
 here — recording, drum lanes, automation lanes, ARP, Performance Mode, banks,
-bake/export, persistence — the authoritative reference is the dAVEBOx manual at
-**`overture-ui/MANUAL.md`** (its §15 Cheat Sheet is the full control inventory). Where a
-control below says "(unchanged)", it behaves exactly as the dAVEBOx manual describes.
+bake/export, persistence — the authoritative reference is the vendored dAVEBOx manual at
+**[`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md)** (its §15 Cheat Sheet is the
+full control inventory). Where a control below says "(unchanged)", it behaves exactly as
+the dAVEBOx manual describes. For an Overture-native, screenshot-driven walkthrough of the
+whole surface, see the generated [`generated/overture-reference.html`](generated/overture-reference.html).
 
 > Status: living document. Each shipped change in `DAVEBOX-CHANGES.md` lands a
 > section here. Changes not yet implemented are listed under **Planned** at the end.
@@ -18,7 +20,7 @@ control below says "(unchanged)", it behaves exactly as the dAVEBOx manual descr
 
 ## Control map (Overture vs dAVEBOx)
 
-Only the controls Overture changes. Everything else is unchanged — see `overture-ui/MANUAL.md`.
+Only the controls Overture changes. Everything else is unchanged — see [`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md).
 
 | Control | dAVEBOx | Overture |
 |---|---|---|
@@ -136,7 +138,7 @@ switching that track to keys keeps the existing 1/2-step notes; newly sequenced
 keys notes are 1 full step.
 
 You can still override a step's length by holding the step and turning the jog
-wheel, or by using the Step Edit length control described in `overture-ui/MANUAL.md`.
+wheel, or by using the Step Edit length control described in [`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md).
 
 ---
 

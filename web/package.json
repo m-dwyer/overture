@@ -13,7 +13,8 @@
     "test:node": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "manual:generate": "MANUAL_GENERATE=1 playwright test tests/manual-shots.spec.ts"
+    "manual:generate": "MANUAL_GENERATE=1 playwright test tests/manual-shots.spec.ts",
+    "reference:generate": "REFERENCE_GENERATE=1 playwright test tests/manual-reference.spec.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
