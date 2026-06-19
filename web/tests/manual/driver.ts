@@ -144,6 +144,25 @@ export function makeDriver(page: Page): Driver {
     await settle();
   }
 
+  // Curated read of the live emulator for assertions — never used to navigate.
+  async function probe() {
+    return page.evaluate(() => {
+      const s = (globalThis as typeof globalThis & { overtureUiState?: StateBag }).overtureUiState;
+      const items = s?.globalMenuItems as Array<{ label?: string }> | undefined;
+      const menu = s?.globalMenuState as { selectedIndex: number } | undefined;
+      return {
+        sessionView: Boolean(s?.sessionView),
+        activeTrack: Number(s?.activeTrack ?? -1),
+        activeBank: Number(s?.activeBank ?? -1),
+        globalMenuOpen: Boolean(s?.globalMenuOpen),
+        menuLabel: items && menu ? items[menu.selectedIndex]?.label : undefined,
+        recordArmed: Boolean(s?.recordArmed),
+        recordCountingIn: Boolean(s?.recordCountingIn),
+        oled: (globalThis as typeof globalThis & { __OVT_OLED_TEXT?: string }).__OVT_OLED_TEXT ?? "",
+      };
+    });
+  }
+
   // --- view state (read-only) -------------------------------------------------
   async function sessionView(): Promise<boolean> {
     return page.evaluate(() => {
@@ -381,6 +400,7 @@ export function makeDriver(page: Page): Driver {
     sceneNav,
     openGlobalMenu,
     selectMenuLabel,
+    probe,
     enterTrackView,
     enterDrumTrackView,
     enterSessionView,

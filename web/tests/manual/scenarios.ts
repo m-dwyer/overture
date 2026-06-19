@@ -42,6 +42,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "02-track-view.png",
+        expect: { sessionView: false },
         title: "Track View",
         action: "Tap Note/Session until Track View is active",
         showing: "Track View: edit one clip with pads, steps, jog, and encoders",
@@ -52,6 +53,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "03-session-view.png",
+        expect: { sessionView: true },
         title: "Session View",
         action: "Tap Note/Session to switch to Session View",
         showing: "Session View: numbers are tracks; letters are active scenes, so A means scene A is selected",
@@ -71,6 +73,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "04-drum-pattern.png",
+        expect: { sessionView: false, activeTrack: 0 },
         title: "A simple lane pattern",
         action: "Tap drum pad, then tap Steps 1, 5, 9, 13",
         showing: "A drum lane pattern: lit step buttons are hits on the active lane",
@@ -104,6 +107,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "05-session-launch.png",
+        expect: { sessionView: true },
         title: "Focus a clip in Session View",
         action: "Tap a clip pad in Session View",
         showing: "Track 1 now shows D: the bottom-row clip pad selected scene D",
@@ -117,6 +121,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "06-return-track-view.png",
+        expect: { sessionView: false },
         title: "Return to detailed editing",
         action: "Tap Note/Session to return to Track View",
         showing: "The focused clip is now back on the detailed edit surface",
@@ -139,6 +144,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "07-track-select.png",
+        expect: { sessionView: false, activeTrack: 1 },
         title: "Side buttons select tracks",
         action: "Track View: tap side button 2",
         showing: "Track selection: side-button LEDs indicate the active track bank",
@@ -154,6 +160,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "08-shift-track-select.png",
+        expect: { activeTrack: 4 },
         title: "Shift reaches the upper track bank",
         action: "Hold Shift + tap side button 1",
         showing: "Upper track bank: Shift + side buttons select tracks 5-8",
@@ -217,6 +224,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "10-global-menu.png",
+        expect: { globalMenuOpen: true },
         title: "Open the Global Menu",
         action: "Hold Shift + tap Note/Session",
         showing: "Global Menu: jog selects rows; jog click edits or confirms",
@@ -229,6 +237,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "11-global-menu-scrolled.png",
+        expect: { globalMenuOpen: true },
         title: "Scroll to project actions",
         action: "Rotate jog to Export / Save entries",
         showing: "Project actions live in the Global section; this guide only shows the entry points",

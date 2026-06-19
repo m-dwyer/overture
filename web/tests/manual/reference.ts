@@ -51,6 +51,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-03-track-view.png",
+        expect: { sessionView: false, activeTrack: 0 },
         title: "Track View",
         action: "Tap Note/Session until Track View is active",
         showing: "Track View: edit one clip with pads, steps, jog, and encoders",
@@ -61,6 +62,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "ref-04-session-view.png",
+        expect: { sessionView: true },
         title: "Session View",
         action: "Tap Note/Session to switch to Session View",
         showing: "Session View: numbers are tracks; letters are the active scene per track",
@@ -80,6 +82,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-05-track-select.png",
+        expect: { sessionView: false, activeTrack: 1 },
         title: "Side buttons select tracks",
         action: "Track View: tap side button 2",
         showing: "Track selection: the active side-button LED marks the current track",
@@ -92,6 +95,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "ref-06-shift-track-select.png",
+        expect: { activeTrack: 4 },
         title: "Shift reaches tracks 5-8",
         action: "Hold Shift + tap side button 1",
         showing: "Upper bank: Shift + side button selects tracks 5-8 on the same four buttons",
@@ -117,6 +121,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-07-clip-reveal.png",
+        expect: { sessionView: false, activeTrack: 0 },
         title: "Hold a side button to reveal clips",
         action: "Track View: hold side button 1, then tap a step",
         showing: "Clip overlay: the 16 step buttons are track 1's 16 clips",
@@ -145,6 +150,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-08-drum-pattern.png",
+        expect: { sessionView: false, activeTrack: 0 },
         title: "A simple lane pattern",
         action: "Drum track: tap a lane pad, then Steps 1, 5, 9, 13",
         showing: "A drum lane pattern: lit step buttons are hits on the active lane",
@@ -176,6 +182,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-09-chord-entry.png",
+        expect: { activeTrack: 1 },
         title: "Chord entry",
         action: "Hold three pads, then tap a step",
         showing: "Chord entry: the held pads are written to the tapped step together",
@@ -206,6 +213,9 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-10-step-edit.png",
+        // The "STEP EDIT" header is bitmap-drawn (not print()), so assert the
+        // printed trig-condition rows that are unique to the Step Edit screen.
+        expect: { oledIncludes: ["Iter", "Prob", "Ratch"] },
         title: "Hold a step to edit it",
         action: "Place a step, then hold it",
         showing: "Step Edit: the held step's length, velocity, timing and trig conditions",
@@ -229,6 +239,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-11-step-length.png",
+        expect: { oledIncludes: ["Leng", "Ratch"] }, // Step Edit screen, length row visible
         title: "Hold step + jog = length",
         action: "Hold a placed step and turn the jog",
         showing: "Step length: the jog stretches the held step, never changing banks",
@@ -256,6 +267,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-12-bank.png",
+        expect: { activeTrack: 1, activeBank: 2 },
         title: "Bank editing",
         action: "On a melodic track, turn the jog to a bank, then turn K3",
         showing: "Parameter editing: the OLED rows map to K1-K8 above the pad grid",
@@ -274,6 +286,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "ref-13-bank-oled.png",
+        expect: { activeTrack: 1, activeBank: 2 },
         title: "The bank readout up close",
         action: "Turn the jog to a bank, then turn K3",
         showing: "Each OLED row is one encoder, in K1-K8 order left to right",
@@ -292,6 +305,9 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-14-fx-bank.png",
+        // Bank index 3 = DELAY; assert its feedback param labels (printed rows) —
+        // ties the figure to the DELAY bank even if the header is bitmap-drawn.
+        expect: { activeTrack: 1, activeBank: 3, oledIncludes: ["Vfb", "Pfb"] },
         title: "An effects bank",
         action: "Turn the jog to an effects bank",
         showing: "An effects bank (e.g. DELAY / NOTE FX): eight K1-K8 parameters",
@@ -317,6 +333,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-15-auto.png",
+        expect: { activeTrack: 1, activeBank: 6, oledIncludes: "CC7" }, // AUTO bank: per-step CC lanes
         title: "The AUTO bank",
         action: "Turn the jog to the AUTO bank",
         showing: "Automation: per-step CC lanes (p-locks) for the active clip",
@@ -343,6 +360,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-16-session-launch.png",
+        expect: { sessionView: true },
         title: "Launch a clip",
         action: "Session View: tap a clip pad",
         showing: "Clip launch: the tapped pad selects/launches that clip and updates its track's scene letter",
@@ -365,6 +383,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-17-clip-copy.png",
+        expect: { sessionView: true },
         title: "Copy a clip",
         action: "Hold Copy, tap source clip (COPIED), then — still holding Copy — tap destination",
         showing: "Clip copy: keep Copy held while you tap source then destination",
@@ -392,6 +411,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-18-record.png",
+        expect: { recording: true },
         title: "Arm recording",
         action: "Tap Record (no Play needed)",
         showing: "Transport: Record arms a one-bar count-in, then records automatically",
@@ -415,6 +435,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-19-pages.png",
+        expect: { sessionView: false },
         title: "Page through a clip",
         action: "Tap ‹ or › to change page",
         showing: "Paging: ‹ › move through a clip's step pages and the loop view",
@@ -440,6 +461,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-20-menu.png",
+        expect: { globalMenuOpen: true },
         title: "Open the Global Menu",
         action: "Hold Shift + tap Note/Session",
         showing: "Global Menu: jog scrolls; jog click edits or confirms",
@@ -452,6 +474,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "ref-21-menu-project.png",
+        expect: { globalMenuOpen: true },
         title: "Project actions",
         action: "Turn the jog to Save / Load / Export",
         showing: "Project actions: save and load a session, or export to Ableton",

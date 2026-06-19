@@ -76,10 +76,21 @@ export function App() {
 
     // ---- Canvas display sink (1-bit OLED; value 0=black, 1=white → BG/FG) -------
     const shade = (v: number | boolean): string => (v ? FG : BG);
+    // Mirror the current OLED frame's printed text into a global so tests can
+    // assert what the screen actually says (e.g. the manual generator checks a
+    // figure landed on "DELAY"/"STEP EDIT"). A draw-order join is enough for
+    // substring checks; reset each frame on clearScreen. Same spirit as the
+    // existing emulator test hooks — observability, not app logic.
+    let oledFrame: string[] = [];
+    const publishOled = () => {
+      (globalThis as typeof globalThis & { __OVT_OLED_TEXT?: string }).__OVT_OLED_TEXT = oledFrame.join(" ");
+    };
     const display: DisplaySink = {
       clearScreen() {
         ctx.fillStyle = BG;
         ctx.fillRect(0, 0, OLED_W, OLED_H);
+        oledFrame = [];
+        publishOled();
       },
       fillRect(x, y, w, h, v) {
         ctx.fillStyle = shade(v);
@@ -110,6 +121,7 @@ export function App() {
         const baseX = x | 0;
         const baseY = y | 0;
         for (let i = 0; i < s.length; i++) ctx.fillText(s[i], baseX + i * CHAR_W, baseY);
+        if (s.trim()) { oledFrame.push(s); publishOled(); }
       },
       textWidth(text) {
         return String(text).length * CHAR_W;
