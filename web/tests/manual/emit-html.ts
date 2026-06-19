@@ -1,24 +1,16 @@
 import { writeFileSync } from "node:fs";
-import type { GuideConfig, Scene, Section } from "./types";
+import rehypeSlug from "rehype-slug";
+import rehypeStringify from "rehype-stringify";
+import remarkGfm from "remark-gfm";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import { unified } from "unified";
+import type { GuideConfig, Scene } from "./types";
 
-// Styled standalone HTML build of the guide. Same data as the markdown emitter,
-// wrapped in a self-contained page with inline CSS (no external deps): a sticky
-// table of contents, the Overture palette, a styled cheat-sheet, and figures.
-// Output lives in docs/generated/ alongside the markdown so assets/ resolves.
-// Everything that differs between the beginner guide and the reference is in cfg.
+// Styled standalone HTML build of the guide. Markdown is the canonical document;
+// this writer only renders that markdown and wraps it in the Overture page shell.
 
 const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-// Escape, then turn `code` spans into <code>.
-const inline = (s: string): string => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
-
-const tableHtml = (headers: string[], rows: string[][]): string =>
-  [
-    "<table>",
-    `<thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead>`,
-    `<tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody>`,
-    "</table>",
-  ].join("\n");
 
 const STYLE = `
   :root {
@@ -47,33 +39,41 @@ const STYLE = `
   nav a { color: var(--muted); display: block; padding: 0.2rem 0; border-left: 2px solid transparent; padding-left: 0.7rem; }
   nav a:hover { color: var(--text); border-left-color: var(--accent); text-decoration: none; }
   main { min-width: 0; }
-  .intro { color: var(--text); }
-  .deeper { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-    padding: 0.8rem 1rem; font-size: 0.92rem; color: var(--muted); }
-  .deeper strong { color: var(--text); }
+  h1 { font-size: 2rem; line-height: 1.15; margin: 0 0 1rem; }
+  #contents, #contents + ul { display: none; }
   h2 { font-size: 1.5rem; margin: 2.4rem 0 0.8rem; padding-top: 0.6rem; border-top: 1px solid var(--line); }
   h2:first-of-type { border-top: none; }
   h3 { font-size: 1.05rem; color: var(--muted); margin: 1.6rem 0 0.6rem; }
   p { margin: 0.6rem 0; }
-  figure { margin: 1rem 0 1.6rem; }
-  figure img { max-width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: #000; }
-  figcaption { font-size: 0.88rem; color: var(--muted); margin-top: 0.5rem; }
-  figcaption strong { color: var(--text); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2.5rem 0 1.2rem; }
+  main > ul { margin: 0.6rem 0 1.2rem; padding-left: 1.2rem; }
+  main > ul li { margin: 0.25rem 0; }
+  p:has(> img:only-child) { margin: 1rem 0 0.4rem; }
+  img { max-width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: #000; }
+  h3 + p:has(> img:only-child) + p { font-size: 0.88rem; color: var(--muted); margin-top: 0.5rem; }
+  h3 + p:has(> img:only-child) + p strong { color: var(--text); }
   table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.92rem; }
   th, td { text-align: left; padding: 0.5rem 0.8rem; border: 1px solid var(--line); vertical-align: top; }
   th { background: var(--panel-2); color: var(--text); font-weight: 600; }
   td:first-child { color: var(--text); font-weight: 500; white-space: nowrap; }
-  footer { grid-column: 1 / -1; border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1.2rem;
-    font-size: 0.85rem; color: var(--muted); }
   @media (max-width: 820px) {
     .wrap { grid-template-columns: 1fr; gap: 1.5rem; }
     nav { position: static; }
   }
 `;
 
-export function writeGuideHtml(sections: Section[], scenes: Scene[], cfg: GuideConfig): void {
-  const slugFor = (title: string) => scenes.find((s) => s.title === title)?.slug ?? "";
+const renderMarkdown = async (markdown: string): Promise<string> =>
+  String(
+    await unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkRehype)
+      .use(rehypeSlug)
+      .use(rehypeStringify)
+      .process(markdown)
+  );
 
+export async function writeGuideHtml(markdown: string, scenes: Scene[], cfg: GuideConfig): Promise<void> {
   const toc = [
     { href: "#controls-cheat-sheet", label: "Controls cheat-sheet" },
     ...scenes.map((s) => ({ href: `#${s.slug}`, label: s.title })),
@@ -82,27 +82,7 @@ export function writeGuideHtml(sections: Section[], scenes: Scene[], cfg: GuideC
   const navHtml = `<nav><div class="label">Contents</div><ol>${toc
     .map((t) => `<li><a href="${esc(t.href)}">${esc(t.label)}</a></li>`)
     .join("")}</ol></nav>`;
-
-  const linkLine = cfg.links
-    .map((l) => `<a href="${esc(l.href)}">${esc(l.label)}</a> — ${esc(l.note)}`)
-    .join(" &middot; ");
-  const deeperHtml = linkLine
-    ? `<p class="deeper"><strong>Where to go deeper:</strong> ${linkLine}</p>`
-    : "";
-
-  const sectionsHtml = sections
-    .map((sec) => {
-      const body = sec.body.map((p) => `<p>${inline(p)}</p>`).join("\n");
-      const shots = sec.shots
-        .map(
-          (shot) =>
-            `<figure>\n<img src="assets/${esc(shot.file)}" alt="${esc(shot.title)}" loading="lazy" />\n` +
-            `<figcaption><strong>${esc(shot.title)}.</strong> ${inline(shot.caption)}</figcaption>\n</figure>`
-        )
-        .join("\n");
-      return `<section id="${esc(slugFor(sec.title))}">\n<h2>${esc(sec.title)}</h2>\n${body}\n${shots}\n</section>`;
-    })
-    .join("\n");
+  const bodyHtml = await renderMarkdown(markdown);
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -118,24 +98,7 @@ export function writeGuideHtml(sections: Section[], scenes: Scene[], cfg: GuideC
 <header class="brand"><span class="name">${esc(cfg.brandName)}</span><span class="sub">${esc(cfg.brandSub)}</span></header>
 ${navHtml}
 <main>
-${cfg.intro.map((p) => `<p class="intro">${inline(p)}</p>`).join("\n")}
-${deeperHtml}
-<section id="controls-cheat-sheet">
-<h2>Controls cheat-sheet</h2>
-${tableHtml(
-  ["Control", "Gesture", "What it does"],
-  cfg.cheatSheet.map((r) => [r.control, r.gesture, r.does])
-)}
-</section>
-${sectionsHtml}
-<section id="glossary">
-<h2>Glossary</h2>
-${tableHtml(
-  ["Term", "Meaning"],
-  cfg.glossary.map((g) => [g.term, g.def])
-)}
-</section>
-${linkLine ? `<footer>${linkLine}</footer>` : ""}
+${bodyHtml}
 </main>
 </div>
 </body>
