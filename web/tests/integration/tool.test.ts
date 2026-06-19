@@ -226,7 +226,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(globalThis.shadow_corun_state()).toBeNull();
   });
 
-  test("Shift+Step 3 preflights Schwung route then enters chain co-run", () => {
+  test("Shift+Step 3 on a Schwung route opens the Overture Sound page", () => {
     const ui = h.ui();
     ui.activeTrack = 4;
     ui.sessionView = false;
@@ -234,14 +234,13 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.tapStep(2);
     h.release(49);
     h.step(3);
-    expect(ui.pendingEditSoundEntry).toBeTruthy();
-    expect(h.rec.text()).toMatch(/EDIT SOUND/);
-    expect(h.rec.text()).toMatch(/T5 Schwung Slot1/);
-    h.step(30);
-    expect(ui.schwungCoRunSlot).toBe(0);
-    expect(globalThis.shadow_corun_state()).toMatchObject({ target: 1, id: 0 });
+    expect(ui.pendingEditSoundEntry).toBeNull();
+    expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 0, selectedIndex: 1 });
+    expect(h.rec.text()).toMatch(/SOUND T5 Slot1/);
+    expect(h.rec.text()).toMatch(/Synth linein/);
+    expect(globalThis.shadow_corun_state()).toBeNull();
     h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
-    expect(ui.schwungCoRunSlot).toBe(-1);
+    expect(ui.schwungSoundPage).toBeNull();
     expect(globalThis.shadow_corun_state()).toBeNull();
   });
 
@@ -265,7 +264,11 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.tapStep(2);
     h.release(49);
     h.step(3);
-    h.step(30);
+    h.cc(14, 1); h.step(1);
+    h.cc(14, 1); h.step(1);
+    h.cc(14, 1); h.step(1);
+    h.press(3);
+    h.step(3);
     expect(ui.schwungCoRunSlot).toBe(0);
     globalThis.shadow_corun_end();
     h.step(3);
@@ -287,12 +290,177 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       openEditSoundFromGlobalMenu();
       expect(h.rec.text()).toMatch(/NO SLOT/);
       expect(h.rec.text()).toMatch(/Ch5/);
+      expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: -1 });
       h.step(30);
-      expect(ui.schwungCoRunSlot).toBe(0);
-      h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
       expect(ui.schwungCoRunSlot).toBe(-1);
+      h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
+      expect(ui.schwungSoundPage).toBeNull();
     } finally {
       globalThis.shadow_get_slots = originalSlots;
+    }
+  });
+
+  test("Sound page jog changes component and applies a Synth module", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    h.hold(49);
+    h.tapStep(2);
+    h.release(49);
+    h.step(3);
+
+    expect(ui.schwungSoundPage).toMatchObject({ selectedIndex: 1 });
+    h.press(3);
+    h.step(2);
+    expect(h.rec.text()).toMatch(/Synth/);
+    expect(h.rec.text()).toMatch(/Line In/);
+
+    h.cc(14, 1); h.step(1);
+    h.press(3);
+    h.step(2);
+
+    expect(globalThis.shadow_get_param(0, "synth_module")).toBe("test-synth");
+    expect(h.rec.text()).toMatch(/Synth test-synth/);
+    ui.schwungSoundPage = null;
+    h.step(1);
+  });
+
+  test("Sound page browser opens on the currently loaded Synth", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    globalThis.shadow_set_param(0, "synth:module", "test-synth");
+    try {
+      h.hold(49);
+      h.tapStep(2);
+      h.release(49);
+      h.step(3);
+
+      h.press(3);
+      h.step(2);
+
+      expect(ui.schwungSoundPage).toMatchObject({ browser: true, browserIndex: 1 });
+      expect(h.rec.prints.some((p) => p.x === 0 && p.y === 16 && p.text === " Line In")).toBe(true);
+      expect(h.rec.prints.some((p) => p.x === 0 && p.y === 30 && p.text === ">Test Synth")).toBe(true);
+    } finally {
+      globalThis.shadow_set_param(0, "synth:module", "linein");
+      ui.schwungSoundPage = null;
+      h.step(1);
+    }
+  });
+
+  test("Sound page applies FX 1 through the expected Schwung param key", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    h.hold(49);
+    h.tapStep(2);
+    h.release(49);
+    h.step(3);
+
+    h.cc(14, 1); h.step(1); // FX 1
+    h.press(3);
+    h.step(2);
+    h.cc(14, 1); h.step(1);
+    h.press(3);
+    h.step(2);
+
+    expect(globalThis.shadow_get_param(0, "fx1_module")).toBe("delay");
+    ui.schwungSoundPage = null;
+    h.step(1);
+  });
+
+  test("Sound page applies MIDI FX through the expected Schwung param key", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    h.hold(49);
+    h.tapStep(2);
+    h.release(49);
+    h.step(3);
+
+    h.cc(14, 127); h.step(1); // MIDI FX
+    h.press(3);
+    h.step(2);
+    h.cc(14, 1); h.step(1);
+    h.press(3);
+    h.step(2);
+
+    expect(globalThis.shadow_get_param(0, "midi_fx1_module")).toBe("chord");
+    expect(h.rec.text()).toMatch(/MIDI FX chord/);
+    globalThis.shadow_set_param(0, "midi_fx1:module", "arp");
+    ui.schwungSoundPage = null;
+    h.step(1);
+  });
+
+  test("Sound page applies FX 2 through the expected Schwung param key", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    h.hold(49);
+    h.tapStep(2);
+    h.release(49);
+    h.step(3);
+
+    h.cc(14, 1); h.step(1); // FX 1
+    h.cc(14, 1); h.step(1); // FX 2
+    h.press(3);
+    h.step(2);
+    h.press(3);
+    h.step(2);
+
+    expect(globalThis.shadow_get_param(0, "fx2_module")).toBe("freeverb");
+    expect(h.rec.text()).toMatch(/FX 2 freeverb/);
+    globalThis.shadow_set_param(0, "fx2:module", "");
+    ui.schwungSoundPage = null;
+    h.step(1);
+  });
+
+  test("Sound page resolves a non-default Schwung channel to the matching slot", () => {
+    const ui = h.ui();
+    const oldChannel = ui.trackChannel[4];
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    ui.trackChannel[4] = 8;
+    h.set("t4_channel", 8);
+    try {
+      h.hold(49);
+      h.tapStep(2);
+      h.release(49);
+      h.step(3);
+
+      expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 3 });
+      expect(h.rec.text()).toMatch(/SOUND T5 Slot4/);
+    } finally {
+      ui.trackChannel[4] = oldChannel;
+      h.set("t4_channel", oldChannel);
+      ui.schwungSoundPage = null;
+      h.step(1);
+    }
+  });
+
+  test("missing Sound page slot does not write params", () => {
+    const ui = h.ui();
+    const originalSlots = globalThis.shadow_get_slots;
+    globalThis.shadow_get_slots = () => [
+      { channel: 6, name: "Slot2" },
+      { channel: 7, name: "Slot3" },
+      { channel: 8, name: "Slot4" },
+    ];
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    try {
+      openEditSoundFromGlobalMenu();
+      expect(ui.schwungSoundPage).toMatchObject({ slot: -1 });
+      const before = globalThis.shadow_get_param(0, "synth_module");
+      h.press(3);
+      h.step(2);
+      expect(globalThis.shadow_get_param(0, "synth_module")).toBe(before);
+      expect(ui.schwungSoundPage).toMatchObject({ slot: -1 });
+    } finally {
+      globalThis.shadow_get_slots = originalSlots;
+      ui.schwungSoundPage = null;
+      h.step(1);
     }
   });
 

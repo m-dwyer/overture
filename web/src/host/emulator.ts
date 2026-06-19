@@ -39,6 +39,19 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     { channel: 7, name: "Slot3" },
     { channel: 8, name: "Slot4" },
   ];
+  const chainParams = new Map<string, string>();
+  chainParams.set("0:midi_fx1_module", "arp");
+  chainParams.set("0:synth_module", "linein");
+  chainParams.set("0:fx1_module", "freeverb");
+  chainParams.set("0:fx2_module", "");
+  const installedModules = [
+    { id: "arp", name: "Arpeggiator", version: "0.3.0", component_type: "midi_fx" },
+    { id: "chord", name: "Chord", version: "0.1.0", component_type: "midi_fx" },
+    { id: "linein", name: "Line In", version: "0.2.0", component_type: "sound_generator" },
+    { id: "test-synth", name: "Test Synth", version: "0.1.0", component_type: "sound_generator" },
+    { id: "freeverb", name: "Freeverb", version: "0.1.1", component_type: "audio_fx" },
+    { id: "delay", name: "Delay", version: "0.1.0", component_type: "audio_fx" },
+  ];
 
   // Display (1-bit OLED) → sink.
   const clear_screen = (): void => display.clearScreen();
@@ -101,6 +114,20 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const shadow_corun_state = (): { target: number; id: number; keep_mask: number } | null =>
     corunState ? { ...corunState } : null;
   const shadow_get_slots = (): Array<Record<string, unknown>> => slots;
+  const shadow_get_param = (slot: number, key: string): string | null =>
+    chainParams.get(`${slot | 0}:${key}`) ?? null;
+  const shadow_set_param = (slot: number, key: string, val: string | number): boolean => {
+    const s = slot | 0;
+    const v = String(val ?? "");
+    if (key === "midi_fx1:module") chainParams.set(`${s}:midi_fx1_module`, v);
+    else if (key === "synth:module") chainParams.set(`${s}:synth_module`, v);
+    else if (key === "fx1:module") chainParams.set(`${s}:fx1_module`, v);
+    else if (key === "fx2:module") chainParams.set(`${s}:fx2_module`, v);
+    chainParams.set(`${s}:${key}`, v);
+    log("shadow_set_param " + JSON.stringify([s, key, v]));
+    return true;
+  };
+  const host_list_modules = (): Array<Record<string, unknown>> => installedModules.map((m) => ({ ...m }));
   const shadow_get_ui_flags = (): Record<string, unknown> => ({});
 
   Object.assign(globalThis, {
@@ -109,7 +136,8 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     host_module_get_param, host_module_set_param,
     host_write_file, host_read_file, host_file_exists, host_ensure_dir, host_remove_dir,
     move_midi_inject_to_move, shadow_send_midi_to_dsp,
-    shadow_corun_begin, shadow_corun_end, shadow_corun_state, shadow_get_slots, shadow_get_ui_flags,
+    shadow_corun_begin, shadow_corun_end, shadow_corun_state, shadow_get_slots,
+    shadow_get_param, shadow_set_param, host_list_modules, shadow_get_ui_flags,
   });
 
   // Load the REAL tool UI. The literal lets Vite's remap plugin (and vitest)

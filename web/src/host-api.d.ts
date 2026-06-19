@@ -36,6 +36,9 @@ export interface HostApi {
   shadow_corun_end(...args: unknown[]): void;
   shadow_corun_state(): { target: number; id: number; keep_mask: number } | null;
   shadow_get_slots(): Array<Record<string, unknown>>;
+  shadow_get_param(slot: number, key: string): string | null;
+  shadow_set_param(slot: number, key: string, val: string | number): boolean;
+  host_list_modules(): Array<Record<string, unknown>>;
   shadow_get_ui_flags(): Record<string, unknown>;
 }
 
@@ -72,6 +75,9 @@ declare global {
   var shadow_corun_end: HostApi["shadow_corun_end"];
   var shadow_corun_state: HostApi["shadow_corun_state"];
   var shadow_get_slots: HostApi["shadow_get_slots"];
+  var shadow_get_param: HostApi["shadow_get_param"];
+  var shadow_set_param: HostApi["shadow_set_param"];
+  var host_list_modules: HostApi["host_list_modules"];
   var shadow_get_ui_flags: HostApi["shadow_get_ui_flags"];
 
   // Console-driven input handle until the Move shell is wired.
