@@ -21,6 +21,7 @@ import {
     handleUiJogMovement,
     handleUiJogRecordBlocked,
     handleUiJogShiftDeleteReset,
+    handleUiJogSchwungSoundPage,
     handleUiJogSnapshotPicker,
     handleUiJogStateWipe,
     handleUiJogStepIntervalExit,
@@ -103,6 +104,7 @@ export function onCcJogImpl(S, deps, d1, d2) {
     if (handleUiJogBakeConfirm(S, jogDeps, d1, d2)) return;
     if (handleUiJogTapTempo(S, jogDeps, d1, d2)) return;
     if (handleUiJogGlobalMenu(S, jogDeps, d1, d2)) return;
+    if (handleUiJogSchwungSoundPage(S, jogDeps, d1, d2)) return;
     if (handleUiJogShiftDeleteReset(S, jogDeps, d1, d2)) return;
     if (handleUiJogDeleteReset(S, jogDeps, d1, d2)) return;
     if (handleUiJogStepIntervalToggle(S, jogDeps, d1, d2)) return;

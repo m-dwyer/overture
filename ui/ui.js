@@ -93,8 +93,13 @@ import {
 } from './core/ui_routes.mjs';
 import {
     advancePendingEditSoundEntry,
+    applySchwungSoundBrowserSelection,
+    closeSchwungSoundPage,
+    openSchwungSoundBrowser,
+    renderSchwungSoundPage,
     refreshSchwungCoRunSlotMask,
-    requestEditSoundForTrack
+    requestEditSoundForTrack,
+    rotateSchwungSoundPage
 } from './core/ui_sound_edit.mjs';
 import {
     PARAM_PEEK_DETAIL_TICKS
@@ -1614,6 +1619,7 @@ function drawUI() {
         ensureGlobalMenuFresh,
         drawGlobalMenu,
         renderPerfModeOled,
+        renderSchwungSoundPage,
         renderSplashScreen,
         clear_screen,
         renderSessionActionPopup,
@@ -2131,6 +2137,7 @@ function createButtonCcWorkflowDeps() {
         ...createButtonCcHardwareAdapters(),
         clearAllLEDs,
         closeConvertConfirm,
+        closeSchwungSoundPage,
         closeSnapshotPicker,
         closeTapTempo,
         computePadNoteMap,
@@ -2273,6 +2280,7 @@ function createJogCcWorkflowDeps() {
         clearAutoMenuClick,
         clearAutoMenuRotate,
         closeTapTempo,
+        closeSchwungSoundPage,
         removeFlagsWrap,
         clearAllLEDs,
         doClearSession,
@@ -2300,7 +2308,11 @@ function createJogCcWorkflowDeps() {
         writeSidecar,
         handleLoopJog: function (delta) {
             return handleLoopJog(S, createLoopGestureWorkflowDeps(), delta);
-        }
+        },
+        rotateSchwungSoundPage,
+        openSchwungSoundBrowser,
+        applySchwungSoundBrowserSelection,
+        enterSchwungCoRun
     };
 }
 

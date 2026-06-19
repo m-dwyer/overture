@@ -18,6 +18,7 @@ describe("UI descriptor seams", () => {
     S.knobTouchStartTick = 100;
     S.altMode = false;
     S.pendingEditSoundEntry = null;
+    S.schwungSoundPage = null;
     S._coRunChanSlots = 0;
     S.trackRoute[0] = 1;
     S.trackChannel[0] = 1;
@@ -88,7 +89,7 @@ describe("UI descriptor seams", () => {
     expect(describeEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true })).toMatchObject({
       title: "NO SLOT",
       body: "Ch5",
-      queue: { track: 4, route: 0, slot: 0 },
+      queue: { track: 4, route: 0, slot: -1 },
     });
   });
 
@@ -108,9 +109,8 @@ describe("UI descriptor seams", () => {
     expect(S.pendingEditSoundEntry).toBeNull();
 
     requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
-    action = null;
-    for (let i = 0; i < 24; i++) action = advancePendingEditSoundEntry(4);
-    expect(action).toEqual({ kind: "schwung", track: 4, slot: 0 });
+    expect(S.pendingEditSoundEntry).toBeNull();
+    expect(S.schwungSoundPage).toMatchObject({ track: 4, slot: 0, selectedIndex: 1 });
     expect(S._coRunChanSlots).toBe(0b0101);
   });
 
