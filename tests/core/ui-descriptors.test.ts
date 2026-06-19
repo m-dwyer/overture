@@ -2,7 +2,20 @@ import { describe, beforeEach, test, expect } from "vitest";
 import { S } from "@overture-ui/core/ui_state.mjs";
 import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@overture-ui/core/ui_routes.mjs";
 import { routeCheckStatus, routeCheckViewModel } from "@overture-ui/core/ui_route_check.mjs";
-import { advancePendingEditSoundEntry, requestEditSoundForTrack } from "@overture-ui/core/ui_sound_edit.mjs";
+import {
+  advancePendingEditSoundEntry,
+  adjustSchwungSoundVisibleParam,
+  applySchwungSoundBrowserSelection,
+  closeSchwungSoundPage,
+  expireSchwungSoundParamPeek,
+  openSchwungSoundBrowser,
+  renderSchwungSoundPage,
+  requestEditSoundForTrack,
+  rotateSchwungSoundPage,
+  selectSchwungSoundComponent,
+  touchSchwungSoundVisibleParam,
+  toggleSchwungSoundParamDetail,
+} from "@overture-ui/core/ui_sound_edit.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
 
 describe("UI descriptor seams", () => {
@@ -19,6 +32,7 @@ describe("UI descriptor seams", () => {
     S.altMode = false;
     S.pendingEditSoundEntry = null;
     S.schwungSoundPage = null;
+    S.schwungSoundMemory = Array.from({ length: 8 }, () => ({ selectedIndex: 1, paramDetailIndex: 0, paramDetail: true }));
     S._coRunChanSlots = 0;
     S.trackRoute[0] = 1;
     S.trackChannel[0] = 1;
@@ -53,6 +67,10 @@ describe("UI descriptor seams", () => {
       { channel: 6, name: "Slot2" },
       { channel: 0, name: "Layer" },
     ]);
+    Reflect.deleteProperty(globalThis, "host_list_modules");
+    Reflect.deleteProperty(globalThis, "shadow_get_param");
+    Reflect.deleteProperty(globalThis, "shadow_set_param");
+    Reflect.deleteProperty(globalThis, "shadow_list_modules_for_component");
   });
 
   test("Schwung slot masks include exact-channel and All-channel slots", () => {
@@ -112,6 +130,223 @@ describe("UI descriptor seams", () => {
     expect(S.pendingEditSoundEntry).toBeNull();
     expect(S.schwungSoundPage).toMatchObject({ track: 4, slot: 0, selectedIndex: 1 });
     expect(S._coRunChanSlots).toBe(0b0101);
+  });
+
+  test("Schwung Sound page stores normalized current modules and applies browser selection", () => {
+    const reads: Record<string, string> = {
+      midi_fx1_module: "arpy",
+      synth_module: "dustline",
+      fx1_module: "trail",
+      fx2_module: "",
+      "synth:chain_params": JSON.stringify([
+        { key: "cutoff", name: "Cutoff" },
+        { key: "resonance", label: "Resonance" },
+      ]),
+      knob_1_param: "Cutoff",
+      knob_2_param: "Resonance",
+    };
+    const writes: Array<[number, string, string]> = [];
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => reads[key] ?? "");
+    Reflect.set(globalThis, "host_list_modules", () => [
+      { id: "dustline", name: "Dustline", component_type: "sound_generator" },
+      { id: "westfold", name: "Westfold", component_type: "sound_generator" },
+      { id: "trail", name: "Trail", component_type: "audio_fx" },
+    ]);
+    Reflect.set(globalThis, "shadow_set_param", (slot: number, key: string, value: string) => {
+      writes.push([slot, key, value]);
+      reads.synth_module = value;
+    });
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    expect(S.schwungSoundPage?.modules[1]).toMatchObject({
+      id: "dustline",
+      name: "dustline",
+      componentType: "sound_generator",
+    });
+    expect(S.schwungSoundPage?.names).toEqual(["arpy", "dustline", "trail", "", ""]);
+    expect(S.schwungSoundPage?.componentParams[1]).toMatchObject([
+      { key: "cutoff", name: "Cutoff" },
+      { key: "resonance", name: "Resonance" },
+    ]);
+
+    expect(openSchwungSoundBrowser()).toBe(true);
+    expect(S.schwungSoundPage?.browserItems).toMatchObject([
+      { id: "dustline", name: "Dustline", componentType: "sound_generator" },
+      { id: "westfold", name: "Westfold", componentType: "sound_generator" },
+    ]);
+    expect(S.schwungSoundPage?.browserIndex).toBe(0);
+
+    S.schwungSoundPage!.browserIndex = 1;
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    expect(writes).toEqual([[0, "synth:module", "westfold"]]);
+    expect(S.schwungSoundPage?.modules[1]).toMatchObject({ id: "westfold", name: "westfold" });
+  });
+
+  test("Schwung Sound page renders selected module detail and cached chain params", () => {
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => ({
+      midi_fx1_module: "arpy",
+      synth_module: "dustline",
+      fx1_module: "trail",
+      fx2_module: "wash",
+      "synth:ui_hierarchy": JSON.stringify({
+        levels: {
+          root: {
+            knobs: ["macro", { key: "tone", label: "Tone" }],
+            params: [
+              { key: "fil_env_dep", name: "fil_env_dep" },
+              { key: "fil_env_depth", name: "fil_env_depth" },
+              { key: "enabled", name: "Enabled" },
+              { key: "sample_path", name: "Sample" },
+            ],
+          },
+        },
+      }),
+      "synth:chain_params": JSON.stringify([
+        { key: "macro", name: "Macro", type: "float", min: 0, max: 1, step: 0.1 },
+        { key: "tone", name: "Tone", type: "enum", options: ["Dark", "Bright"] },
+        { key: "fil_env_dep", name: "fil_env_dep", type: "float", min: -100, max: 100 },
+        { key: "fil_env_depth", name: "fil_env_depth", type: "float", rangeMin: -100, rangeMax: 127 },
+        { key: "enabled", name: "Enabled", type: "bool" },
+        { key: "sample_path", name: "Sample", type: "filepath" },
+        { key: "osc_shape", name: "OscShape" },
+        { key: "filter_cutoff", name: "Cutoff" },
+        { key: "resonance", name: "Resonance" },
+        { key: "attack", name: "Attack" },
+        { key: "decay", name: "Decay" },
+      ]),
+      "synth:macro": "0.5",
+      "synth:tone": "0",
+      "synth:fil_env_dep": "60",
+      "synth:fil_env_depth": "101",
+      "synth:enabled": "1",
+      "synth:sample_path": "/tmp/kick.wav",
+      "fx2:chain_params": JSON.stringify(Array.from({ length: 20 }, (_, i) => ({
+        key: `step_${i + 1}`,
+        name: `Step ${i + 1}`,
+      }))),
+      knob_1_param: "Cutoff",
+      knob_3_param: "Drive",
+    } as Record<string, string>)[key] ?? "");
+    const writes: unknown[][] = [];
+    Reflect.set(globalThis, "shadow_set_param", (slot: number, key: string, value: string) => {
+      writes.push([slot, key, value]);
+      return true;
+    });
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    expect(S.schwungSoundPage).toMatchObject({ selectedIndex: 1, paramDetail: true });
+    const calls: unknown[][] = [];
+    const surface = {
+      clear_screen: () => calls.push(["clear"]),
+      fill_rect: (x: number, y: number, w: number, h: number, color: number) =>
+        calls.push(["fill", x, y, w, h, color]),
+      print: (x: number, y: number, text: string, color: number) =>
+        calls.push(["print", x, y, text, color]),
+    };
+
+    expect(renderSchwungSoundPage(surface)).toBe(true);
+    expect(calls).toContainEqual(["print", 0, 0, "Synth dustline", 1]);
+    expect(calls).toContainEqual(["print", 96, 0, "1/1", 1]);
+    expect(calls).toContainEqual(["print", 0, 12, "K1 mcr 0.5", 1]);
+    expect(calls).toContainEqual(["print", 0, 22, "K2 Tn Dark", 1]);
+    expect(calls).toContainEqual(["print", 0, 32, "K3 fed 60", 1]);
+    expect(calls).toContainEqual(["print", 0, 42, "K4 fed 101", 1]);
+    expect(calls).toContainEqual(["print", 64, 12, "K5 nbld On", 1]);
+    expect(calls).toContainEqual(["print", 64, 22, "K6 Sm /tmp", 1]);
+
+    expect(toggleSchwungSoundParamDetail()).toBe(true);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 0, 46, "Synth dustline", 1]);
+    expect(calls).toContainEqual(["print", 0, 56, "P1 macro  P2 Tone", 1]);
+    expect(toggleSchwungSoundParamDetail()).toBe(true);
+
+    expect(touchSchwungSoundVisibleParam(1)).toBe(true);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 110, 1, "K2", 0]);
+    expect(calls).toContainEqual(["print", 0, 14, "Tone", 1]);
+    expect(calls).toContainEqual(["print", 52, 38, "Dark", 0]);
+    expect(calls).not.toContainEqual(["print", 0, 22, "K2 Tn Dark", 1]);
+
+    expect(adjustSchwungSoundVisibleParam(0, 1)).toBe(true);
+    expect(writes).toContainEqual([0, "synth:macro", "0.51"]);
+    expect(adjustSchwungSoundVisibleParam(2, 1)).toBe(true);
+    expect(writes).toContainEqual([0, "synth:fil_env_dep", "62"]);
+    const staleParam = S.schwungSoundPage!.componentParams[1].find((p: any) => p.key === "fil_env_dep");
+    staleParam.value = "60";
+    expect(touchSchwungSoundVisibleParam(2)).toBe(true);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 110, 1, "K3", 0]);
+    expect(calls).toContainEqual(["print", 0, 14, "fil env dep", 1]);
+    expect(calls).toContainEqual(["print", 58, 38, "62", 0]);
+    const transientMissingValue = S.schwungSoundPage!.componentParams[1].find((p: any) => p.key === "fil_env_depth");
+    transientMissingValue.value = "-";
+    delete S.schwungSoundPage!.paramValueOverrides["synth:fil_env_depth"];
+    expect(adjustSchwungSoundVisibleParam(3, 1)).toBe(true);
+    expect(writes).toContainEqual([0, "synth:fil_env_depth", "2"]);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 110, 1, "K4", 0]);
+    expect(calls).toContainEqual(["print", 61, 38, "2", 0]);
+    expect(calls).not.toContainEqual(["print", 0, 54, "Read only", 1]);
+    expect(adjustSchwungSoundVisibleParam(4, 1)).toBe(true);
+    expect(writes).toContainEqual([0, "synth:enabled", "0"]);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 110, 1, "K5", 0]);
+    expect(calls).toContainEqual(["print", 0, 14, "Enabled", 1]);
+    expect(calls).toContainEqual(["print", 55, 38, "Off", 0]);
+
+    const beforeReadOnly = writes.length;
+    expect(adjustSchwungSoundVisibleParam(5, 1)).toBe(true);
+    expect(writes).toHaveLength(beforeReadOnly);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 110, 1, "K6", 0]);
+    expect(calls).toContainEqual(["print", 0, 14, "Sample", 1]);
+    expect(calls).toContainEqual(["print", 0, 54, "Read only", 1]);
+
+    S.schwungSoundPage!.touchedParam.expireAtMs = Date.now() - 1;
+    expect(expireSchwungSoundParamPeek()).toBe(true);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 64, 22, "K6 Sm /tmp", 1]);
+
+    expect(selectSchwungSoundComponent(3)).toBe(true);
+    expect(S.schwungSoundPage).toMatchObject({ selectedIndex: 3, paramDetail: true, paramDetailIndex: 0 });
+    rotateSchwungSoundPage(100);
+    expect(S.schwungSoundPage).toMatchObject({ selectedIndex: 3, paramDetail: true, paramDetailIndex: 16 });
+    expect(closeSchwungSoundPage()).toBe(true);
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    expect(S.schwungSoundPage).toMatchObject({ selectedIndex: 3, paramDetail: true, paramDetailIndex: 16 });
+
+    expect(selectSchwungSoundComponent(1)).toBe(true);
+    S.schwungSoundPage!.paramDetailIndex = 999;
+    expect(adjustSchwungSoundVisibleParam(2, 1)).toBe(true);
+    expect(writes).toContainEqual([0, "synth:fil_env_dep", "62"]);
+
+    expect(toggleSchwungSoundParamDetail()).toBe(true);
+    S.schwungSoundPage!.selectedIndex = 2;
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 0, 56, "K1 Cutoff  K3 Drive", 1]);
+
+    S.schwungSoundPage!.selectedIndex = 3;
+    expect(toggleSchwungSoundParamDetail()).toBe(true);
+    rotateSchwungSoundPage(100);
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 96, 0, "3/3", 1]);
+    expect(calls).toContainEqual(["print", 0, 12, "K1 S17 --", 1]);
+    expect(calls).toContainEqual(["print", 0, 42, "K4 S20 --", 1]);
+    expect(toggleSchwungSoundParamDetail()).toBe(true);
+
+    S.schwungSoundPage!.selectedIndex = 4;
+    calls.length = 0;
+    renderSchwungSoundPage(surface);
+    expect(calls).toContainEqual(["print", 0, 46, "Deep Edit opens Schwu", 1]);
   });
 
   test("route labels distinguish Move, External, Schwung slot, and Schwung channel fallback", () => {

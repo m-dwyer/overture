@@ -533,6 +533,8 @@ export function handleUiJogSchwungSoundPage(S, deps, d1, d2) {
     if (!S.schwungSoundPage) return false;
     if (d1 === 3 && d2 === 127) {
         if (S.schwungSoundPage.browser) deps.applySchwungSoundBrowserSelection();
+        else if (S.schwungSoundPage.paramDetail) deps.toggleSchwungSoundParamDetail();
+        else if (S.shiftHeld) deps.toggleSchwungSoundParamDetail();
         else {
             const result = deps.openSchwungSoundBrowser();
             if (result && result.deepEdit) {
