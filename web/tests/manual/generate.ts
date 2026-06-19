@@ -52,19 +52,18 @@ export async function generateGuide(page: Page, scenes: Scene[], cfg: GuideConfi
   expect(existsSync(cfg.htmlPath)).toBe(true);
 }
 
-// Run only the drives + assertions (no annotate/capture/emit). This is the cheap,
-// ungated guard that runs in the normal e2e suite: it reaches each figure's state
-// via real gestures and fails if a shot's declared expectation no longer holds —
-// so a behaviour change that would invalidate a figure or caption fails CI even
-// when nobody regenerates the manual.
-export async function runAssertions(page: Page, scenes: Scene[]): Promise<void> {
+// Drive + assert ONE scene (no annotate/capture/emit). The ungated guard runs one
+// of these per scene as a separate Playwright test, so the worker pool runs scenes
+// in parallel (and each gets its own browser context — clean isolation). A failure
+// means a gesture no longer reaches the state a figure + caption depict, so a
+// behaviour change that would invalidate the manual fails the suite even when
+// nobody regenerates it.
+export async function assertScene(page: Page, scene: Scene): Promise<void> {
   const d = makeDriver(page);
-  for (const scene of scenes) {
-    await d.boot();
-    if (scene.setup) await scene.setup(d);
-    for (const shot of scene.shots) {
-      if (shot.drive) await shot.drive(d);
-      await assertShot(d, shot);
-    }
+  await d.boot();
+  if (scene.setup) await scene.setup(d);
+  for (const shot of scene.shots) {
+    if (shot.drive) await shot.drive(d);
+    await assertShot(d, shot);
   }
 }
