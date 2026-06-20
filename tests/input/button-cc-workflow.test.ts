@@ -166,6 +166,8 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     // Note/Session view-toggle + dialog-dismissal deps
     moveNoteSession: NOTE_SESSION,
     noteSessionHoldTicks: NOTE_SESSION_HOLD_TICKS,
+    closeSchwungSoundBrowser: c.fn("closeSoundBrowser"),
+    closeSchwungSoundPage: c.fn("closeSoundPage"),
     closeSnapshotPicker: c.fn("closeSnapshot"),
     openGlobalMenu: c.fn("openGlobalMenu"),
     closeTapTempo: c.fn("closeTapTempo"),
@@ -177,6 +179,22 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     ...overrides,
   };
 }
+
+describe("Button CC workflow - Sound Edit Menu", () => {
+  test("Menu closes only the Sound Edit browser layer first", () => {
+    const c = calls();
+    const S = state({ schwungSoundPage: { browser: true } });
+    expect(handleUiMenuCoRunExitButton(S, deps(c), MENU, 127)).toBe(true);
+    expect(c.log).toEqual([["closeSoundBrowser"], ["redraw"]]);
+  });
+
+  test("Menu closes Sound Edit page when no browser is open", () => {
+    const c = calls();
+    const S = state({ schwungSoundPage: { browser: false } });
+    expect(handleUiMenuCoRunExitButton(S, deps(c), MENU, 127)).toBe(true);
+    expect(c.log).toEqual([["closeSoundPage"], ["redraw"]]);
+  });
+});
 
 describe("Button CC workflow - Shift button", () => {
   test("ignores non-Shift CCs", () => {

@@ -62,6 +62,14 @@ import {
 } from '/data/UserData/schwung/shared/menu_layout.mjs';
 
 import {
+    drawTextEntry,
+    handleTextEntryMidi,
+    isTextEntryActive,
+    openTextEntry,
+    tickTextEntry
+} from '/data/UserData/schwung/shared/text_entry.mjs';
+
+import {
     MoveNoteSession, MoveUndo, MoveLoop, MoveCopy, MoveMainTouch, MoveRec,
     MoveCapture, MoveSample, MoveMainButton, MoveMainKnob,
     LED_OFF, LED_STEP_ACTIVE, LED_STEP_CURSOR, SCENE_BTN_FLASH_TICKS,
@@ -80,6 +88,7 @@ import {
 } from './core/ui_constants.mjs';
 
 import { S, resetUiState } from './core/ui_state.mjs';
+import { initDebugLog, dlog } from './core/ui_debug_log.mjs';
 import { saveState, writeSidecar, doClearSession, showActionPopup, uuidToStatePath, uuidToUiStatePath, readActiveSet, loadNameIndex, saveNameIndex, copyStateFiles, findInheritCandidates,
     SNAPSHOT_CAP, snapshotLabel, loadSnapshotManifest, commitSnapshot, applySnapshotToLive, dropSnapshots } from './persist/ui_persistence.mjs';
 import { drawGlobalMenu } from './menu/ui_dialogs.mjs';
@@ -95,9 +104,12 @@ import {
     advancePendingEditSoundEntry,
     adjustSchwungSoundVisibleParam,
     applySchwungSoundBrowserSelection,
+    beginSaveSchwungSoundPreset,
+    closeSchwungSoundBrowser,
     closeSchwungSoundPage,
     expireSchwungSoundParamPeek,
     openSchwungSoundBrowser,
+    openSchwungSoundPresetBrowser,
     refreshSchwungCoRunSlotMask,
     requestEditSoundForTrack,
     rotateSchwungSoundPage,
@@ -1472,6 +1484,15 @@ function createLiveNoteWorkflowDeps() {
 }
 
 function liveSendNote(t, type, pitch, vel, rawVel) {
+    OVERTURE_DEBUG_LOG && dlog('DEBUG', 'live-note t=' + (t | 0)
+        + ' type=' + (type | 0)
+        + ' pitch=' + (pitch | 0)
+        + ' vel=' + (vel | 0)
+        + ' raw=' + (rawVel ? 1 : 0)
+        + ' route=' + (S.trackRoute[t | 0] | 0)
+        + ' ch=' + (S.trackChannel[t | 0] | 0)
+        + ' dspInbound=' + (S.dspInboundEnabled ? 1 : 0)
+        + ' pendingQ=' + (pendingLiveNotes[t | 0] ? pendingLiveNotes[t | 0].length : -1));
     return liveSendNoteImpl(S, createLiveNoteWorkflowDeps(), t, type, pitch, vel, rawVel);
 }
 
@@ -1606,6 +1627,10 @@ function renderSurface() {
 }
 
 function drawUI() {
+    if (isTextEntryActive()) {
+        drawTextEntry();
+        return;
+    }
     return drawUIImpl(S, {
         renderSurface,
         paintCoRunSideButtons,
@@ -1830,6 +1855,7 @@ globalThis.init = function () {
      * lets the headless harness swap host primitives per createHarness() without
      * rendering into a stale recorder. */
     _renderSurface = null;
+    OVERTURE_DEBUG_LOG && initDebugLog();
     runEntrypoint('init', function () { runInitWorkflowImpl(S, createInitWorkflowDeps()); });
 };
 
@@ -1852,6 +1878,7 @@ function createTickWorkflowDeps() {
         KNOB_TURN_HIGHLIGHT_TICKS,
         PARAM_PEEK_DETAIL_TICKS,
         expireSchwungSoundParamPeek,
+        tickTextEntry,
         STEP_SAVE_HOLD_TICKS,
         STEP_SAVE_FLASH_TICKS,
         STEP_HOLD_TICKS,
@@ -2056,10 +2083,29 @@ function createPadWorkflowDeps() {
 }
 
 function _onPadPressTrackView(status, d1, d2) {
+    OVERTURE_DEBUG_LOG && dlog('DEBUG', 'pad track-view press status=' + (status | 0)
+        + ' d1=' + (d1 | 0)
+        + ' d2=' + (d2 | 0)
+        + ' activeTrack=' + (S.activeTrack | 0)
+        + ' padMode=' + (S.trackPadMode[S.activeTrack] | 0)
+        + ' pad0=' + (S.padNoteMap[0] | 0)
+        + ' heldStep=' + (S.heldStep | 0)
+        + ' shift=' + (S.shiftHeld ? 1 : 0)
+        + ' copy=' + (S.copyHeld ? 1 : 0)
+        + ' mute=' + (S.muteHeld ? 1 : 0)
+        + ' cap=' + (S.captureHeld ? 1 : 0)
+        + ' sv=' + (S.sessionView ? 1 : 0));
     onPadPressTrackViewImpl(S, createInputDispatchWorkflowDeps(), status, d1, d2);
 }
 
 function _onPadPress(status, d1, d2) {
+    OVERTURE_DEBUG_LOG && dlog('DEBUG', 'pad press status=' + (status | 0)
+        + ' d1=' + (d1 | 0)
+        + ' d2=' + (d2 | 0)
+        + ' activeTrack=' + (S.activeTrack | 0)
+        + ' soundPage=' + (S.schwungSoundPage ? 1 : 0)
+        + ' sv=' + (S.sessionView ? 1 : 0)
+        + ' lastMuted=' + (S.lastPushedMuted ? 1 : 0));
     onPadPressImpl(S, createInputDispatchWorkflowDeps(), status, d1, d2);
 }
 
@@ -2143,6 +2189,7 @@ function createButtonCcWorkflowDeps() {
         ...createButtonCcHardwareAdapters(),
         clearAllLEDs,
         closeConvertConfirm,
+        closeSchwungSoundBrowser,
         closeSchwungSoundPage,
         closeSnapshotPicker,
         closeTapTempo,
@@ -2320,7 +2367,24 @@ function createJogCcWorkflowDeps() {
         rotateSchwungSoundPage,
         toggleSchwungSoundParamDetail,
         openSchwungSoundBrowser,
-        applySchwungSoundBrowserSelection,
+        openSchwungSoundPresetBrowser,
+        beginSaveSchwungSoundPreset: function () {
+            return beginSaveSchwungSoundPreset(openTextEntry);
+        },
+        applySchwungSoundBrowserSelection: function () {
+            OVERTURE_DEBUG_LOG && dlog('DEBUG', 'sound-edit wrapper apply-browser before padmap copy=' + (S.copyHeld ? 1 : 0)
+                + ' cap=' + (S.captureHeld ? 1 : 0)
+                + ' sv=' + (S.sessionView ? 1 : 0)
+                + ' lastMuted=' + (S.lastPushedMuted ? 1 : 0));
+            const handled = applySchwungSoundBrowserSelection();
+            computePadNoteMap();
+            OVERTURE_DEBUG_LOG && dlog('DEBUG', 'sound-edit wrapper apply-browser after padmap handled=' + (handled ? 1 : 0)
+                + ' copy=' + (S.copyHeld ? 1 : 0)
+                + ' cap=' + (S.captureHeld ? 1 : 0)
+                + ' sv=' + (S.sessionView ? 1 : 0)
+                + ' lastMuted=' + (S.lastPushedMuted ? 1 : 0));
+            return handled;
+        },
         enterSchwungCoRun
     };
 }
@@ -2362,8 +2426,54 @@ function _onPadRelease(status, d1, d2) {
     onPadReleaseImpl(S, createInputDispatchWorkflowDeps(), status, d1, d2);
 }
 
+function syncHeldModifierReleaseBeforeTextEntry(data) {
+    const status = data[0] | 0;
+    const d1 = (data[1] ?? 0) | 0;
+    const d2 = (data[2] ?? 0) | 0;
+    if (status !== 0xB0 || d2 !== 0) return false;
+
+    let changed = false;
+    if (d1 === MoveCapture && S.captureHeld) {
+        S.captureHeld = false;
+        changed = true;
+    } else if (d1 === MoveCopy && S.copyHeld) {
+        S.copyHeld = false;
+        S.copySrc = null;
+        invalidateLEDCache();
+        changed = true;
+    } else if (d1 === MoveMute && S.muteHeld) {
+        S.muteHeld = false;
+        if (S.sessionView) invalidateLEDCache();
+        changed = true;
+    } else if (d1 === MoveLoop && S.loopHeld) {
+        S.loopHeld = false;
+        S.loopJogActive = false;
+        changed = true;
+    } else if (d1 === MoveShift && S.shiftHeld) {
+        S.shiftHeld = false;
+        S.shiftTrackLEDActive = false;
+        changed = true;
+    } else if (d1 === MoveDelete && S.deleteHeld) {
+        S.deleteHeld = false;
+        S.deleteTapArmed = false;
+        changed = true;
+    }
+
+    if (changed) {
+        computePadNoteMap();
+        S.screenDirty = true;
+    }
+    return changed;
+}
+
 globalThis.onMidiMessageInternal = function (data) { runEntrypoint('onMidiInternal', function () { _onMidiInternalImpl(data); }); };
 function _onMidiInternalImpl(data) {
+    if (isTextEntryActive()) {
+        syncHeldModifierReleaseBeforeTextEntry(data);
+        handleTextEntryMidi(data);
+        S.screenDirty = true;
+        return;
+    }
     handleUiMidiInternalMessage(S, createMidiInternalWorkflowDeps(), data);
 }
 

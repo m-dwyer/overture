@@ -8,6 +8,10 @@ the section into a versioned heading at release time.
 
 ## [Unreleased]
 ### Features
+- **Sound Edit presets.** Schwung Sound Edit can now save and load named presets
+  for the selected MIDI FX, Synth, FX 1, or FX 2 module without adding permanent
+  OLED clutter. Use Copy+jog-click to browse presets and Capture+jog-click to
+  save the current module parameters.
 - **Param Peek and shortcut help.** Touching a knob now opens a compact OLED
   readout with the bank/context, human-readable target, current value, and
   route/scope. AUTO Param Peek names common CCs (`CC7 Volume`, `CC74 Filter`),

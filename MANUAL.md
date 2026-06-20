@@ -1046,6 +1046,20 @@ Shown at the top of the Global Menu for the active track. Updates live if you sw
 
 Edit Sound edits the active track's sound source from within Overture: Schwung-routed tracks open the matching Schwung chain editor slot, and Move-routed tracks open Move's native preset/device editor. The sequencer keeps running while co-run gives the OLED and navigation controls to the native editor. Before handoff, Overture shows the target route or a route problem such as `NO SLOT`, `MOVE CH>4`, or `CO-RUN UNAVAILABLE`.
 
+On Schwung-routed tracks, the compact Sound Edit page can browse modules, edit visible parameters, and store module-level presets without changing the normal OLED layout:
+
+| Control | Action |
+|---|---|
+| Step 1-4 | Select MIDI FX, Synth, FX 1, or FX 2 |
+| Jog rotate | Change parameter page |
+| Jog click | Browse modules for the selected component |
+| Copy + jog click | Browse saved presets for the selected module |
+| Capture + jog click | Save the selected module's current parameter values as a named preset |
+| Shift + jog click | Enter Schwung's deeper chain editor |
+| Menu | Back out of the browser, then close Sound Edit |
+
+Saved Sound Edit presets are global across sets and are stored under Overture's user-data folder on Move.
+
 ## Global settings
 
 | Item | Values | Default | Notes |

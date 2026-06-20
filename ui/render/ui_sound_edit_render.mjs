@@ -211,10 +211,12 @@ export function renderSchwungSoundPage(surface) {
     }
     if (page.browser) {
         const component = SCHWUNG_SOUND_COMPONENTS[clampComponentIndex(page.selectedIndex)];
-        surface.print(0, 0, component.label, 1);
+        const title = page.browserKind === 'preset' ? component.label + ' Presets' : component.label;
+        surface.print(0, 0, truncText(title, 21), 1);
         if (page.noList) {
-            surface.print(0, 18, 'NO LIST', 1);
-            surface.print(0, 32, 'Needs Schwung hook', 1);
+            surface.print(0, 18, page.browserKind === 'preset' ? 'NO PRESETS' : 'NO LIST', 1);
+            if (page.browserMessage && page.browserMessage !== 'NO LIST' && page.browserMessage !== 'NO PRESETS')
+                surface.print(0, 32, truncText(page.browserMessage, 21), 1);
             return true;
         }
         const start = Math.max(0, Math.min(page.browserIndex | 0, Math.max(0, page.browserItems.length - 3)));
@@ -230,5 +232,7 @@ export function renderSchwungSoundPage(surface) {
     const component = SCHWUNG_SOUND_COMPONENTS[selectedIndex];
     renderSoundHeader(surface, page, component);
     renderParamGrid(surface, page, 14);
+    if (page.browserMessage)
+        surface.print(0, 54, truncText(page.browserMessage, 21), 1);
     return true;
 }

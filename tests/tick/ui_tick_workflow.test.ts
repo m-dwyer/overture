@@ -356,6 +356,43 @@ test('ui.js keeps the public tick callback and error wrapper while delegating to
     assert.match(source, /function _tickImpl\(\) \{\s*runTickWorkflow\(S, createTickWorkflowDeps\(\)\);\s*\}/);
 });
 
+test('ui.js wires Sound Edit preset save to the shared text entry opener', async () => {
+    const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
+    assert.match(source, /openTextEntry,[\s\S]*tickTextEntry[\s\S]*from '\/data\/UserData\/schwung\/shared\/text_entry\.mjs';/);
+    assert.match(source, /return beginSaveSchwungSoundPreset\(openTextEntry\);/);
+});
+
+test('ui.js bootstraps dev debug logging behind the build flag', async () => {
+    const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
+    assert.match(source, /import \{ initDebugLog, dlog \} from '\.\/core\/ui_debug_log\.mjs';/);
+    assert.match(source, /OVERTURE_DEBUG_LOG && initDebugLog\(\);/);
+});
+
+test('ui.js clears held modifiers before text entry consumes release MIDI', async () => {
+    const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
+    assert.match(source, /function syncHeldModifierReleaseBeforeTextEntry\(data\) \{/);
+    assert.match(source, /if \(d1 === MoveCapture && S\.captureHeld\) \{\s*S\.captureHeld = false;/);
+    assert.match(
+        source,
+        /if \(isTextEntryActive\(\)\) \{\s*syncHeldModifierReleaseBeforeTextEntry\(data\);\s*handleTextEntryMidi\(data\);\s*S\.screenDirty = true;\s*return;\s*\}/
+    );
+});
+
+test('ui.js immediately repushes pad map after Sound Edit browser selection', async () => {
+    const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
+    assert.match(
+        source,
+        /applySchwungSoundBrowserSelection: function \(\) \{[\s\S]*const handled = applySchwungSoundBrowserSelection\(\);\s*computePadNoteMap\(\);[\s\S]*return handled;\s*\}/
+    );
+});
+
+test('ui.js instruments pad press and live-note dispatch for Sound Edit debugging', async () => {
+    const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
+    assert.match(source, /dlog\('DEBUG', 'pad press status='/);
+    assert.match(source, /dlog\('DEBUG', 'pad track-view press status='/);
+    assert.match(source, /dlog\('DEBUG', 'live-note t='/);
+});
+
 test('runTickWorkflow source preserves load-bearing task order', async () => {
     const source = await readFile(new URL('../../ui/tick/ui_tick_workflow.mjs', import.meta.url), 'utf8');
     const ordered = [

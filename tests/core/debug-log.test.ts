@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach } from "vitest";
 import {
+  initDebugLog,
   dlog,
   _debugLogRingForTest,
   _resetDebugLogForTest,
@@ -9,7 +10,11 @@ import {
 // OVERTURE_DEBUG_LOG=true so this exercises the real logger. host_write_file is
 // absent off-device, so nothing is written — we assert on the in-memory ring.
 describe("dev debug logger (ui_debug_log)", () => {
-  beforeEach(() => _resetDebugLogForTest("OFF"));
+  beforeEach(() => {
+    _resetDebugLogForTest("OFF");
+    Reflect.deleteProperty(globalThis, "host_read_file");
+    Reflect.deleteProperty(globalThis, "host_write_file");
+  });
 
   test("default OFF writes nothing — even ERROR is dropped", () => {
     dlog("ERROR", "boom");
@@ -49,5 +54,25 @@ describe("dev debug logger (ui_debug_log)", () => {
     _resetDebugLogForTest("DEBUG");
     dlog("WHATEVER" as unknown as string, "x");
     expect(_debugLogRingForTest()).toEqual(["1 WHATEVER x"]);
+  });
+
+  test("uses Overture home for level and log files", () => {
+    const writes: Array<[string, string]> = [];
+    Reflect.set(globalThis, "host_read_file", (path: string) =>
+      path === "/data/UserData/overture/overture-debug-level" ? "DEBUG" : null
+    );
+    Reflect.set(globalThis, "host_write_file", (path: string, body: string) => {
+      writes.push([path, body]);
+      return true;
+    });
+
+    initDebugLog();
+    dlog("DEBUG", "sound-edit trace");
+
+    expect(writes.map(([path]) => path)).toEqual([
+      "/data/UserData/overture/overture-debug.log",
+      "/data/UserData/overture/overture-debug.log",
+    ]);
+    expect(writes.at(-1)?.[1]).toContain("sound-edit trace");
   });
 });

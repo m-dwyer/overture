@@ -1,4 +1,5 @@
 import { S } from './ui_state.mjs';
+import { dlog } from './ui_debug_log.mjs';
 import {
     EDIT_SOUND_PREFLIGHT_TICKS,
     describeEditSoundForTrack,
@@ -17,6 +18,12 @@ import {
     readSchwungModuleName,
     visibleParamList
 } from './ui_sound_edit_model.mjs';
+import {
+    listSchwungSoundPresets,
+    loadSchwungSoundPreset,
+    saveSchwungSoundPreset,
+    suggestedSchwungSoundPresetName
+} from './ui_sound_preset_manager.mjs';
 
 const SOUND_PARAM_PEEK_MS = 1000;
 
@@ -72,6 +79,40 @@ function setTouchedParamFeedback(page, feedback) {
         expireAtMs: Number.isFinite(nowMs) ? nowMs + SOUND_PARAM_PEEK_MS : NaN,
         expireTick: (S.tickCount | 0) + 50
     });
+}
+
+function soundEditTraceState(label, page) {
+    OVERTURE_DEBUG_LOG && dlog('DEBUG', 'sound-edit ' + label
+        + ' page=' + (page ? 1 : 0)
+        + ' slot=' + (page ? (page.slot | 0) : -1)
+        + ' browser=' + (page && page.browser ? 1 : 0)
+        + ' kind=' + (page ? (page.browserKind || '') : '')
+        + ' selected=' + (page ? (page.selectedIndex | 0) : -1)
+        + ' copy=' + (S.copyHeld ? 1 : 0)
+        + ' cap=' + (S.captureHeld ? 1 : 0)
+        + ' shift=' + (S.shiftHeld ? 1 : 0)
+        + ' mute=' + (S.muteHeld ? 1 : 0)
+        + ' del=' + (S.deleteHeld ? 1 : 0)
+        + ' loop=' + (S.loopHeld ? 1 : 0)
+        + ' sv=' + (S.sessionView ? 1 : 0)
+        + ' pendingPadMap=' + (S.pendingPadNoteMapRecompute ? 1 : 0)
+        + ' lastMuted=' + (S.lastPushedMuted ? 1 : 0));
+}
+
+function releaseSoundBrowserPadModalState() {
+    soundEditTraceState('release-pad-modal-before', S.schwungSoundPage);
+    if (typeof globalThis.host_pad_block === 'function') globalThis.host_pad_block(0);
+    S.shiftHeld = false;
+    S.deleteHeld = false;
+    S.muteHeld = false;
+    S.copyHeld = false;
+    S.copySrc = null;
+    S.captureHeld = false;
+    S.loopHeld = false;
+    S.loopJogActive = false;
+    S.shiftTrackLEDActive = false;
+    S.pendingPadNoteMapRecompute = true;
+    soundEditTraceState('release-pad-modal-after', S.schwungSoundPage);
 }
 
 function rememberSchwungSoundPosition(page) {
@@ -135,9 +176,11 @@ export function openSchwungSoundPage(t, slot) {
         slot: slot | 0,
         selectedIndex: 1,
         browser: false,
+        browserKind: '',
         browserItems: [],
         browserIndex: 0,
         noList: false,
+        browserMessage: '',
         paramDetail: false,
         paramDetailIndex: 0,
         touchedParam: null,
@@ -149,11 +192,25 @@ export function openSchwungSoundPage(t, slot) {
     };
     refreshSchwungSoundPageModules();
     restoreSchwungSoundPosition(S.schwungSoundPage);
+    soundEditTraceState('open-page', S.schwungSoundPage);
 }
 
 export function closeSchwungSoundPage() {
     if (!S.schwungSoundPage) return false;
     S.schwungSoundPage = null;
+    S.screenDirty = true;
+    return true;
+}
+
+export function closeSchwungSoundBrowser() {
+    const page = S.schwungSoundPage;
+    if (!page || !page.browser) return false;
+    page.browser = false;
+    page.browserKind = '';
+    page.browserItems = [];
+    page.browserIndex = 0;
+    page.noList = false;
+    page.browserMessage = '';
     S.screenDirty = true;
     return true;
 }
@@ -183,9 +240,11 @@ export function openSchwungSoundBrowser() {
         const hostItems = filterHostModulesForComponent(component.list);
         if (hostItems === null) {
             page.browser = true;
+            page.browserKind = 'module';
             page.browserItems = [];
             page.browserIndex = 0;
             page.noList = true;
+            page.browserMessage = 'Needs hook';
             S.screenDirty = true;
             return true;
         }
@@ -197,18 +256,72 @@ export function openSchwungSoundBrowser() {
     }
     if (!page.browserItems.length) {
         page.browser = true;
+        page.browserKind = 'module';
         page.browserIndex = 0;
         page.noList = true;
+        page.browserMessage = 'NO LIST';
         S.screenDirty = true;
         return true;
     }
     page.browser = true;
+    page.browserKind = 'module';
     const currentId = currentModuleIdForComponent(page, component);
     const currentIndex = currentId
         ? page.browserItems.findIndex(function(item) { return item.id === currentId; })
         : -1;
     page.browserIndex = currentIndex >= 0 ? currentIndex : 0;
     page.noList = page.browserItems.length === 0;
+    page.browserMessage = '';
+    S.screenDirty = true;
+    return true;
+}
+
+export function openSchwungSoundPresetBrowser() {
+    const page = S.schwungSoundPage;
+    if (!page) return false;
+    soundEditTraceState('preset-browser-open-before', page);
+    if (page.slot < 0) {
+        S.screenDirty = true;
+        return true;
+    }
+    const items = listSchwungSoundPresets(SCHWUNG_SOUND_COMPONENTS, page);
+    page.browser = true;
+    page.browserKind = 'preset';
+    page.browserItems = items;
+    page.browserIndex = 0;
+    page.noList = items.length === 0;
+    page.browserMessage = items.length ? '' : 'NO PRESETS';
+    S.screenDirty = true;
+    OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-browser-open items=' + items.length);
+    soundEditTraceState('preset-browser-open-after', page);
+    return true;
+}
+
+export function beginSaveSchwungSoundPreset(openTextEntryFn) {
+    const page = S.schwungSoundPage;
+    if (!page || page.slot < 0 || typeof openTextEntryFn !== 'function') return false;
+    const initialText = suggestedSchwungSoundPresetName(SCHWUNG_SOUND_COMPONENTS, page);
+    openTextEntryFn({
+        title: 'Save Preset',
+        initialText,
+        padSelect: true,
+        onConfirm: function(name) {
+            OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit save-confirm name=' + String(name || ''));
+            const result = saveSchwungSoundPreset(SCHWUNG_SOUND_COMPONENTS, page, name);
+            page.browserMessage = result && result.ok ? 'SAVED' : ((result && result.reason) || 'SAVE FAILED');
+            page.browser = false;
+            page.browserKind = '';
+            page.browserItems = [];
+            page.browserIndex = 0;
+            page.noList = false;
+            S.screenDirty = true;
+            OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit save-confirm result=' + (result && result.ok ? 'ok' : ((result && result.reason) || 'fail')));
+            soundEditTraceState('save-confirm-after', page);
+        },
+        onCancel: function() {
+            S.screenDirty = true;
+        }
+    });
     S.screenDirty = true;
     return true;
 }
@@ -216,6 +329,26 @@ export function openSchwungSoundBrowser() {
 export function applySchwungSoundBrowserSelection() {
     const page = S.schwungSoundPage;
     if (!page || !page.browser || page.slot < 0 || page.noList) return false;
+    soundEditTraceState('browser-apply-before', page);
+    if (page.browserKind === 'preset') {
+        const entry = page.browserItems[page.browserIndex | 0];
+        OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-apply index=' + (page.browserIndex | 0)
+            + ' name=' + (entry && entry.name ? entry.name : '')
+            + ' module=' + (entry && entry.moduleId ? entry.moduleId : ''));
+        const result = loadSchwungSoundPreset(SCHWUNG_SOUND_COMPONENTS, page, entry);
+        page.browser = false;
+        page.browserKind = '';
+        page.browserItems = [];
+        page.browserIndex = 0;
+        page.noList = false;
+        page.browserMessage = result && result.ok ? 'LOADED' : ((result && result.reason) || 'LOAD FAILED');
+        page.paramValueOverrides = {};
+        releaseSoundBrowserPadModalState();
+        refreshSchwungSoundPageModules();
+        OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-apply result=' + (result && result.ok ? 'ok' : ((result && result.reason) || 'fail')));
+        soundEditTraceState('browser-apply-after', page);
+        return true;
+    }
     const component = SCHWUNG_SOUND_COMPONENTS[clampComponentIndex(page.selectedIndex)];
     const item = page.browserItems[page.browserIndex | 0];
     if (!component || !component.param || !item) return false;
@@ -226,9 +359,11 @@ export function applySchwungSoundBrowserSelection() {
     }
     globalThis.shadow_set_param(page.slot | 0, component.param, item.id);
     page.browser = false;
+    page.browserKind = '';
     page.browserItems = [];
     page.browserIndex = 0;
     page.noList = false;
+    page.browserMessage = '';
     page.paramValueOverrides = {};
     refreshSchwungSoundPageModules();
     return true;
