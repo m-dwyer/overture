@@ -215,6 +215,48 @@ export const scenes: Scene[] = [
     ],
   },
   {
+    title: "Edit a Schwung Sound",
+    slug: "edit-a-schwung-sound",
+    body: [
+      "Tracks 5-8 are Schwung/open-engine tracks in the default hybrid setup. Select one, then press Shift + Step 3 to open Overture's Sound page for that track.",
+      "If the loaded Schwung module exposes parameters, the Sound page opens directly on its parameter detail. The eight encoders edit the visible params; touching or turning an encoder briefly shows a larger value readout. Turn the jog to move through additional 8-param banks. Menu exits the Sound page.",
+    ],
+    shots: [
+      {
+        file: "09c-schwung-sound.png",
+        expect: { activeTrack: 4, oledIncludes: ["SYNTH", "linein"] },
+        title: "Open Sound on a Schwung track",
+        action: "Select track 5, then hold Shift + tap Step 3",
+        showing: "Schwung Sound page: module params are mapped to K1-K8",
+        targets: [
+          { aria: ARIA.track(1), name: "Track 5 (Shift + side 1)" },
+          { aria: ARIA.shift, name: "Shift" },
+          { aria: ARIA.step(3), name: "Step 3" },
+        ],
+        drive: async (d) => {
+          await d.enterTrackView();
+          await d.selectTrack(5);
+          await d.shiftStep(3);
+        },
+        caption:
+          "On a Schwung-routed track, Shift + Step 3 opens Overture's Sound page instead of dropping straight into Schwung's chain editor. Parameters exposed by the module are assigned to K1-K8.",
+      },
+      {
+        file: "09d-schwung-param-peek.png",
+        expect: { activeTrack: 4, oledIncludes: ["Gain"] },
+        title: "Edit a module parameter",
+        action: "Turn K1 on the Sound page",
+        showing: "Param peek: the touched encoder gets a larger value readout",
+        targets: [{ aria: ARIA.encoder(1), name: "K1" }],
+        drive: async (d) => {
+          await d.turnEncoder(1, 4);
+        },
+        caption:
+          "Turning an encoder edits the visible Schwung parameter and temporarily replaces the grid with a focused value readout and range bar. The peek times out back to the overview.",
+      },
+    ],
+  },
+  {
     title: "Save and Export Entry Points",
     slug: "save-and-export-entry-points",
     body: [

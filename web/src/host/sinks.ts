@@ -15,6 +15,7 @@ export interface DisplaySink {
 export interface LedSink {
   setLED(index: number, color: number): void;
   setButtonLED(cc: number, color: number): void;
+  setPaletteEntryRGB?(index: number, r: number, g: number, b: number): void;
   clearAll(): void;
 }
 

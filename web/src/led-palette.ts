@@ -40,8 +40,21 @@ const NAMED: Record<number, string> = {
   127: "#ff5f5f", // Red
 };
 
+const dynamic = new Map<number, string>();
+
+function toHex(value: number): string {
+  const n = Math.max(0, Math.min(255, Math.round(value)));
+  return n.toString(16).padStart(2, "0");
+}
+
+export function setLedPaletteEntryRGB(index: number, r: number, g: number, b: number): void {
+  dynamic.set(index, `#${toHex(r)}${toHex(g)}${toHex(b)}`);
+}
+
 /** CSS color for a Move palette index, or "" for off/unlit. */
 export function ledColor(index: number): string {
+  const custom = dynamic.get(index);
+  if (custom) return custom;
   if (index in NAMED) return NAMED[index];
   // Unknown index (incl. runtime setPaletteEntryRGB scratch entries 51–61):
   // show as a neutral "lit" grey so the LED is still visible.

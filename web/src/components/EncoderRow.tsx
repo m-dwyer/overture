@@ -13,6 +13,7 @@ import {
   type Send,
 } from "@/lib/move-controls";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { ledRef, useLedRegistry } from "./led-registry";
 import { useTurn } from "./useTurn";
 
 const KNOB_BASE =
@@ -23,23 +24,32 @@ const KNOB_BASE =
 function Encoder({ idx, send }: { idx: number; send: Send }) {
   const cc = KNOB_CC0 + idx;
   const touch = KNOB_TOUCH0 + idx;
+  const reg = useLedRegistry();
   const emit = useCallback((dir: 1 | -1) => send(CC, cc, dir > 0 ? 1 : 127), [cc, send]);
   const onTouch = useCallback((on: boolean) => send(NOTE_ON, touch, on ? 127 : 0), [touch, send]);
   const { angle, ref, handlers } = useTurn<HTMLButtonElement>(emit, onTouch);
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          ref={ref}
-          aria-label={`Encoder ${idx + 1}`}
-          className={`h-12 w-12 ${KNOB_BASE}`}
-          style={{ transform: `rotate(${angle}deg)` }}
-          {...handlers}
-        />
-      </TooltipTrigger>
-      <TooltipContent>Encoder {idx + 1} — drag up/down or scroll to turn</TooltipContent>
-    </Tooltip>
+    <div className="flex w-12 flex-col items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            ref={ref}
+            aria-label={`Encoder ${idx + 1}`}
+            className={`h-12 w-12 ${KNOB_BASE}`}
+            style={{ transform: `rotate(${angle}deg)` }}
+            {...handlers}
+          />
+        </TooltipTrigger>
+        <TooltipContent>Encoder {idx + 1} — drag up/down or scroll to turn</TooltipContent>
+      </Tooltip>
+      <span
+        ref={ledRef(reg.buttons, cc)}
+        aria-hidden="true"
+        className="h-2.5 w-2.5 rounded-full border border-line bg-bg/80 shadow-inner"
+      />
+      <span className="text-center text-[9px] text-muted">K{idx + 1}</span>
+    </div>
   );
 }
 
@@ -49,13 +59,6 @@ export function EncoderRow({ send }: { send: Send }) {
       <div className="flex justify-between">
         {Array.from({ length: 8 }, (_, i) => (
           <Encoder key={i} idx={i} send={send} />
-        ))}
-      </div>
-      <div className="flex justify-between">
-        {Array.from({ length: 8 }, (_, i) => (
-          <span key={i} className="w-12 text-center text-[9px] text-muted">
-            K{i + 1}
-          </span>
         ))}
       </div>
     </div>

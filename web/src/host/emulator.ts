@@ -27,6 +27,36 @@ export interface Emulator {
   readonly dsp: Dsp;
 }
 
+function usbMidiSysexBytes(pkt: number[]): number[] {
+  const bytes: number[] = [];
+  for (let i = 0; i < pkt.length; i += 4) {
+    const cin = pkt[i] & 0x0f;
+    const count = cin === 0x05 ? 1 : cin === 0x06 ? 2 : cin === 0x07 || cin === 0x04 ? 3 : 0;
+    for (let j = 0; j < count; j++) bytes.push(pkt[i + 1 + j] ?? 0);
+  }
+  return bytes;
+}
+
+function parsePaletteEntry(pkt: number[]): { index: number; r: number; g: number; b: number } | null {
+  const b = usbMidiSysexBytes(pkt);
+  if (
+    b.length < 17 ||
+    b[0] !== 0xf0 ||
+    b[1] !== 0x00 ||
+    b[2] !== 0x21 ||
+    b[3] !== 0x1d ||
+    b[4] !== 0x01 ||
+    b[5] !== 0x01 ||
+    b[6] !== 0x03
+  ) return null;
+  return {
+    index: b[7] & 0x7f,
+    r: Math.min(255, (b[8] & 0x7f) | ((b[9] & 0x7f) << 7)),
+    g: Math.min(255, (b[10] & 0x7f) | ((b[11] & 0x7f) << 7)),
+    b: Math.min(255, (b[12] & 0x7f) | ((b[13] & 0x7f) << 7)),
+  };
+}
+
 export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const { dsp, display, leds } = opts;
   const strict = opts.strict ?? false;
@@ -38,6 +68,59 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     { channel: 6, name: "Slot2" },
     { channel: 7, name: "Slot3" },
     { channel: 8, name: "Slot4" },
+  ];
+  const chainParams = new Map<string, string>();
+  chainParams.set("0:midi_fx1_module", "arp");
+  chainParams.set("0:synth_module", "linein");
+  chainParams.set("0:fx1_module", "freeverb");
+  chainParams.set("0:fx2_module", "");
+  chainParams.set("0:synth:ui_hierarchy", JSON.stringify({
+    levels: {
+      root: {
+        knobs: [
+          { key: "gain", name: "Gain" },
+          { key: "tone", name: "Tone" },
+          { key: "filter_env_depth", name: "Filter Env Depth" },
+          { key: "enabled", name: "Enabled" },
+          { key: "drive", name: "Drive" },
+          { key: "attack", name: "Attack" },
+          { key: "decay", name: "Decay" },
+          { key: "release", name: "Release" },
+          { key: "stereo_width", name: "Stereo Width" },
+          { key: "output_level", name: "Output Level" },
+        ],
+      },
+    },
+  }));
+  chainParams.set("0:synth:chain_params", JSON.stringify([
+    { key: "gain", name: "Gain", type: "float", min: 0, max: 1 },
+    { key: "tone", name: "Tone", type: "enum", options: ["Dark", "Bright"] },
+    { key: "filter_env_depth", name: "Filter Env Depth", type: "float", rangeMin: -100, rangeMax: 100 },
+    { key: "enabled", name: "Enabled", type: "bool" },
+    { key: "drive", name: "Drive", type: "float", min: 0, max: 1 },
+    { key: "attack", name: "Attack", type: "float", min: 0, max: 1 },
+    { key: "decay", name: "Decay", type: "float", min: 0, max: 1 },
+    { key: "release", name: "Release", type: "float", min: 0, max: 1 },
+    { key: "stereo_width", name: "Stereo Width", type: "float", min: 0, max: 1 },
+    { key: "output_level", name: "Output Level", type: "float", min: 0, max: 1 },
+  ]));
+  chainParams.set("0:synth:gain", "0.5");
+  chainParams.set("0:synth:tone", "0");
+  chainParams.set("0:synth:filter_env_depth", "20");
+  chainParams.set("0:synth:enabled", "1");
+  chainParams.set("0:synth:drive", "0.25");
+  chainParams.set("0:synth:attack", "0.02");
+  chainParams.set("0:synth:decay", "0.4");
+  chainParams.set("0:synth:release", "0.7");
+  chainParams.set("0:synth:stereo_width", "0.8");
+  chainParams.set("0:synth:output_level", "0.9");
+  const installedModules = [
+    { id: "arp", name: "Arpeggiator", version: "0.3.0", component_type: "midi_fx" },
+    { id: "chord", name: "Chord", version: "0.1.0", component_type: "midi_fx" },
+    { id: "linein", name: "Line In", version: "0.2.0", component_type: "sound_generator" },
+    { id: "test-synth", name: "Test Synth", version: "0.1.0", component_type: "sound_generator" },
+    { id: "freeverb", name: "Freeverb", version: "0.1.1", component_type: "audio_fx" },
+    { id: "delay", name: "Delay", version: "0.1.0", component_type: "audio_fx" },
   ];
 
   // Display (1-bit OLED) → sink.
@@ -56,6 +139,11 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const setButtonLED = (cc: number, color: number): void => leds.setButtonLED(cc, color);
   const clearAllLEDs = (): void => leds.clearAll();
   const move_midi_internal_send = (pkt: number[]): void => {
+    const palette = parsePaletteEntry(pkt);
+    if (palette) {
+      leds.setPaletteEntryRGB?.(palette.index, palette.r, palette.g, palette.b);
+      return;
+    }
     const status = (pkt[1] ?? 0) & 0xf0, idx = pkt[2] ?? 0, color = pkt[3] ?? 0;
     if (status === 0x90) leds.setLED(idx, color);
     else if (status === 0xb0) leds.setButtonLED(idx, color);
@@ -101,6 +189,20 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const shadow_corun_state = (): { target: number; id: number; keep_mask: number } | null =>
     corunState ? { ...corunState } : null;
   const shadow_get_slots = (): Array<Record<string, unknown>> => slots;
+  const shadow_get_param = (slot: number, key: string): string | null =>
+    chainParams.get(`${slot | 0}:${key}`) ?? null;
+  const shadow_set_param = (slot: number, key: string, val: string | number): boolean => {
+    const s = slot | 0;
+    const v = String(val ?? "");
+    if (key === "midi_fx1:module") chainParams.set(`${s}:midi_fx1_module`, v);
+    else if (key === "synth:module") chainParams.set(`${s}:synth_module`, v);
+    else if (key === "fx1:module") chainParams.set(`${s}:fx1_module`, v);
+    else if (key === "fx2:module") chainParams.set(`${s}:fx2_module`, v);
+    chainParams.set(`${s}:${key}`, v);
+    log("shadow_set_param " + JSON.stringify([s, key, v]));
+    return true;
+  };
+  const host_list_modules = (): Array<Record<string, unknown>> => installedModules.map((m) => ({ ...m }));
   const shadow_get_ui_flags = (): Record<string, unknown> => ({});
 
   Object.assign(globalThis, {
@@ -109,7 +211,8 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     host_module_get_param, host_module_set_param,
     host_write_file, host_read_file, host_file_exists, host_ensure_dir, host_remove_dir,
     move_midi_inject_to_move, shadow_send_midi_to_dsp,
-    shadow_corun_begin, shadow_corun_end, shadow_corun_state, shadow_get_slots, shadow_get_ui_flags,
+    shadow_corun_begin, shadow_corun_end, shadow_corun_state, shadow_get_slots,
+    shadow_get_param, shadow_set_param, host_list_modules, shadow_get_ui_flags,
   });
 
   // Load the REAL tool UI. The literal lets Vite's remap plugin (and vitest)

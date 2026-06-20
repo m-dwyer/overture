@@ -58,7 +58,7 @@
 <body>
 <div class="wrap">
 <header class="brand"><span class="name">OVERTURE</span><span class="sub">REFERENCE MANUAL</span></header>
-<nav><div class="label">Contents</div><ol><li><a href="#controls-cheat-sheet">Controls cheat-sheet</a></li><li><a href="#the-control-surface">The Control Surface</a></li><li><a href="#the-two-views">The Two Views</a></li><li><a href="#selecting-tracks">Selecting Tracks</a></li><li><a href="#switching-clips">Switching Clips</a></li><li><a href="#a-first-drum-pattern">A First Drum Pattern</a></li><li><a href="#step-entry-and-chords">Step Entry and Chords</a></li><li><a href="#step-edit">Step Edit</a></li><li><a href="#per-step-length-on-the-jog">Per-Step Length on the Jog</a></li><li><a href="#parameter-banks">Parameter Banks</a></li><li><a href="#effects-banks">Effects Banks</a></li><li><a href="#automation">Automation</a></li><li><a href="#launching-and-arranging-clips">Launching and Arranging Clips</a></li><li><a href="#copy-cut-and-delete-clips">Copy, Cut, and Delete Clips</a></li><li><a href="#recording-and-transport">Recording and Transport</a></li><li><a href="#pages-octave-and-performance">Pages, Octave, and Performance</a></li><li><a href="#the-global-menu">The Global Menu</a></li><li><a href="#glossary">Glossary</a></li></ol></nav>
+<nav><div class="label">Contents</div><ol><li><a href="#controls-cheat-sheet">Controls cheat-sheet</a></li><li><a href="#the-control-surface">The Control Surface</a></li><li><a href="#the-two-views">The Two Views</a></li><li><a href="#selecting-tracks">Selecting Tracks</a></li><li><a href="#switching-clips">Switching Clips</a></li><li><a href="#a-first-drum-pattern">A First Drum Pattern</a></li><li><a href="#step-entry-and-chords">Step Entry and Chords</a></li><li><a href="#step-edit">Step Edit</a></li><li><a href="#per-step-length-on-the-jog">Per-Step Length on the Jog</a></li><li><a href="#parameter-banks">Parameter Banks</a></li><li><a href="#effects-banks">Effects Banks</a></li><li><a href="#automation">Automation</a></li><li><a href="#editing-schwung-sounds">Editing Schwung Sounds</a></li><li><a href="#launching-and-arranging-clips">Launching and Arranging Clips</a></li><li><a href="#copy-cut-and-delete-clips">Copy, Cut, and Delete Clips</a></li><li><a href="#recording-and-transport">Recording and Transport</a></li><li><a href="#pages-octave-and-performance">Pages, Octave, and Performance</a></li><li><a href="#the-global-menu">The Global Menu</a></li><li><a href="#glossary">Glossary</a></li></ol></nav>
 <main>
 <h1 id="overture-reference-manual">Overture Reference Manual</h1>
 <p>This is the complete Overture reference: a screenshot-driven tour of every surface — the two views, track and clip selection, step and chord entry, step editing, the parameter banks, effects, automation, drums, scenes, performance, and the global menu. Each figure is produced by the real Overture UI running in the browser emulator, driven through the same MIDI gestures the hardware sends, so the manual always reflects the current build.</p>
@@ -79,6 +79,7 @@
 <li><a href="#parameter-banks">Parameter Banks</a></li>
 <li><a href="#effects-banks">Effects Banks</a></li>
 <li><a href="#automation">Automation</a></li>
+<li><a href="#editing-schwung-sounds">Editing Schwung Sounds</a></li>
 <li><a href="#launching-and-arranging-clips">Launching and Arranging Clips</a></li>
 <li><a href="#copy-cut-and-delete-clips">Copy, Cut, and Delete Clips</a></li>
 <li><a href="#recording-and-transport">Recording and Transport</a></li>
@@ -145,6 +146,11 @@
 <td>Shift + Step</td>
 <td>Hold + tap</td>
 <td>Per-step shortcuts</td>
+</tr>
+<tr>
+<td>Shift + Step 3</td>
+<td>Hold + tap</td>
+<td>Edit the active track's sound source</td>
 </tr>
 <tr>
 <td>Jog wheel</td>
@@ -276,6 +282,19 @@
 <h3 id="the-auto-bank">The AUTO bank</h3>
 <p><img src="assets/ref-15-auto.png" alt="The AUTO bank"></p>
 <p>AUTO records per-step parameter values that ride with the clip. (Device-only: the recorded CCs emit during playback on hardware — the emulator shows the edit surface, not the live emission.)</p>
+<h2 id="editing-schwung-sounds">Editing Schwung Sounds</h2>
+<p>Shift + Step 3 edits the active track's sound source. On a Schwung-routed track, Overture opens its own Sound page for the matching Schwung slot instead of immediately handing you to Schwung's chain editor.</p>
+<p>The Sound page has four components: MIDI FX, Synth, FX 1, and FX 2. While the page is open, Step 1-4 jumps directly to those components. If the selected component exposes parameters through Schwung metadata, Overture opens directly in parameter detail.</p>
+<p>Parameter detail is an 8-encoder bank: K1-K8 edit the visible params, and turning the jog moves to the next or previous bank when a module exposes more than eight. Touching or turning an encoder briefly opens a focused param peek with a larger value and range bar. Numeric, enum, and bool params are editable; string, file, and canvas params are shown read-only. Menu exits this Overture Sound page. Deep Edit still enters Schwung's own chain editor for bespoke module UIs.</p>
+<h3 id="open-the-schwung-sound-page">Open the Schwung Sound page</h3>
+<p><img src="assets/ref-16-schwung-sound.png" alt="Open the Schwung Sound page"></p>
+<p>Track 5 is Schwung-routed in the default setup. Shift + Step 3 opens Overture's Sound page for Slot 1. Because the Synth module exposes params, the page opens directly with K1-K8 assigned to the first parameter bank.</p>
+<h3 id="param-peek-while-editing">Param peek while editing</h3>
+<p><img src="assets/ref-17-schwung-param-peek.png" alt="Param peek while editing"></p>
+<p>Turning K1 edits the first visible module parameter. The focused peek makes the touched value easier to read while playing, then times out back to the 8-param overview.</p>
+<h3 id="jump-between-schwung-components">Jump between Schwung components</h3>
+<p><img src="assets/ref-18-schwung-components.png" alt="Jump between Schwung components"></p>
+<p>Inside the Sound page, Step 1-4 are direct component jumps: MIDI FX, Synth, FX 1, and FX 2. Components with visible params open in detail; otherwise they show the module overview/browser path.</p>
 <h2 id="launching-and-arranging-clips">Launching and Arranging Clips</h2>
 <p>In Session View the pad grid is clips: columns are tracks, rows are scenes. Tap a clip pad to launch it; tap the side buttons to launch a whole scene row (Shift + side launches at the next bar boundary).</p>
 <p>This is where you arrange — building scenes and moving between them — while Track View stays focused on editing the selected clip.</p>
@@ -357,6 +376,14 @@
 <tr>
 <td>Bank-position strip</td>
 <td>The Track-View header tick strip showing how many banks exist and where the jog is (Overture).</td>
+</tr>
+<tr>
+<td>Sound page</td>
+<td>The route-aware sound editor opened with Shift + Step 3. Move-routed tracks hand off to Move's editor; Schwung-routed tracks open Overture's module and parameter page.</td>
+</tr>
+<tr>
+<td>Schwung component</td>
+<td>One slot in the Schwung Sound page: MIDI FX, Synth, FX 1, or FX 2. Step 1-4 jumps between them while the page is open.</td>
 </tr>
 </tbody>
 </table>

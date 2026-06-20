@@ -351,6 +351,62 @@ export const scenes: Scene[] = [
     ],
   },
   {
+    title: "Editing Schwung Sounds",
+    slug: "editing-schwung-sounds",
+    body: [
+      "Shift + Step 3 edits the active track's sound source. On a Schwung-routed track, Overture opens its own Sound page for the matching Schwung slot instead of immediately handing you to Schwung's chain editor.",
+      "The Sound page has four components: MIDI FX, Synth, FX 1, and FX 2. While the page is open, Step 1-4 jumps directly to those components. If the selected component exposes parameters through Schwung metadata, Overture opens directly in parameter detail.",
+      "Parameter detail is an 8-encoder bank: K1-K8 edit the visible params, and turning the jog moves to the next or previous bank when a module exposes more than eight. Touching or turning an encoder briefly opens a focused param peek with a larger value and range bar. Numeric, enum, and bool params are editable; string, file, and canvas params are shown read-only. Menu exits this Overture Sound page. Deep Edit still enters Schwung's own chain editor for bespoke module UIs.",
+    ],
+    shots: [
+      {
+        file: "ref-16-schwung-sound.png",
+        expect: { activeTrack: 4, oledIncludes: ["SYNTH", "linein"] },
+        title: "Open the Schwung Sound page",
+        action: "Select track 5, then hold Shift + tap Step 3",
+        showing: "Sound page: Synth component params are mapped to K1-K8",
+        targets: [
+          { aria: ARIA.track(1), name: "Track 5 (Shift + side 1)" },
+          { aria: ARIA.shift, name: "Shift" },
+          { aria: ARIA.step(3), name: "Step 3" },
+        ],
+        drive: async (d) => {
+          await d.enterTrackView();
+          await d.selectTrack(5);
+          await d.shiftStep(3);
+        },
+        caption:
+          "Track 5 is Schwung-routed in the default setup. Shift + Step 3 opens Overture's Sound page for Slot 1. Because the Synth module exposes params, the page opens directly with K1-K8 assigned to the first parameter bank.",
+      },
+      {
+        file: "ref-17-schwung-param-peek.png",
+        expect: { activeTrack: 4, oledIncludes: ["Gain"] },
+        title: "Param peek while editing",
+        action: "Turn K1 on the Sound page",
+        showing: "Focused param peek: large value readout and range bar",
+        targets: [{ aria: ARIA.encoder(1), name: "K1" }],
+        drive: async (d) => {
+          await d.turnEncoder(1, 4);
+        },
+        caption:
+          "Turning K1 edits the first visible module parameter. The focused peek makes the touched value easier to read while playing, then times out back to the 8-param overview.",
+      },
+      {
+        file: "ref-18-schwung-components.png",
+        expect: { activeTrack: 4, oledIncludes: ["FX1"] },
+        title: "Jump between Schwung components",
+        action: "While Sound is open, tap Step 3",
+        showing: "Component jump: Step 1-4 select MIDI FX, Synth, FX 1, FX 2",
+        targets: [{ aria: ARIA.step(3), name: "Step 3 = FX 1" }],
+        drive: async (d) => {
+          await d.tapStep(3);
+        },
+        caption:
+          "Inside the Sound page, Step 1-4 are direct component jumps: MIDI FX, Synth, FX 1, and FX 2. Components with visible params open in detail; otherwise they show the module overview/browser path.",
+      },
+    ],
+  },
+  {
     title: "Launching and Arranging Clips",
     slug: "launching-and-arranging-clips",
     body: [

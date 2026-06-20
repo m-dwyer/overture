@@ -17,6 +17,7 @@ Each screenshot is produced by the real Overture UI running in the browser emula
 - [Move Between Clips and Editing](#move-between-clips-and-editing)
 - [Select Tracks](#select-tracks)
 - [Edit Parameters](#edit-parameters)
+- [Edit a Schwung Sound](#edit-a-schwung-sound)
 - [Save and Export Entry Points](#save-and-export-entry-points)
 - [Glossary](#glossary)
 
@@ -30,6 +31,7 @@ Each screenshot is produced by the real Overture UI running in the browser emula
 | Step 1-16 | Tap | Place or clear a hit on the active lane |
 | Jog wheel | Turn | Move through parameter banks |
 | K1-K8 | Turn | Edit the eight values in the visible bank |
+| Shift + Step 3 | Hold + tap | Edit the active track's sound source |
 | Shift + Note/Session | Hold + tap | Open the Global Menu (save, load, export) |
 
 ## Orientation
@@ -134,6 +136,24 @@ The OLED shows the active bank and the eight encoder rows. Touching or turning a
 
 The OLED row order matches K1-K8 left to right. The close-up makes the active bank and its eight values legible.
 
+## Edit a Schwung Sound
+
+Tracks 5-8 are Schwung/open-engine tracks in the default hybrid setup. Select one, then press Shift + Step 3 to open Overture's Sound page for that track.
+
+If the loaded Schwung module exposes parameters, the Sound page opens directly on its parameter detail. The eight encoders edit the visible params; touching or turning an encoder briefly shows a larger value readout. Turn the jog to move through additional 8-param banks. Menu exits the Sound page.
+
+### Open Sound on a Schwung track
+
+![Open Sound on a Schwung track](assets/09c-schwung-sound.png)
+
+On a Schwung-routed track, Shift + Step 3 opens Overture's Sound page instead of dropping straight into Schwung's chain editor. Parameters exposed by the module are assigned to K1-K8.
+
+### Edit a module parameter
+
+![Edit a module parameter](assets/09d-schwung-param-peek.png)
+
+Turning an encoder edits the visible Schwung parameter and temporarily replaces the grid with a focused value readout and range bar. The peek times out back to the overview.
+
 ## Save and Export Entry Points
 
 The Global Menu contains track configuration plus project-level actions. Open it with Shift + Note/Session, rotate the jog to move, and press the jog to edit or confirm.
@@ -161,6 +181,7 @@ Rotate the jog to reach additional actions such as save, load, export, and globa
 | Scene | A row of clips — one per track — launched together (A, B, C ...). |
 | Parameter bank | A page of eight encoder (K1-K8) parameters shown on the OLED. |
 | Drum lane | One drum voice on a drum track; its 16 steps are edited on the step row. |
+| Sound page | The route-aware sound editor opened with Shift + Step 3. On Schwung tracks it edits modules and their exposed params from Overture. |
 
 ---
 

@@ -36,6 +36,7 @@ export const cheatSheet: CheatRow[] = [
   { control: "Step 1-16", gesture: "Tap", does: "Place or clear a hit on the active lane" },
   { control: "Jog wheel", gesture: "Turn", does: "Move through parameter banks" },
   { control: "K1-K8", gesture: "Turn", does: "Edit the eight values in the visible bank" },
+  { control: "Shift + Step 3", gesture: "Hold + tap", does: "Edit the active track's sound source" },
   { control: "Shift + Note/Session", gesture: "Hold + tap", does: "Open the Global Menu (save, load, export)" },
 ];
 
@@ -50,6 +51,7 @@ export const glossary: GlossaryRow[] = [
   { term: "Scene", def: "A row of clips — one per track — launched together (A, B, C ...)." },
   { term: "Parameter bank", def: "A page of eight encoder (K1-K8) parameters shown on the OLED." },
   { term: "Drum lane", def: "One drum voice on a drum track; its 16 steps are edited on the step row." },
+  { term: "Sound page", def: "The route-aware sound editor opened with Shift + Step 3. On Schwung tracks it edits modules and their exposed params from Overture." },
 ];
 
 // The full GuideConfig for the beginner guide — framing + output target in one
