@@ -29,7 +29,10 @@ const shiftDown = (page: Page) => mi(page, 0xb0, 49, 127);
 const shiftUp = (page: Page) => mi(page, 0xb0, 49, 0);
 
 async function boot(page: Page) {
-  await page.goto("/");
+  // ?exact pins the 1:1 pixel-exact OLED render so these goldens keep asserting the
+  // literal device pixels (the readable default supersamples 8×). This suite IS the
+  // device-pixel fidelity lock.
+  await page.goto("/?exact");
   await page.waitForTimeout(2500);
 }
 async function snap(page: Page, name: string) {
@@ -97,4 +100,26 @@ test("track view bank strip", async ({ page }) => {
   await boot(page);
   await tap(page, 50); // Note/Session -> Track view (resting overview)
   await snap(page, "08-track-bank-strip");
+});
+
+// OLED readable/exact toggle: default supersamples the 128×64 buffer (readable),
+// the toggle flips to 1:1 device pixels, and the choice persists across reloads.
+const oledWidth = (page: Page) => page.locator("#oled").evaluate((el) => (el as HTMLCanvasElement).width);
+
+test("oled readable default + exact toggle persists", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForTimeout(2500);
+  expect(await oledWidth(page)).toBe(1024); // readable default (128 × 8)
+
+  await page.getByRole("button", { name: /OLED:/ }).click();
+  expect(await oledWidth(page)).toBe(128); // exact (1:1 device pixels)
+
+  await page.reload(); // persisted via localStorage
+  await page.waitForTimeout(2500);
+  expect(await oledWidth(page)).toBe(128);
+
+  // ?exact always forces exact regardless of the stored preference.
+  await page.goto("/?exact");
+  await page.waitForTimeout(2500);
+  expect(await oledWidth(page)).toBe(128);
 });

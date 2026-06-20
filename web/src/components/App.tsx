@@ -4,7 +4,7 @@
 // DSP (real seq8-wasm, or the JS mock via ?mock), boots the emulator core, runs the
 // ~94 Hz loop, and exposes globalThis.OVT. The host core stays untouched — this is
 // just the browser binding, now expressed as React + an imperative effect.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createEmulator, type Emulator } from "@/host/emulator.js";
 import type { DisplaySink, FileStore, LedSink } from "@/host/sinks.js";
 import { createMockDsp } from "@/mock-dsp.js";
@@ -18,17 +18,22 @@ import { TooltipProvider } from "./ui/tooltip";
 
 const TICK_HZ = 94;
 const BLOCK_MS = (1000 * 128) / 44100; // one audio block of real time (~2.9 ms)
-const OLED_W = 128;
-const OLED_H = 64;
 // Real Move OLED: monochrome white pixels on black.
 const FG = "#f2f2f2";
 const BG = "#000000";
 // The device's `print` font is a 5×7 bitmap on a fixed 6px-wide grid; the tool
 // stacks menu rows only 9px apart (menu_layout LIST_LINE_HEIGHT) and right-aligns
 // values using text_width = chars × 6. Match that so text doesn't overlap and
-// alignment lands correctly. ~8px keeps glyphs inside the 9px line height.
+// alignment lands correctly. ~8px keeps glyphs inside the 9px line height. The
+// display sink multiplies all of these (coords, sizes, font px) by the active OLED
+// scale: every logical device pixel becomes a scale×scale block.
 const CHAR_W = 6;
-const FONT = "8px ui-monospace, 'SF Mono', Menlo, monospace";
+const FONT_PX = 8;
+const FONT_FAMILY = "ui-monospace, 'SF Mono', Menlo, monospace";
+// Readable default supersamples the 128×64 device buffer 8× (1024×512 backing): graphics
+// stay crisp scale-blocks and print() text renders anti-aliased and legible. Exact mode
+// (scale 1) reproduces the literal device pixels with nearest-neighbor CSS upscaling.
+const OLED_READABLE_SCALE = 8;
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,6 +42,22 @@ export function App() {
   const emuRef = useRef<Emulator | null>(null);
   const shellLedsRef = useRef<LedSink | null>(null);
   const manualMode = new URLSearchParams(location.search).has("manual");
+  // OLED readability: supersampled "readable" view by default, toggleable to a 1:1
+  // pixel-exact view for verifying literal device pixels. `?exact` forces exact
+  // (deterministic for snapshot tests); otherwise persisted in localStorage.
+  const [readable, setReadable] = useState(() => {
+    if (new URLSearchParams(location.search).has("exact")) return false;
+    return localStorage.getItem("ovt:oled-readable") !== "0";
+  });
+  const oledScale = readable ? OLED_READABLE_SCALE : 1;
+  // The display sink (built once in the boot effect) reads scale from this ref, so
+  // toggling repaints at the new density on the next tick without a reboot.
+  const oledModeRef = useRef({ scale: oledScale });
+  useLayoutEffect(() => {
+    oledModeRef.current.scale = oledScale;
+    localStorage.setItem("ovt:oled-readable", readable ? "1" : "0");
+  }, [readable, oledScale]);
+
   const [manualGesture, setManualGesture] = useState("");
   const [manualControls, setManualControls] = useState("");
   const [manualShowing, setManualShowing] = useState("");
@@ -146,43 +167,52 @@ export function App() {
     const publishOled = () => {
       (globalThis as typeof globalThis & { __OVT_OLED_TEXT?: string }).__OVT_OLED_TEXT = oledFrame.join(" ");
     };
+    // All draw ops scale logical device coordinates/sizes by the active OLED scale
+    // (read live from oledModeRef so the readable⇄exact toggle takes effect on the
+    // next tick). At scale 1 this is byte-for-byte the original 128×64 path.
+    const S = () => oledModeRef.current.scale;
     const display: DisplaySink = {
       clearScreen() {
         ctx.fillStyle = BG;
-        ctx.fillRect(0, 0, OLED_W, OLED_H);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         oledFrame = [];
         publishOled();
       },
       fillRect(x, y, w, h, v) {
+        const s = S();
         ctx.fillStyle = shade(v);
-        ctx.fillRect(x | 0, y | 0, Math.max(0, w | 0), Math.max(0, h | 0));
+        ctx.fillRect((x | 0) * s, (y | 0) * s, Math.max(0, w | 0) * s, Math.max(0, h | 0) * s);
       },
       drawRect(x, y, w, h, v) {
+        const s = S();
         ctx.fillStyle = shade(v);
-        const X = x | 0,
-          Y = y | 0,
-          W = Math.max(0, w | 0),
-          H = Math.max(0, h | 0);
-        ctx.fillRect(X, Y, W, 1);
-        ctx.fillRect(X, Y + H - 1, W, 1);
-        ctx.fillRect(X, Y, 1, H);
-        ctx.fillRect(X + W - 1, Y, 1, H);
+        const X = (x | 0) * s,
+          Y = (y | 0) * s,
+          W = Math.max(0, w | 0) * s,
+          H = Math.max(0, h | 0) * s;
+        ctx.fillRect(X, Y, W, s);
+        ctx.fillRect(X, Y + H - s, W, s);
+        ctx.fillRect(X, Y, s, H);
+        ctx.fillRect(X + W - s, Y, s, H);
       },
       setPixel(x, y, v) {
+        const s = S();
         ctx.fillStyle = shade(v);
-        ctx.fillRect(x | 0, y | 0, 1, 1);
+        ctx.fillRect((x | 0) * s, (y | 0) * s, s, s);
       },
       print(x, y, text, color) {
-        ctx.font = FONT;
+        const s = S();
+        ctx.font = `${FONT_PX * s}px ${FONT_FAMILY}`;
         ctx.textBaseline = "top";
         ctx.fillStyle = color === 0 ? BG : FG;
         // Draw on the device's fixed 6px-per-char grid (monospace, no kerning) so
-        // spacing and text_width-based alignment match the firmware font.
-        const s = String(text);
-        const baseX = x | 0;
-        const baseY = y | 0;
-        for (let i = 0; i < s.length; i++) ctx.fillText(s[i], baseX + i * CHAR_W, baseY);
-        if (s.trim()) { oledFrame.push(s); publishOled(); }
+        // spacing and text_width-based alignment match the firmware font. fillText is
+        // anti-aliased, so readable mode (large backing store) renders smooth glyphs.
+        const str = String(text);
+        const baseX = (x | 0) * s;
+        const baseY = (y | 0) * s;
+        for (let i = 0; i < str.length; i++) ctx.fillText(str[i], baseX + i * CHAR_W * s, baseY);
+        if (str.trim()) { oledFrame.push(str); publishOled(); }
       },
       textWidth(text) {
         return String(text).length * CHAR_W;
@@ -353,9 +383,21 @@ export function App() {
             {/* Screen pinned at the top, log grows to fill so its bottom lines up
                 with the bottom of the panel. */}
             <div className="flex w-[min(92vw,440px)] flex-col items-center gap-2">
-              <OledScreen canvasRef={canvasRef} />
-              <div id="status" ref={statusRef} className={manualMode ? "sr-only" : "min-h-[1.4em] shrink-0 text-xs text-accent"}>
-                booting…
+              <OledScreen canvasRef={canvasRef} scale={oledScale} smooth={readable} />
+              <div className="flex w-full items-center justify-between gap-2">
+                <div id="status" ref={statusRef} className={manualMode ? "sr-only" : "min-h-[1.4em] shrink-0 text-xs text-accent"}>
+                  booting…
+                </div>
+                {manualMode ? null : (
+                  <button
+                    type="button"
+                    onClick={() => setReadable((v) => !v)}
+                    title="Toggle OLED rendering: Sharp = supersampled & readable, Exact = literal device pixels"
+                    className="shrink-0 rounded border border-line px-2 py-0.5 text-[11px] text-muted hover:text-text"
+                  >
+                    OLED: {readable ? "Sharp" : "Exact"}
+                  </button>
+                )}
               </div>
               {/* The log is absolutely positioned inside a flex-filled wrapper so
                   its growing content can never inflate the column (which would
