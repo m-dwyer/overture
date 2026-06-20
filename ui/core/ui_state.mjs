@@ -541,6 +541,23 @@ export function effectiveClip(t) {
     return (!S.playing && qc >= 0) ? qc : S.trackActiveClip[t];
 }
 
+/* Schedule a deferred drum-lane resync: re-read lane `lane` of track `track`
+ * from DSP `ticks` ticks from now. Consumed by the tick-task that decrements
+ * `pendingDrumLaneResync` and resyncs on reaching 0. Last write wins — a fresh
+ * call overwrites any pending schedule, matching the open-coded triple it
+ * replaces. Producers pass `ticks` (2 for clip/lane edits, 3 for recording and
+ * step-reassign — the variant is load-bearing, so callers keep their own value).
+ * @param {import('../types').State} S
+ * @param {number} track
+ * @param {number} lane
+ * @param {number} ticks
+ * @returns {void} */
+export function scheduleDrumLaneResync(S, track, lane, ticks) {
+    S.pendingDrumLaneResync = ticks;
+    S.pendingDrumLaneResyncTrack = track;
+    S.pendingDrumLaneResyncLane = lane;
+}
+
 /* Reset the singleton to a pristine state IN PLACE — same object reference, so
  * every `import { S }` holder (and closures captured at module load) stay valid.
  * On device, init() deliberately preserves most UI state across Shift+Back

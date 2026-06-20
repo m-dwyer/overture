@@ -11,6 +11,8 @@
  * @property {Map<number, { track: number, recording: boolean }>} extHeldNotes  external-MIDI held notes
  */
 
+import { scheduleDrumLaneResync } from '../core/ui_state.mjs';
+
 /** @returns {LiveNoteRecordingState} */
 export function createLiveNoteRecordingState() {
     return {
@@ -125,9 +127,7 @@ export function clearPendingPrerollRecording(S) {
 export function enqueueDrumRecNoteOn(S, drumRecNoteOns, track, laneNote, vel, lane) {
     drumRecNoteOns.push({ track: track, laneNote: laneNote, vel: vel });
     if (lane >= 0) {
-        S.pendingDrumLaneResync      = 3;
-        S.pendingDrumLaneResyncTrack = track;
-        S.pendingDrumLaneResyncLane  = lane;
+        scheduleDrumLaneResync(S, track, lane, 3);
     }
 }
 

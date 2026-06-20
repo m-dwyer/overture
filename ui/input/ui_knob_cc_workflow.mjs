@@ -15,6 +15,8 @@
  *
  * Handlers take everything via deps so they can be unit-tested without the host. */
 
+import { scheduleDrumLaneResync } from '../core/ui_state.mjs';
+
 /* Shared overlays: heldStep + exclusive dialogs swallow knob turns. Runs before
  * the knobTouched bookkeeping, exactly like the original early returns. */
 export function handleUiKnobOverlaySwallow(S, deps, d1, d2) {
@@ -109,7 +111,7 @@ export function handleUiKnobDrumClip(S, deps, d1, d2) {
                         if (S.drumStepPage[t] > maxPage) S.drumStepPage[t] = maxPage;
                         if (deps.setParam)
                             deps.setParam('t' + t + '_l' + lane + '_clip_resolution_zoom', String(nv));
-                        S.pendingDrumLaneResync = 2; S.pendingDrumLaneResyncTrack = t; S.pendingDrumLaneResyncLane = lane;
+                        scheduleDrumLaneResync(S, t, lane, 2);
                         deps.forceRedraw();
                     }
                 } else {
@@ -165,7 +167,7 @@ export function handleUiKnobDrumClip(S, deps, d1, d2) {
                 if (deps.setParam)
                     deps.setParam('t' + t + '_l' + lane + '_clock_shift', String(dir));
             }
-            S.pendingDrumLaneResync = 2; S.pendingDrumLaneResyncTrack = t; S.pendingDrumLaneResyncLane = lane;
+            scheduleDrumLaneResync(S, t, lane, 2);
             S.screenDirty = true;
         }
         return true;
@@ -200,7 +202,7 @@ export function handleUiKnobDrumClip(S, deps, d1, d2) {
                                           prev + ' ' + nv + ' ' + vel);
                 S.drumLaneEuclidN[t][lane] = nv;
                 S.bankParams[t][0][4] = nv;
-                S.pendingDrumLaneResync = 2; S.pendingDrumLaneResyncTrack = t; S.pendingDrumLaneResyncLane = lane;
+                scheduleDrumLaneResync(S, t, lane, 2);
             }
             S.screenDirty = true;
         }

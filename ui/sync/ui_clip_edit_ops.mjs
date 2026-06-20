@@ -19,6 +19,7 @@ import {
 } from '../core/ui_constants.mjs';
 import { invalidateLEDCache } from '../render/ui_leds.mjs';
 import { showActionPopup } from '../persist/ui_persistence.mjs';
+import { scheduleDrumLaneResync } from '../core/ui_state.mjs';
 
 /* deps: setParam, resetPerClipBankParamsToDefault, refreshPerClipBankParams,
  * forceRedraw, effectiveClip */
@@ -270,9 +271,7 @@ export function copyStepImpl(S, deps, t, ac, srcAbs, dstAbs) {
         S.pendingDefaultSetParams.push({ key: 't' + t + '_l' + lane + '_step_' + srcAbs + '_copy_to', val: String(dstAbs) });
         S.drumLaneSteps[t][lane][dstAbs] = S.drumLaneSteps[t][lane][srcAbs];
         if (S.drumLaneSteps[t][lane][srcAbs] !== '0') S.drumLaneHasNotes[t][lane] = true;
-        S.pendingDrumLaneResync      = 2;
-        S.pendingDrumLaneResyncTrack = t;
-        S.pendingDrumLaneResyncLane  = lane;
+        scheduleDrumLaneResync(S, t, lane, 2);
     } else {
         S.pendingDefaultSetParams.push({ key: 't' + t + '_c' + ac + '_step_' + srcAbs + '_copy_to', val: String(dstAbs) });
         S.clipSteps[t][ac][dstAbs] = S.clipSteps[t][ac][srcAbs];

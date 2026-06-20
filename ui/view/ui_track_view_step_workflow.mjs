@@ -1,3 +1,5 @@
+import { scheduleDrumLaneResync } from '../core/ui_state.mjs';
+
 export function handleTrackViewCopyStepPress(S, deps, idx) {
     if (!S.copyHeld) return false;
 
@@ -359,9 +361,7 @@ export function handleTrackViewStepRelease(S, deps, btn) {
                 if (deps.setParam)
                     deps.setParam('t' + track + '_l' + lane + '_step_' + S.heldStep + '_reassign', String(dstStep));
                 S.drumLaneSteps[track][lane][S.heldStep] = '0';
-                S.pendingDrumLaneResync = 3;
-                S.pendingDrumLaneResyncTrack = track;
-                S.pendingDrumLaneResyncLane = lane;
+                scheduleDrumLaneResync(S, track, lane, 3);
                 drumDidReassign = true;
             }
         }
