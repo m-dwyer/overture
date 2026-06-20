@@ -52,6 +52,12 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
           { key: "tone", name: "Tone" },
           { key: "filter_env_depth", name: "Filter Env Depth" },
           { key: "enabled", name: "Enabled" },
+          { key: "drive", name: "Drive" },
+          { key: "attack", name: "Attack" },
+          { key: "decay", name: "Decay" },
+          { key: "release", name: "Release" },
+          { key: "stereo_width", name: "Stereo Width" },
+          { key: "output_level", name: "Output Level" },
         ],
       },
     },
@@ -61,11 +67,23 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     { key: "tone", name: "Tone", type: "enum", options: ["Dark", "Bright"] },
     { key: "filter_env_depth", name: "Filter Env Depth", type: "float", rangeMin: -100, rangeMax: 100 },
     { key: "enabled", name: "Enabled", type: "bool" },
+    { key: "drive", name: "Drive", type: "float", min: 0, max: 1 },
+    { key: "attack", name: "Attack", type: "float", min: 0, max: 1 },
+    { key: "decay", name: "Decay", type: "float", min: 0, max: 1 },
+    { key: "release", name: "Release", type: "float", min: 0, max: 1 },
+    { key: "stereo_width", name: "Stereo Width", type: "float", min: 0, max: 1 },
+    { key: "output_level", name: "Output Level", type: "float", min: 0, max: 1 },
   ]));
   chainParams.set("0:synth:gain", "0.5");
   chainParams.set("0:synth:tone", "0");
   chainParams.set("0:synth:filter_env_depth", "20");
   chainParams.set("0:synth:enabled", "1");
+  chainParams.set("0:synth:drive", "0.25");
+  chainParams.set("0:synth:attack", "0.02");
+  chainParams.set("0:synth:decay", "0.4");
+  chainParams.set("0:synth:release", "0.7");
+  chainParams.set("0:synth:stereo_width", "0.8");
+  chainParams.set("0:synth:output_level", "0.9");
   const installedModules = [
     { id: "arp", name: "Arpeggiator", version: "0.3.0", component_type: "midi_fx" },
     { id: "chord", name: "Chord", version: "0.1.0", component_type: "midi_fx" },

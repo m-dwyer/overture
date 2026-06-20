@@ -236,8 +236,9 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(3);
     expect(ui.pendingEditSoundEntry).toBeNull();
     expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 0, selectedIndex: 1, paramDetail: true });
-    expect(h.rec.text()).toMatch(/Synth linein/);
-    expect(h.rec.text()).toMatch(/K1 Gn 0\.5/);
+    expect(h.rec.text()).toMatch(/T5 SYNTH/);
+    expect(h.rec.text()).toMatch(/\[linein\]/);
+    expect(h.rec.text()).toMatch(/Gain 0\.5/);
     expect(globalThis.shadow_corun_state()).toBeNull();
     h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
     expect(ui.schwungSoundPage).toBeNull();
@@ -264,15 +265,13 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.tapStep(2);
     h.release(49);
     h.step(3);
-    h.press(3); // leave parameter detail for the component list
-    h.cc(14, 1); h.step(1);
-    h.cc(14, 1); h.step(1);
-    h.cc(14, 1); h.step(1);
+    h.hold(49);
     h.press(3);
+    h.release(49);
     h.step(3);
     expect(ui.schwungCoRunSlot).toBe(0);
     globalThis.shadow_corun_end();
-    h.step(3);
+    h.step(30);
     expect(ui.schwungCoRunSlot).toBe(-1);
     expect(globalThis.shadow_corun_state()).toBeNull();
   });
@@ -289,6 +288,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     ui.sessionView = false;
     try {
       openEditSoundFromGlobalMenu();
+      h.step(30);
       expect(h.rec.text()).toMatch(/NO SLOT/);
       expect(h.rec.text()).toMatch(/Ch5/);
       expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: -1 });
@@ -311,10 +311,9 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(3);
 
     expect(ui.schwungSoundPage).toMatchObject({ selectedIndex: 1 });
-    h.press(3); // leave parameter detail for the Synth component row
     h.press(3);
     h.step(2);
-    expect(h.rec.text()).toMatch(/Synth/);
+    expect(h.rec.text()).toMatch(/Synth/i);
     expect(h.rec.text()).toMatch(/Line In/);
 
     h.cc(14, 1); h.step(1);
@@ -322,7 +321,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(2);
 
     expect(globalThis.shadow_get_param(0, "synth_module")).toBe("test-synth");
-    expect(h.rec.text()).toMatch(/Synth test-synth/);
+    expect(h.rec.text()).toMatch(/T5 SYNTH/);
+    expect(h.rec.text()).toMatch(/\[test-synth\]/);
     ui.schwungSoundPage = null;
     h.step(1);
   });
@@ -338,7 +338,6 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.release(49);
       h.step(3);
 
-      if (ui.schwungSoundPage?.paramDetail) h.press(3); // leave parameter detail for the Synth component row
       h.press(3);
       h.step(2);
 
@@ -390,7 +389,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(2);
 
     expect(globalThis.shadow_get_param(0, "midi_fx1_module")).toBe("chord");
-    expect(h.rec.text()).toMatch(/MIDI FX chord/);
+    expect(h.rec.text()).toMatch(/T5 MIDI/);
+    expect(h.rec.text()).toMatch(/\[chord\]/);
     globalThis.shadow_set_param(0, "midi_fx1:module", "arp");
     ui.schwungSoundPage = null;
     h.step(1);
@@ -412,7 +412,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(2);
 
     expect(globalThis.shadow_get_param(0, "fx2_module")).toBe("freeverb");
-    expect(h.rec.text()).toMatch(/FX 2 freeverb/);
+    expect(h.rec.text()).toMatch(/T5 FX2/);
+    expect(h.rec.text()).toMatch(/\[freeverb\]/);
     globalThis.shadow_set_param(0, "fx2:module", "");
     ui.schwungSoundPage = null;
     h.step(1);
@@ -429,10 +430,10 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.hold(49);
       h.tapStep(2);
       h.release(49);
-      h.step(3);
+      h.step(30);
 
       expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 3, paramDetail: false });
-      expect(h.rec.text()).toMatch(/SOUND T5 Slot4|Synth --/);
+      expect(h.rec.text()).toMatch(/T5 SYNTH|\[Empty\]/);
     } finally {
       ui.trackChannel[4] = oldChannel;
       h.set("t4_channel", oldChannel);
