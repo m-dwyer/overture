@@ -75,3 +75,16 @@ test("jog wheel: main touch (note 9) on press/release", async ({ page }) => {
   await page.mouse.up();
   expect(await drain(page)).toContainEqual([0x90, 9, 0]); // touch OFF
 });
+
+test("Alt-click pins a chord button so Copy + jog click can be tested", async ({ page }) => {
+  await page.getByLabel("Copy", { exact: true }).click({ modifiers: ["Alt"] });
+  await page.getByLabel("Jog click", { exact: true }).click();
+  await page.getByLabel("Copy", { exact: true }).click({ modifiers: ["Alt"] });
+
+  expect(await drain(page)).toEqual([
+    [0xb0, 60, 127],
+    [0xb0, 3, 127],
+    [0xb0, 3, 0],
+    [0xb0, 60, 0],
+  ]);
+});

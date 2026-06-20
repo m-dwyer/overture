@@ -43,6 +43,7 @@ interface Ctl {
   className?: string;
   tooltip?: string;
   latch?: boolean;
+  altHold?: boolean;
 }
 
 function IconButton({ ctl, send, size = 16 }: { ctl: Ctl; send: Send; size?: number }) {
@@ -52,6 +53,7 @@ function IconButton({ ctl, send, size = 16 }: { ctl: Ctl; send: Send; size?: num
       cc={ctl.cc}
       send={send}
       latch={ctl.latch}
+      altHold={ctl.altHold}
       tooltip={ctl.tooltip ?? ctl.label}
       aria-label={ctl.label}
       refCb={ledRef(reg.buttons, ctl.cc)}
@@ -98,12 +100,42 @@ export function Transport({ send }: { send: Send }) {
 //   Delete   Copy
 //   Undo     Shift
 const RIGHT: Ctl[] = [
-  { cc: NAV.Capture, label: "Capture", Icon: Camera },
+  {
+    cc: NAV.Capture,
+    label: "Capture",
+    Icon: Camera,
+    altHold: true,
+    tooltip: "Capture - hold Alt and click to pin for a chord; Alt-click again to release",
+  },
   { cc: NAV.Sample, label: "Sampling", Icon: Mic },
-  { cc: NAV.Loop, label: "Loop", Icon: Repeat },
-  { cc: NAV.Mute, label: "Mute", Icon: VolumeX },
-  { cc: NAV.Delete, label: "Delete", Icon: Trash2 },
-  { cc: NAV.Copy, label: "Copy", Icon: Copy },
+  {
+    cc: NAV.Loop,
+    label: "Loop",
+    Icon: Repeat,
+    altHold: true,
+    tooltip: "Loop - hold Alt and click to pin for a chord; Alt-click again to release",
+  },
+  {
+    cc: NAV.Mute,
+    label: "Mute",
+    Icon: VolumeX,
+    altHold: true,
+    tooltip: "Mute - hold Alt and click to pin for a chord; Alt-click again to release",
+  },
+  {
+    cc: NAV.Delete,
+    label: "Delete",
+    Icon: Trash2,
+    altHold: true,
+    tooltip: "Delete - hold Alt and click to pin for a chord; Alt-click again to release",
+  },
+  {
+    cc: NAV.Copy,
+    label: "Copy",
+    Icon: Copy,
+    altHold: true,
+    tooltip: "Copy - hold Alt and click to pin for a chord; Alt-click again to release",
+  },
   { cc: NAV.Undo, label: "Undo", Icon: Undo2 },
   {
     cc: NAV.Shift,
