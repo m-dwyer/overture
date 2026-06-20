@@ -204,8 +204,8 @@ export function App() {
       },
       setPaletteEntryRGB(index, r, g, b) {
         setLedPaletteEntryRGB(index, r, g, b);
-        for (const [i, c] of ledsMap) shellLedsRef.current?.setLED(i, c);
-        for (const [cc, c] of buttonLedsMap) shellLedsRef.current?.setButtonLED(cc, c);
+        for (const [i, c] of ledsMap) if (c === index) shellLedsRef.current?.setLED(i, c);
+        for (const [cc, c] of buttonLedsMap) if (c === index) shellLedsRef.current?.setButtonLED(cc, c);
       },
       clearAll() {
         ledsMap.clear();
