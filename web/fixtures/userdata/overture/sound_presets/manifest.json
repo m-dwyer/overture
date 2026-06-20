@@ -1,0 +1,35 @@
+{
+  "v": 1,
+  "presets": [
+    {
+      "id": "example-test-synth-bright-lead",
+      "name": "Bright Lead",
+      "ts": 3,
+      "scope": "synth/test-synth",
+      "componentPrefix": "synth",
+      "moduleId": "test-synth",
+      "moduleName": "Test Synth",
+      "file": "/data/UserData/overture/sound_presets/example-test-synth-bright-lead.json"
+    },
+    {
+      "id": "example-test-synth-soft-pad",
+      "name": "Soft Pad",
+      "ts": 2,
+      "scope": "synth/test-synth",
+      "componentPrefix": "synth",
+      "moduleId": "test-synth",
+      "moduleName": "Test Synth",
+      "file": "/data/UserData/overture/sound_presets/example-test-synth-soft-pad.json"
+    },
+    {
+      "id": "example-test-synth-driven-bass",
+      "name": "Driven Bass",
+      "ts": 1,
+      "scope": "synth/test-synth",
+      "componentPrefix": "synth",
+      "moduleId": "test-synth",
+      "moduleName": "Test Synth",
+      "file": "/data/UserData/overture/sound_presets/example-test-synth-driven-bass.json"
+    }
+  ]
+}

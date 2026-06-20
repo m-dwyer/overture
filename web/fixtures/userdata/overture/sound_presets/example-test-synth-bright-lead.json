@@ -1,0 +1,23 @@
+{
+  "v": 1,
+  "id": "example-test-synth-bright-lead",
+  "name": "Bright Lead",
+  "ts": 3,
+  "componentPrefix": "synth",
+  "componentLabel": "Synth",
+  "moduleId": "test-synth",
+  "moduleName": "Test Synth",
+  "state": "",
+  "params": {
+    "gain": "0.68",
+    "tone": "1",
+    "filter_env_depth": "72",
+    "enabled": "1",
+    "drive": "0.18",
+    "attack": "0.01",
+    "decay": "0.22",
+    "release": "0.18",
+    "stereo_width": "0.42",
+    "output_level": "0.9"
+  }
+}

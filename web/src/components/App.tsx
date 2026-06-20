@@ -6,6 +6,7 @@
 // just the browser binding, now expressed as React + an imperative effect.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createEmulator, type Emulator } from "@/host/emulator.js";
+import { createBrowserFileStore } from "@/host/browser-file-store.js";
 import type { DisplaySink, FileStore, LedSink } from "@/host/sinks.js";
 import { createMockDsp } from "@/mock-dsp.js";
 import { createWasmDsp } from "@/wasm-dsp.js";
@@ -244,19 +245,8 @@ export function App() {
       },
     };
 
-    // ---- File store → localStorage ---------------------------------------------
-    const files: FileStore = {
-      read: (p) => localStorage.getItem("ovt:" + p),
-      write: (p, d) => {
-        try {
-          localStorage.setItem("ovt:" + p, String(d));
-          return 1;
-        } catch {
-          return 0;
-        }
-      },
-      exists: (p) => localStorage.getItem("ovt:" + p) !== null,
-    };
+    // ---- File store → repo fixtures overlaid with localStorage ------------------
+    const files: FileStore = createBrowserFileStore(localStorage);
 
     let interval: ReturnType<typeof setInterval> | undefined;
     let cancelled = false;
