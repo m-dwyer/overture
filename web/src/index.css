@@ -42,9 +42,8 @@
     margin: 0;
     -webkit-font-smoothing: antialiased;
   }
-  #oled {
-    image-rendering: pixelated;
-  }
+  /* #oled image-rendering is prop-driven in OledScreen (pixelated only in exact
+     mode); the supersampled readable default scales smoothly, so no static rule. */
   /* Momentary press feedback (LED still drives the element background). */
   .pressed {
     outline: 3px solid var(--accent);
