@@ -39,6 +39,9 @@ function moveDeviceImports() {
 
 export default defineConfig({
   root: here,
+  define: {
+    OVERTURE_DEBUG_LOG: "false",
+  },
   // react() handles JSX + Fast Refresh; moveDeviceImports keeps enforce:"pre" so it
   // still wins on the tool's absolute on-device import specifiers.
   plugins: [react(), moveDeviceImports()],
