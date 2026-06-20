@@ -2,8 +2,7 @@ export const SCHWUNG_SOUND_COMPONENTS = [
     { label: 'MIDI FX', param: 'midi_fx1:module', read: 'midi_fx1_module', list: 'midi_fx' },
     { label: 'Synth',   param: 'synth:module',    read: 'synth_module',    list: 'sound_generator' },
     { label: 'FX 1',    param: 'fx1:module',      read: 'fx1_module',      list: 'audio_fx' },
-    { label: 'FX 2',    param: 'fx2:module',      read: 'fx2_module',      list: 'audio_fx' },
-    { label: 'Deep Edit', param: '', read: '', list: '' }
+    { label: 'FX 2',    param: 'fx2:module',      read: 'fx2_module',      list: 'audio_fx' }
 ];
 
 const DEFAULT_MODULE_CAPABILITIES = Object.freeze({

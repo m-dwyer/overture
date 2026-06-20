@@ -163,7 +163,7 @@ describe("UI descriptor seams", () => {
       name: "dustline",
       componentType: "sound_generator",
     });
-    expect(S.schwungSoundPage?.names).toEqual(["arpy", "dustline", "trail", "", ""]);
+    expect(S.schwungSoundPage?.names).toEqual(["arpy", "dustline", "trail", ""]);
     expect(S.schwungSoundPage?.componentParams[1]).toMatchObject([
       { key: "cutoff", name: "Cutoff" },
       { key: "resonance", name: "Resonance" },
@@ -245,20 +245,25 @@ describe("UI descriptor seams", () => {
     };
 
     expect(renderSchwungSoundPage(surface)).toBe(true);
-    expect(calls).toContainEqual(["print", 0, 0, "Synth dustline", 1]);
-    expect(calls).toContainEqual(["print", 96, 0, "1/1", 1]);
-    expect(calls).toContainEqual(["print", 0, 12, "K1 mcr 0.5", 1]);
-    expect(calls).toContainEqual(["print", 0, 22, "K2 Tn Dark", 1]);
-    expect(calls).toContainEqual(["print", 0, 32, "K3 fed 60", 1]);
-    expect(calls).toContainEqual(["print", 0, 42, "K4 fed 101", 1]);
-    expect(calls).toContainEqual(["print", 64, 12, "K5 nbld On", 1]);
-    expect(calls).toContainEqual(["print", 64, 22, "K6 Sm /tmp", 1]);
+    expect(calls).toContainEqual(["print", 0, 0, "T5 SYNTH", 1]);
+    expect(calls).toContainEqual(["print", 54, 1, "[dustline]", 0]);
+    expect(calls).toContainEqual(["print", 4, 14, "mcr", 1]);
+    expect(calls).toContainEqual(["print", 4, 22, "0.5", 1]);
+    expect(calls).toContainEqual(["print", 34, 14, "Tone", 1]);
+    expect(calls).toContainEqual(["print", 34, 22, "Dark", 1]);
+    expect(calls).toContainEqual(["print", 64, 14, "FED", 1]);
+    expect(calls).toContainEqual(["print", 64, 22, "60", 1]);
+    expect(calls).toContainEqual(["print", 4, 36, "En", 1]);
+    expect(calls).toContainEqual(["print", 4, 44, "On", 1]);
+    expect(calls).toContainEqual(["print", 34, 36, "Smpl", 1]);
+    expect(calls).toContainEqual(["print", 34, 44, "/tmp", 1]);
 
     expect(toggleSchwungSoundParamDetail()).toBe(true);
     calls.length = 0;
     renderSchwungSoundPage(surface);
-    expect(calls).toContainEqual(["print", 0, 46, "Synth dustline", 1]);
-    expect(calls).toContainEqual(["print", 0, 56, "P1 macro  P2 Tone", 1]);
+    expect(calls).toContainEqual(["print", 54, 1, "[dustline]", 0]);
+    expect(calls).toContainEqual(["print", 4, 14, "mcr", 1]);
+    expect(calls).toContainEqual(["print", 4, 22, "0.5", 1]);
     expect(toggleSchwungSoundParamDetail()).toBe(true);
 
     expect(touchSchwungSoundVisibleParam(1)).toBe(true);
@@ -312,7 +317,8 @@ describe("UI descriptor seams", () => {
     expect(expireSchwungSoundParamPeek()).toBe(true);
     calls.length = 0;
     renderSchwungSoundPage(surface);
-    expect(calls).toContainEqual(["print", 64, 22, "K6 Sm /tmp", 1]);
+    expect(calls).toContainEqual(["print", 34, 36, "Smpl", 1]);
+    expect(calls).toContainEqual(["print", 34, 44, "/tmp", 1]);
 
     expect(selectSchwungSoundComponent(3)).toBe(true);
     expect(S.schwungSoundPage).toMatchObject({ selectedIndex: 3, paramDetail: true, paramDetailIndex: 0 });
@@ -331,22 +337,23 @@ describe("UI descriptor seams", () => {
     S.schwungSoundPage!.selectedIndex = 2;
     calls.length = 0;
     renderSchwungSoundPage(surface);
-    expect(calls).toContainEqual(["print", 0, 56, "K1 Cutoff  K3 Drive", 1]);
+    expect(calls).toContainEqual(["print", 42, 1, "[trail]", 0]);
+    expect(calls).toContainEqual(["print", 4, 14, "Cut", 1]);
+    expect(calls).toContainEqual(["print", 4, 22, "--", 1]);
+    expect(calls).toContainEqual(["print", 34, 14, "Drv", 1]);
+    expect(calls).toContainEqual(["print", 34, 22, "--", 1]);
 
     S.schwungSoundPage!.selectedIndex = 3;
     expect(toggleSchwungSoundParamDetail()).toBe(true);
     rotateSchwungSoundPage(100);
     calls.length = 0;
     renderSchwungSoundPage(surface);
-    expect(calls).toContainEqual(["print", 96, 0, "3/3", 1]);
-    expect(calls).toContainEqual(["print", 0, 12, "K1 S17 --", 1]);
-    expect(calls).toContainEqual(["print", 0, 42, "K4 S20 --", 1]);
+    expect(calls).toContainEqual(["fill", 124, 35, 3, 2, 1]);
+    expect(calls).toContainEqual(["print", 4, 14, "S17", 1]);
+    expect(calls).toContainEqual(["print", 4, 22, "--", 1]);
+    expect(calls).toContainEqual(["print", 94, 14, "S20", 1]);
+    expect(calls).toContainEqual(["print", 94, 22, "--", 1]);
     expect(toggleSchwungSoundParamDetail()).toBe(true);
-
-    S.schwungSoundPage!.selectedIndex = 4;
-    calls.length = 0;
-    renderSchwungSoundPage(surface);
-    expect(calls).toContainEqual(["print", 0, 46, "Deep Edit opens Schwu", 1]);
   });
 
   test("route labels distinguish Move, External, Schwung slot, and Schwung channel fallback", () => {

@@ -762,22 +762,16 @@ describe("Jog CC workflow - alt toggle (click)", () => {
 });
 
 describe("Jog CC workflow - Schwung Sound page", () => {
-  test("Shift+jog click opens param detail; click in detail closes it", () => {
+  test("Shift+jog click enters Schwung deep edit", () => {
     const c = calls();
-    const S = state({ shiftHeld: true, schwungSoundPage: { paramDetail: false, browser: false } });
+    const S = state({ shiftHeld: true, schwungSoundPage: { track: 4, slot: 0, paramDetail: true, browser: false } });
     expect(handleUiJogSchwungSoundPage(S, deps(c), ...CLICK)).toBe(true);
-    expect(c.log).toEqual([["toggleSoundParams"], ["redraw"]]);
-
-    c.log.length = 0;
-    S.shiftHeld = false;
-    S.schwungSoundPage = { paramDetail: true, browser: false };
-    expect(handleUiJogSchwungSoundPage(S, deps(c), ...CLICK)).toBe(true);
-    expect(c.log).toEqual([["toggleSoundParams"], ["redraw"]]);
+    expect(c.log).toEqual([["closeSoundPage"], ["enterSchwung", 4, 0], ["redraw"]]);
   });
 
   test("plain jog click still opens browser and rotate delegates to the Sound page", () => {
     const c = calls();
-    const S = state({ schwungSoundPage: { paramDetail: false, browser: false } });
+    const S = state({ schwungSoundPage: { paramDetail: true, browser: false } });
     expect(handleUiJogSchwungSoundPage(S, deps(c), ...CLICK)).toBe(true);
     expect(c.log).toEqual([["openSoundBrowser"], ["redraw"]]);
 

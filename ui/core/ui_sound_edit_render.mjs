@@ -1,4 +1,3 @@
-import { editSoundSlotLabel } from './ui_routes.mjs';
 import {
     SCHWUNG_SOUND_COMPONENTS,
     clampComponentIndex,
@@ -7,26 +6,13 @@ import {
     truncText,
     visibleParamList
 } from './ui_sound_edit_model.mjs';
-
-function componentDetailLine(page) {
-    const idx = clampComponentIndex(page.selectedIndex);
-    const component = SCHWUNG_SOUND_COMPONENTS[idx];
-    if (!component || !component.read) return truncText('Deep Edit opens Schwung', 21);
-    const module = page.modules && page.modules[idx];
-    const name = module && module.name ? module.name : '--';
-    const status = module && module.status && module.status !== 'installed' ? (' ' + module.status) : '';
-    return truncText(component.label + ' ' + name + status, 21);
-}
-
-function chainParamDetailLine(page) {
-    const params = selectedParamList(page);
-    if (!params.length) return 'Params --';
-    const parts = [];
-    for (let i = 0; i < params.length && parts.length < 2; i++) {
-        parts.push(params[i].displayPrefix + params[i].number + ' ' + truncText(params[i].name, 7));
-    }
-    return truncText(parts.join('  '), 21);
-}
+import {
+    compactLayoutLabel,
+    compactLayoutValue,
+    renderEncoderValueGrid,
+    renderHeaderPill,
+    splitLayoutWords
+} from '../render/ui_oled_layout.mjs';
 
 function renderSchwungSoundParamDetail(surface, page) {
     const params = selectedParamList(page);
@@ -55,12 +41,12 @@ function renderSchwungSoundParamDetail(surface, page) {
         const row = i % 4;
         const y = 12 + row * 10;
         if (!p) {
-            surface.print(col, y, 'K' + (i + 1) + ' --', 1);
+            surface.print(col, y, '-- --', 1);
             continue;
         }
-        surface.print(col, y, compactEncoderCell(i, p), 1);
+        surface.print(col, y, compactParamCell(p, 10), 1);
     }
-    if (pageCount > 1) surface.print(0, 54, 'Jog bank  Click back', 1);
+    if (pageCount > 1) surface.print(96, 54, String(pageIdx + 1) + '/' + pageCount, 1);
     return true;
 }
 
@@ -158,32 +144,57 @@ function firstFiniteNumber() {
 }
 
 function readableParamName(name) {
-    return String(name || '').replace(/_/g, ' ');
+    return splitLayoutWords(name).join(' ');
 }
 
-function compactEncoderCell(idx, p) {
-    const value = truncText(displayParamValue(p), 4);
-    const name = abbreviateParamName(p.name || p.key || '', Math.max(1, 10 - 4 - value.length));
-    return truncText('K' + (idx + 1) + ' ' + name + ' ' + value, 10);
-}
-
-function abbreviateParamName(name, maxLen) {
-    name = String(name || '').replace(/_/g, ' ');
+function compactParamCell(p, maxLen) {
     maxLen = maxLen | 0;
-    if (name.length <= maxLen) return name;
-    const parts = name.split(/\s+/).filter(Boolean);
-    if (parts.length > 1) {
-        const last = parts[parts.length - 1];
-        if (/^\d+$/.test(last)) {
-            const numbered = parts[0].charAt(0) + last;
-            if (numbered.length <= maxLen) return numbered;
-        }
-        const initials = parts.map(function(p) { return p.charAt(0); }).join('');
-        if (initials.length <= maxLen) return initials;
+    const value = compactLayoutValue(displayParamValue(p), Math.min(5, Math.max(2, maxLen - 2)));
+    const labelBudget = Math.max(1, maxLen - value.length - 1);
+    const label = compactSoundParamLabel(p, labelBudget);
+    return truncText(label + ' ' + value, maxLen);
+}
+
+function renderSoundHeader(surface, page, component) {
+    const title = truncText('T' + (page.track + 1) + ' ' + compactSlotTitle(component.label), 8);
+    const idx = clampComponentIndex(page.selectedIndex);
+    const module = page.modules && page.modules[idx];
+    const name = module && module.name ? module.name : 'Empty';
+    renderHeaderPill(surface, title, name, { titleMax: 8, pillMax: 10 });
+}
+
+function compactSlotTitle(label) {
+    label = String(label || '');
+    if (label === 'MIDI FX') return 'MIDI FX';
+    if (label === 'Synth') return 'SYNTH';
+    if (label === 'FX 1') return 'FX1';
+    if (label === 'FX 2') return 'FX2';
+    return label.toUpperCase();
+}
+
+function renderParamGrid(surface, page, startY) {
+    const params = visibleParamList(page);
+    const pageCount = Math.max(1, Math.ceil(params.length / 8));
+    const pageIdx = Math.max(0, Math.min(pageCount - 1, Math.floor((page.paramDetailIndex | 0) / 8)));
+    const start = pageIdx * 8;
+    const cells = [];
+    for (let i = 0; i < 8; i++) {
+        const p = params[start + i];
+        if (p) cells.push({
+            label: p.shortName || p.short_name || p.name || p.label || p.key || '',
+            value: displayParamValue(p)
+        });
     }
-    const compact = name.replace(/[aeiou]/gi, '');
-    if (compact.length >= 2) return truncText(compact, maxLen);
-    return truncText(name, maxLen);
+    renderEncoderValueGrid(surface, cells, {
+        mode: 'encoder-grid',
+        startY,
+        pageIdx,
+        pageCount
+    });
+}
+
+function compactSoundParamLabel(p, maxLen) {
+    return compactLayoutLabel(p.shortName || p.short_name || p.name || p.label || p.key || '', maxLen);
 }
 
 export function renderSchwungSoundPage(S, surface) {
@@ -213,19 +224,10 @@ export function renderSchwungSoundPage(S, surface) {
         }
         return true;
     }
-    if (page.paramDetail) return renderSchwungSoundParamDetail(surface, page);
-    surface.print(0, 0, 'SOUND T' + (page.track + 1) + ' ' + editSoundSlotLabel(page.slot), 1);
-    const start = Math.max(0, Math.min(page.selectedIndex | 0, SCHWUNG_SOUND_COMPONENTS.length - 3));
-    for (let i = 0; i < 3; i++) {
-        const idx = start + i;
-        const c = SCHWUNG_SOUND_COMPONENTS[idx];
-        const prefix = idx === page.selectedIndex ? '>' : ' ';
-        const name = page.names && page.names[idx] ? page.names[idx] : '--';
-        const value = c.read ? (' ' + name) : '';
-        surface.print(0, 12 + i * 10, truncText(prefix + c.label + value, 21), 1);
-    }
-    if (surface.fill_rect) surface.fill_rect(0, 43, 128, 1, 1);
-    surface.print(0, 46, componentDetailLine(page), 1);
-    surface.print(0, 56, chainParamDetailLine(page), 1);
+    if (page.paramDetail && page.touchedParam) return renderSchwungSoundParamDetail(surface, page);
+    const selectedIndex = clampComponentIndex(page.selectedIndex);
+    const component = SCHWUNG_SOUND_COMPONENTS[selectedIndex];
+    renderSoundHeader(surface, page, component);
+    renderParamGrid(surface, page, 14);
     return true;
 }
