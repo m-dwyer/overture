@@ -10,6 +10,7 @@ import type { DisplaySink, FileStore, LedSink } from "@/host/sinks.js";
 import { createMockDsp } from "@/mock-dsp.js";
 import { createWasmDsp } from "@/wasm-dsp.js";
 import type { Dsp } from "@/dsp.js";
+import { setLedPaletteEntryRGB } from "@/led-palette.js";
 import { NAV, NOTE_OFF, NOTE_ON, STEP_CC0, type Send } from "@/lib/move-controls";
 import { OledScreen } from "./OledScreen";
 import { Shell } from "./Shell";
@@ -200,6 +201,11 @@ export function App() {
       setButtonLED(cc, c) {
         buttonLedsMap.set(cc, c);
         shellLedsRef.current?.setButtonLED(cc, c);
+      },
+      setPaletteEntryRGB(index, r, g, b) {
+        setLedPaletteEntryRGB(index, r, g, b);
+        for (const [i, c] of ledsMap) shellLedsRef.current?.setLED(i, c);
+        for (const [cc, c] of buttonLedsMap) shellLedsRef.current?.setButtonLED(cc, c);
       },
       clearAll() {
         ledsMap.clear();

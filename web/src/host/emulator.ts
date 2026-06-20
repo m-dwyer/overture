@@ -27,6 +27,36 @@ export interface Emulator {
   readonly dsp: Dsp;
 }
 
+function usbMidiSysexBytes(pkt: number[]): number[] {
+  const bytes: number[] = [];
+  for (let i = 0; i < pkt.length; i += 4) {
+    const cin = pkt[i] & 0x0f;
+    const count = cin === 0x05 ? 1 : cin === 0x06 ? 2 : cin === 0x07 || cin === 0x04 ? 3 : 0;
+    for (let j = 0; j < count; j++) bytes.push(pkt[i + 1 + j] ?? 0);
+  }
+  return bytes;
+}
+
+function parsePaletteEntry(pkt: number[]): { index: number; r: number; g: number; b: number } | null {
+  const b = usbMidiSysexBytes(pkt);
+  if (
+    b.length < 17 ||
+    b[0] !== 0xf0 ||
+    b[1] !== 0x00 ||
+    b[2] !== 0x21 ||
+    b[3] !== 0x1d ||
+    b[4] !== 0x01 ||
+    b[5] !== 0x01 ||
+    b[6] !== 0x03
+  ) return null;
+  return {
+    index: b[7] & 0x7f,
+    r: Math.min(255, (b[8] & 0x7f) | ((b[9] & 0x7f) << 7)),
+    g: Math.min(255, (b[10] & 0x7f) | ((b[11] & 0x7f) << 7)),
+    b: Math.min(255, (b[12] & 0x7f) | ((b[13] & 0x7f) << 7)),
+  };
+}
+
 export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const { dsp, display, leds } = opts;
   const strict = opts.strict ?? false;
@@ -109,6 +139,11 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const setButtonLED = (cc: number, color: number): void => leds.setButtonLED(cc, color);
   const clearAllLEDs = (): void => leds.clearAll();
   const move_midi_internal_send = (pkt: number[]): void => {
+    const palette = parsePaletteEntry(pkt);
+    if (palette) {
+      leds.setPaletteEntryRGB?.(palette.index, palette.r, palette.g, palette.b);
+      return;
+    }
     const status = (pkt[1] ?? 0) & 0xf0, idx = pkt[2] ?? 0, color = pkt[3] ?? 0;
     if (status === 0x90) leds.setLED(idx, color);
     else if (status === 0xb0) leds.setButtonLED(idx, color);

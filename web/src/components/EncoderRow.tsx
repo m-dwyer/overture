@@ -46,7 +46,7 @@ function Encoder({ idx, send }: { idx: number; send: Send }) {
       <span
         ref={ledRef(reg.buttons, cc)}
         aria-hidden="true"
-        className="h-1.5 w-5 rounded-full border border-line bg-bg/80 shadow-inner"
+        className="h-2.5 w-2.5 rounded-full border border-line bg-bg/80 shadow-inner"
       />
       <span className="text-center text-[9px] text-muted">K{idx + 1}</span>
     </div>
