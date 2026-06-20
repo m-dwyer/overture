@@ -3,22 +3,11 @@ import {
     queueLiveNoteOn
 } from '../pad/ui_pad_surface.mjs';
 
-/**
- * Live-note recording sub-state, owned by the Recording Workflow concept
- * (held on the dedicated workflowState, not on `S`).
- *
- * @typedef {Object} LiveNoteRecordingState
- * @property {Map<number, number>} recordingNoteTrack  pitch -> record realtime tick
- * @property {Map<number, { track: number, recording: boolean }>} extHeldNotes  external-MIDI held notes
- */
-
-/** @returns {LiveNoteRecordingState} */
-export function createLiveNoteRecordingState() {
-    return {
-        recordingNoteTrack: new Map(),
-        extHeldNotes: new Map()
-    };
-}
+/* The live-note recording sub-state (LiveNoteRecordingState + its factory) lives
+ * in ui_recording_workflow.mjs — it is owned by the Recording Workflow concept,
+ * and co-locating it there keeps this module free of a recording import (which
+ * would cycle via pad-surface). recordNoteOnImpl/OffImpl operate on that state
+ * object, passed in by the caller. */
 
 export function recordNoteOnImpl(S, state, pitch, velocity, rt) {
     state.recordingNoteTrack.set(pitch, rt);

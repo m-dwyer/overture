@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
-  createLiveNoteRecordingState,
   extNoteOffAllImpl,
   liveSendNoteImpl,
   recordNoteOnImpl,
 } from "@overture-ui/perform/ui_live_note_workflow.mjs";
+import { createLiveNoteRecordingState } from "@overture-ui/perform/ui_recording_workflow.mjs";
 
 function calls() {
   const log: Array<[string, ...unknown[]]> = [];

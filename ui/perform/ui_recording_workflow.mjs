@@ -1,8 +1,23 @@
-import {
-    createLiveNoteRecordingState
-} from './ui_live_note_workflow.mjs';
+/**
+ * Live-note recording sub-state, owned by the Recording Workflow concept
+ * (held on the dedicated workflowState, not on `S`). Relocated here from
+ * ui_live_note_workflow.mjs: it always belonged to this concept, and keeping it
+ * here cuts the recording->live-note import edge so drum-recording producers
+ * (incl. pad-surface, which live-note imports) can delegate to this module
+ * without a no-circular violation.
+ *
+ * @typedef {Object} LiveNoteRecordingState
+ * @property {Map<number, number>} recordingNoteTrack  pitch -> record realtime tick
+ * @property {Map<number, { track: number, recording: boolean }>} extHeldNotes  external-MIDI held notes
+ */
 
-/** @typedef {import('./ui_live_note_workflow.mjs').LiveNoteRecordingState} LiveNoteRecordingState */
+/** @returns {LiveNoteRecordingState} */
+export function createLiveNoteRecordingState() {
+    return {
+        recordingNoteTrack: new Map(),
+        extHeldNotes: new Map()
+    };
+}
 
 /**
  * The Recording Workflow's dedicated state object (kept off `S` — the shape the
