@@ -361,7 +361,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "ref-16-schwung-sound.png",
-        expect: { activeTrack: 4, oledIncludes: ["Synth", "linein"] },
+        expect: { activeTrack: 4, oledIncludes: ["SYNTH", "linein"] },
         title: "Open the Schwung Sound page",
         action: "Select track 5, then hold Shift + tap Step 3",
         showing: "Sound page: Synth component params are mapped to K1-K8",
@@ -393,7 +393,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "ref-18-schwung-components.png",
-        expect: { activeTrack: 4, oledIncludes: ["FX 1"] },
+        expect: { activeTrack: 4, oledIncludes: ["FX1"] },
         title: "Jump between Schwung components",
         action: "While Sound is open, tap Step 3",
         showing: "Component jump: Step 1-4 select MIDI FX, Synth, FX 1, FX 2",
