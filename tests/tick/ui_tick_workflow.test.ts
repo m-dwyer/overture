@@ -356,10 +356,11 @@ test('ui.js keeps the public tick callback and error wrapper while delegating to
     assert.match(source, /function _tickImpl\(\) \{\s*runTickWorkflow\(S, createTickWorkflowDeps\(\)\);\s*\}/);
 });
 
-test('ui.js wires Sound Edit preset save to the shared text entry opener', async () => {
+test('ui.js wires Sound Edit preset save to the Overture text keyboard component', async () => {
     const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
-    assert.match(source, /openTextEntry,[\s\S]*tickTextEntry[\s\S]*from '\/data\/UserData\/schwung\/shared\/text_entry\.mjs';/);
-    assert.match(source, /return beginSaveSchwungSoundPreset\(openTextEntry\);/);
+    assert.doesNotMatch(source, /from '\/data\/UserData\/schwung\/shared\/text_entry\.mjs';/);
+    assert.match(source, /createTextKeyboard[\s\S]*from '\.\/components\/ui_text_keyboard\.mjs';/);
+    assert.match(source, /return beginSaveSchwungSoundPreset\(textKeyboard\(\)\);/);
 });
 
 test('ui.js bootstraps dev debug logging behind the build flag', async () => {
@@ -374,7 +375,7 @@ test('ui.js clears held modifiers before text entry consumes release MIDI', asyn
     assert.match(source, /if \(d1 === MoveCapture && S\.captureHeld\) \{\s*S\.captureHeld = false;/);
     assert.match(
         source,
-        /if \(isTextEntryActive\(\)\) \{\s*syncHeldModifierReleaseBeforeTextEntry\(data\);\s*handleTextEntryMidi\(data\);\s*S\.screenDirty = true;\s*return;\s*\}/
+        /if \(textKeyboard\(\)\.isActive\(\)\) \{\s*syncHeldModifierReleaseBeforeTextEntry\(data\);\s*textKeyboard\(\)\.handleMidi\(data\);\s*if \(!textKeyboard\(\)\.isActive\(\)\) \{\s*invalidateLEDCache\(\);\s*computePadNoteMap\(\);\s*\}\s*S\.screenDirty = true;\s*return;\s*\}/
     );
 });
 
@@ -382,7 +383,7 @@ test('ui.js immediately repushes pad map after Sound Edit browser selection', as
     const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
     assert.match(
         source,
-        /applySchwungSoundBrowserSelection: function \(\) \{[\s\S]*const handled = applySchwungSoundBrowserSelection\(\);\s*computePadNoteMap\(\);[\s\S]*return handled;\s*\}/
+        /applySchwungSoundBrowserSelection: function \(\) \{[\s\S]*const handled = applySchwungSoundBrowserSelection\(textKeyboard\(\)\);\s*computePadNoteMap\(\);[\s\S]*return handled;\s*\}/
     );
 });
 

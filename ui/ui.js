@@ -62,12 +62,8 @@ import {
 } from '/data/UserData/schwung/shared/menu_layout.mjs';
 
 import {
-    drawTextEntry,
-    handleTextEntryMidi,
-    isTextEntryActive,
-    openTextEntry,
-    tickTextEntry
-} from '/data/UserData/schwung/shared/text_entry.mjs';
+    createTextKeyboard
+} from './components/ui_text_keyboard.mjs';
 
 import {
     MoveNoteSession, MoveUndo, MoveLoop, MoveCopy, MoveMainTouch, MoveRec,
@@ -107,6 +103,7 @@ import {
     beginSaveSchwungSoundPreset,
     closeSchwungSoundBrowser,
     closeSchwungSoundPage,
+    expireSchwungSoundStatusFlash,
     expireSchwungSoundParamPeek,
     openSchwungSoundBrowser,
     openSchwungSoundPresetBrowser,
@@ -1626,9 +1623,25 @@ function renderSurface() {
     return _renderSurface;
 }
 
+let _textKeyboard = null;
+function textKeyboard() {
+    if (_textKeyboard === null) {
+        _textKeyboard = createTextKeyboard({
+            print,
+            fill_rect,
+            clear_screen,
+            decodeDelta,
+            moveMidiInternalSend: typeof move_midi_internal_send === 'function' ? move_midi_internal_send : null,
+            getPadLedSnapshot: typeof shadow_get_pad_led_snapshot === 'function' ? shadow_get_pad_led_snapshot : null,
+            hostPadBlock: typeof host_pad_block === 'function' ? host_pad_block : null
+        });
+    }
+    return _textKeyboard;
+}
+
 function drawUI() {
-    if (isTextEntryActive()) {
-        drawTextEntry();
+    if (textKeyboard().isActive()) {
+        textKeyboard().render();
         return;
     }
     return drawUIImpl(S, {
@@ -1878,7 +1891,10 @@ function createTickWorkflowDeps() {
         KNOB_TURN_HIGHLIGHT_TICKS,
         PARAM_PEEK_DETAIL_TICKS,
         expireSchwungSoundParamPeek,
-        tickTextEntry,
+        expireSchwungSoundStatusFlash,
+        tickTextEntry: function () {
+            return textKeyboard().tick();
+        },
         STEP_SAVE_HOLD_TICKS,
         STEP_SAVE_FLASH_TICKS,
         STEP_HOLD_TICKS,
@@ -2369,14 +2385,14 @@ function createJogCcWorkflowDeps() {
         openSchwungSoundBrowser,
         openSchwungSoundPresetBrowser,
         beginSaveSchwungSoundPreset: function () {
-            return beginSaveSchwungSoundPreset(openTextEntry);
+            return beginSaveSchwungSoundPreset(textKeyboard());
         },
         applySchwungSoundBrowserSelection: function () {
             OVERTURE_DEBUG_LOG && dlog('DEBUG', 'sound-edit wrapper apply-browser before padmap copy=' + (S.copyHeld ? 1 : 0)
                 + ' cap=' + (S.captureHeld ? 1 : 0)
                 + ' sv=' + (S.sessionView ? 1 : 0)
                 + ' lastMuted=' + (S.lastPushedMuted ? 1 : 0));
-            const handled = applySchwungSoundBrowserSelection();
+            const handled = applySchwungSoundBrowserSelection(textKeyboard());
             computePadNoteMap();
             OVERTURE_DEBUG_LOG && dlog('DEBUG', 'sound-edit wrapper apply-browser after padmap handled=' + (handled ? 1 : 0)
                 + ' copy=' + (S.copyHeld ? 1 : 0)
@@ -2468,9 +2484,13 @@ function syncHeldModifierReleaseBeforeTextEntry(data) {
 
 globalThis.onMidiMessageInternal = function (data) { runEntrypoint('onMidiInternal', function () { _onMidiInternalImpl(data); }); };
 function _onMidiInternalImpl(data) {
-    if (isTextEntryActive()) {
+    if (textKeyboard().isActive()) {
         syncHeldModifierReleaseBeforeTextEntry(data);
-        handleTextEntryMidi(data);
+        textKeyboard().handleMidi(data);
+        if (!textKeyboard().isActive()) {
+            invalidateLEDCache();
+            computePadNoteMap();
+        }
         S.screenDirty = true;
         return;
     }

@@ -19,6 +19,15 @@ import {
     visibleParamList
 } from './ui_sound_edit_model.mjs';
 import {
+    expireStatusFlash,
+    showStatusFlash
+} from '../components/ui_status_flash.mjs';
+import {
+    confirmPromptAction,
+    createConfirmPrompt,
+    rotateConfirmPrompt
+} from '../components/ui_confirm_prompt.mjs';
+import {
     listSchwungSoundPresets,
     loadSchwungSoundPreset,
     saveSchwungSoundPreset,
@@ -26,6 +35,8 @@ import {
 } from './ui_sound_preset_manager.mjs';
 
 const SOUND_PARAM_PEEK_MS = 1000;
+const SOUND_STATUS_FLASH_TICKS = 90;
+const CREATE_PRESET_ENTRY = { name: 'Create new', createNew: true };
 
 export {
     SCHWUNG_SOUND_COMPONENTS,
@@ -181,6 +192,8 @@ export function openSchwungSoundPage(t, slot) {
         browserIndex: 0,
         noList: false,
         browserMessage: '',
+        overwriteConfirm: null,
+        statusFlash: null,
         paramDetail: false,
         paramDetailIndex: 0,
         touchedParam: null,
@@ -211,6 +224,7 @@ export function closeSchwungSoundBrowser() {
     page.browserIndex = 0;
     page.noList = false;
     page.browserMessage = '';
+    page.overwriteConfirm = null;
     S.screenDirty = true;
     return true;
 }
@@ -291,45 +305,87 @@ export function openSchwungSoundPresetBrowser() {
     page.browserIndex = 0;
     page.noList = items.length === 0;
     page.browserMessage = items.length ? '' : 'NO PRESETS';
+    page.overwriteConfirm = null;
     S.screenDirty = true;
     OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-browser-open items=' + items.length);
     soundEditTraceState('preset-browser-open-after', page);
     return true;
 }
 
-export function beginSaveSchwungSoundPreset(openTextEntryFn) {
-    const page = S.schwungSoundPage;
-    if (!page || page.slot < 0 || typeof openTextEntryFn !== 'function') return false;
-    const initialText = suggestedSchwungSoundPresetName(SCHWUNG_SOUND_COMPONENTS, page);
-    openTextEntryFn({
-        title: 'Save Preset',
-        initialText,
-        padSelect: true,
+function openTextKeyboard(textKeyboard, opts) {
+    if (textKeyboard && typeof textKeyboard.open === 'function') return textKeyboard.open(opts);
+    if (typeof textKeyboard === 'function') {
+        textKeyboard(opts);
+        return true;
+    }
+    return false;
+}
+
+function resetSoundBrowser(page) {
+    page.browser = false;
+    page.browserKind = '';
+    page.browserItems = [];
+    page.browserIndex = 0;
+    page.noList = false;
+    page.overwriteConfirm = null;
+}
+
+function saveSchwungSoundPresetWithFeedback(page, name) {
+    const result = saveSchwungSoundPreset(SCHWUNG_SOUND_COMPONENTS, page, name);
+    showStatusFlash(page, result && result.ok ? 'SAVED' : ((result && result.reason) || 'SAVE FAILED'), S.tickCount, SOUND_STATUS_FLASH_TICKS);
+    resetSoundBrowser(page);
+    releaseSoundBrowserPadModalState();
+    S.screenDirty = true;
+    OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit save-confirm result=' + (result && result.ok ? 'ok' : ((result && result.reason) || 'fail')));
+    soundEditTraceState('save-confirm-after', page);
+    return result;
+}
+
+function openSchwungSoundPresetNameEntry(textKeyboard, page, initialText) {
+    return openTextKeyboard(textKeyboard, {
+        title: 'Name',
+        defaultText: initialText,
         onConfirm: function(name) {
             OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit save-confirm name=' + String(name || ''));
-            const result = saveSchwungSoundPreset(SCHWUNG_SOUND_COMPONENTS, page, name);
-            page.browserMessage = result && result.ok ? 'SAVED' : ((result && result.reason) || 'SAVE FAILED');
-            page.browser = false;
-            page.browserKind = '';
-            page.browserItems = [];
-            page.browserIndex = 0;
-            page.noList = false;
-            S.screenDirty = true;
-            OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit save-confirm result=' + (result && result.ok ? 'ok' : ((result && result.reason) || 'fail')));
-            soundEditTraceState('save-confirm-after', page);
+            saveSchwungSoundPresetWithFeedback(page, name);
         },
         onCancel: function() {
+            releaseSoundBrowserPadModalState();
             S.screenDirty = true;
         }
     });
+}
+
+export function beginSaveSchwungSoundPreset(textKeyboard) {
+    const page = S.schwungSoundPage;
+    if (!page || page.slot < 0) return false;
+    const items = listSchwungSoundPresets(SCHWUNG_SOUND_COMPONENTS, page).concat([CREATE_PRESET_ENTRY]);
+    page.browser = true;
+    page.browserKind = 'preset-save';
+    page.browserItems = items;
+    page.browserIndex = 0;
+    page.noList = false;
+    page.browserMessage = '';
+    page.overwriteConfirm = null;
     S.screenDirty = true;
+    OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-save-browser-open items=' + items.length);
     return true;
 }
 
-export function applySchwungSoundBrowserSelection() {
+export function applySchwungSoundBrowserSelection(textKeyboard) {
     const page = S.schwungSoundPage;
     if (!page || !page.browser || page.slot < 0 || page.noList) return false;
     soundEditTraceState('browser-apply-before', page);
+    if (page.overwriteConfirm) {
+        const prompt = page.overwriteConfirm;
+        page.overwriteConfirm = null;
+        if (confirmPromptAction(prompt) === 'confirm') {
+            saveSchwungSoundPresetWithFeedback(page, prompt.payload && prompt.payload.name ? prompt.payload.name : '');
+        } else {
+            S.screenDirty = true;
+        }
+        return true;
+    }
     if (page.browserKind === 'preset') {
         const entry = page.browserItems[page.browserIndex | 0];
         OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-apply index=' + (page.browserIndex | 0)
@@ -341,12 +397,33 @@ export function applySchwungSoundBrowserSelection() {
         page.browserItems = [];
         page.browserIndex = 0;
         page.noList = false;
-        page.browserMessage = result && result.ok ? 'LOADED' : ((result && result.reason) || 'LOAD FAILED');
+        showStatusFlash(page, result && result.ok ? 'LOADED' : ((result && result.reason) || 'LOAD FAILED'), S.tickCount, SOUND_STATUS_FLASH_TICKS);
         page.paramValueOverrides = {};
         releaseSoundBrowserPadModalState();
         refreshSchwungSoundPageModules();
         OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-apply result=' + (result && result.ok ? 'ok' : ((result && result.reason) || 'fail')));
         soundEditTraceState('browser-apply-after', page);
+        return true;
+    }
+    if (page.browserKind === 'preset-save') {
+        const entry = page.browserItems[page.browserIndex | 0];
+        if (!entry) return false;
+        if (entry.createNew) {
+            const initialText = suggestedSchwungSoundPresetName(SCHWUNG_SOUND_COMPONENTS, page);
+            if (!openSchwungSoundPresetNameEntry(textKeyboard, page, initialText)) return false;
+            resetSoundBrowser(page);
+            S.screenDirty = true;
+            return true;
+        }
+        page.overwriteConfirm = createConfirmPrompt({
+            title: 'Overwrite?',
+            message: entry.name || '',
+            cancelLabel: 'No',
+            confirmLabel: 'Yes',
+            defaultConfirm: false,
+            payload: entry
+        });
+        S.screenDirty = true;
         return true;
     }
     const component = SCHWUNG_SOUND_COMPONENTS[clampComponentIndex(page.selectedIndex)];
@@ -373,6 +450,11 @@ export function rotateSchwungSoundPage(delta) {
     const page = S.schwungSoundPage;
     if (!page || delta === 0) return false;
     if (page.browser) {
+        if (page.overwriteConfirm) {
+            if (!rotateConfirmPrompt(page.overwriteConfirm, delta)) return false;
+            S.screenDirty = true;
+            return true;
+        }
         const n = page.browserItems.length;
         if (n > 0) page.browserIndex = Math.max(0, Math.min(n - 1, (page.browserIndex | 0) + delta));
     } else if (page.paramDetail) {
@@ -505,6 +587,13 @@ export function expireSchwungSoundParamPeek() {
         return false;
     }
     page.touchedParam = null;
+    S.screenDirty = true;
+    return true;
+}
+
+export function expireSchwungSoundStatusFlash() {
+    const page = S.schwungSoundPage;
+    if (!expireStatusFlash(page, S.tickCount)) return false;
     S.screenDirty = true;
     return true;
 }

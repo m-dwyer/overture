@@ -72,11 +72,8 @@ function presetFile(id) {
     return SOUND_PRESET_DIR + '/' + sanitizeFilePart(id) + '.json';
 }
 
-function defaultPresetName(module, d) {
-    d = d || new Date();
-    function p2(n) { return n < 10 ? '0' + n : '' + n; }
-    const stamp = p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes());
-    return String((module && module.name) || (module && module.id) || 'Preset') + ' ' + stamp;
+function defaultPresetName() {
+    return 'Preset';
 }
 
 function captureParams(slot, params) {
@@ -92,7 +89,20 @@ function captureParams(slot, params) {
 }
 
 export function suggestedSchwungSoundPresetName(components, page) {
-    return defaultPresetName(selectedModule(page));
+    const base = defaultPresetName(selectedModule(page));
+    const presets = listSchwungSoundPresets(components, page);
+    for (let i = 1; i < 1000; i++) {
+        const candidate = base + ' ' + i;
+        let used = false;
+        for (let j = 0; j < presets.length; j++) {
+            if (presets[j] && presets[j].name === candidate) {
+                used = true;
+                break;
+            }
+        }
+        if (!used) return candidate;
+    }
+    return base;
 }
 
 export function listSchwungSoundPresets(components, page) {

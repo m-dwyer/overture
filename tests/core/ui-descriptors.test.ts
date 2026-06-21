@@ -9,6 +9,7 @@ import {
   beginSaveSchwungSoundPreset,
   closeSchwungSoundPage,
   expireSchwungSoundParamPeek,
+  expireSchwungSoundStatusFlash,
   openSchwungSoundBrowser,
   openSchwungSoundPresetBrowser,
   requestEditSoundForTrack,
@@ -256,10 +257,14 @@ describe("UI descriptor seams", () => {
       [0, "synth:tone", "1"],
     ]);
     expect(S.schwungSoundPage?.browser).toBe(false);
-    expect(S.schwungSoundPage?.browserMessage).toBe("LOADED");
+    expect(S.schwungSoundPage?.browserMessage).toBe("");
+    expect(S.schwungSoundPage?.statusFlash).toMatchObject({ text: "LOADED", endTick: 190 });
     expect(S.copyHeld).toBe(false);
     expect(S.pendingPadNoteMapRecompute).toBe(true);
     expect(padBlocks).toEqual([0]);
+    S.tickCount = 191;
+    expect(expireSchwungSoundStatusFlash()).toBe(true);
+    expect(S.schwungSoundPage?.statusFlash).toBe(null);
   });
 
   test("Schwung Sound preset manager saves under Overture home with a manifest", () => {
@@ -422,20 +427,80 @@ describe("UI descriptor seams", () => {
     });
   });
 
-  test("Schwung Sound preset save opens text entry as a pad-typing modal", () => {
+  test("Schwung Sound preset save opens manager list with overwrite and create-new paths", () => {
     let opened: any = null;
+    const files = new Map<string, string>();
+    files.set("/data/UserData/overture/sound_presets/manifest.json", JSON.stringify({
+      v: 1,
+      presets: [
+        {
+          id: "dust",
+          name: "Dust Pad",
+          ts: 20,
+          scope: "synth/dustline",
+          componentPrefix: "synth",
+          moduleId: "dustline",
+          file: "/data/UserData/overture/sound_presets/dust.json",
+        },
+      ],
+    }));
+    const padBlocks: number[] = [];
+    Reflect.set(globalThis, "host_ensure_dir", () => true);
+    Reflect.set(globalThis, "host_read_file", (path: string) => files.get(path) ?? null);
+    Reflect.set(globalThis, "host_write_file", (path: string, data: string) => {
+      files.set(path, data);
+      return true;
+    });
+    Reflect.set(globalThis, "host_pad_block", (blocked: number) => {
+      padBlocks.push(blocked);
+      return true;
+    });
     Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => ({
       synth_module: "dustline",
       "synth:chain_params": JSON.stringify([{ key: "macro", name: "Macro" }]),
+      "synth:macro": "0.5",
     } as Record<string, string>)[key] ?? "");
 
     requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
     expect(beginSaveSchwungSoundPreset((opts: any) => { opened = opts; })).toBe(true);
+    expect(opened).toBe(null);
+    expect(S.schwungSoundPage).toMatchObject({
+      browser: true,
+      browserKind: "preset-save",
+      browserIndex: 0,
+      noList: false,
+    });
+    expect(S.schwungSoundPage?.browserItems).toMatchObject([
+      { name: "Dust Pad" },
+      { name: "Create new", createNew: true },
+    ]);
 
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    expect(S.schwungSoundPage?.overwriteConfirm).toMatchObject({
+      title: "Overwrite?",
+      message: "Dust Pad",
+      selected: 0,
+    });
+    expect(files.get("/data/UserData/overture/sound_presets/dust.json")).toBe(undefined);
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    expect(files.get("/data/UserData/overture/sound_presets/dust.json")).toBe(undefined);
+
+    expect(beginSaveSchwungSoundPreset((opts: any) => { opened = opts; })).toBe(true);
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    rotateSchwungSoundPage(1);
+    expect(S.schwungSoundPage?.overwriteConfirm).toMatchObject({ selected: 1 });
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    const overwritten = JSON.parse(files.get("/data/UserData/overture/sound_presets/dust.json")!);
+    expect(overwritten).toMatchObject({ name: "Dust Pad", params: { macro: "0.5" } });
+    expect(S.schwungSoundPage?.statusFlash).toMatchObject({ text: "SAVED" });
+    expect(padBlocks).toEqual([0]);
+
+    expect(beginSaveSchwungSoundPreset((opts: any) => { opened = opts; })).toBe(true);
+    S.schwungSoundPage!.browserIndex = 1;
+    expect(applySchwungSoundBrowserSelection((opts: any) => { opened = opts; })).toBe(true);
     expect(opened).toMatchObject({
-      title: "Save Preset",
-      initialText: expect.stringContaining("dustline"),
-      padSelect: true,
+      title: "Name",
+      defaultText: "Preset 1",
     });
   });
 

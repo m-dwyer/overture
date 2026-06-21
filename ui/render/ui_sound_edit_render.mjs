@@ -14,6 +14,12 @@ import {
     renderHeaderPill,
     splitLayoutWords
 } from './ui_oled_layout.mjs';
+import {
+    activeStatusFlashText
+} from '../components/ui_status_flash.mjs';
+import {
+    renderConfirmPrompt
+} from '../components/ui_confirm_prompt.mjs';
 
 function renderSchwungSoundParamDetail(surface, page) {
     const params = selectedParamList(page);
@@ -210,11 +216,14 @@ export function renderSchwungSoundPage(surface) {
         return true;
     }
     if (page.browser) {
+        if (page.overwriteConfirm) return renderConfirmPrompt(surface, page.overwriteConfirm);
         const component = SCHWUNG_SOUND_COMPONENTS[clampComponentIndex(page.selectedIndex)];
-        const title = page.browserKind === 'preset' ? component.label + ' Presets' : component.label;
+        const title = page.browserKind === 'preset-save' ? 'Save ' + component.label
+            : page.browserKind === 'preset' ? component.label + ' Presets'
+            : component.label;
         surface.print(0, 0, truncText(title, 21), 1);
         if (page.noList) {
-            surface.print(0, 18, page.browserKind === 'preset' ? 'NO PRESETS' : 'NO LIST', 1);
+            surface.print(0, 18, page.browserKind === 'preset' || page.browserKind === 'preset-save' ? 'NO PRESETS' : 'NO LIST', 1);
             if (page.browserMessage && page.browserMessage !== 'NO LIST' && page.browserMessage !== 'NO PRESETS')
                 surface.print(0, 32, truncText(page.browserMessage, 21), 1);
             return true;
@@ -232,7 +241,10 @@ export function renderSchwungSoundPage(surface) {
     const component = SCHWUNG_SOUND_COMPONENTS[selectedIndex];
     renderSoundHeader(surface, page, component);
     renderParamGrid(surface, page, 14);
-    if (page.browserMessage)
+    const statusText = activeStatusFlashText(page, S.tickCount);
+    if (statusText)
+        surface.print(0, 54, truncText(statusText, 21), 1);
+    else if (page.browserMessage)
         surface.print(0, 54, truncText(page.browserMessage, 21), 1);
     return true;
 }
