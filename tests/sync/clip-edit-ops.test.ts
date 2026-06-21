@@ -147,10 +147,15 @@ describe("clearClip", () => {
       playing: true,
       trackClipPlaying: [false, false],
       trackActiveClip: [0, 0],
+      pendingDefaultSetParams: [{ key: "older", val: "1" }],
     });
     clearClipImpl(S, makeDeps(c), 0, 0, false);
-    // _clear unshifted first, launch_clip pushed at the end.
-    expect(S.pendingDefaultSetParams).toContainEqual({ key: "t0_launch_clip", val: "0" });
+    // _clear is priority-unshifted before older queued work; launch_clip is appended.
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "t0_c0_clear", val: "1" },
+      { key: "older", val: "1" },
+      { key: "t0_launch_clip", val: "0" },
+    ]);
     expect((S.trackQueuedClip as any)[0]).toBe(0);
   });
 
@@ -168,9 +173,15 @@ describe("clearClip", () => {
 describe("hardResetClip", () => {
   test("melodic: unshifts hard_reset, resets length/tps + bank defaults", () => {
     const c = calls();
-    const S = makeState({ clipLength: grid([2, 2], () => 64) });
+    const S = makeState({
+      clipLength: grid([2, 2], () => 64),
+      pendingDefaultSetParams: [{ key: "older", val: "1" }],
+    });
     hardResetClipImpl(S, makeDeps(c), 0, 0);
-    expect(S.pendingDefaultSetParams[0]).toEqual({ key: "t0_c0_hard_reset", val: "1" });
+    expect(S.pendingDefaultSetParams).toEqual([
+      { key: "t0_c0_hard_reset", val: "1" },
+      { key: "older", val: "1" },
+    ]);
     expect((S.clipLength as any)[0][0]).toBe(16);
     expect((S.clipTPS as any)[0][0]).toBe(24);
     expect((S.clipLengthManuallySet as any)[0][0]).toBe(false);
