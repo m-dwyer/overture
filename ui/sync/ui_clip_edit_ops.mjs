@@ -20,6 +20,11 @@ import {
 import { invalidateLEDCache } from '../render/ui_leds.mjs';
 import { showActionPopup } from '../persist/ui_persistence.mjs';
 import { scheduleDrumLaneResync } from '../core/ui_state.mjs';
+import {
+    enqueueDspOperation,
+    enqueuePriorityDspOperation,
+    holdDspOperationDrain
+} from './ui_dsp_operation_queue.mjs';
 
 /* deps: setParam, resetPerClipBankParamsToDefault, refreshPerClipBankParams,
  * forceRedraw, effectiveClip */
@@ -34,8 +39,8 @@ export function clearClipImpl(S, deps, t, ac, keepPlaying) {
      * ARP). Hard Reset (Shift+Delete) is the gesture that wipes structure. */
     if (S.trackPadMode[t] === PAD_MODE_DRUM) {
         const keep = (keepPlaying && S.trackClipPlaying[t] && ac === S.trackActiveClip[t]) ? '1' : '0';
-        S.pendingDefaultSetParams.unshift({ key: 't' + t + '_c' + ac + '_drum_clear', val: keep });
-        S.clearDrainHold = 1;
+        enqueuePriorityDspOperation(S, { key: 't' + t + '_c' + ac + '_drum_clear', val: keep });
+        holdDspOperationDrain(S, 1);
         for (let l = 0; l < DRUM_LANES; l++) {
             for (let s = 0; s < 256; s++) S.drumLaneSteps[t][l][s] = '0';
             S.drumLaneHasNotes[t][l] = false;
@@ -49,10 +54,10 @@ export function clearClipImpl(S, deps, t, ac, keepPlaying) {
     const cmd = (keepPlaying && S.trackClipPlaying[t] && ac === S.trackActiveClip[t])
         ? 't' + t + '_c' + ac + '_clear_keep'
         : 't' + t + '_c' + ac + '_clear';
-    S.pendingDefaultSetParams.unshift({ key: cmd, val: '1' });
+    enqueuePriorityDspOperation(S, { key: cmd, val: '1' });
     /* Defer drain 1 tick to keep _clear out of the same audio buffer as any
      * sync set_param fan-out that might still be in flight. */
-    S.clearDrainHold = 1;
+    holdDspOperationDrain(S, 1);
     const len = S.clipLength[t][ac];
     for (let s = 0; s < len; s++) S.clipSteps[t][ac][s] = 0;
     S.clipNonEmpty[t][ac] = false;
@@ -78,7 +83,7 @@ export function clearClipImpl(S, deps, t, ac, keepPlaying) {
         if (S.playing && !S.trackClipPlaying[t]
                 && !S.trackWillRelaunch[t]
                 && S.trackQueuedClip[t] === -1) {
-            S.pendingDefaultSetParams.push({ key: 't' + t + '_launch_clip', val: String(ac) });
+            enqueueDspOperation(S, { key: 't' + t + '_launch_clip', val: String(ac) });
             S.trackQueuedClip[t] = ac;
         }
     }
@@ -90,8 +95,8 @@ export function hardResetClipImpl(S, deps, t, ac) {
     S.undoAvailable = true; S.redoAvailable = false; S.undoSeqArpSnapshot = null;
     if (S.trackPadMode[t] === PAD_MODE_DRUM) {
         /* Drum clip reset: clip_init all 32 lanes; midi_note preserved */
-        S.pendingDefaultSetParams.unshift({ key: 't' + t + '_c' + ac + '_drum_reset', val: '1' });
-        S.clearDrainHold = 1;
+        enqueuePriorityDspOperation(S, { key: 't' + t + '_c' + ac + '_drum_reset', val: '1' });
+        holdDspOperationDrain(S, 1);
         for (let l = 0; l < DRUM_LANES; l++) {
             for (let s = 0; s < 256; s++) S.drumLaneSteps[t][l][s] = '0';
             S.drumLaneHasNotes[t][l] = false;
@@ -109,8 +114,8 @@ export function hardResetClipImpl(S, deps, t, ac) {
         }
         return;
     }
-    S.pendingDefaultSetParams.unshift({ key: 't' + t + '_c' + ac + '_hard_reset', val: '1' });
-    S.clearDrainHold = 1;
+    enqueuePriorityDspOperation(S, { key: 't' + t + '_c' + ac + '_hard_reset', val: '1' });
+    holdDspOperationDrain(S, 1);
     const defaultLen = 16;
     for (let s = 0; s < NUM_STEPS; s++) S.clipSteps[t][ac][s] = 0;
     S.clipLength[t][ac] = defaultLen;
@@ -135,7 +140,7 @@ export function copyClipImpl(S, deps, srcT, srcC, dstT, dstC) {
     if (srcT === dstT && srcC === dstC) return;
     if (!deps.setParam) return;
     S.undoAvailable = true; S.redoAvailable = false; S.undoSeqArpSnapshot = null;
-    S.pendingDefaultSetParams.push({ key: 'clip_copy', val: `${srcT} ${srcC} ${dstT} ${dstC}` });
+    enqueueDspOperation(S, { key: 'clip_copy', val: `${srcT} ${srcC} ${dstT} ${dstC}` });
     S.clipSteps[dstT][dstC] = S.clipSteps[srcT][srcC].slice();
     S.clipLength[dstT][dstC] = S.clipLength[srcT][srcC];
     S.clipLoopStart[dstT][dstC] = S.clipLoopStart[srcT][srcC];
@@ -157,7 +162,7 @@ export function cutClipImpl(S, deps, srcT, srcC, dstT, dstC) {
     if (srcT === dstT && srcC === dstC) return;
     if (!deps.setParam) return;
     S.undoAvailable = true; S.redoAvailable = false; S.undoSeqArpSnapshot = null;
-    S.pendingDefaultSetParams.push({ key: 'clip_cut', val: `${srcT} ${srcC} ${dstT} ${dstC}` });
+    enqueueDspOperation(S, { key: 'clip_cut', val: `${srcT} ${srcC} ${dstT} ${dstC}` });
     S.clipSteps[dstT][dstC] = S.clipSteps[srcT][srcC].slice();
     S.clipLength[dstT][dstC] = S.clipLength[srcT][srcC];
     S.clipLoopStart[dstT][dstC] = S.clipLoopStart[srcT][srcC];
