@@ -218,6 +218,8 @@ function deps(c: ReturnType<typeof calls>, overrides: Record<string, unknown> = 
     writeSidecar: c.fn("writeSidecar"),
     handleLoopJog: c.fn("loopJog"),
     openSchwungSoundBrowser: c.fn("openSoundBrowser"),
+    openSchwungSoundPresetBrowser: c.fn("openSoundPresets"),
+    beginSaveSchwungSoundPreset: c.fn("saveSoundPreset"),
     applySchwungSoundBrowserSelection: c.fn("applySoundBrowser"),
     closeSchwungSoundPage: c.fn("closeSoundPage"),
     enterSchwungCoRun: c.fn("enterSchwung"),
@@ -778,6 +780,21 @@ describe("Jog CC workflow - Schwung Sound page", () => {
     c.log.length = 0;
     expect(handleUiJogSchwungSoundPage(S, deps(c), ...ROTATE_CW)).toBe(true);
     expect(c.log).toEqual([["rotateSoundPage", 1], ["redraw"]]);
+  });
+
+  test("Copy+jog click opens sound presets", () => {
+    const c = calls();
+    const S = state({ copyHeld: true, schwungSoundPage: { paramDetail: true, browser: false } });
+    expect(handleUiJogSchwungSoundPage(S, deps(c), ...CLICK)).toBe(true);
+    expect(c.log).toEqual([["openSoundPresets"], ["redraw"]]);
+  });
+
+  test("Capture+jog click starts preset save and marks Capture as consumed", () => {
+    const c = calls();
+    const S = state({ captureHeld: true, captureUsedAsModifier: false, schwungSoundPage: { paramDetail: true, browser: false } });
+    expect(handleUiJogSchwungSoundPage(S, deps(c), ...CLICK)).toBe(true);
+    expect(S.captureUsedAsModifier).toBe(true);
+    expect(c.log).toEqual([["saveSoundPreset"], ["redraw"]]);
   });
 });
 

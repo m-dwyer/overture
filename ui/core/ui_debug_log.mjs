@@ -26,18 +26,20 @@
  *   3. Build a dev bundle:  OVERTURE_DEBUG_LOG=1 ./scripts/bundle_ui.sh
  *      (a plain prod bundle strips every trace — verify: `grep dlog dist/overture/ui.js`.)
  *   4. On device, choose a level (default OFF = silent):
- *          echo DEBUG > /data/UserData/schwung/overture-debug-level   # then relaunch
- *      Read it back at /data/UserData/schwung/overture-debug.log; delete the level
+ *          echo DEBUG > /data/UserData/overture/overture-debug-level   # then relaunch
+ *      Read it back at /data/UserData/overture/overture-debug.log; delete the level
  *      file to silence. The log can never exceed RING_MAX lines (overwrite, not append).
  */
 
+import { OVERTURE_HOME } from './ui_constants.mjs';
+
 const LEVELS = { OFF: 0, ERROR: 1, WARN: 2, INFO: 3, DEBUG: 4 };
 const RING_MAX = 400;
-const LOG_PATH = '/data/UserData/schwung/overture-debug.log';
+const LOG_PATH = OVERTURE_HOME + '/overture-debug.log';
 /* Runtime level control WITHOUT a redeploy: drop a file containing one of
  * OFF/ERROR/WARN/INFO/DEBUG at this path and relaunch. Absent -> OFF, so even a
  * dev build writes NOTHING (no log file appears) until you explicitly opt in. */
-const LEVEL_FLAG_PATH = '/data/UserData/schwung/overture-debug-level';
+const LEVEL_FLAG_PATH = OVERTURE_HOME + '/overture-debug-level';
 
 let _level = LEVELS.OFF;
 let _seq = 0;

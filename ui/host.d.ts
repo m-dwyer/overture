@@ -32,8 +32,10 @@ declare function host_module_set_param(key: string, val: string): void;
 declare function host_module_get_param(key: string): string | null;
 
 // --- Persistence ---
-declare function host_write_file(path: string, data: string): void;
+declare function host_write_file(path: string, data: string): boolean;
 declare function host_read_file(path: string): string | null;
+declare function host_ensure_dir(path: string): boolean;
+declare function host_file_exists(path: string): boolean;
 
 // --- Module lifecycle ---
 declare function host_exit_module(): void;

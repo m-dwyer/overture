@@ -10,6 +10,8 @@ import {
     BrightGreen, BrightPink, RoyalBlue, DarkOlive, DeepWine
 } from '/data/UserData/schwung/shared/constants.mjs';
 
+export const OVERTURE_HOME = '/data/UserData/overture';
+
 /* ------------------------------------------------------------------ */
 /* Hardware CC / note constants                                         */
 /* ------------------------------------------------------------------ */

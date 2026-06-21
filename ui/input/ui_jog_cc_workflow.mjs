@@ -533,6 +533,13 @@ export function handleUiJogSchwungSoundPage(S, deps, d1, d2) {
     if (!S.schwungSoundPage) return false;
     if (d1 === 3 && d2 === 127) {
         if (S.schwungSoundPage.browser) deps.applySchwungSoundBrowserSelection();
+        else if (S.copyHeld) {
+            deps.openSchwungSoundPresetBrowser();
+        }
+        else if (S.captureHeld) {
+            S.captureUsedAsModifier = true;
+            deps.beginSaveSchwungSoundPreset();
+        }
         else if (S.shiftHeld) {
             const track = S.schwungSoundPage.track | 0;
             const slot = S.schwungSoundPage.slot | 0;

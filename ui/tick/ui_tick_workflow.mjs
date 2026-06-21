@@ -44,6 +44,8 @@ import {
 export function runTickWorkflow(S, deps) {
     S.tickCount++;
     if (S.bootSplashTicks > 0) S.bootSplashTicks--;
+    if (deps.tickTextEntry && deps.tickTextEntry()) S.screenDirty = true;
+    if (deps.expireSchwungSoundStatusFlash && deps.expireSchwungSoundStatusFlash()) S.screenDirty = true;
 
     /* Ableton .ablbundle export runs here (tick context) so get_param('bpm')
      * resolves — it returns null on the on_midi path where the menu action

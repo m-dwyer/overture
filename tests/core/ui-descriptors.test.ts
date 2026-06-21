@@ -6,9 +6,12 @@ import {
   advancePendingEditSoundEntry,
   adjustSchwungSoundVisibleParam,
   applySchwungSoundBrowserSelection,
+  beginSaveSchwungSoundPreset,
   closeSchwungSoundPage,
   expireSchwungSoundParamPeek,
+  expireSchwungSoundStatusFlash,
   openSchwungSoundBrowser,
+  openSchwungSoundPresetBrowser,
   requestEditSoundForTrack,
   rotateSchwungSoundPage,
   selectSchwungSoundComponent,
@@ -17,6 +20,7 @@ import {
 } from "@overture-ui/core/ui_sound_edit.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_edit_render.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
+import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/core/ui_sound_preset_manager.mjs";
 
 describe("UI descriptor seams", () => {
   beforeEach(() => {
@@ -71,6 +75,10 @@ describe("UI descriptor seams", () => {
     Reflect.deleteProperty(globalThis, "shadow_get_param");
     Reflect.deleteProperty(globalThis, "shadow_set_param");
     Reflect.deleteProperty(globalThis, "shadow_list_modules_for_component");
+    Reflect.deleteProperty(globalThis, "host_ensure_dir");
+    Reflect.deleteProperty(globalThis, "host_pad_block");
+    Reflect.deleteProperty(globalThis, "host_read_file");
+    Reflect.deleteProperty(globalThis, "host_write_file");
   });
 
   test("Schwung slot masks include exact-channel and All-channel slots", () => {
@@ -180,6 +188,320 @@ describe("UI descriptor seams", () => {
     expect(applySchwungSoundBrowserSelection()).toBe(true);
     expect(writes).toEqual([[0, "synth:module", "westfold"]]);
     expect(S.schwungSoundPage?.modules[1]).toMatchObject({ id: "westfold", name: "westfold" });
+  });
+
+  test("Schwung Sound preset browser lists and applies matching module presets", () => {
+    const files = new Map<string, string>();
+    files.set("/data/UserData/overture/sound_presets/manifest.json", JSON.stringify({
+      v: 1,
+      presets: [
+        {
+          id: "dust",
+          name: "Dust Pad",
+          ts: 20,
+          scope: "synth/dustline",
+          componentPrefix: "synth",
+          moduleId: "dustline",
+          file: "/data/UserData/overture/sound_presets/dust.json",
+        },
+        {
+          id: "trail",
+          name: "Trail FX",
+          ts: 30,
+          scope: "fx1/trail",
+          componentPrefix: "fx1",
+          moduleId: "trail",
+          file: "/data/UserData/overture/sound_presets/trail.json",
+        },
+      ],
+    }));
+    files.set("/data/UserData/overture/sound_presets/dust.json", JSON.stringify({
+      v: 1,
+      id: "dust",
+      name: "Dust Pad",
+      componentPrefix: "synth",
+      moduleId: "dustline",
+      state: "{\"opaque\":true}",
+      params: { macro: "0.75", tone: "1" },
+    }));
+    const writes: Array<[number, string, string]> = [];
+    const padBlocks: number[] = [];
+    Reflect.set(globalThis, "host_read_file", (path: string) => files.get(path) ?? null);
+    Reflect.set(globalThis, "host_pad_block", (blocked: number) => {
+      padBlocks.push(blocked);
+      return true;
+    });
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => ({
+      synth_module: "dustline",
+      "synth:chain_params": JSON.stringify([
+        { key: "macro", name: "Macro" },
+        { key: "tone", name: "Tone" },
+      ]),
+      "synth:macro": "0.5",
+      "synth:tone": "0",
+    } as Record<string, string>)[key] ?? "");
+    Reflect.set(globalThis, "shadow_set_param", (slot: number, key: string, value: string) => {
+      writes.push([slot, key, value]);
+      return true;
+    });
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    expect(openSchwungSoundPresetBrowser()).toBe(true);
+    expect(S.schwungSoundPage?.browserKind).toBe("preset");
+    expect(S.schwungSoundPage?.browserItems).toMatchObject([{ name: "Dust Pad" }]);
+    S.copyHeld = true;
+
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    expect(writes).toEqual([
+      [0, "synth:macro", "0.75"],
+      [0, "synth:tone", "1"],
+    ]);
+    expect(S.schwungSoundPage?.browser).toBe(false);
+    expect(S.schwungSoundPage?.browserMessage).toBe("");
+    expect(S.schwungSoundPage?.statusFlash).toMatchObject({ text: "LOADED", endTick: 190 });
+    expect(S.copyHeld).toBe(false);
+    expect(S.pendingPadNoteMapRecompute).toBe(true);
+    expect(padBlocks).toEqual([0]);
+    S.tickCount = 191;
+    expect(expireSchwungSoundStatusFlash()).toBe(true);
+    expect(S.schwungSoundPage?.statusFlash).toBe(null);
+  });
+
+  test("Schwung Sound preset manager saves under Overture home with a manifest", () => {
+    const files = new Map<string, string>();
+    const ensured: string[] = [];
+    const reads: Record<string, string> = {
+      synth_module: "dustline",
+      "synth:chain_params": JSON.stringify([
+        { key: "macro", name: "Macro" },
+        { key: "tone", name: "Tone" },
+      ]),
+      "synth:macro": "0.5",
+      "synth:tone": "0",
+      "synth:state": "{\"opaque\":true}",
+    };
+    Reflect.set(globalThis, "host_ensure_dir", (path: string) => {
+      ensured.push(path);
+      return true;
+    });
+    Reflect.set(globalThis, "host_read_file", (path: string) => files.get(path) ?? null);
+    Reflect.set(globalThis, "host_write_file", (path: string, data: string) => {
+      files.set(path, data);
+      return true;
+    });
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => reads[key] ?? "");
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    const result = saveSchwungSoundPreset(
+      [
+        { label: "MIDI FX", param: "midi_fx1:module", read: "midi_fx1_module", list: "midi_fx" },
+        { label: "Synth", param: "synth:module", read: "synth_module", list: "sound_generator" },
+        { label: "FX 1", param: "fx1:module", read: "fx1_module", list: "audio_fx" },
+        { label: "FX 2", param: "fx2:module", read: "fx2_module", list: "audio_fx" },
+      ],
+      S.schwungSoundPage,
+      "Dust Pad"
+    );
+
+    expect(result.ok).toBe(true);
+    expect(ensured).toContain("/data/UserData/overture");
+    expect(ensured).toContain("/data/UserData/overture/sound_presets");
+    const manifestRaw = files.get("/data/UserData/overture/sound_presets/manifest.json");
+    expect(manifestRaw).toBeTruthy();
+    const manifest = JSON.parse(manifestRaw!);
+    expect(manifest.presets[0]).toMatchObject({
+      name: "Dust Pad",
+      scope: "synth/dustline",
+      componentPrefix: "synth",
+      moduleId: "dustline",
+    });
+    const preset = JSON.parse(files.get(manifest.presets[0].file)!);
+    expect(preset).toMatchObject({
+      name: "Dust Pad",
+      componentPrefix: "synth",
+      moduleId: "dustline",
+      state: "{\"opaque\":true}",
+      params: { macro: "0.5", tone: "0" },
+    });
+  });
+
+  test("Schwung Sound preset round-trip reloads saved params as authoritative values", () => {
+    const files = new Map<string, string>();
+    const values: Record<string, string> = {
+      synth_module: "helm",
+      "synth:chain_params": JSON.stringify([
+        { key: "cutoff", name: "Cutoff" },
+        { key: "resonance", name: "Resonance" },
+        { key: "fil_env_depth", name: "FED" },
+        { key: "amp_attack", name: "AA" },
+        { key: "amp_decay", name: "AD" },
+        { key: "amp_sustain", name: "AS" },
+        { key: "amp_release", name: "AR" },
+        { key: "volume", name: "Vol" },
+      ]),
+      "synth:cutoff": "28",
+      "synth:resonance": "0",
+      "synth:fil_env_depth": "-128",
+      "synth:amp_attack": "0",
+      "synth:amp_decay": "0",
+      "synth:amp_sustain": "0",
+      "synth:amp_release": "0",
+      "synth:volume": "0",
+      "synth:state": JSON.stringify({
+        cutoff: "101",
+        resonance: "0.9",
+        fil_env_depth: "64",
+        amp_attack: "1",
+        amp_decay: "1",
+        amp_sustain: "1",
+        amp_release: "1",
+        volume: "0.92",
+      }),
+    };
+    Reflect.set(globalThis, "host_ensure_dir", () => true);
+    Reflect.set(globalThis, "host_read_file", (path: string) => files.get(path) ?? null);
+    Reflect.set(globalThis, "host_write_file", (path: string, data: string) => {
+      files.set(path, data);
+      return true;
+    });
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => values[key] ?? "");
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    const components = [
+      { label: "MIDI FX", param: "midi_fx1:module", read: "midi_fx1_module", list: "midi_fx" },
+      { label: "Synth", param: "synth:module", read: "synth_module", list: "sound_generator" },
+      { label: "FX 1", param: "fx1:module", read: "fx1_module", list: "audio_fx" },
+      { label: "FX 2", param: "fx2:module", read: "fx2_module", list: "audio_fx" },
+    ];
+    const save = saveSchwungSoundPreset(components, S.schwungSoundPage, "Helm Zeroed");
+    expect(save.ok).toBe(true);
+
+    Object.assign(values, {
+      "synth:cutoff": "77",
+      "synth:resonance": "0.6",
+      "synth:fil_env_depth": "42",
+      "synth:amp_attack": "0.5",
+      "synth:amp_decay": "0.5",
+      "synth:amp_sustain": "0.5",
+      "synth:amp_release": "0.5",
+      "synth:volume": "0.5",
+    });
+
+    let delayedStateRestore: null | (() => void) = null;
+    const writes: Array<[number, string, string]> = [];
+    Reflect.set(globalThis, "shadow_set_param", (slot: number, key: string, value: string) => {
+      writes.push([slot, key, value]);
+      if (key === "synth:state") {
+        delayedStateRestore = () => {
+          values["synth:cutoff"] = "101";
+          values["synth:resonance"] = "0.9";
+          values["synth:fil_env_depth"] = "64";
+          values["synth:amp_attack"] = "1";
+          values["synth:amp_decay"] = "1";
+          values["synth:amp_sustain"] = "1";
+          values["synth:amp_release"] = "1";
+          values["synth:volume"] = "0.92";
+        };
+      } else {
+        values[key] = value;
+      }
+      return true;
+    });
+
+    const manifest = JSON.parse(files.get("/data/UserData/overture/sound_presets/manifest.json")!);
+    const load = loadSchwungSoundPreset(components, S.schwungSoundPage, manifest.presets[0]);
+    expect(load.ok).toBe(true);
+    if (delayedStateRestore) delayedStateRestore();
+
+    expect(writes).not.toContainEqual([0, "synth:module", "helm"]);
+    expect(writes).not.toContainEqual([0, "synth:state", values["synth:state"]]);
+    expect(values).toMatchObject({
+      "synth:cutoff": "28",
+      "synth:resonance": "0",
+      "synth:fil_env_depth": "-128",
+      "synth:amp_attack": "0",
+      "synth:amp_decay": "0",
+      "synth:amp_sustain": "0",
+      "synth:amp_release": "0",
+      "synth:volume": "0",
+    });
+  });
+
+  test("Schwung Sound preset save opens manager list with overwrite and create-new paths", () => {
+    let opened: any = null;
+    const files = new Map<string, string>();
+    files.set("/data/UserData/overture/sound_presets/manifest.json", JSON.stringify({
+      v: 1,
+      presets: [
+        {
+          id: "dust",
+          name: "Dust Pad",
+          ts: 20,
+          scope: "synth/dustline",
+          componentPrefix: "synth",
+          moduleId: "dustline",
+          file: "/data/UserData/overture/sound_presets/dust.json",
+        },
+      ],
+    }));
+    const padBlocks: number[] = [];
+    Reflect.set(globalThis, "host_ensure_dir", () => true);
+    Reflect.set(globalThis, "host_read_file", (path: string) => files.get(path) ?? null);
+    Reflect.set(globalThis, "host_write_file", (path: string, data: string) => {
+      files.set(path, data);
+      return true;
+    });
+    Reflect.set(globalThis, "host_pad_block", (blocked: number) => {
+      padBlocks.push(blocked);
+      return true;
+    });
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => ({
+      synth_module: "dustline",
+      "synth:chain_params": JSON.stringify([{ key: "macro", name: "Macro" }]),
+      "synth:macro": "0.5",
+    } as Record<string, string>)[key] ?? "");
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    expect(beginSaveSchwungSoundPreset((opts: any) => { opened = opts; })).toBe(true);
+    expect(opened).toBe(null);
+    expect(S.schwungSoundPage).toMatchObject({
+      browser: true,
+      browserKind: "preset-save",
+      browserIndex: 0,
+      noList: false,
+    });
+    expect(S.schwungSoundPage?.browserItems).toMatchObject([
+      { name: "Dust Pad" },
+      { name: "Create new", createNew: true },
+    ]);
+
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    expect(S.schwungSoundPage?.overwriteConfirm).toMatchObject({
+      title: "Overwrite?",
+      message: "Dust Pad",
+      selected: 0,
+    });
+    expect(files.get("/data/UserData/overture/sound_presets/dust.json")).toBe(undefined);
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    expect(files.get("/data/UserData/overture/sound_presets/dust.json")).toBe(undefined);
+
+    expect(beginSaveSchwungSoundPreset((opts: any) => { opened = opts; })).toBe(true);
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    rotateSchwungSoundPage(1);
+    expect(S.schwungSoundPage?.overwriteConfirm).toMatchObject({ selected: 1 });
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    const overwritten = JSON.parse(files.get("/data/UserData/overture/sound_presets/dust.json")!);
+    expect(overwritten).toMatchObject({ name: "Dust Pad", params: { macro: "0.5" } });
+    expect(S.schwungSoundPage?.statusFlash).toMatchObject({ text: "SAVED" });
+    expect(padBlocks).toEqual([0]);
+
+    expect(beginSaveSchwungSoundPreset((opts: any) => { opened = opts; })).toBe(true);
+    S.schwungSoundPage!.browserIndex = 1;
+    expect(applySchwungSoundBrowserSelection((opts: any) => { opened = opts; })).toBe(true);
+    expect(opened).toMatchObject({
+      title: "Name",
+      defaultText: "Preset 1",
+    });
   });
 
   test("Schwung Sound page renders selected module detail and cached chain params", () => {
