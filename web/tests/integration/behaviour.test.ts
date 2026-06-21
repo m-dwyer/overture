@@ -930,3 +930,67 @@ describe("Overture §15 — Track View navigation (Change #1 targets)", () => {
     h.step(2);
   });
 });
+
+describe("Overture Track View copy-step drain timing (real ui.js + seq8-wasm)", () => {
+  let h: Harness;
+
+  beforeAll(async () => {
+    h = await createHarness({ strict: true });
+  }, 60_000);
+
+  const noteView = () => {
+    if (h.ui().sessionView) {
+      h.press(50);
+      h.step(2);
+    }
+  };
+
+  test("Copy + step appends step_copy behind older queued writes and copies engine truth", () => {
+    noteView();
+
+    const ui = h.ui() as any;
+    ui.activeTrack = 1;
+    ui.activeBank = 0;
+    ui.trackCurrentPage[1] = 0;
+    ui.trackActiveClip[1] = 0;
+    ui.trackPadMode[1] = 0;
+    ui.copyHeld = true;
+    ui.copySrc = null;
+    ui.pendingDefaultSetParams = [];
+
+    h.set("t1_c0_length", "64");
+    h.set("t1_c0_step_3_add", "64 0 100");
+    ui.clipSteps[1][0][3] = 1;
+    ui.clipNonEmpty[1][0] = true;
+    expect(h.get("t1_c0_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c0_steps")?.[5]).toBe("0");
+    expect(h.get("t1_c0_steps")?.[7]).toBe("0");
+
+    h.emu.sendInternal(0x90, 19, 127); // step 4 source
+    expect(ui.copySrc).toEqual({ kind: "step", absStep: 3 });
+    h.emu.sendInternal(0x80, 19, 0);
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c0_step_5_add", val: "69 0 100" }];
+    h.emu.sendInternal(0x90, 23, 127); // step 8 destination
+
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c0_step_5_add", val: "69 0 100" },
+      { key: "t1_c0_step_3_copy_to", val: "7" },
+    ]);
+    expect(ui.clipSteps[1][0][7]).toBe(1);
+    expect(ui.pendingStepsReread).toBe(2);
+
+    h.step(1);
+    expect(h.get("t1_c0_steps")?.[5]).toBe("1");
+    expect(h.get("t1_c0_steps")?.[7]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "t1_c0_step_3_copy_to", val: "7" }]);
+
+    h.step(1);
+    expect(h.get("t1_c0_steps")?.[7]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+
+    h.emu.sendInternal(0x80, 23, 0);
+    ui.copyHeld = false;
+    h.step(2);
+  });
+});
