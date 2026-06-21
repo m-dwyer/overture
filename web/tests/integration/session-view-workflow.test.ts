@@ -398,6 +398,77 @@ describe("Session View Workflow - clip clear/reset drain timing (real ui.js + se
   });
 });
 
+describe("Session View Workflow - clip copy/cut drain timing (real ui.js + seq8-wasm)", () => {
+  let h: Harness;
+  let ui: SessionUiState;
+
+  beforeEach(async () => {
+    h = await createHarness({ strict: true });
+    ui = h.ui() as SessionUiState;
+    resetSessionState(ui);
+    ui.trackPadMode[1] = 0;
+    ui.clipNonEmpty[1][1] = true;
+  }, 60_000);
+
+  test("Copy+clip pad appends clip_copy behind older queued writes and copies engine truth", () => {
+    h.set("t1_c1_length", "64");
+    h.set("t1_c1_step_3_add", "64 0 100");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("1");
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c2_step_4_add", val: "67 0 100" }];
+    ui.copyHeld = true;
+    pressClipPad(h, 1, 1);
+    pressClipPad(h, 1, 2);
+
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c2_step_4_add", val: "67 0 100" },
+      { key: "clip_copy", val: "1 1 1 2" },
+    ]);
+
+    h.step(1);
+    expect(h.get("t1_c2_steps")?.[3]).toBe("0");
+    expect(h.get("t1_c2_steps")?.[4]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "clip_copy", val: "1 1 1 2" }]);
+
+    h.step(1);
+    expect(h.get("t1_c2_length")).toBe("64");
+    expect(h.get("t1_c2_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c2_steps")?.[4]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Shift+Copy+clip pad appends clip_cut behind older queued writes and resets engine source", () => {
+    h.set("t1_c1_length", "64");
+    h.set("t1_c1_step_3_add", "64 0 100");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("1");
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c1_step_4_add", val: "67 0 100" }];
+    ui.copyHeld = true;
+    ui.shiftHeld = true;
+    pressClipPad(h, 1, 1);
+    pressClipPad(h, 1, 2);
+
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c1_step_4_add", val: "67 0 100" },
+      { key: "clip_cut", val: "1 1 1 2" },
+    ]);
+
+    h.step(1);
+    expect(h.get("t1_c1_steps")?.[4]).toBe("1");
+    expect(h.get("t1_c2_steps")?.[3]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "clip_cut", val: "1 1 1 2" }]);
+
+    h.step(1);
+    expect(h.get("t1_c1_length")).toBe("16");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("0");
+    expect(h.get("t1_c1_steps")?.[4]).toBe("0");
+    expect(h.get("t1_c2_length")).toBe("64");
+    expect(h.get("t1_c2_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c2_steps")?.[4]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+});
+
 describe("Session View Workflow - side rows", () => {
   let h: Harness;
   let ui: SessionUiState;
