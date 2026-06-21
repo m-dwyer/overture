@@ -626,3 +626,105 @@ describe("Session View Workflow - side rows", () => {
     expect(ui.pendingDefaultSetParams).toEqual([{ key: "launch_scene_quant", val: "7" }]);
   });
 });
+
+describe("Session View Workflow - row copy/cut/clear drain timing (real ui.js + seq8-wasm)", () => {
+  let h: Harness;
+  let ui: SessionUiState;
+
+  beforeEach(async () => {
+    h = await createHarness({ strict: true });
+    ui = h.ui() as SessionUiState;
+    resetSessionState(ui);
+    ui.trackPadMode[1] = 0;
+  }, 60_000);
+
+  test("Copy+side row appends row_copy behind older queued writes and copies engine truth", () => {
+    ui.sceneRow = 4;
+    ui.copyHeld = true;
+    ui.clipNonEmpty[1][4] = true;
+    h.set("t1_c4_length", "64");
+    h.set("t1_c4_step_3_add", "64 0 100");
+    expect(h.get("t1_c4_steps")?.[3]).toBe("1");
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c7_step_4_add", val: "67 0 100" }];
+    pressSideRow(h, 0);
+    pressSideRow(h, 3);
+
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c7_step_4_add", val: "67 0 100" },
+      { key: "row_copy", val: "4 7" },
+    ]);
+
+    h.step(1);
+    expect(h.get("t1_c7_steps")?.[3]).toBe("0");
+    expect(h.get("t1_c7_steps")?.[4]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "row_copy", val: "4 7" }]);
+
+    h.step(1);
+    expect(h.get("t1_c7_length")).toBe("64");
+    expect(h.get("t1_c7_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c7_steps")?.[4]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Shift+Copy+side row appends row_cut behind older queued writes and resets engine source", () => {
+    ui.sceneRow = 4;
+    ui.copyHeld = true;
+    ui.shiftHeld = true;
+    ui.clipNonEmpty[1][4] = true;
+    h.set("t1_c4_length", "64");
+    h.set("t1_c4_step_3_add", "64 0 100");
+    expect(h.get("t1_c4_steps")?.[3]).toBe("1");
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c4_step_4_add", val: "67 0 100" }];
+    pressSideRow(h, 0);
+    pressSideRow(h, 3);
+
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c4_step_4_add", val: "67 0 100" },
+      { key: "row_cut", val: "4 7" },
+    ]);
+
+    h.step(1);
+    expect(h.get("t1_c4_steps")?.[4]).toBe("1");
+    expect(h.get("t1_c7_steps")?.[3]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "row_cut", val: "4 7" }]);
+
+    h.step(1);
+    expect(h.get("t1_c4_length")).toBe("16");
+    expect(h.get("t1_c4_steps")?.[3]).toBe("0");
+    expect(h.get("t1_c4_steps")?.[4]).toBe("0");
+    expect(h.get("t1_c7_length")).toBe("64");
+    expect(h.get("t1_c7_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c7_steps")?.[4]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Delete+side row appends row_clear behind older queued writes and clears engine truth", () => {
+    ui.sceneRow = 4;
+    ui.deleteHeld = true;
+    ui.clipNonEmpty[1][5] = true;
+    h.set("t1_c5_length", "64");
+    h.set("t1_c5_step_3_add", "64 0 100");
+    expect(h.get("t1_c5_steps")?.[3]).toBe("1");
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c5_step_4_add", val: "67 0 100" }];
+    pressSideRow(h, 1);
+
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c5_step_4_add", val: "67 0 100" },
+      { key: "row_clear", val: "5" },
+    ]);
+
+    h.step(1);
+    expect(h.get("t1_c5_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c5_steps")?.[4]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "row_clear", val: "5" }]);
+
+    h.step(1);
+    expect(h.get("t1_c5_length")).toBe("64");
+    expect(h.get("t1_c5_steps")?.[3]).toBe("0");
+    expect(h.get("t1_c5_steps")?.[4]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+});
