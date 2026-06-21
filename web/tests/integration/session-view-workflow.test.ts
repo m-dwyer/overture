@@ -30,8 +30,10 @@ interface SessionUiState extends UiState {
   trackWillRelaunch: boolean[];
   trackQueuedClip: number[];
   clipNonEmpty: boolean[][];
+  clipLength: number[][];
   drumClipNonEmpty: boolean[][];
   clipLoopStart: number[][];
+  clearDrainHold: number;
   actionPopupLines: string[];
   pendingDrumResync: number;
   pendingDrumResyncTrack: number;
@@ -317,6 +319,82 @@ describe("Session View Workflow - clip pads", () => {
     expect(ui.activeTrack).toBe(1);
     expect(ui.trackActiveClip[1]).toBe(2);
     expect(ui.trackCurrentPage[1]).toBe(0);
+  });
+});
+
+describe("Session View Workflow - clip clear/reset drain timing (real ui.js + seq8-wasm)", () => {
+  let h: Harness;
+  let ui: SessionUiState;
+
+  beforeEach(async () => {
+    h = await createHarness({ strict: true });
+    ui = h.ui() as SessionUiState;
+    resetSessionState(ui);
+    ui.trackPadMode[1] = 0;
+    ui.clipNonEmpty[1][1] = true;
+  }, 60_000);
+
+  test("Delete+clip pad clears engine steps after the hold tick and before older queued writes", () => {
+    h.set("t1_c1_length", "64");
+    h.set("t1_c1_step_3_add", "64 0 100");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c1_length")).toBe("64");
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c1_step_4_add", val: "67 0 100" }];
+    ui.deleteHeld = true;
+    pressClipPad(h, 1, 1);
+
+    expect(ui.clearDrainHold).toBe(1);
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c1_clear", val: "1" },
+      { key: "t1_c1_step_4_add", val: "67 0 100" },
+    ]);
+
+    h.step(1);
+    expect(h.get("t1_c1_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c1_steps")?.[4]).toBe("0");
+
+    h.step(1);
+    expect(h.get("t1_c1_length")).toBe("64");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("0");
+    expect(h.get("t1_c1_steps")?.[4]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "t1_c1_step_4_add", val: "67 0 100" }]);
+
+    h.step(1);
+    expect(h.get("t1_c1_steps")?.[4]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
+  });
+
+  test("Shift+Delete+clip pad hard-resets engine length after the hold tick and before older queued writes", () => {
+    h.set("t1_c1_length", "64");
+    h.set("t1_c1_step_3_add", "64 0 100");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("1");
+    expect(h.get("t1_c1_length")).toBe("64");
+
+    ui.pendingDefaultSetParams = [{ key: "t1_c1_step_4_add", val: "67 0 100" }];
+    ui.deleteHeld = true;
+    ui.shiftHeld = true;
+    pressClipPad(h, 1, 1);
+
+    expect(ui.clearDrainHold).toBe(1);
+    expect(ui.pendingDefaultSetParams).toEqual([
+      { key: "t1_c1_hard_reset", val: "1" },
+      { key: "t1_c1_step_4_add", val: "67 0 100" },
+    ]);
+
+    h.step(1);
+    expect(h.get("t1_c1_length")).toBe("64");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("1");
+
+    h.step(1);
+    expect(h.get("t1_c1_length")).toBe("16");
+    expect(h.get("t1_c1_steps")?.[3]).toBe("0");
+    expect(h.get("t1_c1_steps")?.[4]).toBe("0");
+    expect(ui.pendingDefaultSetParams).toEqual([{ key: "t1_c1_step_4_add", val: "67 0 100" }]);
+
+    h.step(1);
+    expect(h.get("t1_c1_steps")?.[4]).toBe("1");
+    expect(ui.pendingDefaultSetParams).toEqual([]);
   });
 });
 
