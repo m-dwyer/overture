@@ -6,9 +6,9 @@
 //
 // `latch` makes a control toggle-and-hold instead of momentary: the hardware does
 // chords by physically holding Shift while pressing another button, which is
-// impossible with a single mouse pointer — so latched buttons stay held (CC 127)
+// impossible with a single mouse pointer - so latched buttons stay held (CC 127)
 // until clicked again (CC 0), letting you click other controls in between.
-import { useState, type PointerEvent, type ReactNode, type Ref } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode, type Ref } from "react";
 import { CC, NOTE_OFF, NOTE_ON, type Send } from "@/lib/move-controls";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -33,17 +33,34 @@ interface MomentaryProps {
   refCb?: Ref<HTMLButtonElement>;
   /** Toggle-and-hold instead of momentary (for modifier buttons like Shift). */
   latch?: boolean;
+  /** Emulator-only: Alt-click toggles a physical hold for testing chords. */
+  altHold?: boolean;
   "aria-label"?: string;
 }
 
 /** A CC button: momentary (127 down / 0 up) by default, or toggle-held when `latch`. */
-export function MomentaryButton({ cc, send, className, children, tooltip, refCb, latch, ...rest }: MomentaryProps) {
+export function MomentaryButton({ cc, send, className, children, tooltip, refCb, latch, altHold, ...rest }: MomentaryProps) {
   const [held, setHeld] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const pinnedRef = useRef(false);
   const toggle = (): void =>
     setHeld((h) => {
       send(CC, cc, h ? 0 : 127);
       return !h;
     });
+  const togglePinned = (): void =>
+    setPinned((h) => {
+      const next = !h;
+      pinnedRef.current = next;
+      send(CC, cc, next ? 127 : 0);
+      return next;
+    });
+
+  useEffect(() => {
+    return () => {
+      if (pinnedRef.current) send(CC, cc, 0);
+    };
+  }, [cc, send]);
 
   const btn = latch ? (
     <button
@@ -58,13 +75,23 @@ export function MomentaryButton({ cc, send, className, children, tooltip, refCb,
   ) : (
     <button
       ref={refCb}
-      className={cn("select-none", className)}
+      aria-pressed={pinned || undefined}
+      className={cn("select-none", pinned && "pressed", className)}
       onPointerDown={(e) => {
+        if (altHold && e.altKey) {
+          e.preventDefault();
+          togglePinned();
+          return;
+        }
+        if (pinned) {
+          e.preventDefault();
+          return;
+        }
         press(e);
         send(CC, cc, 127);
       }}
-      onPointerUp={(e) => releasing(e) && send(CC, cc, 0)}
-      onPointerLeave={(e) => releasing(e) && send(CC, cc, 0)}
+      onPointerUp={(e) => !pinned && releasing(e) && send(CC, cc, 0)}
+      onPointerLeave={(e) => !pinned && releasing(e) && send(CC, cc, 0)}
       {...rest}
     >
       {children}

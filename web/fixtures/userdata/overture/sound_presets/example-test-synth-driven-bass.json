@@ -1,0 +1,23 @@
+{
+  "v": 1,
+  "id": "example-test-synth-driven-bass",
+  "name": "Driven Bass",
+  "ts": 1,
+  "componentPrefix": "synth",
+  "componentLabel": "Synth",
+  "moduleId": "test-synth",
+  "moduleName": "Test Synth",
+  "state": "",
+  "params": {
+    "gain": "0.74",
+    "tone": "0",
+    "filter_env_depth": "-42",
+    "enabled": "1",
+    "drive": "0.62",
+    "attack": "0",
+    "decay": "0.18",
+    "release": "0.12",
+    "stereo_width": "0.2",
+    "output_level": "0.88"
+  }
+}
