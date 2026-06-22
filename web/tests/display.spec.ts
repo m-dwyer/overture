@@ -9,6 +9,12 @@ type DisplayPageGlobal = typeof globalThis & {
   OVT: {
     midiIn(status: number, d1: number, d2: number): void;
   };
+  overtureUiState?: {
+    activeTrack: number;
+    activeBank: number;
+    sessionView: boolean;
+    allLanesConfirmed?: boolean;
+  };
 };
 type Page = import("@playwright/test").Page;
 
@@ -27,6 +33,21 @@ const step = async (page: Page, n: number) => {
 };
 const shiftDown = (page: Page) => mi(page, 0xb0, 49, 127);
 const shiftUp = (page: Page) => mi(page, 0xb0, 49, 0);
+const jog = (page: Page, dir: 1 | -1) => mi(page, 0xb0, 14, dir > 0 ? 1 : 127);
+const encoderTouch = (page: Page, idx: number, on: boolean) => mi(page, on ? 0x90 : 0x80, idx, on ? 127 : 0);
+const encoderTurn = (page: Page, idx: number, dir: 1 | -1) => mi(page, 0xb0, 71 + idx, dir > 0 ? 1 : 127);
+
+const uiState = (page: Page) =>
+  page.evaluate(() => {
+    const s = (globalThis as DisplayPageGlobal).overtureUiState;
+    if (!s) throw new Error("overtureUiState unavailable");
+    return {
+      activeTrack: s.activeTrack,
+      activeBank: s.activeBank,
+      sessionView: s.sessionView,
+      allLanesConfirmed: !!s.allLanesConfirmed,
+    };
+  });
 
 async function boot(page: Page) {
   // ?exact pins the 1:1 pixel-exact OLED render so these goldens keep asserting the
@@ -38,6 +59,41 @@ async function boot(page: Page) {
 async function snap(page: Page, name: string) {
   await page.waitForTimeout(250);
   await expect(page.locator("#oled")).toHaveScreenshot(`${name}.png`, { maxDiffPixelRatio: 0.02 });
+}
+async function enterTrackView(page: Page) {
+  if ((await uiState(page)).sessionView) {
+    await tap(page, 50); // Note/Session
+    await page.waitForTimeout(120);
+  }
+}
+async function selectTrack(page: Page, track: 0 | 1 | 2 | 3) {
+  await enterTrackView(page);
+  await tap(page, 43 - track); // side buttons: CC43=track 1 ... CC40=track 4
+  await page.waitForTimeout(120);
+}
+async function jogToBank(page: Page, bank: number) {
+  for (const dir of [1, -1] as const) {
+    for (let i = 0; i < 12; i++) {
+      const s = await uiState(page);
+      if (s.activeBank === bank) return;
+      await jog(page, dir);
+      await page.waitForTimeout(80);
+    }
+  }
+  const s = await uiState(page);
+  throw new Error(`could not reach bank ${bank}; activeBank=${s.activeBank}`);
+}
+async function showBankOverview(page: Page, bank: number) {
+  await jogToBank(page, bank);
+  await encoderTouch(page, 0, true);
+  await page.waitForTimeout(120);
+  await encoderTouch(page, 0, false);
+  await page.waitForTimeout(80);
+}
+async function showTouchedCell(page: Page, bank: number, encoderIdx: number) {
+  await jogToBank(page, bank);
+  await encoderTurn(page, encoderIdx, 1);
+  await page.waitForTimeout(120);
 }
 
 test("default view", async ({ page }) => {
@@ -100,6 +156,52 @@ test("track view bank strip", async ({ page }) => {
   await boot(page);
   await tap(page, 50); // Note/Session -> Track view (resting overview)
   await snap(page, "08-track-bank-strip");
+});
+
+test("melodic parameter page sweep", async ({ page }) => {
+  await boot(page);
+  await selectTrack(page, 1); // track 2 defaults melodic
+
+  await showBankOverview(page, 0);
+  await snap(page, "09-param-page-melodic-clip");
+
+  await showBankOverview(page, 2);
+  await snap(page, "10-param-page-melodic-harmony");
+
+  await showBankOverview(page, 3);
+  await snap(page, "11-param-page-melodic-delay");
+
+  await showBankOverview(page, 4);
+  await snap(page, "12-param-page-melodic-seq-arp");
+
+  await showBankOverview(page, 5);
+  await snap(page, "13-param-page-melodic-arp-in");
+});
+
+test("parameter page touched-cell highlights", async ({ page }) => {
+  await boot(page);
+  await selectTrack(page, 1); // track 2 defaults melodic
+
+  await showTouchedCell(page, 0, 6);
+  await snap(page, "14-param-page-melodic-clip-k7-highlight");
+
+  await showTouchedCell(page, 4, 1);
+  await snap(page, "15-param-page-melodic-seq-arp-k2-highlight");
+});
+
+test("drum parameter page sweep", async ({ page }) => {
+  await boot(page);
+  await selectTrack(page, 0); // track 1 defaults drum
+
+  await showBankOverview(page, 0);
+  await snap(page, "16-param-page-drum-lane");
+
+  await showBankOverview(page, 7);
+  if (!(await uiState(page)).allLanesConfirmed) {
+    await mi(page, 0xb0, 3, 127); // jog click confirms ALL LANES overview
+    await page.waitForTimeout(120);
+  }
+  await snap(page, "17-param-page-drum-all-lanes");
 });
 
 // OLED readable/exact toggle: default supersamples the 128×64 buffer (readable),

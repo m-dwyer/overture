@@ -7,6 +7,10 @@ Schwung, and dAVEBOx modes.
 Prototype UX in the browser emulator first, then confirm timing, co-run, LED
 budget, and real-engine behavior on device.
 
+The living implementation-level design system lives in
+`overture-ui/docs/DESIGN_SYSTEM.md`. Use it for shared language, Page patterns,
+Parameter Page behavior, browser behavior, and LED vocabulary.
+
 ## Design Principles
 
 1. **Overture-native coherence.** Use Move gestures where they help, but do not
