@@ -61,7 +61,7 @@ Keep focused concept tests for:
 
 - Recording Workflow
 - Pad Surface
-- Parameter Bank
+- Parameter Page
 - Drum Lane Workflow
 - Session View
 - Track View Step Workflow
@@ -89,7 +89,7 @@ Good candidates:
 
 - undo/redo restore sync
 - recording handoff and drain order
-- parameter bank CC automation edits
+- Parameter Page CC automation edits
 - co-run enter/exit LED reclaim
 - Back behavior with nested surfaces
 
@@ -118,4 +118,3 @@ This lets tests assert behavior at the right boundary instead of inspecting unre
 5. Add frame tests for one screen renderer and one LED region.
 6. Add tick phase tests when the DSP operation queue is introduced.
 7. Keep legacy integration tests until the new seams cover equivalent behavior.
-

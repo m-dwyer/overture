@@ -84,7 +84,7 @@ export function renderEncoderValueGrid(surface, cells, opts) {
     const pageIdx = opts.pageIdx || 0;
     const pageCount = opts.pageCount || 1;
     const mode = opts.mode || 'encoder-grid';
-    const filtered = cells.filter(Boolean);
+    const filtered = opts.preserveSlots ? cells : cells.filter(Boolean);
     if (!filtered.length) {
         surface.print(opts.emptyX || 0, opts.emptyY || 24, opts.emptyText || 'No mapped params', 1);
         return;
@@ -95,11 +95,24 @@ export function renderEncoderValueGrid(surface, cells, opts) {
         : grid4x2Positions(opts.startY == null ? 14 : opts.startY);
     const labelMax = opts.labelMax || (useSparse ? 8 : 4);
     const valueMax = opts.valueMax || (useSparse ? 8 : 4);
+    const valueYOffset = opts.valueYOffset == null ? 8 : opts.valueYOffset;
     for (let i = 0; i < filtered.length && i < positions.length; i++) {
         const cell = filtered[i];
+        if (!cell) continue;
         const pos = positions[i];
-        surface.print(pos.x, pos.y, compactLayoutLabel(cell.label, labelMax), 1);
-        surface.print(pos.x, pos.y + 8, compactLayoutValue(cell.value, valueMax), 1);
+        const highlighted = !!cell.highlighted;
+        if (highlighted && surface.fill_rect) {
+            surface.fill_rect(pos.x, pos.y, cell.highlightW || 24, cell.highlightH || 24, 1);
+        }
+        const color = highlighted ? 0 : 1;
+        const label = opts.preformatted
+            ? String(cell.label == null || cell.label === '' ? '--' : cell.label)
+            : compactLayoutLabel(cell.label, labelMax);
+        const value = opts.preformatted
+            ? String(cell.value == null || cell.value === '' ? '--' : cell.value)
+            : compactLayoutValue(cell.value, valueMax);
+        surface.print(pos.x, pos.y, label, color);
+        surface.print(pos.x, pos.y + valueYOffset, value, color);
     }
     renderPageRail(surface, pageIdx, pageCount, opts.pageRail || {});
 }

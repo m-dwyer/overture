@@ -13,7 +13,7 @@ This document describes the current implementation of `overture/overture-ui/ui` 
 - internal MIDI routing through wrappers around `_onCC_*`, `_onPadPress`, `_onPadRelease`, and step-button handlers
 - `globalThis.__overtureResetState` for headless test teardown
 
-`ui.js` also memoizes long-lived runtime objects such as the render surface, text keyboard, pad surface runtime, parameter bank runtime, and track/clip sync facade. Most feature modules expose `*Impl` functions that take `S` and dependency bags, while `ui.js` builds those dependency bags from host globals, constants, and local wrapper functions.
+`ui.js` also memoizes long-lived runtime objects such as the render surface, text keyboard, pad surface runtime, parameter page runtime, and track/clip sync facade. Most feature modules expose `*Impl` functions that take `S` and dependency bags, while `ui.js` builds those dependency bags from host globals, constants, and local wrapper functions.
 
 ### Core State and Constants
 
@@ -103,7 +103,7 @@ Other major feature folders:
 - `perform/` owns live note sending, recording, latch/performance modifiers, tap tempo, transpose, loop gestures, mute/solo, and recording queues.
 - `midi/` owns internal MIDI routing, external MIDI input, and external MIDI remapping.
 - `drum/` owns drum clip/lane sync, lane copy/clear/reset/mute/solo, repeat modes, and repeat groove edits.
-- `bank/` owns parameter bank runtime logic, bank reset, bank reads, track config writes, and bank param writes.
+- `bank/` owns legacy parameter page runtime logic, page reset, page reads, track config writes, and page param writes.
 - `corun/` owns Schwung chain-editor co-run and Move-native co-run entry/exit.
 
 ## State Ownership
@@ -378,4 +378,3 @@ These are observed current-state smells, not proposed fixes.
 - Co-run is cross-cutting and invasive. It introduces checks and cleanup paths across input, pad mapping, render, LEDs, sound edit, and tick workflows.
 - Persistence, snapshot, sidecar, and active-set handling are interleaved with initialization, tick, menu actions, and suspend detection.
 - Hardware-specific constants and assumptions are widely visible. MIDI CC/note ranges, Move button mappings, palette indices, and OLED dimensions appear across multiple layers.
-

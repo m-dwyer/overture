@@ -70,7 +70,7 @@ Base contexts own normal surfaces:
 - Track View
 - Performance View if it becomes a durable mode
 
-They should be long-lived and may delegate to concept workflows such as Pad Surface, Parameter Bank, and Loop Gesture.
+They should be long-lived and may delegate to concept workflows such as Pad Surface, Parameter Page, and Loop Gesture.
 
 ### Overlay Contexts
 
@@ -136,4 +136,3 @@ Overture should borrow the stack idea, not the implementation.
 5. Route normalized input through the stack before legacy handlers.
 6. Convert picker and confirmation surfaces one by one.
 7. Model co-run as an explicit context after modal migration proves stable.
-

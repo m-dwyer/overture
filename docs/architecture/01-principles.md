@@ -44,7 +44,7 @@ Prefer Overture-specific versions of the template patterns:
 - Use command descriptors with DSP effects, mirror effects, invalidation effects, undo metadata, and readback policy, not only `apply()` and `undo()`.
 - Use a DSP operation queue that owns coalescing rules, rather than scattering one-per-tick drains across workflows.
 - Use render models and frame diffing. Renderers should return desired screen/LED output; host adapters should own actual writes and caches.
-- Keep concept-owned runtime modules. Overture should deepen modules such as Recording Workflow, Pad Surface, Parameter Bank, Track/Clip Sync, Tick Pipeline, and Co-run instead of reorganizing by generic pattern names.
+- Keep concept-owned runtime modules. Overture should deepen modules such as Recording Workflow, Pad Surface, Parameter Page, Track/Clip Sync, Tick Pipeline, and Co-run instead of reorganizing by generic pattern names.
 
 ## Target Constraints
 
@@ -66,4 +66,3 @@ Architecture must optimize for:
 - Rendering should be a pure description step followed by an adapter-controlled flush.
 - Commands should be introduced where they reduce duplicated edit, undo, readback, and invalidation logic.
 - Contexts should be introduced where they remove duplicated modal routing and Back behavior.
-

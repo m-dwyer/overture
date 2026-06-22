@@ -33,7 +33,7 @@ The best early migrations have high leverage, low effort, low risk, high testabi
 | 5 | Recording Workflow drain interface | 4 | 3 | 3 | 4 | 1 | Strong concept boundary. Do after queue semantics are clear. |
 | 6 | Command bus execution for one clip command | 4 | 4 | 4 | 4 | 2 | Valuable but should follow descriptor and queue tests. |
 | 7 | Readback Scheduler runtime | 4 | 3 | 4 | 4 | 2 | Important, but only after commands/queue prove the policy shape. |
-| 8 | Parameter Bank CC automation slice | 4 | 4 | 4 | 4 | 2 | High payoff, but too risky before command/readback discipline exists. |
+| 8 | Parameter Page CC automation slice | 4 | 4 | 4 | 4 | 2 | High payoff, but too risky before command/readback discipline exists. |
 | 9 | LED cache adapter boundary | 3 | 3 | 3 | 4 | 1 | Useful before broad LED frame work; keep scope narrow. |
 | 10 | ScreenFrame for confirm prompt only | 3 | 2 | 2 | 5 | 2 | Good as a rendering spike after context work. |
 | 11 | Session View step-button slice | 3 | 4 | 4 | 3 | 2 | Useful but behavior-heavy. Delay until input normalization is real. |
@@ -145,7 +145,7 @@ Delay until:
 
 The scheduler is valuable, but introducing it before commands use it will create a second deferred-work abstraction with no pressure test.
 
-### Parameter Bank CC Automation Slice
+### Parameter Page CC Automation Slice
 
 Delay until:
 
@@ -153,7 +153,7 @@ Delay until:
 - command descriptors are established
 - readback/invalidation policy is clearer
 
-Parameter Bank behavior is high payoff, but it is a dense cluster of DSP writes, recording behavior, automation semantics, delete behavior, alt behavior, and UI feedback. It should not be the first concept migration.
+Parameter Page behavior is high payoff, but it is a dense cluster of DSP writes, recording behavior, automation semantics, delete behavior, alt behavior, and UI feedback. It should not be the first concept migration.
 
 ### Co-run Context Ownership
 
@@ -260,7 +260,7 @@ Forcing every event through commands would add ceremony and obscure timing-sensi
 
 ### Later
 
-10. Parameter Bank CC automation slice.
+10. Parameter Page CC automation slice.
 11. Drum lane clear/reset commands.
 12. Session View step-button slice.
 13. LED cache adapter boundary.
@@ -297,4 +297,3 @@ Be disciplined about the first month of work:
 5. Only then execute one small command through the new path.
 
 That sequence gives real architecture leverage without asking the project to survive a rewrite.
-

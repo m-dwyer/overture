@@ -53,7 +53,7 @@ The DSP Mirror readback behavior that refreshes track, clip, drum lane, automati
 _Avoid_: Clip helper, sync service
 
 **UI Sidecar**:
-The UI Runtime persistence file for UI-only state such as active track, active clips, session view, active drum lanes, performance memory, active banks, and track octave.
+The UI Runtime persistence file for UI-only state such as active track, active clips, session view, active drum lanes, performance memory, active pages, and track octave.
 _Avoid_: UI state file, settings
 
 **Session View**:
@@ -61,15 +61,19 @@ The clip-grid view where pads launch, select, copy, clear, or edit clips by trac
 _Avoid_: Grid view, launcher
 
 **Track View**:
-The performance/edit view for the active track where pads play notes, drum lanes, repeat workflows, or bank-selection gestures.
+The performance/edit view for the active track where pads play notes, drum lanes, repeat workflows, or page-selection gestures.
 _Avoid_: Detail view, edit view
 
-**Parameter Bank**:
-A bank of eight knob-addressable parameters whose read/write behavior may target global, track, clip, drum-lane, action, or automation state.
-_Avoid_: Knob page, bank component
+**Page**:
+A top-level, jog-reachable editing surface in Track View.
+_Avoid_: Bank in user-facing language; keep `bank` only for legacy code, state, tests, or DSP protocol names.
+
+**Parameter Page**:
+A Page centered on eight encoder-addressable parameters whose read/write behavior may target global, track, clip, drum-lane, action, sound, or automation state.
+_Avoid_: Parameter bank, knob bank
 
 **Render Surface**:
-The single bag of OLED drawing primitives (`print`, `pixelPrint`, `fill_rect`, `clear_screen`), shared chrome helpers (bank headings, alt arrow, metro indicator, position bar), and render-time param queries (`altIndicatorActive`, `bankHasAltParams`, `midiNoteName`) that every render module draws through. Assembled once at the composition root and memoized; a render module reads only the subset it needs off the one surface. Replaced the former per-render deps factories and their identity adapters.
+The single bag of OLED drawing primitives (`print`, `pixelPrint`, `fill_rect`, `clear_screen`), shared chrome helpers (page headings, alt arrow, metro indicator, position bar), and render-time param queries (`altIndicatorActive`, `bankHasAltParams`, `midiNoteName`) that every render module draws through. Assembled once at the composition root and memoized; a render module reads only the subset it needs off the one surface. Replaced the former per-render deps factories and their identity adapters.
 _Avoid_: Canvas, graphics context, render deps, draw adapter
 
 **Patched Schwung Capability**:
@@ -89,9 +93,15 @@ _Avoid_: Native mode, passthrough
 - **Drum Repeat Workflow** owns repeat-specific pad routing and **Repeat Groove** state, not general Drum Lane destruction.
 - **Track / Clip Sync** refreshes the **DSP Mirror** for clips, tracks, drum lanes, automation, and sidecar-derived UI state.
 - The **UI Sidecar** persists UI-only state and is reconciled with DSP state through **Track / Clip Sync** after state load or resume.
-- **Parameter Bank** read/write behavior depends on track type, active clip, active drum lane, and coalescing-sensitive DSP command rules.
+- **Parameter Page** read/write behavior depends on track type, active clip, active drum lane, route, sound component, and coalescing-sensitive DSP command rules.
 - Every render module draws through the one **Render Surface**; the composition root assembles it once and passes it wherever a per-render deps bag was formerly built.
 - **Patched Schwung Capability** checks keep the same **Tool Module** working on both stock and patched Schwung hosts.
+
+## Design System
+
+The living UI design system is documented in `docs/DESIGN_SYSTEM.md`. It is the
+source of truth for product language, Page behavior, Parameter Page layout,
+Sound Page behavior, browser behavior, and shared LED language.
 
 ## Example Dialogue
 
@@ -107,3 +117,4 @@ _Avoid_: Native mode, passthrough
 - "Pad handling" previously covered padmap construction, live notes, drum lane destruction, and repeat routing. Resolved: **Pad Surface**, **Drum Lane Workflow**, and **Drum Repeat Workflow** are separate concepts.
 - "State" can mean DSP persistence, UI-only sidecar persistence, or the in-memory DSP Mirror. Resolved: use **DSP Engine** state, **UI Sidecar**, or **DSP Mirror** explicitly.
 - "Queue" can hide different ordering requirements. Resolved: use **Deferred Queue** only for Tick Pipeline drains that preserve `set_param` or `get_param` invariants.
+- "Bank" is overloaded between product language, UI implementation, persisted state, and DSP protocol. Resolved: use **Page** or **Parameter Page** in product/domain language. Keep `bank` only when referring to current code, state fields, tests, generated assets, or DSP protocol names that have not been migrated.

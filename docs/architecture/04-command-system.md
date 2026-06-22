@@ -142,6 +142,5 @@ Overture needs command descriptors and execution policy, not a pure in-memory re
 3. Add tests that assert command descriptor, DSP ops, mirror patch, readbacks, and invalidation.
 4. Move undo availability marking into the command bus.
 5. Move `pendingDefaultSetParams` and similar drains into the DSP operation queue.
-6. Convert Parameter Bank and automation edits after simpler structural commands are stable.
+6. Convert Parameter Page and automation edits after simpler structural commands are stable.
 7. Convert undo/redo restore handling into command descriptors with sync policies.
-

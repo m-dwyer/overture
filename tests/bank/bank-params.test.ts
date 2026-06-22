@@ -440,7 +440,7 @@ describe("applyTrackConfig", () => {
   });
 });
 
-describe("Parameter Bank runtime", () => {
+describe("Parameter Page runtime", () => {
   test("applyTrackConfig keeps route-check popup linkage behind the runtime", () => {
     const c = calls();
     const oldRoute = [...runtimeState.trackRoute];

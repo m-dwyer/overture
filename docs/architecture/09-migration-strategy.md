@@ -114,7 +114,7 @@ Migrate the highest-pressure runtime concepts one at a time.
 Suggested order:
 
 1. Recording Workflow
-2. Parameter Bank CC automation slice
+2. Parameter Page CC automation slice
 3. Drum Lane Workflow write operations
 4. Session View step/pad behavior
 5. Co-run context and LED ownership
@@ -165,4 +165,3 @@ The migration is working when:
 - LED ownership is explicit during co-run
 - `S` has fewer top-level fields and clearer ownership
 - `ui.js` mostly wires capabilities rather than implementing behavior
-

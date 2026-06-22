@@ -18,6 +18,7 @@ import {
 } from '../core/ui_constants.mjs';
 import { effectiveClip } from './ui_leds.mjs';
 import { motionOverviewModel } from '../core/ui_motion.mjs';
+import { renderEncoderValueGrid } from './ui_oled_layout.mjs';
 
 export function renderDrumLaneBankOverview(deps) {
     const t    = S.activeTrack;
@@ -249,20 +250,17 @@ export function renderTrackBankOverview(deps, bank) {
     } else if (isDrum && bank === 3) {
         renderDrumMidiDelayBankOverview(deps);
     } else {
-        renderGenericBankOverview(deps, bank);
+        renderGenericParameterPageOverview(deps, bank);
     }
 }
 
-export function renderGenericBankOverview(deps, bank) {
+export function renderGenericParameterPageOverview(deps, bank) {
     const knobs = BANKS[bank].knobs;
     const vals  = S.bankParams[S.activeTrack][bank];
     const isDrum = S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM;
     (bank === 5 ? deps.drawBankHeadingInverted : deps.drawBankHeading)(BANKS[bank].name);
+    const cells = [];
     for (let k = 0; k < 8; k++) {
-        const colX = 4 + (k % 4) * 30;
-        const rowY = k < 4 ? 12 : 36;
-        const hi   = (S.knobTouched === k);
-        if (hi) deps.fill_rect(colX, rowY, 24, 24, 1);
         let lbl = knobs[k].abbrev || '-';
         const delayShiftClkF = S.altMode && !isDrum && bank === 3 && k === 0;
         const clipDirAlt     = S.altMode && !isDrum && knobs[k].dspKey === 'clip_playback_dir';
@@ -275,7 +273,6 @@ export function renderGenericBankOverview(deps, bank) {
             else if (delayShiftClkF)                         lbl = 'ClkF';
             else if (rndAltAlgo)                             lbl = 'Algo';
         }
-        deps.print(colX, rowY, lbl, hi ? 0 : 1);
         const rawVal = rndAltAlgo
             ? RND_ALG_NAMES[bank === 3 ? (S.midiDlyRandomMode[S.activeTrack] || 0) : (S.noteFXRandomMode[S.activeTrack] || 0)]
             : delayShiftClkF
@@ -284,20 +281,43 @@ export function renderGenericBankOverview(deps, bank) {
                     ? fmtRevStyle(S.clipPlaybackAudioReverse[S.activeTrack][effectiveClip(S.activeTrack)] | 0)
                     : (knobs[k].abbrev ? knobs[k].fmt(vals[k]) : null);
         const txt = (knobs[k].fmt === fmtArpRate && !delayShiftClkF) ? (rawVal || '-') : col4(rawVal);
-        deps.print(colX, rowY + 12, txt, hi ? 0 : 1);
+        cells.push({
+            label: lbl,
+            value: txt,
+            highlighted: S.knobTouched === k
+        });
     }
+    renderEncoderValueGrid(deps, cells, {
+        preformatted: true,
+        preserveSlots: true,
+        startY: 12,
+        valueYOffset: 12
+    });
+}
+
+export function renderGenericBankOverview(deps, bank) {
+    return renderGenericParameterPageOverview(deps, bank);
 }
 
 function renderBankCells(deps, labels, values, opts) {
     const wideLabels = opts && opts.wideLabels;
+    const cells = [];
     for (let k = 0; k < 8; k++) {
-        if (!labels[k]) continue;
-        const colX = 4 + (k % 4) * 30;
-        const rowY = k < 4 ? 12 : 36;
-        const hi   = (S.knobTouched === k);
-        if (hi) deps.fill_rect(colX, rowY, 24, 24, 1);
+        if (!labels[k]) {
+            cells.push(null);
+            continue;
+        }
         const lbl = labels[k];
-        deps.print(colX, rowY,      wideLabels && lbl.length > 4 ? lbl : col4(lbl), hi ? 0 : 1);
-        deps.print(colX, rowY + 12, col4(values[k]), hi ? 0 : 1);
+        cells.push({
+            label: wideLabels && lbl.length > 4 ? lbl : col4(lbl),
+            value: col4(values[k]),
+            highlighted: S.knobTouched === k
+        });
     }
+    renderEncoderValueGrid(deps, cells, {
+        preformatted: true,
+        preserveSlots: true,
+        startY: 12,
+        valueYOffset: 12
+    });
 }
