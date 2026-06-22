@@ -1,6 +1,6 @@
 // The OLED. The device screen is 128×64; the host display sink draws device pixels.
 // The internal buffer is supersampled by `scale` so graphics render as crisp scale×
-// blocks (pixel-faithful) while print() text draws anti-aliased and legible. The CSS
+// blocks (pixel-faithful), including print() text. The CSS
 // box size is unchanged (w-full / aspect-[2/1]) — only the backing-store density
 // changes. In exact mode (scale=1, smooth=false) image-rendering: pixelated keeps the
 // nearest-neighbor upscale crisp, reproducing the literal device pixels. main's

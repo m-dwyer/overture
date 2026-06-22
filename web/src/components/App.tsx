@@ -13,6 +13,7 @@ import { createWasmDsp } from "@/wasm-dsp.js";
 import type { Dsp } from "@/dsp.js";
 import { setLedPaletteEntryRGB } from "@/led-palette.js";
 import { NAV, NOTE_OFF, NOTE_ON, STEP_CC0, type Send } from "@/lib/move-controls";
+import { MCUFONT } from "@overture-ui/core/ui_constants.mjs";
 import { OledScreen } from "./OledScreen";
 import { Shell } from "./Shell";
 import { TooltipProvider } from "./ui/tooltip";
@@ -25,16 +26,15 @@ const BG = "#000000";
 // The device's `print` font is a 5×7 bitmap on a fixed 6px-wide grid; the tool
 // stacks menu rows only 9px apart (menu_layout LIST_LINE_HEIGHT) and right-aligns
 // values using text_width = chars × 6. Match that so text doesn't overlap and
-// alignment lands correctly. ~8px keeps glyphs inside the 9px line height. The
-// display sink multiplies all of these (coords, sizes, font px) by the active OLED
+// alignment lands correctly. The display sink multiplies coordinates and glyph
+// pixels by the active OLED
 // scale: every logical device pixel becomes a scale×scale block.
 const CHAR_W = 6;
-const FONT_PX = 8;
-const FONT_FAMILY = "ui-monospace, 'SF Mono', Menlo, monospace";
 // Readable default supersamples the 128×64 device buffer 8× (1024×512 backing): graphics
-// stay crisp scale-blocks and print() text renders anti-aliased and legible. Exact mode
-// (scale 1) reproduces the literal device pixels with nearest-neighbor CSS upscaling.
+// and print() text both stay crisp scale-blocks. Exact mode (scale 1) reproduces
+// the literal device pixels with nearest-neighbor CSS upscaling.
 const OLED_READABLE_SCALE = 8;
+type McuFont = Record<string, number[]>;
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -207,16 +207,26 @@ export function App() {
       },
       print(x, y, text, color) {
         const s = S();
-        ctx.font = `${FONT_PX * s}px ${FONT_FAMILY}`;
-        ctx.textBaseline = "top";
         ctx.fillStyle = color === 0 ? BG : FG;
-        // Draw on the device's fixed 6px-per-char grid (monospace, no kerning) so
-        // spacing and text_width-based alignment match the firmware font. fillText is
-        // anti-aliased, so readable mode (large backing store) renders smooth glyphs.
+        // Draw the same 5x5 MCU bitmap font the tool uses on-device. Browser
+        // fillText is anti-aliased, which makes Sharp mode mix smooth vector text
+        // with pixel-scaled graphics.
         const str = String(text);
         const baseX = (x | 0) * s;
         const baseY = (y | 0) * s;
-        for (let i = 0; i < str.length; i++) ctx.fillText(str[i], baseX + i * CHAR_W * s, baseY);
+        const font = MCUFONT as McuFont;
+        for (let i = 0; i < str.length; i++) {
+          const glyph = font[str[i]];
+          if (!glyph) continue;
+          for (let row = 0; row < 5; row++) {
+            const bits = glyph[row] ?? 0;
+            for (let col = 0; col < 5; col++) {
+              if (bits & (1 << (4 - col))) {
+                ctx.fillRect(baseX + (i * CHAR_W + col) * s, baseY + row * s, s, s);
+              }
+            }
+          }
+        }
         if (str.trim()) { oledFrame.push(str); publishOled(); }
       },
       textWidth(text) {
