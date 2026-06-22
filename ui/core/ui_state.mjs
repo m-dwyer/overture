@@ -193,6 +193,15 @@ export function createInitialState() {
     schwungSoundMemory: Array.from({length: 8}, () => ({ selectedIndex: 1, paramDetailIndex: 0, paramDetail: true })),
     moveCoRunTrack: -1,                       /* -1 = off; 0-3 = Move firmware is co-running on this track (Overture skips OLED; shim filters nav CCs + touch 0-9 from tool, lets them reach Move) */
     moveCoRunDrumHeld: -1,                    /* d1 note of drum lane pad held in co-run; -1 = none. Plain note-off sent on physical release */
+    /* Auto-route (ui/core/ui_auto_route.mjs): blind front-panel gesture macro
+     * that sets Move tracks to MIDI ch 1-4 on a new/changed set. NOT wired into
+     * the live tick pipeline yet — owned by its own module + test. */
+    autoRouteQueue: null,                     /* [{emit:[[...]], gap}] | null — queued gesture steps */
+    autoRouteGap: 0,                          /* ticks to wait before the next step */
+    autoRouteActive: false,                   /* overlay + input-lockout flag while the macro runs */
+    autoRouteWatchdog: 0,                     /* ticks to hard-abort the macro */
+    autoRouteAppliedUuid: '',                 /* guard: run the macro once per set */
+    pendingAutoRouteRequest: false,           /* Route Check jog-click -> drained by runAutoRouteRequest in tick */
     trackPadMode: new Array(8).fill(0),
     trackVelOverride: new Array(8).fill(0),
     trackLooper: new Array(8).fill(1),
@@ -450,6 +459,7 @@ export function createInitialState() {
     currentSetUuid: '',
     currentSetName: '',
     lastDspInstanceId: '',
+    lastSongIndex: -1,                        /* Move Settings.json currentSongIndex; resume/init set-change signal */
     stepOpTick: -99,
     pendingSetLoad: false,
     pendingDspSync: 0,

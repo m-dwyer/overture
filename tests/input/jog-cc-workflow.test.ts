@@ -112,6 +112,7 @@ function state(overrides: Record<string, unknown> = {}) {
     globalMenuOpen: false,
     routeCheckOpen: false,
     routeCheckSelected: 0,
+    pendingAutoRouteRequest: false,
     exportDoneDialog: false,
     confirmClearSession: false,
     confirmClearSel: 0,
@@ -785,11 +786,24 @@ describe("Jog CC workflow - global menu", () => {
     expect(handleUiJogGlobalMenu(state(), deps(c), ...CLICK)).toBe(false);
   });
 
-  test("route-check click closes the route view", () => {
+  test("route-check Apply-row click requests an auto-route re-apply (view stays open)", () => {
     const c = calls();
-    const S = state({ globalMenuOpen: true, routeCheckOpen: true });
+    const S = state({ globalMenuOpen: true, routeCheckOpen: true, routeCheckSelected: 8 });
     expect(handleUiJogGlobalMenu(S, deps(c), ...CLICK)).toBe(true);
-    expect(S.routeCheckOpen).toBe(false);
+    /* The Apply routing row (index 8) acts: deferred to runAutoRouteRequest in
+     * tick; the view stays open so the refreshed result shows (Back/Menu close
+     * it via their own handlers). */
+    expect(S.pendingAutoRouteRequest).toBe(true);
+    expect(S.routeCheckOpen).toBe(true);
+  });
+
+  test("route-check click on a track row is inert (no auto-route request)", () => {
+    const c = calls();
+    const S = state({ globalMenuOpen: true, routeCheckOpen: true, routeCheckSelected: 2 });
+    expect(handleUiJogGlobalMenu(S, deps(c), ...CLICK)).toBe(true);
+    /* Track rows (0-7) do nothing on click; only the Apply row arms the request. */
+    expect(S.pendingAutoRouteRequest).toBe(false);
+    expect(S.routeCheckOpen).toBe(true);
   });
 
   test("clear-session YES click runs doClearSession", () => {

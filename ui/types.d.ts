@@ -42,6 +42,7 @@ export interface State
     TrackConfigState,
     SessionViewState,
     CoRunState,
+    AutoRouteState,
     RecordingState,
     ModalState,
     RenderState,
@@ -365,6 +366,16 @@ export interface CoRunState {
   pendingEditEntryTrack: number;
 }
 
+/** Auto-Route: blind front-panel gesture macro queue + once-per-set guard. */
+export interface AutoRouteState {
+  autoRouteQueue: Array<{ emit: number[][]; gap: number }> | null;
+  autoRouteGap: number;
+  autoRouteActive: boolean;
+  autoRouteWatchdog: number;
+  autoRouteAppliedUuid: string;
+  pendingAutoRouteRequest: boolean;
+}
+
 /** Recording Workflow: arm/count-in/note-queue/scheduled-stop state. */
 export interface RecordingState {
   recordArmed: boolean;
@@ -474,6 +485,7 @@ export interface PersistenceLifecycleState {
   currentSetUuid: string;
   currentSetName: string;
   lastDspInstanceId: string;
+  lastSongIndex: number;
   hasInitedOnce: boolean;
   _wasSuspended: boolean;
   pendingSetLoad: boolean;

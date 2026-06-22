@@ -22,6 +22,13 @@ export function drawUIImpl(S, deps) {
         deps.paintCoRunSideButtons(_litMask, (S.tickCount % POLL_INTERVAL) === 0);
         return;
     }
+    /* Auto-route: the blind gesture macro is driving Move's routing menu. Own the
+     * OLED with a stable "Configuring… routing…" message so the user doesn't see
+     * the menu flicker. Top priority after the co-run OLED owners. */
+    if (S.autoRouteActive) {
+        deps.renderAutoRouteOverlay(deps.renderSurface());
+        return;
+    }
     /* Alt-param mode is transient: any bank change, track change, or entering
      * Session View drops back to primary params. Diff-guard catches every
      * S.activeBank / S.activeTrack reassignment regardless of source. */

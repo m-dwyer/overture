@@ -156,6 +156,9 @@ import {
     renderShiftStepHelp
 } from './render/ui_prompt_render.mjs';
 import {
+    renderAutoRouteOverlay
+} from './render/ui_auto_route_render.mjs';
+import {
     renderBakeConfirm,
     renderBakeSceneConfirm,
     renderClearAutomationMenu,
@@ -1635,6 +1638,7 @@ function drawUI() {
     return drawUIImpl(S, {
         renderSurface,
         paintCoRunSideButtons,
+        renderAutoRouteOverlay,
         renderSessionOverview,
         drawInheritPicker,
         drawSnapshotPicker,
@@ -1812,6 +1816,7 @@ function createInitWorkflowDeps() {
         readActiveSet,
         maybeShowInheritPicker,
         fileExists: optionalHostFileExists(),
+        host_read_file: optionalHostReadFile(),
         syncClipsFromDsp,
         syncMuteSoloFromDsp,
         extHeldNotes,
@@ -2482,6 +2487,10 @@ function _onMidiInternalImpl(data) {
         S.screenDirty = true;
         return;
     }
+    /* Auto-route lockout: the gesture macro is injecting front-panel CCs into
+     * Move; swallow physical front-panel input so the user can't fight the macro
+     * (and so injected CCs that echo back don't re-enter Overture's handlers). */
+    if (S.autoRouteActive) return;
     handleUiMidiInternalMessage(S, createMidiInternalWorkflowDeps(), data);
 }
 

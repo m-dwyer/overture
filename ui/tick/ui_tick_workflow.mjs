@@ -40,6 +40,7 @@ import {
     handleTrackViewChordFirstStepTick,
     handleTrackViewStepHoldThreshold
 } from '../view/ui_track_view_step_workflow.mjs';
+import { runAutoRouteTickTasks, runAutoRouteRequest } from '../core/ui_auto_route.mjs';
 
 export function runTickWorkflow(S, deps) {
     S.tickCount++;
@@ -94,7 +95,14 @@ export function runTickWorkflow(S, deps) {
         maybeShowInheritPicker: deps.maybeShowInheritPicker,
         invalidateLEDCache: deps.invalidateLEDCache,
         buildLedInitQueue: deps.buildLedInitQueue,
-        forceRedraw: deps.forceRedraw
+        forceRedraw: deps.forceRedraw,
+        /* Set-change signal + auto-route deps for the unsaved/blank resume case:
+         * readCurrentSongIndex reads Settings.json; beginAutoRoute needs the
+         * Schwung-slot setters + Move inject to seed canonical channels. */
+        host_read_file: deps.host_read_file,
+        shadowSetParam: deps.shadowSetParam,
+        shadowSetParamTimeout: deps.shadowSetParamTimeout,
+        move_midi_inject_to_move: deps.move_midi_inject_to_move
     });
 
     runMetroNoteOffTask(S, {
@@ -172,10 +180,32 @@ export function runTickWorkflow(S, deps) {
         restoreUiSidecar: deps.restoreUiSidecar,
         computePadNoteMap: deps.computePadNoteMap,
         invalidateLEDCache: deps.invalidateLEDCache,
-        forceRedraw: deps.forceRedraw
+        forceRedraw: deps.forceRedraw,
+        move_midi_inject_to_move: deps.move_midi_inject_to_move,
+        shadowSetParam: deps.shadowSetParam,
+        shadowSetParamTimeout: deps.shadowSetParamTimeout
     });
 
     runMoveCoRunTickTasks(S, {
+        move_midi_inject_to_move: deps.move_midi_inject_to_move
+    });
+
+    /* Manual auto-route request (Route Check jog-click): deferred to tick because
+     * Route Check input runs in onMidiMessage context (get_param null, set_param
+     * coalesces). Fire BEFORE the drain so a request queued this tick begins
+     * draining promptly. Uses the same full deps bag as runDspMirrorResyncTasks. */
+    runAutoRouteRequest(S, {
+        host_module_get_param: deps.host_module_get_param,
+        move_midi_inject_to_move: deps.move_midi_inject_to_move,
+        shadowSetParam: deps.shadowSetParam,
+        shadowSetParamTimeout: deps.shadowSetParamTimeout
+    });
+
+    /* Auto-route gesture drain: blind front-panel macro that sets Move tracks to
+     * MIDI ch 1-4 on a new/changed set. Armed by beginAutoRoute() on the
+     * set-load-complete path (runDspMirrorResyncTasks above). No reordering of the
+     * existing tick calls. */
+    runAutoRouteTickTasks(S, {
         move_midi_inject_to_move: deps.move_midi_inject_to_move
     });
 

@@ -396,7 +396,13 @@ export function handleUiJogGlobalMenu(S, deps, d1, d2) {
     if (!S.globalMenuOpen) return false;
     if (d1 === 3 && d2 === 127) {
         if (S.routeCheckOpen) {
-            S.routeCheckOpen = false;
+            /* Only the bottom "Apply routing" row (index 8) acts; track rows
+             * (0-7) are inert on click. Jog-click on Apply re-applies the
+             * canonical auto-route, deferred to runAutoRouteRequest in tick —
+             * this runs in the onMidiMessage path where get_param is null and
+             * set_param coalesces. Keep the view open (Back/Menu close it) so the
+             * refreshed result shows. */
+            if ((S.routeCheckSelected | 0) === 8) S.pendingAutoRouteRequest = true;
             S.screenDirty = true;
             return true;
         }
@@ -491,7 +497,8 @@ export function handleUiJogGlobalMenu(S, deps, d1, d2) {
         if (S.routeCheckOpen) {
             const delta = deps.decodeDelta(d2);
             if (delta !== 0) {
-                S.routeCheckSelected = Math.max(0, Math.min(7, (S.routeCheckSelected | 0) + delta));
+                /* 0-7 = tracks, 8 = the "Apply routing" action row. */
+                S.routeCheckSelected = Math.max(0, Math.min(8, (S.routeCheckSelected | 0) + delta));
                 S.screenDirty = true;
             }
         } else if (S.exportDoneDialog) {

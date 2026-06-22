@@ -191,7 +191,6 @@ function drawRouteCheck() {
         print(2, y, routeRow.text, active ? 0 : 1);
         print(86, y, routeRow.status, active ? 0 : 1);
     }
-    print(2, 59, model.footer, 1);
 }
 
 export function drawGlobalMenu() {

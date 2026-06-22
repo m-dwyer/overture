@@ -26,6 +26,7 @@
     "ui/types.d.ts",
     "ui/host.d.ts",
     "ui/core/ui_state.mjs",
+    "ui/core/ui_auto_route.mjs",
     "ui/core/ui_constants.mjs",
     "ui/core/ui_debug_log.mjs",
     "ui/core/ui_parameter_page_model.mjs",
