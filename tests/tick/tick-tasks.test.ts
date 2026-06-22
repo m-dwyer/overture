@@ -48,11 +48,17 @@ function calls() {
   };
 }
 
-function dspMirrorDeps(c: ReturnType<typeof calls>, instanceId = "new-instance") {
+function dspMirrorDeps(
+  c: ReturnType<typeof calls>,
+  instanceId = "new-instance",
+  stateUuid: string | null = null,
+) {
   return {
     host_module_get_param: (key: string) => {
       c.log.push(["get", key]);
-      return key === "instance_id" ? instanceId : null;
+      if (key === "instance_id") return instanceId;
+      if (key === "state_uuid") return stateUuid;
+      return null;
     },
     host_module_set_param: c.fn("set"),
     pollDSP: c.fn("pollDSP"),
@@ -62,6 +68,23 @@ function dspMirrorDeps(c: ReturnType<typeof calls>, instanceId = "new-instance")
     computePadNoteMap: c.fn("computePadNoteMap"),
     invalidateLEDCache: c.fn("invalidateLEDCache"),
     forceRedraw: c.fn("forceRedraw"),
+    move_midi_inject_to_move: c.fn("inject"),
+    shadowSetParam: c.fn("shadowSetParam"),
+  };
+}
+
+/* Auto-route writes S.trackRoute/S.trackChannel + the autoRoute* fields; a settle
+ * test that exercises the restoreSidecar path must seed these so beginAutoRoute
+ * has somewhere to write. */
+function autoRouteStateFields() {
+  return {
+    trackRoute: new Array(8).fill(0),
+    trackChannel: new Array(8).fill(0),
+    autoRouteQueue: null as Array<{ emit: number[][]; gap: number }> | null,
+    autoRouteGap: 0,
+    autoRouteActive: false,
+    autoRouteWatchdog: 0,
+    autoRouteAppliedUuid: "",
   };
 }
 
@@ -358,25 +381,52 @@ describe("tick task drains", () => {
       stateLoading: true,
       trackCurrentStep: [15, 47],
       trackCurrentPage: [8, 8],
+      ...autoRouteStateFields(),
     };
 
-    runDspMirrorResyncTasks(S, dspMirrorDeps(c));
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c, "new-instance", "set-A"));
     expect(S.pendingDspSync).toBe(1);
     expect(c.log).toEqual([]);
 
-    runDspMirrorResyncTasks(S, dspMirrorDeps(c));
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c, "new-instance", "set-A"));
     expect(S.pendingDspSync).toBe(0);
     expect(S.trackCurrentPage).toEqual([0, 2]);
     expect(S.stateLoading).toBe(false);
+    /* The settle (restoreSidecar) path reads state_uuid then arms auto-route:
+     * beginAutoRoute re-seeds the 4 Schwung slots via shadowSetParam (ch 5-8)
+     * between restoreUiSidecar and computePadNoteMap. */
     expect(c.log).toEqual([
       ["pollDSP"],
       ["syncClipsFromDsp"],
       ["syncMuteSoloFromDsp"],
       ["restoreUiSidecar", true],
+      ["get", "state_uuid"],
+      ["shadowSetParam", 0, "slot:receive_channel", "5"],
+      ["shadowSetParam", 1, "slot:receive_channel", "6"],
+      ["shadowSetParam", 2, "slot:receive_channel", "7"],
+      ["shadowSetParam", 3, "slot:receive_channel", "8"],
       ["computePadNoteMap"],
       ["invalidateLEDCache"],
       ["forceRedraw"],
     ]);
+    /* Auto-route fired once for set-A: overlay active, macro queued, uuid pinned. */
+    expect(S.autoRouteActive).toBe(true);
+    expect(S.autoRouteAppliedUuid).toBe("set-A");
+    expect(S.autoRouteQueue && S.autoRouteQueue.length).toBeGreaterThan(0);
+    expect(S.trackChannel).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+
+    /* A second settle with the SAME uuid is a no-op for auto-route: the
+     * once-per-uuid guard short-circuits, so no further shadowSetParam re-seed. */
+    c.log.length = 0;
+    S.autoRouteActive = false;
+    S.autoRouteQueue = null;
+    S.pendingDspSync = 1;
+    runDspMirrorResyncTasks(S, dspMirrorDeps(c, "new-instance", "set-A"));
+    expect(S.pendingDspSync).toBe(0);
+    expect(S.autoRouteActive).toBe(false);
+    expect(S.autoRouteQueue).toBeNull();
+    expect(c.log.filter(([name]) => name === "shadowSetParam")).toEqual([]);
+    expect(c.log).toContainEqual(["get", "state_uuid"]);
   });
 
   test("Move co-run inject arms the same track-button press queue and drains with defensive Shift-off", () => {
