@@ -42,12 +42,14 @@ export function App() {
   const logRef = useRef<HTMLPreElement>(null);
   const emuRef = useRef<Emulator | null>(null);
   const shellLedsRef = useRef<LedSink | null>(null);
-  const manualMode = new URLSearchParams(location.search).has("manual");
+  const searchParams = new URLSearchParams(location.search);
+  const manualMode = searchParams.has("manual");
+  const forceExactOled = searchParams.has("exact");
   // OLED readability: supersampled "readable" view by default, toggleable to a 1:1
   // pixel-exact view for verifying literal device pixels. `?exact` forces exact
   // (deterministic for snapshot tests); otherwise persisted in localStorage.
   const [readable, setReadable] = useState(() => {
-    if (new URLSearchParams(location.search).has("exact")) return false;
+    if (forceExactOled) return false;
     return localStorage.getItem("ovt:oled-readable") !== "0";
   });
   const oledScale = readable ? OLED_READABLE_SCALE : 1;
@@ -56,8 +58,10 @@ export function App() {
   const oledModeRef = useRef({ scale: oledScale });
   useLayoutEffect(() => {
     oledModeRef.current.scale = oledScale;
-    localStorage.setItem("ovt:oled-readable", readable ? "1" : "0");
-  }, [readable, oledScale]);
+    if (!forceExactOled) {
+      localStorage.setItem("ovt:oled-readable", readable ? "1" : "0");
+    }
+  }, [readable, oledScale, forceExactOled]);
 
   const [manualGesture, setManualGesture] = useState("");
   const [manualControls, setManualControls] = useState("");
