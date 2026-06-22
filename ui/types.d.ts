@@ -529,6 +529,30 @@ export interface SetParamCmd {
   val: string;
 }
 
+/** Shared preformatted encoder-grid options for Parameter Page models. */
+export interface ParameterPageGridOptions {
+  preformatted: boolean;
+  preserveSlots: boolean;
+  startY: number;
+  valueYOffset: number;
+}
+
+/** One visible encoder cell in a Parameter Page overview grid. */
+export interface ParameterPageCell {
+  label: string;
+  value: string;
+  highlighted: boolean;
+}
+
+/** Null keeps a physical encoder slot empty while preserving grid position. */
+export type ParameterPageCellSlot = ParameterPageCell | null;
+
+/** Render-ready cell model for an encoder-grid Parameter Page overview. */
+export interface ParameterPageGridModel {
+  cells: ParameterPageCellSlot[];
+  grid: ParameterPageGridOptions;
+}
+
 // ===========================================================================
 // Deps — NOT declared here.
 //

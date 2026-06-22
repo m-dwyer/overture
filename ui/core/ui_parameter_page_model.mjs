@@ -1,7 +1,71 @@
-import { col4, fmtArpRate, fmtRevStyle, fmtSign } from './ui_constants.mjs';
+import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtPct, fmtPlayDir, fmtRes, fmtRevStyle, fmtSign, fmtStretch, fmtVelOverride } from './ui_constants.mjs';
+
+/**
+ * @typedef {Object} ParameterPageKnob
+ * @property {string | null | undefined} abbrev
+ * @property {string | undefined} dspKey
+ * @property {(value: number) => string | number | null | undefined} fmt
+ */
+
+/**
+ * @typedef {Object} GenericParameterPageInput
+ * @property {number} bank
+ * @property {ParameterPageKnob[]} knobs
+ * @property {number[]} vals
+ * @property {boolean} altMode
+ * @property {boolean} isDrum
+ * @property {number} knobTouched
+ * @property {number=} midiDlyRandomMode
+ * @property {number=} noteFXRandomMode
+ * @property {number=} delayClockFb
+ * @property {number=} clipPlaybackAudioReverse
+ */
+
+/**
+ * @typedef {Object} LabelValueParameterPageInput
+ * @property {(string | null | undefined)[]} labels
+ * @property {unknown[]} values
+ * @property {boolean=} wideLabels
+ * @property {number} knobTouched
+ */
+
+/**
+ * @typedef {Object} DrumMidiDelayParameterPageInput
+ * @property {ParameterPageKnob[]} knobs
+ * @property {number[]} vals
+ * @property {number} knobTouched
+ */
+
+/**
+ * @typedef {Object} DrumLaneParameterPageInput
+ * @property {boolean} altMode
+ * @property {number} tpsIdx
+ * @property {number} stretch
+ * @property {number} shift
+ * @property {number} euclidN
+ * @property {number} playbackDir
+ * @property {number} playbackAudioReverse
+ * @property {boolean | number} seqFollow
+ * @property {number} knobTouched
+ */
+
+/**
+ * @typedef {Object} AllLanesParameterPageInput
+ * @property {boolean} altMode
+ * @property {number} resolution
+ * @property {number} stretch
+ * @property {number} shift
+ * @property {number} quantize
+ * @property {number} velocityOverride
+ * @property {number} inputQuantize
+ * @property {number} playbackDir
+ * @property {boolean | number} syncRepeat
+ * @property {number} knobTouched
+ */
 
 const RND_ALG_NAMES = ['Pure', 'Gaus', 'Walk'];
 
+/** @type {import('../types').ParameterPageGridOptions} */
 export const GENERIC_PARAMETER_PAGE_GRID_OPTIONS = {
     preformatted: true,
     preserveSlots: true,
@@ -9,21 +73,63 @@ export const GENERIC_PARAMETER_PAGE_GRID_OPTIONS = {
     valueYOffset: 12
 };
 
+/**
+ * @param {import('../types').ParameterPageCellSlot[]} cells
+ * @returns {import('../types').ParameterPageGridModel}
+ */
+function parameterPageGridModel(cells) {
+    return {
+        cells: cells,
+        grid: GENERIC_PARAMETER_PAGE_GRID_OPTIONS
+    };
+}
+
+/**
+ * @param {GenericParameterPageInput} input
+ * @returns {import('../types').ParameterPageGridModel}
+ */
 export function genericParameterPageGridModel(input) {
-    return {
-        cells: genericParameterPageCells(input),
-        grid: GENERIC_PARAMETER_PAGE_GRID_OPTIONS
-    };
+    return parameterPageGridModel(genericParameterPageCells(input));
 }
 
+/**
+ * @param {LabelValueParameterPageInput} input
+ * @returns {import('../types').ParameterPageGridModel}
+ */
 export function labelValueParameterPageGridModel(input) {
-    return {
-        cells: labelValueParameterPageCells(input),
-        grid: GENERIC_PARAMETER_PAGE_GRID_OPTIONS
-    };
+    return parameterPageGridModel(labelValueParameterPageCells(input));
 }
 
+/**
+ * @param {DrumMidiDelayParameterPageInput} input
+ * @returns {import('../types').ParameterPageGridModel}
+ */
+export function drumMidiDelayParameterPageGridModel(input) {
+    return parameterPageGridModel(drumMidiDelayParameterPageCells(input));
+}
+
+/**
+ * @param {DrumLaneParameterPageInput} input
+ * @returns {import('../types').ParameterPageGridModel}
+ */
+export function drumLaneParameterPageGridModel(input) {
+    return parameterPageGridModel(drumLaneParameterPageCells(input));
+}
+
+/**
+ * @param {AllLanesParameterPageInput} input
+ * @returns {import('../types').ParameterPageGridModel}
+ */
+export function allLanesParameterPageGridModel(input) {
+    return parameterPageGridModel(allLanesParameterPageCells(input));
+}
+
+/**
+ * @param {GenericParameterPageInput} input
+ * @returns {import('../types').ParameterPageCellSlot[]}
+ */
 export function genericParameterPageCells(input) {
+    /** @type {import('../types').ParameterPageCellSlot[]} */
     const cells = [];
     const knobs = input.knobs;
     const vals = input.vals;
@@ -57,7 +163,12 @@ export function genericParameterPageCells(input) {
     return cells;
 }
 
+/**
+ * @param {LabelValueParameterPageInput} input
+ * @returns {import('../types').ParameterPageCellSlot[]}
+ */
 export function labelValueParameterPageCells(input) {
+    /** @type {import('../types').ParameterPageCellSlot[]} */
     const cells = [];
     const labels = input.labels;
     const values = input.values;
@@ -74,4 +185,95 @@ export function labelValueParameterPageCells(input) {
         });
     }
     return cells;
+}
+
+/**
+ * @param {DrumMidiDelayParameterPageInput} input
+ * @returns {import('../types').ParameterPageCellSlot[]}
+ */
+export function drumMidiDelayParameterPageCells(input) {
+    const knobs = input.knobs;
+    const vals = input.vals;
+    const labels = [knobs[0].abbrev, knobs[1].abbrev, knobs[2].abbrev, knobs[3].abbrev, 'Gate', 'Clk', 'Retrg', null];
+    const values = [
+        knobs[0].fmt(vals[0]),
+        knobs[1].fmt(vals[1]),
+        knobs[2].fmt(vals[2]),
+        knobs[3].fmt(vals[3]),
+        fmtGateMod(vals[4]),
+        fmtSign(vals[5]),
+        fmtBool(vals[6]),
+        null
+    ];
+    return labelValueParameterPageCells({
+        labels: labels,
+        values: values,
+        knobTouched: input.knobTouched
+    });
+}
+
+/**
+ * @param {DrumLaneParameterPageInput} input
+ * @returns {import('../types').ParameterPageCellSlot[]}
+ */
+export function drumLaneParameterPageCells(input) {
+    const labels = [
+        input.altMode ? 'Zoom' : 'Res',
+        'Stch',
+        input.altMode ? 'Nudg' : 'Shft',
+        'Lgto',
+        'Eucl',
+        '-',
+        input.altMode ? 'Rvrs' : 'Dir',
+        'SqFl'
+    ];
+    const values = [
+        fmtRes(input.tpsIdx),
+        fmtStretch(input.stretch),
+        fmtSign(input.shift),
+        '->',
+        String(input.euclidN),
+        '-',
+        input.altMode ? fmtRevStyle(input.playbackAudioReverse | 0) : fmtPlayDir(input.playbackDir | 0),
+        fmtBool(input.seqFollow ? 1 : 0)
+    ];
+    return labelValueParameterPageCells({
+        labels: labels,
+        values: values,
+        knobTouched: input.knobTouched
+    });
+}
+
+/**
+ * @param {AllLanesParameterPageInput} input
+ * @returns {import('../types').ParameterPageCellSlot[]}
+ */
+export function allLanesParameterPageCells(input) {
+    const DIQ_LABELS = ['Off','1/64','1/32','1/16','1/16T','1/8','1/8T','1/4','1/4T'];
+    const labels = [
+        'Res',
+        'Stch',
+        input.altMode ? 'Nudg' : 'Shft',
+        'Qnt',
+        'VelIn',
+        'InQ',
+        input.altMode ? 'Rvrs' : 'Dir',
+        'SyncRpt'
+    ];
+    const values = [
+        input.resolution < 0 ? '--' : fmtRes(input.resolution),
+        fmtStretch(input.stretch),
+        fmtSign(input.shift),
+        input.quantize <= 0 ? '--' : fmtPct(input.quantize),
+        fmtVelOverride(input.velocityOverride),
+        DIQ_LABELS[input.inputQuantize] || 'Off',
+        input.playbackDir < 0 ? '--' : (input.altMode ? fmtRevStyle(input.playbackDir) : fmtPlayDir(input.playbackDir)),
+        fmtBool(input.syncRepeat)
+    ];
+    return labelValueParameterPageCells({
+        labels: labels,
+        values: values,
+        wideLabels: true,
+        knobTouched: input.knobTouched
+    });
 }

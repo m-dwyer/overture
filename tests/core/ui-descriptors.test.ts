@@ -20,7 +20,7 @@ import {
 } from "@overture-ui/core/ui_sound_edit.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_edit_render.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
-import { genericParameterPageGridModel, labelValueParameterPageGridModel } from "@overture-ui/core/ui_parameter_page_model.mjs";
+import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, genericParameterPageGridModel, labelValueParameterPageGridModel } from "@overture-ui/core/ui_parameter_page_model.mjs";
 import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/core/ui_sound_preset_manager.mjs";
 import { fmtArpRate } from "@overture-ui/core/ui_constants.mjs";
 
@@ -888,5 +888,85 @@ describe("UI descriptor seams", () => {
     expect(model.cells[4]).toBeNull();
     expect(model.cells[6]).toMatchObject({ label: "SyncRpt", value: "ON  ", highlighted: true });
     expect(model.cells[7]).toMatchObject({ label: "-   ", value: "-   ", highlighted: false });
+  });
+
+  test("drum MIDI delay Parameter Page model preserves special-case cell labels", () => {
+    const knobs = Array.from({ length: 8 }, (_, k) => ({
+      abbrev: "K" + k,
+      fmt: (v: number) => "V" + v,
+    }));
+    const model = drumMidiDelayParameterPageGridModel({
+      knobs,
+      vals: [2, 1, -3, 4, 5, -6, 1, 0],
+      knobTouched: 5,
+    });
+
+    expect(model.grid).toMatchObject({
+      preformatted: true,
+      preserveSlots: true,
+      startY: 12,
+      valueYOffset: 12,
+    });
+    expect(model.cells[0]).toMatchObject({ label: "K0  ", value: "V2  ", highlighted: false });
+    expect(model.cells[4]).toMatchObject({ label: "Gate", value: "1/8T", highlighted: false });
+    expect(model.cells[5]).toMatchObject({ label: "Clk ", value: "-6  ", highlighted: true });
+    expect(model.cells[6]).toMatchObject({ label: "Retr", value: "ON  ", highlighted: false });
+    expect(model.cells[7]).toBeNull();
+  });
+
+  test("drum lane Parameter Page model preserves lane cell labels and alt values", () => {
+    const model = drumLaneParameterPageGridModel({
+      altMode: true,
+      tpsIdx: 2,
+      stretch: -1,
+      shift: 5,
+      euclidN: 12,
+      playbackDir: 3,
+      playbackAudioReverse: 1,
+      seqFollow: true,
+      knobTouched: 6,
+    });
+
+    expect(model.grid).toMatchObject({
+      preformatted: true,
+      preserveSlots: true,
+      startY: 12,
+      valueYOffset: 12,
+    });
+    expect(model.cells[0]).toMatchObject({ label: "Zoom", value: "1/8 ", highlighted: false });
+    expect(model.cells[1]).toMatchObject({ label: "Stch", value: "/2  ", highlighted: false });
+    expect(model.cells[2]).toMatchObject({ label: "Nudg", value: "+5  ", highlighted: false });
+    expect(model.cells[4]).toMatchObject({ label: "Eucl", value: "12  ", highlighted: false });
+    expect(model.cells[6]).toMatchObject({ label: "Rvrs", value: "Audi", highlighted: true });
+    expect(model.cells[7]).toMatchObject({ label: "SqFl", value: "ON  ", highlighted: false });
+  });
+
+  test("all lanes Parameter Page model preserves wide labels and unavailable values", () => {
+    const model = allLanesParameterPageGridModel({
+      altMode: true,
+      resolution: -1,
+      stretch: 1,
+      shift: -2,
+      quantize: 0,
+      velocityOverride: 96,
+      inputQuantize: 3,
+      playbackDir: -1,
+      syncRepeat: 1,
+      knobTouched: 7,
+    });
+
+    expect(model.grid).toMatchObject({
+      preformatted: true,
+      preserveSlots: true,
+      startY: 12,
+      valueYOffset: 12,
+    });
+    expect(model.cells[0]).toMatchObject({ label: "Res ", value: "--  ", highlighted: false });
+    expect(model.cells[2]).toMatchObject({ label: "Nudg", value: "-2  ", highlighted: false });
+    expect(model.cells[3]).toMatchObject({ label: "Qnt ", value: "--  ", highlighted: false });
+    expect(model.cells[4]).toMatchObject({ label: "VelIn", value: "96  ", highlighted: false });
+    expect(model.cells[5]).toMatchObject({ label: "InQ ", value: "1/16", highlighted: false });
+    expect(model.cells[6]).toMatchObject({ label: "Rvrs", value: "--  ", highlighted: false });
+    expect(model.cells[7]).toMatchObject({ label: "SyncRpt", value: "ON  ", highlighted: true });
   });
 });

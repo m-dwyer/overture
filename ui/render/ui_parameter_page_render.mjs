@@ -5,20 +5,17 @@ import {
     TPS_VALUES,
     col4,
     fmtBool,
-    fmtGateMod,
     fmtLen,
     fmtPct,
-    fmtPlayDir,
-    fmtRes,
-    fmtRevStyle,
     fmtSign,
-    fmtStretch,
-    fmtVelOverride
 } from '../core/ui_constants.mjs';
 import { effectiveClip } from './ui_leds.mjs';
 import { motionOverviewModel } from '../core/ui_motion.mjs';
 import {
+    allLanesParameterPageGridModel,
+    drumLaneParameterPageGridModel,
     genericParameterPageGridModel,
+    drumMidiDelayParameterPageGridModel,
     labelValueParameterPageGridModel
 } from '../core/ui_parameter_page_model.mjs';
 import { renderEncoderValueGrid } from './ui_oled_layout.mjs';
@@ -31,20 +28,19 @@ export function renderDrumLaneBankOverview(deps) {
     const tpsIdx = Math.max(0, TPS_VALUES.indexOf(S.drumLaneTPS[t]));
     const sqfl   = S.clipSeqFollow[t][ac] ? 1 : 0;
     const eucN = Math.min(S.drumLaneEuclidN[t][lane] | 0, len);
-    const drumLaneLabels = [S.altMode ? 'Zoom' : 'Res', 'Stch', S.altMode ? 'Nudg' : 'Shft', 'Lgto', 'Eucl', '-', S.altMode ? 'Rvrs' : 'Dir', 'SqFl'];
-    const drumLaneVals  = [
-        fmtRes(tpsIdx),
-        fmtStretch(S.bankParams[t][0][1]),
-        fmtSign(S.bankParams[t][0][2]),
-        '->',
-        String(eucN),
-        '-',
-        S.altMode ? fmtRevStyle(S.drumLanePlaybackAudioReverse[t][lane] | 0)
-                  : fmtPlayDir(S.drumLanePlaybackDir[t][lane] | 0),
-        fmtBool(sqfl),
-    ];
     deps.drawBankHeading('DRUM LANE');
-    renderBankCells(deps, drumLaneLabels, drumLaneVals);
+    const model = drumLaneParameterPageGridModel({
+        altMode: S.altMode,
+        tpsIdx: tpsIdx,
+        stretch: S.bankParams[t][0][1],
+        shift: S.bankParams[t][0][2],
+        euclidN: eucN,
+        playbackDir: S.drumLanePlaybackDir[t][lane],
+        playbackAudioReverse: S.drumLanePlaybackAudioReverse[t][lane],
+        seqFollow: sqfl,
+        knobTouched: S.knobTouched
+    });
+    renderEncoderValueGrid(deps, model.cells, model.grid);
 }
 
 export function renderAllLanesConfirm(deps) {
@@ -59,26 +55,23 @@ export function renderAllLanesConfirm(deps) {
 
 export function renderAllLanesBankOverview(deps) {
     const t = S.activeTrack;
-    const rv = S.bankParams[t][7][0];
-    const qv = S.bankParams[t][7][3];
-    const dv = S.bankParams[t][7][6];
-    const DIQ_LABELS = ['Off','1/64','1/32','1/16','1/16T','1/8','1/8T','1/4','1/4T'];
-    const allLabels = ['Res', 'Stch', S.altMode ? 'Nudg' : 'Shft', 'Qnt', 'VelIn', 'InQ', S.altMode ? 'Rvrs' : 'Dir', 'SyncRpt'];
-    const allVals = [
-        rv < 0 ? '--' : fmtRes(rv),
-        fmtStretch(S.bankParams[t][7][1]),
-        fmtSign(S.bankParams[t][7][2]),
-        qv <= 0 ? '--' : fmtPct(qv),
-        fmtVelOverride(S.trackVelOverride[t]),
-        DIQ_LABELS[S.drumInpQuant[t]] || 'Off',
-        dv < 0 ? '--' : (S.altMode ? fmtRevStyle(dv) : fmtPlayDir(dv)),
-        fmtBool(S.bankParams[t][7][7]),
-    ];
     deps.fill_rect(0, 0, 128, 9, 1);
     deps.print(4, 1, (Math.floor(S.tickCount / 24) % 2 === 0 ? 'ALL' : '   ') + ' LANES', 0);
     deps.print(106, 1, 'Tr' + (S.activeTrack + 1), 0);
     deps.drawAltArrow(98, true, deps.altIndicatorActive(S.activeTrack, S.activeBank));
-    renderBankCells(deps, allLabels, allVals, { wideLabels: true });
+    const model = allLanesParameterPageGridModel({
+        altMode: S.altMode,
+        resolution: S.bankParams[t][7][0],
+        stretch: S.bankParams[t][7][1],
+        shift: S.bankParams[t][7][2],
+        quantize: S.bankParams[t][7][3],
+        velocityOverride: S.trackVelOverride[t],
+        inputQuantize: S.drumInpQuant[t],
+        playbackDir: S.bankParams[t][7][6],
+        syncRepeat: S.bankParams[t][7][7],
+        knobTouched: S.knobTouched
+    });
+    renderEncoderValueGrid(deps, model.cells, model.grid);
 }
 
 export function renderDrumNoteFxBankOverview(deps) {
@@ -160,18 +153,13 @@ export function renderDrumMidiDelayBankOverview(deps) {
     const t     = S.activeTrack;
     const vals  = S.bankParams[t][3];
     const knobs = BANKS[3].knobs;
-    const drumDlyLabels = [knobs[0].abbrev, knobs[1].abbrev, knobs[2].abbrev, knobs[3].abbrev, 'Gate', 'Clk', 'Retrg', null];
-    const drumDlyFmt    = [knobs[0].fmt, knobs[1].fmt, knobs[2].fmt, knobs[3].fmt, fmtGateMod, fmtSign, fmtBool, null];
     deps.drawBankHeading(BANKS[3].name);
-    for (let k = 0; k < 8; k++) {
-        if (!drumDlyLabels[k]) continue;
-        const colX = 4 + (k % 4) * 30;
-        const rowY = k < 4 ? 12 : 36;
-        const hi   = (S.knobTouched === k);
-        if (hi) deps.fill_rect(colX, rowY, 24, 24, 1);
-        deps.print(colX, rowY,      col4(drumDlyLabels[k]), hi ? 0 : 1);
-        deps.print(colX, rowY + 12, col4(drumDlyFmt[k](vals[k])), hi ? 0 : 1);
-    }
+    const model = drumMidiDelayParameterPageGridModel({
+        knobs: knobs,
+        vals: vals,
+        knobTouched: S.knobTouched
+    });
+    renderEncoderValueGrid(deps, model.cells, model.grid);
 }
 
 export function renderMotionBankOverview(deps) {
