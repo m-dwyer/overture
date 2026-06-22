@@ -42,7 +42,7 @@ The main conclusion: Overture already has many useful seams. The migration shoul
 ### Highly Entangled Areas To Defer
 
 - Co-run ownership across input, OLED, LEDs, palette, pad maps, and tick.
-- Parameter Bank CC automation editing.
+- Parameter Page CC automation editing.
 - Full command execution for musical edits before the DSP operation queue exists.
 - Broad ScreenFrame or LedFrame conversion.
 - Plugin-style feature registry.
@@ -1005,15 +1005,15 @@ Medium.
 - Convert export confirmation to context after confirm prompt and snapshot picker.
 - Keep polling in tick until a general job model exists.
 
-## 27. Parameter Bank
+## 27. Parameter Page
 
 ### Name
 
-Parameter Bank Seam
+Parameter Page Seam
 
 ### Description
 
-`bank/` owns parameter bank state and reads/writes, while `ui/input/ui_knob_cc_workflow.mjs` owns much of the knob-turn behavior.
+`bank/` owns legacy parameter page state and reads/writes, while `ui/input/ui_knob_cc_workflow.mjs` owns much of the knob-turn behavior.
 
 ### Files Involved
 
@@ -1024,11 +1024,11 @@ Parameter Bank Seam
 - `ui/render/ui_bank_chrome_render.mjs`
 - `tests/bank/*`
 - `tests/input/knob-cc-workflow.test.ts`
-- `tests/render/bank-render.test.ts`
+- `tests/render/parameter-page-render.test.ts`
 
 ### Why It Is A Seam
 
-There is already a bank concept boundary, but behavior is split between bank modules, knob input, render, DSP writes, automation, and recording. It is high payoff but not low risk.
+There is already a legacy bank/page concept boundary, but behavior is split between bank modules, knob input, render, DSP writes, automation, and recording. It is high payoff but not low risk.
 
 ### Coupling Level
 
@@ -1042,7 +1042,7 @@ High.
 
 - Move only CC automation classification first, after normalized input and command/readback policy exist.
 - Keep render modules separate.
-- Do not attempt a full bank rewrite.
+- Do not attempt a full legacy bank/page rewrite.
 
 ## 28. Drum Workflows
 
@@ -1362,7 +1362,7 @@ Low.
 ## Deferral Recommendations
 
 - Defer co-run context migration until context stack and LED adapter exist.
-- Defer Parameter Bank behavior migration until command/readback policy is established.
+- Defer Parameter Page behavior migration until command/readback policy is established.
 - Defer broad ScreenFrame and LedFrame conversion.
 - Defer plugin registry until there are several stable registered capabilities.
 - Defer broad `S` restructuring until fields can move into real owners.
@@ -1379,4 +1379,3 @@ Low.
 8. Wrap LED caches behind an adapter while preserving existing exports.
 
 These are evolutionary migrations. Each one can ship without requiring a rewrite, and each one creates a stronger seam for the next step.
-

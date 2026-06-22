@@ -256,7 +256,7 @@ export interface CcAutomationState {
   ccGradPaletteTrack: number;
 }
 
-/** Parameter Bank selection + knob input bookkeeping. */
+/** Legacy Parameter Page selection + knob input bookkeeping. */
 export interface BankInputState {
   activeBank: number;
   trackActiveBank: number[];

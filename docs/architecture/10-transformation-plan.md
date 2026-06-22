@@ -658,7 +658,7 @@ Every concept migration should preserve the old wrapper entrypoint. Roll back by
 - Tests: recording and transport tests.
 - Rollback: route wrapper to old transition code.
 
-#### PR 6.3: Parameter Bank CC Automation Slice
+#### PR 6.3: Parameter Page CC Automation Slice
 
 - Scope: move only CC automation knob-turn classification and edit application.
 - Files: `ui/input/ui_knob_cc_workflow.mjs`, `ui/bank/*`, tests.
@@ -808,4 +808,3 @@ Pause and reassess if:
 - `ui.js` shrinks only by creating shallow pass-through modules
 
 The goal is steady architectural leverage, not movement for its own sake.
-

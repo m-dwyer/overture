@@ -34,7 +34,7 @@ function printed(calls: DrawCall[]) {
     .map((call) => String(call[1] === 4 || call[1] === 106 || typeof call[1] === "number" ? call[3] : call[1]));
 }
 
-describe("Bank render presentation", () => {
+describe("Parameter Page render presentation", () => {
   beforeEach(() => {
     S.activeTrack = 0;
     S.activeBank = 0;

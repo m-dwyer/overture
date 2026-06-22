@@ -11,8 +11,8 @@ As of this audit, `ui/ui.js` is 9,563 lines. The largest functions are:
 | Lines | Function | Main concept pressure |
 | ---: | --- | --- |
 | 977 | `_tickImpl()` | Tick Pipeline, Deferred Queue, recording drains, persistence, LED/render invalidation |
-| 787 | `_onCC_knobs()` | Parameter Bank edit behavior, CC automation, drum-lane bank edits |
-| 755 | `_onCC_jog()` | Modal workflow commits, menu dispatch, Parameter Bank navigation, Loop-held edits |
+| 787 | `_onCC_knobs()` | Parameter Page edit behavior, CC automation, drum-lane page edits |
+| 755 | `_onCC_jog()` | Modal workflow commits, menu dispatch, Parameter Page navigation, Loop-held edits |
 | 459 | `_onCC_transport()` | transport, recording, playback, loop/perf modifiers |
 | 402 | `_onStepButtons()` | Session View workflow, Track View step edit, Loop gesture, shortcuts |
 | 391 | `_onCC_buttons()` | mode buttons, copy/delete/mute/shift state, view switching |
@@ -23,7 +23,7 @@ As of this audit, `ui/ui.js` is 9,563 lines. The largest functions are:
 | 227 | `_onMidiInternalImpl()` | MIDI dispatch routing and modal/touch prefilters |
 | 226 | `_onCC_stepedit()` | step-edit write behavior |
 | 147 | `_onPadPressTrackView()` | Pad Surface routing and drum workflows |
-| 123 | `readBankParams()` | Parameter Bank DSP Mirror reads |
+| 123 | `readBankParams()` | Parameter Page DSP Mirror reads |
 | 121 | `restoreUiSidecar()` | UI Sidecar restore and Track / Clip Sync reconciliation |
 
 The remaining extraction opportunity is therefore mostly workflow and ordering
@@ -54,7 +54,7 @@ Good test seams for larger moves:
 
 ## Ranked Candidates
 
-### 1. Parameter Bank Behavior
+### 1. Parameter Page Behavior
 
 **Files**
 
@@ -63,13 +63,13 @@ Good test seams for larger moves:
 - `ui/ui_bank_render.mjs`
 - `ui/ui_bank_chrome_render.mjs`
 - `ui/ui_constants.mjs`
-- `web/tests/integration/bank-render.test.ts`
+- `tests/render/parameter-page-render.test.ts`
 
 **Problem**
 
-Parameter Bank presentation is now mostly extracted, but behavior is still one
+Parameter Page presentation is now mostly extracted, but behavior is still one
 of the largest and riskiest areas. `_onCC_knobs()` encodes many unrelated
-Parameter Bank rules:
+Parameter Page rules:
 
 - melodic generic bank edits;
 - drum DRUM LANE bank special cases;
@@ -87,7 +87,7 @@ testable by sending broad MIDI CC events through `ui.js`.
 
 **Solution**
 
-Create a **Parameter Bank** behavior module that owns knob-turn classification
+Create a **Parameter Page** behavior module that owns knob-turn classification
 and edit application for one knob event. Start with one sub-slice, not the whole
 function:
 
@@ -101,7 +101,7 @@ callbacks, and the current `S` object.
 
 **Benefits**
 
-- **Locality**: Parameter Bank write rules move next to the bank concept instead
+- **Locality**: Parameter Page write rules move next to the page concept instead
   of being spread across `_onCC_knobs()`, `applyBankParam()`, and render
   conditionals.
 - **Leverage**: focused tests can cover one knob event with small state fixtures
@@ -413,7 +413,7 @@ Do not pick solely by line count. The best next larger slice is:
 1. **Session View Workflow** if the goal is medium-risk progress and a clear
    TDD path.
 2. **Recording Workflow** if the goal is highest architectural leverage.
-3. **Parameter Bank Behavior** if the goal is maximum `ui.js` reduction, with
+3. **Parameter Page Behavior** if the goal is maximum `ui.js` reduction, with
    the understanding that it must proceed in small, exact behavior slices.
 
 My recommendation: start with **Session View Workflow: step-button behavior**.

@@ -3,7 +3,7 @@
 DSP parameter keys, C structs, recording architecture, and algorithm details.
 Read this when writing DSP calls or modifying DSP/pfx code.
 
-## Parameter Bank Reference
+## Parameter Page Reference
 
 Banks via **Shift + top-row pad** (92–99). Same bank again → TRACK (0).
 

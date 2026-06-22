@@ -151,7 +151,7 @@ git commit -m "feat(ui): jog-click toggles altMode; drop drum perform-mode cycle
 
 - [ ] **Step 1: Add the diff-guard in drawUI**
 
-In `ui/ui.js`, inside `function drawUI()` (line 3228), AFTER the `if (S.moveCoRunTrack >= 0) { ... }` co-run block and BEFORE any bank-render logic, insert:
+In `ui/ui.js`, inside `function drawUI()` (line 3228), AFTER the `if (S.moveCoRunTrack >= 0) { ... }` co-run block and BEFORE any legacy parameter-page render logic, insert:
 ```javascript
     /* Alt-param mode is transient: any bank change, track change, or entering
      * Session View drops back to primary params. Diff-guard catches every
