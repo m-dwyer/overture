@@ -42,6 +42,7 @@ export interface State
     TrackConfigState,
     SessionViewState,
     CoRunState,
+    AutoRouteState,
     RecordingState,
     ModalState,
     RenderState,
@@ -363,6 +364,15 @@ export interface CoRunState {
   _moveCoRunTrackLedsActive: boolean;
   _forceKnobReemit: boolean;
   pendingEditEntryTrack: number;
+}
+
+/** Auto-Route: blind front-panel gesture macro queue + once-per-set guard. */
+export interface AutoRouteState {
+  autoRouteQueue: Array<{ emit: number[][]; gap: number }> | null;
+  autoRouteGap: number;
+  autoRouteActive: boolean;
+  autoRouteWatchdog: number;
+  autoRouteAppliedUuid: string;
 }
 
 /** Recording Workflow: arm/count-in/note-queue/scheduled-stop state. */
