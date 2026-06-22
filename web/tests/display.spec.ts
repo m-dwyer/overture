@@ -224,4 +224,13 @@ test("oled readable default + exact toggle persists", async ({ page }) => {
   await page.goto("/?exact");
   await page.waitForTimeout(2500);
   expect(await oledWidth(page)).toBe(128);
+
+  // Forced exact mode is a test/display override, not a preference write.
+  await page.evaluate(() => localStorage.setItem("ovt:oled-readable", "1"));
+  await page.goto("/?exact");
+  await page.waitForTimeout(2500);
+  expect(await oledWidth(page)).toBe(128);
+  await page.goto("/");
+  await page.waitForTimeout(2500);
+  expect(await oledWidth(page)).toBe(1024);
 });
