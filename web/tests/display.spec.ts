@@ -14,6 +14,8 @@ type DisplayPageGlobal = typeof globalThis & {
     activeBank: number;
     sessionView: boolean;
     allLanesConfirmed?: boolean;
+    bootSplashTicks?: number;
+    stateLoading?: boolean;
   };
 };
 type Page = import("@playwright/test").Page;
@@ -54,7 +56,11 @@ async function boot(page: Page) {
   // literal device pixels (the readable default supersamples 8×). This suite IS the
   // device-pixel fidelity lock.
   await page.goto("/?exact");
-  await page.waitForTimeout(2500);
+  await page.waitForFunction(() => {
+    const g = globalThis as DisplayPageGlobal;
+    const s = g.overtureUiState;
+    return Boolean(g.OVT && s && !s.stateLoading && s.bootSplashTicks === 0);
+  });
 }
 async function snap(page: Page, name: string) {
   await page.waitForTimeout(250);
