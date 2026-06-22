@@ -20,7 +20,7 @@ import {
 } from "@overture-ui/core/ui_sound_edit.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_edit_render.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
-import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel } from "@overture-ui/core/ui_parameter_page_model.mjs";
+import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, drumRepeatGrooveParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel, melodicNoteFxParameterPageGridModel, trackBankOverviewRoute } from "@overture-ui/core/ui_parameter_page_model.mjs";
 import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/core/ui_sound_preset_manager.mjs";
 import { fmtArpRate } from "@overture-ui/core/ui_constants.mjs";
 
@@ -788,10 +788,10 @@ describe("UI descriptor seams", () => {
       footer: "",
     });
     expect(motionOverviewModel(0, 0).lanes.slice(0, 4)).toEqual([
-      { lane: 0, label: "AT", value: "--", touched: false, labelInverted: false, valueInverted: false },
-      { lane: 1, label: "CC74", value: "64", touched: true, labelInverted: true, valueInverted: true },
-      { lane: 2, label: "Sch5", value: "99", touched: false, labelInverted: false, valueInverted: false },
-      { lane: 3, label: "--", value: "--", touched: false, labelInverted: false, valueInverted: false },
+      { lane: 0, label: "AT", value: "--", labelText: "AT  ", valueText: "--  ", touched: false, labelInverted: false, valueInverted: false },
+      { lane: 1, label: "CC74", value: "64", labelText: "CC74", valueText: "64  ", touched: true, labelInverted: true, valueInverted: true },
+      { lane: 2, label: "Sch5", value: "99", labelText: "Sch5", valueText: "99  ", touched: false, labelInverted: false, valueInverted: false },
+      { lane: 3, label: "--", value: "--", labelText: "--  ", valueText: "--  ", touched: false, labelInverted: false, valueInverted: false },
     ]);
     S.knobTouched = 2;
     expect(motionOverviewModel(0, 0).footer).toBe("Cutoff");
@@ -996,5 +996,77 @@ describe("UI descriptor seams", () => {
     expect(model.cells[5]).toMatchObject({ label: "InQ ", value: "1/16", highlighted: false });
     expect(model.cells[6]).toMatchObject({ label: "Rvrs", value: "--  ", highlighted: false });
     expect(model.cells[7]).toMatchObject({ label: "SyncRpt", value: "ON  ", highlighted: true });
+  });
+
+  test("melodic NOTE FX Parameter Page model preserves sparse slot and alt algorithm cell", () => {
+    const knobs = Array.from({ length: 8 }, (_, k) => ({
+      abbrev: "K" + k,
+      dspKey: "",
+      fmt: (v: number) => "V" + v,
+    }));
+
+    const model = melodicNoteFxParameterPageGridModel({
+      knobs,
+      vals: [87, -4, 55, 0, 0, 9, 0, 3],
+      altMode: true,
+      noteFXRandomMode: 2,
+      knobTouched: 7,
+    });
+
+    expect(model.grid).toMatchObject({
+      preformatted: true,
+      preserveSlots: true,
+      startY: 12,
+      valueYOffset: 12,
+    });
+    expect(model.cells).toHaveLength(8);
+    expect(model.cells[0]).toMatchObject({ label: "K0  ", value: "V87 ", highlighted: false });
+    expect(model.cells[5]).toMatchObject({ label: ">Gate", value: "V9  ", highlighted: false });
+    expect(model.cells[6]).toBeNull();
+    expect(model.cells[7]).toMatchObject({ label: "Algo", value: "Walk", highlighted: true });
+  });
+
+  test("drum repeat groove Parameter Page model preserves gates, inactive steps, and alt nudge text", () => {
+    const normal = drumRepeatGrooveParameterPageModel({
+      altMode: false,
+      gateBits: 0b00000101,
+      gateLength: 4,
+      velocityScale: [80, 90, 100, 110, 120, 130, 140, 150],
+      nudge: [-2, 0, 3, 4, 5, 6, 7, 8],
+      knobTouched: 1,
+    });
+
+    expect(normal.steps).toHaveLength(8);
+    expect(normal.steps[0]).toEqual({ active: true, gateOn: true, value: "80% ", highlighted: false });
+    expect(normal.steps[1]).toEqual({ active: true, gateOn: false, value: "90% ", highlighted: true });
+    expect(normal.steps[2]).toEqual({ active: true, gateOn: true, value: "100%", highlighted: false });
+    expect(normal.steps[4]).toEqual({ active: false, gateOn: false, value: "", highlighted: false });
+
+    const alt = drumRepeatGrooveParameterPageModel({
+      altMode: true,
+      gateBits: 0b00000101,
+      gateLength: 4,
+      velocityScale: [80, 90, 100, 110, 120, 130, 140, 150],
+      nudge: [-2, 0, 3, 4, 5, 6, 7, 8],
+      knobTouched: 3,
+    });
+
+    expect(alt.steps[0]).toMatchObject({ active: true, gateOn: true, value: "-2% ", highlighted: false });
+    expect(alt.steps[1]).toMatchObject({ active: true, gateOn: false, value: " 0% ", highlighted: false });
+    expect(alt.steps[2]).toMatchObject({ active: true, gateOn: true, value: "+3% ", highlighted: false });
+    expect(alt.steps[3]).toMatchObject({ active: true, gateOn: false, value: "+4% ", highlighted: true });
+  });
+
+  test("track bank overview route preserves specialized renderer selection", () => {
+    expect(trackBankOverviewRoute({ isDrum: true, bank: 0, allLanesConfirmed: true })).toBe("drumLane");
+    expect(trackBankOverviewRoute({ isDrum: true, bank: 7, allLanesConfirmed: false })).toBe("allLanesConfirm");
+    expect(trackBankOverviewRoute({ isDrum: true, bank: 7, allLanesConfirmed: true })).toBe("allLanes");
+    expect(trackBankOverviewRoute({ isDrum: true, bank: 1, allLanesConfirmed: true })).toBe("drumNoteFx");
+    expect(trackBankOverviewRoute({ isDrum: true, bank: 5, allLanesConfirmed: true })).toBe("drumRepeatGroove");
+    expect(trackBankOverviewRoute({ isDrum: true, bank: 6, allLanesConfirmed: true })).toBe("motion");
+    expect(trackBankOverviewRoute({ isDrum: false, bank: 6, allLanesConfirmed: true })).toBe("motion");
+    expect(trackBankOverviewRoute({ isDrum: false, bank: 1, allLanesConfirmed: true })).toBe("melodicNoteFx");
+    expect(trackBankOverviewRoute({ isDrum: true, bank: 3, allLanesConfirmed: true })).toBe("drumMidiDelay");
+    expect(trackBankOverviewRoute({ isDrum: false, bank: 3, allLanesConfirmed: true })).toBe("generic");
   });
 });

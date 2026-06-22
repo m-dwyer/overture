@@ -3,8 +3,6 @@ import {
     BANKS,
     PAD_MODE_DRUM,
     TPS_VALUES,
-    col4,
-    fmtBool,
 } from '../core/ui_constants.mjs';
 import { effectiveClip } from './ui_leds.mjs';
 import { motionOverviewModel } from '../core/ui_motion.mjs';
@@ -14,7 +12,9 @@ import {
     drumNoteFxParameterPageModel,
     genericParameterPageGridModel,
     drumMidiDelayParameterPageGridModel,
-    labelValueParameterPageGridModel
+    melodicNoteFxParameterPageGridModel,
+    drumRepeatGrooveParameterPageModel,
+    trackBankOverviewRoute
 } from '../core/ui_parameter_page_model.mjs';
 import { renderEncoderValueGrid } from './ui_oled_layout.mjs';
 
@@ -126,15 +126,22 @@ export function renderDrumRepeatGrooveBankOverview(deps) {
     if (!S.sessionView && deps.bankHasAltParams(S.activeTrack, S.activeBank)) {
         deps.drawAltArrow(98, false, deps.altIndicatorActive(S.activeTrack, S.activeBank));
     }
-    const gLen = S.drumRepeatGateLen[t][lane];
+    const model = drumRepeatGrooveParameterPageModel({
+        altMode: S.altMode,
+        gateBits: S.drumRepeatGate[t][lane],
+        gateLength: S.drumRepeatGateLen[t][lane],
+        velocityScale: S.drumRepeatVelScale[t][lane],
+        nudge: S.drumRepeatNudge[t][lane],
+        knobTouched: S.knobTouched
+    });
     for (let k = 0; k < 8; k++) {
+        const step = model.steps[k];
         const colX = 4 + (k % 4) * 30;
         const rowY = k < 4 ? 12 : 36;
-        const hi   = (S.knobTouched === k);
+        const hi   = step.highlighted;
         if (hi) deps.fill_rect(colX, rowY, 24, 24, 1);
-        if (k >= gLen) continue;
-        const gateOn = !!(S.drumRepeatGate[t][lane] & (1 << k));
-        if (gateOn) {
+        if (!step.active) continue;
+        if (step.gateOn) {
             deps.fill_rect(colX, rowY + 1, 24, 4, hi ? 0 : 1);
         } else {
             const bc = hi ? 0 : 1;
@@ -143,12 +150,7 @@ export function renderDrumRepeatGrooveBankOverview(deps) {
             deps.fill_rect(colX, rowY + 1, 1, 4, bc);
             deps.fill_rect(colX + 23, rowY + 1, 1, 4, bc);
         }
-        const vs   = S.drumRepeatVelScale[t][lane][k];
-        const ndg  = S.drumRepeatNudge[t][lane][k];
-        const disp = S.altMode
-            ? (ndg === 0 ? ' 0%' : (ndg > 0 ? '+' : '') + ndg + '%')
-            : vs + '%';
-        deps.print(colX, rowY + 12, col4(disp), hi ? 0 : 1);
+        deps.print(colX, rowY + 12, step.value, hi ? 0 : 1);
     }
 }
 
@@ -185,12 +187,12 @@ export function renderMotionBankOverview(deps) {
         if (S.altMode) {
             deps.fill_rect(colX, rowY, 24, 12, 1);
             if (lane.valueInverted) deps.fill_rect(colX, rowY + 12, 24, 12, 1);
-            deps.print(colX, rowY,      col4(lane.label), 0);
-            deps.print(colX, rowY + 12, col4(lane.value), lane.valueInverted ? 0 : 1);
+            deps.print(colX, rowY,      lane.labelText, 0);
+            deps.print(colX, rowY + 12, lane.valueText, lane.valueInverted ? 0 : 1);
         } else {
             if (lane.touched) deps.fill_rect(colX, rowY, 24, 24, 1);
-            deps.print(colX, rowY,      col4(lane.label), lane.touched ? 0 : 1);
-            deps.print(colX, rowY + 12, col4(lane.value), lane.touched ? 0 : 1);
+            deps.print(colX, rowY,      lane.labelText, lane.touched ? 0 : 1);
+            deps.print(colX, rowY + 12, lane.valueText, lane.touched ? 0 : 1);
         }
     }
     if (motionModel.footer) deps.print(0, 56, motionModel.footer, 1);
@@ -200,50 +202,62 @@ export function renderMelodicNoteFxBankOverview(deps) {
     const t     = S.activeTrack;
     const knobs = BANKS[1].knobs;
     const vals  = S.bankParams[t][1];
-    const RND_ALG_NAMES_NFX = ['Pure', 'Gaus', 'Walk'];
     deps.drawBankHeading(BANKS[1].name);
     deps.drawAltArrow(98, true, deps.altIndicatorActive(S.activeTrack, S.activeBank));
+    const model = melodicNoteFxParameterPageGridModel({
+        knobs: knobs,
+        vals: vals,
+        altMode: S.altMode,
+        noteFXRandomMode: S.noteFXRandomMode[t] || 0,
+        knobTouched: S.knobTouched
+    });
     for (let k = 0; k < 8; k++) {
-        if (k === 6) continue;
+        const cell = model.cells[k];
+        if (!cell) continue;
         const colX = 4 + (k % 4) * 30;
         const rowY = k < 4 ? 12 : 36;
-        const hi   = (S.knobTouched === k);
+        const hi   = cell.highlighted;
         const widen = (k === 5);
         const cellW = widen ? 30 : 24;
         if (hi) deps.fill_rect(colX, rowY, cellW, 24, 1);
-        const nfxAlt = S.altMode && k === 7;
-        if (widen) {
-            deps.print(colX, rowY,      '>Gate',                     hi ? 0 : 1);
-            deps.print(colX, rowY + 12, col4(knobs[k].fmt(vals[k])), hi ? 0 : 1);
-        } else if (nfxAlt) {
-            deps.print(colX, rowY,      col4('Algo'), hi ? 0 : 1);
-            deps.print(colX, rowY + 12, col4(RND_ALG_NAMES_NFX[S.noteFXRandomMode[t] || 0]), hi ? 0 : 1);
-        } else {
-            deps.print(colX, rowY,      col4(knobs[k].abbrev),       hi ? 0 : 1);
-            deps.print(colX, rowY + 12, col4(knobs[k].fmt(vals[k])), hi ? 0 : 1);
-        }
+        deps.print(colX, rowY,      cell.label, hi ? 0 : 1);
+        deps.print(colX, rowY + 12, cell.value, hi ? 0 : 1);
     }
 }
 
 export function renderTrackBankOverview(deps, bank) {
     const isDrum = S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM;
-    if (isDrum && bank === 0) {
+    const route = trackBankOverviewRoute({
+        isDrum: isDrum,
+        bank: bank,
+        allLanesConfirmed: S.allLanesConfirmed
+    });
+    switch (route) {
+    case 'drumLane':
         renderDrumLaneBankOverview(deps);
-    } else if (isDrum && bank === 7 && !S.allLanesConfirmed) {
+        break;
+    case 'allLanesConfirm':
         renderAllLanesConfirm(deps);
-    } else if (isDrum && bank === 7) {
+        break;
+    case 'allLanes':
         renderAllLanesBankOverview(deps);
-    } else if (isDrum && bank === 1) {
+        break;
+    case 'drumNoteFx':
         renderDrumNoteFxBankOverview(deps);
-    } else if (isDrum && bank === 5) {
+        break;
+    case 'drumRepeatGroove':
         renderDrumRepeatGrooveBankOverview(deps);
-    } else if (bank === 6) {
+        break;
+    case 'motion':
         renderMotionBankOverview(deps);
-    } else if (!isDrum && bank === 1) {
+        break;
+    case 'melodicNoteFx':
         renderMelodicNoteFxBankOverview(deps);
-    } else if (isDrum && bank === 3) {
+        break;
+    case 'drumMidiDelay':
         renderDrumMidiDelayBankOverview(deps);
-    } else {
+        break;
+    default:
         renderGenericParameterPageOverview(deps, bank);
     }
 }
@@ -272,14 +286,4 @@ export function renderGenericParameterPageOverview(deps, bank) {
 
 export function renderGenericBankOverview(deps, bank) {
     return renderGenericParameterPageOverview(deps, bank);
-}
-
-function renderBankCells(deps, labels, values, opts) {
-    const model = labelValueParameterPageGridModel({
-        labels: labels,
-        values: values,
-        wideLabels: opts && opts.wideLabels,
-        knobTouched: S.knobTouched
-    });
-    renderEncoderValueGrid(deps, model.cells, model.grid);
 }

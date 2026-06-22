@@ -214,9 +214,9 @@ Near-term convergence path:
 First implementation anchor: `renderGenericParameterPageOverview()` now builds a
 preformatted Parameter Page cell model and delegates grid drawing/highlighting
 to `renderEncoderValueGrid()`. A thin legacy `renderGenericBankOverview()`
-alias remains while older callers migrate. The legacy `renderBankCells()` helper
-also delegates to the shared grid with slot preservation, so physical encoder
-positions stay stable when a page has empty cells.
+alias remains while older callers migrate. Specialized Parameter Page overviews
+use explicit presentation models where they need sparse slots, so physical
+encoder positions stay stable when a page has empty cells.
 
 `ui/render/ui_bank_render.mjs` is a legacy compatibility adapter. It re-exports
 the Parameter Page render names from `ui_parameter_page_render.mjs` so older

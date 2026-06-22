@@ -75,6 +75,25 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtLen, fmtPct, fmtPlayDir, fmtR
  */
 
 /**
+ * @typedef {Object} MelodicNoteFxParameterPageInput
+ * @property {ParameterPageKnob[]} knobs
+ * @property {number[]} vals
+ * @property {boolean} altMode
+ * @property {number} noteFXRandomMode
+ * @property {number} knobTouched
+ */
+
+/**
+ * @typedef {Object} DrumRepeatGrooveParameterPageInput
+ * @property {boolean} altMode
+ * @property {number} gateBits
+ * @property {number} gateLength
+ * @property {number[]} velocityScale
+ * @property {number[]} nudge
+ * @property {number} knobTouched
+ */
+
+/**
  * @typedef {Object} DrumNoteFxNoteBlockModel
  * @property {string} octaveLabel
  * @property {string} noteLabel
@@ -86,6 +105,30 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtLen, fmtPct, fmtPlayDir, fmtR
  * @typedef {Object} DrumNoteFxParameterPageModel
  * @property {DrumNoteFxNoteBlockModel} noteBlock
  * @property {import('../types').ParameterPageCellSlot[]} cells
+ */
+
+/**
+ * @typedef {Object} DrumRepeatGrooveStepModel
+ * @property {boolean} active
+ * @property {boolean} gateOn
+ * @property {string} value
+ * @property {boolean} highlighted
+ */
+
+/**
+ * @typedef {Object} DrumRepeatGrooveParameterPageModel
+ * @property {DrumRepeatGrooveStepModel[]} steps
+ */
+
+/**
+ * @typedef {Object} TrackBankOverviewRouteInput
+ * @property {boolean} isDrum
+ * @property {number} bank
+ * @property {boolean} allLanesConfirmed
+ */
+
+/**
+ * @typedef {'drumLane' | 'allLanesConfirm' | 'allLanes' | 'drumNoteFx' | 'drumRepeatGroove' | 'motion' | 'melodicNoteFx' | 'drumMidiDelay' | 'generic'} TrackBankOverviewRoute
  */
 
 const RND_ALG_NAMES = ['Pure', 'Gaus', 'Walk'];
@@ -163,6 +206,61 @@ export function drumNoteFxParameterPageModel(input) {
         },
         cells: drumNoteFxParameterPageCells(input)
     };
+}
+
+/**
+ * @param {MelodicNoteFxParameterPageInput} input
+ * @returns {import('../types').ParameterPageGridModel}
+ */
+export function melodicNoteFxParameterPageGridModel(input) {
+    return parameterPageGridModel(melodicNoteFxParameterPageCells(input));
+}
+
+/**
+ * @param {DrumRepeatGrooveParameterPageInput} input
+ * @returns {DrumRepeatGrooveParameterPageModel}
+ */
+export function drumRepeatGrooveParameterPageModel(input) {
+    /** @type {DrumRepeatGrooveStepModel[]} */
+    const steps = [];
+    for (let k = 0; k < 8; k++) {
+        const active = k < input.gateLength;
+        const nudge = input.nudge[k];
+        steps.push({
+            active: active,
+            gateOn: active && !!(input.gateBits & (1 << k)),
+            value: active ? col4(input.altMode ? repeatGrooveNudgeLabel(nudge) : input.velocityScale[k] + '%') : '',
+            highlighted: input.knobTouched === k
+        });
+    }
+    return { steps: steps };
+}
+
+/**
+ * @param {number} nudge
+ * @returns {string}
+ */
+function repeatGrooveNudgeLabel(nudge) {
+    if (nudge === 0) return ' 0%';
+    return (nudge > 0 ? '+' : '') + nudge + '%';
+}
+
+/**
+ * @param {TrackBankOverviewRouteInput} input
+ * @returns {TrackBankOverviewRoute}
+ */
+export function trackBankOverviewRoute(input) {
+    const bank = input.bank;
+    const isDrum = input.isDrum;
+    if (isDrum && bank === 0) return 'drumLane';
+    if (isDrum && bank === 7 && !input.allLanesConfirmed) return 'allLanesConfirm';
+    if (isDrum && bank === 7) return 'allLanes';
+    if (isDrum && bank === 1) return 'drumNoteFx';
+    if (isDrum && bank === 5) return 'drumRepeatGroove';
+    if (bank === 6) return 'motion';
+    if (!isDrum && bank === 1) return 'melodicNoteFx';
+    if (isDrum && bank === 3) return 'drumMidiDelay';
+    return 'generic';
 }
 
 /**
@@ -273,6 +371,30 @@ export function drumNoteFxParameterPageCells(input) {
         wideLabels: true,
         knobTouched: input.knobTouched
     });
+}
+
+/**
+ * @param {MelodicNoteFxParameterPageInput} input
+ * @returns {import('../types').ParameterPageCellSlot[]}
+ */
+export function melodicNoteFxParameterPageCells(input) {
+    const knobs = input.knobs;
+    const vals = input.vals;
+    /** @type {import('../types').ParameterPageCellSlot[]} */
+    const cells = [];
+    for (let k = 0; k < 8; k++) {
+        if (k === 6) {
+            cells.push(null);
+            continue;
+        }
+        const nfxAlt = input.altMode && k === 7;
+        cells.push({
+            label: k === 5 ? '>Gate' : col4(nfxAlt ? 'Algo' : knobs[k].abbrev),
+            value: col4(nfxAlt ? RND_ALG_NAMES[input.noteFXRandomMode || 0] : knobs[k].fmt(vals[k])),
+            highlighted: input.knobTouched === k
+        });
+    }
+    return cells;
 }
 
 /**
