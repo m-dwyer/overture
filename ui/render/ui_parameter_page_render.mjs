@@ -14,7 +14,8 @@ import {
     drumNoteFxParameterPageModel,
     genericParameterPageGridModel,
     drumMidiDelayParameterPageGridModel,
-    labelValueParameterPageGridModel
+    labelValueParameterPageGridModel,
+    melodicNoteFxParameterPageGridModel
 } from '../core/ui_parameter_page_model.mjs';
 import { renderEncoderValueGrid } from './ui_oled_layout.mjs';
 
@@ -200,28 +201,26 @@ export function renderMelodicNoteFxBankOverview(deps) {
     const t     = S.activeTrack;
     const knobs = BANKS[1].knobs;
     const vals  = S.bankParams[t][1];
-    const RND_ALG_NAMES_NFX = ['Pure', 'Gaus', 'Walk'];
     deps.drawBankHeading(BANKS[1].name);
     deps.drawAltArrow(98, true, deps.altIndicatorActive(S.activeTrack, S.activeBank));
+    const model = melodicNoteFxParameterPageGridModel({
+        knobs: knobs,
+        vals: vals,
+        altMode: S.altMode,
+        noteFXRandomMode: S.noteFXRandomMode[t] || 0,
+        knobTouched: S.knobTouched
+    });
     for (let k = 0; k < 8; k++) {
-        if (k === 6) continue;
+        const cell = model.cells[k];
+        if (!cell) continue;
         const colX = 4 + (k % 4) * 30;
         const rowY = k < 4 ? 12 : 36;
-        const hi   = (S.knobTouched === k);
+        const hi   = cell.highlighted;
         const widen = (k === 5);
         const cellW = widen ? 30 : 24;
         if (hi) deps.fill_rect(colX, rowY, cellW, 24, 1);
-        const nfxAlt = S.altMode && k === 7;
-        if (widen) {
-            deps.print(colX, rowY,      '>Gate',                     hi ? 0 : 1);
-            deps.print(colX, rowY + 12, col4(knobs[k].fmt(vals[k])), hi ? 0 : 1);
-        } else if (nfxAlt) {
-            deps.print(colX, rowY,      col4('Algo'), hi ? 0 : 1);
-            deps.print(colX, rowY + 12, col4(RND_ALG_NAMES_NFX[S.noteFXRandomMode[t] || 0]), hi ? 0 : 1);
-        } else {
-            deps.print(colX, rowY,      col4(knobs[k].abbrev),       hi ? 0 : 1);
-            deps.print(colX, rowY + 12, col4(knobs[k].fmt(vals[k])), hi ? 0 : 1);
-        }
+        deps.print(colX, rowY,      cell.label, hi ? 0 : 1);
+        deps.print(colX, rowY + 12, cell.value, hi ? 0 : 1);
     }
 }
 

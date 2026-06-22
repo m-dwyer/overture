@@ -20,7 +20,7 @@ import {
 } from "@overture-ui/core/ui_sound_edit.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_edit_render.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
-import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel } from "@overture-ui/core/ui_parameter_page_model.mjs";
+import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel, melodicNoteFxParameterPageGridModel } from "@overture-ui/core/ui_parameter_page_model.mjs";
 import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/core/ui_sound_preset_manager.mjs";
 import { fmtArpRate } from "@overture-ui/core/ui_constants.mjs";
 
@@ -996,5 +996,33 @@ describe("UI descriptor seams", () => {
     expect(model.cells[5]).toMatchObject({ label: "InQ ", value: "1/16", highlighted: false });
     expect(model.cells[6]).toMatchObject({ label: "Rvrs", value: "--  ", highlighted: false });
     expect(model.cells[7]).toMatchObject({ label: "SyncRpt", value: "ON  ", highlighted: true });
+  });
+
+  test("melodic NOTE FX Parameter Page model preserves sparse slot and alt algorithm cell", () => {
+    const knobs = Array.from({ length: 8 }, (_, k) => ({
+      abbrev: "K" + k,
+      dspKey: "",
+      fmt: (v: number) => "V" + v,
+    }));
+
+    const model = melodicNoteFxParameterPageGridModel({
+      knobs,
+      vals: [87, -4, 55, 0, 0, 9, 0, 3],
+      altMode: true,
+      noteFXRandomMode: 2,
+      knobTouched: 7,
+    });
+
+    expect(model.grid).toMatchObject({
+      preformatted: true,
+      preserveSlots: true,
+      startY: 12,
+      valueYOffset: 12,
+    });
+    expect(model.cells).toHaveLength(8);
+    expect(model.cells[0]).toMatchObject({ label: "K0  ", value: "V87 ", highlighted: false });
+    expect(model.cells[5]).toMatchObject({ label: ">Gate", value: "V9  ", highlighted: false });
+    expect(model.cells[6]).toBeNull();
+    expect(model.cells[7]).toMatchObject({ label: "Algo", value: "Walk", highlighted: true });
   });
 });

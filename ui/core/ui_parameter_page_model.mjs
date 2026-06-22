@@ -75,6 +75,15 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtLen, fmtPct, fmtPlayDir, fmtR
  */
 
 /**
+ * @typedef {Object} MelodicNoteFxParameterPageInput
+ * @property {ParameterPageKnob[]} knobs
+ * @property {number[]} vals
+ * @property {boolean} altMode
+ * @property {number} noteFXRandomMode
+ * @property {number} knobTouched
+ */
+
+/**
  * @typedef {Object} DrumNoteFxNoteBlockModel
  * @property {string} octaveLabel
  * @property {string} noteLabel
@@ -163,6 +172,14 @@ export function drumNoteFxParameterPageModel(input) {
         },
         cells: drumNoteFxParameterPageCells(input)
     };
+}
+
+/**
+ * @param {MelodicNoteFxParameterPageInput} input
+ * @returns {import('../types').ParameterPageGridModel}
+ */
+export function melodicNoteFxParameterPageGridModel(input) {
+    return parameterPageGridModel(melodicNoteFxParameterPageCells(input));
 }
 
 /**
@@ -273,6 +290,30 @@ export function drumNoteFxParameterPageCells(input) {
         wideLabels: true,
         knobTouched: input.knobTouched
     });
+}
+
+/**
+ * @param {MelodicNoteFxParameterPageInput} input
+ * @returns {import('../types').ParameterPageCellSlot[]}
+ */
+export function melodicNoteFxParameterPageCells(input) {
+    const knobs = input.knobs;
+    const vals = input.vals;
+    /** @type {import('../types').ParameterPageCellSlot[]} */
+    const cells = [];
+    for (let k = 0; k < 8; k++) {
+        if (k === 6) {
+            cells.push(null);
+            continue;
+        }
+        const nfxAlt = input.altMode && k === 7;
+        cells.push({
+            label: k === 5 ? '>Gate' : col4(nfxAlt ? 'Algo' : knobs[k].abbrev),
+            value: col4(nfxAlt ? RND_ALG_NAMES[input.noteFXRandomMode || 0] : knobs[k].fmt(vals[k])),
+            highlighted: input.knobTouched === k
+        });
+    }
+    return cells;
 }
 
 /**
