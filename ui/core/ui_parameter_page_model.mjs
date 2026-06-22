@@ -2,6 +2,7 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtPct, fmtPlayDir, fmtRes, fmtR
 
 const RND_ALG_NAMES = ['Pure', 'Gaus', 'Walk'];
 
+/** @type {import('../types').ParameterPageGridOptions} */
 export const GENERIC_PARAMETER_PAGE_GRID_OPTIONS = {
     preformatted: true,
     preserveSlots: true,
@@ -9,6 +10,7 @@ export const GENERIC_PARAMETER_PAGE_GRID_OPTIONS = {
     valueYOffset: 12
 };
 
+/** @returns {import('../types').ParameterPageGridModel} */
 export function genericParameterPageGridModel(input) {
     return {
         cells: genericParameterPageCells(input),
@@ -16,6 +18,7 @@ export function genericParameterPageGridModel(input) {
     };
 }
 
+/** @returns {import('../types').ParameterPageGridModel} */
 export function labelValueParameterPageGridModel(input) {
     return {
         cells: labelValueParameterPageCells(input),
@@ -23,6 +26,7 @@ export function labelValueParameterPageGridModel(input) {
     };
 }
 
+/** @returns {import('../types').ParameterPageGridModel} */
 export function drumMidiDelayParameterPageGridModel(input) {
     return {
         cells: drumMidiDelayParameterPageCells(input),
@@ -30,6 +34,7 @@ export function drumMidiDelayParameterPageGridModel(input) {
     };
 }
 
+/** @returns {import('../types').ParameterPageGridModel} */
 export function drumLaneParameterPageGridModel(input) {
     return {
         cells: drumLaneParameterPageCells(input),
@@ -37,6 +42,7 @@ export function drumLaneParameterPageGridModel(input) {
     };
 }
 
+/** @returns {import('../types').ParameterPageGridModel} */
 export function allLanesParameterPageGridModel(input) {
     return {
         cells: allLanesParameterPageCells(input),
@@ -44,7 +50,9 @@ export function allLanesParameterPageGridModel(input) {
     };
 }
 
+/** @returns {import('../types').ParameterPageCellSlot[]} */
 export function genericParameterPageCells(input) {
+    /** @type {import('../types').ParameterPageCellSlot[]} */
     const cells = [];
     const knobs = input.knobs;
     const vals = input.vals;
@@ -78,7 +86,9 @@ export function genericParameterPageCells(input) {
     return cells;
 }
 
+/** @returns {import('../types').ParameterPageCellSlot[]} */
 export function labelValueParameterPageCells(input) {
+    /** @type {import('../types').ParameterPageCellSlot[]} */
     const cells = [];
     const labels = input.labels;
     const values = input.values;
@@ -97,6 +107,7 @@ export function labelValueParameterPageCells(input) {
     return cells;
 }
 
+/** @returns {import('../types').ParameterPageCellSlot[]} */
 export function drumMidiDelayParameterPageCells(input) {
     const knobs = input.knobs;
     const vals = input.vals;
@@ -118,6 +129,7 @@ export function drumMidiDelayParameterPageCells(input) {
     });
 }
 
+/** @returns {import('../types').ParameterPageCellSlot[]} */
 export function drumLaneParameterPageCells(input) {
     const labels = [
         input.altMode ? 'Zoom' : 'Res',
@@ -146,6 +158,7 @@ export function drumLaneParameterPageCells(input) {
     });
 }
 
+/** @returns {import('../types').ParameterPageCellSlot[]} */
 export function allLanesParameterPageCells(input) {
     const DIQ_LABELS = ['Off','1/64','1/32','1/16','1/16T','1/8','1/8T','1/4','1/4T'];
     const labels = [
