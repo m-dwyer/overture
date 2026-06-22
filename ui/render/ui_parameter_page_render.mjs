@@ -17,6 +17,7 @@ import {
 import { effectiveClip } from './ui_leds.mjs';
 import { motionOverviewModel } from '../core/ui_motion.mjs';
 import {
+    drumLaneParameterPageGridModel,
     genericParameterPageGridModel,
     drumMidiDelayParameterPageGridModel,
     labelValueParameterPageGridModel
@@ -31,20 +32,19 @@ export function renderDrumLaneBankOverview(deps) {
     const tpsIdx = Math.max(0, TPS_VALUES.indexOf(S.drumLaneTPS[t]));
     const sqfl   = S.clipSeqFollow[t][ac] ? 1 : 0;
     const eucN = Math.min(S.drumLaneEuclidN[t][lane] | 0, len);
-    const drumLaneLabels = [S.altMode ? 'Zoom' : 'Res', 'Stch', S.altMode ? 'Nudg' : 'Shft', 'Lgto', 'Eucl', '-', S.altMode ? 'Rvrs' : 'Dir', 'SqFl'];
-    const drumLaneVals  = [
-        fmtRes(tpsIdx),
-        fmtStretch(S.bankParams[t][0][1]),
-        fmtSign(S.bankParams[t][0][2]),
-        '->',
-        String(eucN),
-        '-',
-        S.altMode ? fmtRevStyle(S.drumLanePlaybackAudioReverse[t][lane] | 0)
-                  : fmtPlayDir(S.drumLanePlaybackDir[t][lane] | 0),
-        fmtBool(sqfl),
-    ];
     deps.drawBankHeading('DRUM LANE');
-    renderBankCells(deps, drumLaneLabels, drumLaneVals);
+    const model = drumLaneParameterPageGridModel({
+        altMode: S.altMode,
+        tpsIdx: tpsIdx,
+        stretch: S.bankParams[t][0][1],
+        shift: S.bankParams[t][0][2],
+        euclidN: eucN,
+        playbackDir: S.drumLanePlaybackDir[t][lane],
+        playbackAudioReverse: S.drumLanePlaybackAudioReverse[t][lane],
+        seqFollow: sqfl,
+        knobTouched: S.knobTouched
+    });
+    renderEncoderValueGrid(deps, model.cells, model.grid);
 }
 
 export function renderAllLanesConfirm(deps) {

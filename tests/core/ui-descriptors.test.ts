@@ -20,7 +20,7 @@ import {
 } from "@overture-ui/core/ui_sound_edit.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_edit_render.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
-import { drumMidiDelayParameterPageGridModel, genericParameterPageGridModel, labelValueParameterPageGridModel } from "@overture-ui/core/ui_parameter_page_model.mjs";
+import { drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, genericParameterPageGridModel, labelValueParameterPageGridModel } from "@overture-ui/core/ui_parameter_page_model.mjs";
 import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/core/ui_sound_preset_manager.mjs";
 import { fmtArpRate } from "@overture-ui/core/ui_constants.mjs";
 
@@ -912,5 +912,32 @@ describe("UI descriptor seams", () => {
     expect(model.cells[5]).toMatchObject({ label: "Clk ", value: "-6  ", highlighted: true });
     expect(model.cells[6]).toMatchObject({ label: "Retr", value: "ON  ", highlighted: false });
     expect(model.cells[7]).toBeNull();
+  });
+
+  test("drum lane Parameter Page model preserves lane cell labels and alt values", () => {
+    const model = drumLaneParameterPageGridModel({
+      altMode: true,
+      tpsIdx: 2,
+      stretch: -1,
+      shift: 5,
+      euclidN: 12,
+      playbackDir: 3,
+      playbackAudioReverse: 1,
+      seqFollow: true,
+      knobTouched: 6,
+    });
+
+    expect(model.grid).toMatchObject({
+      preformatted: true,
+      preserveSlots: true,
+      startY: 12,
+      valueYOffset: 12,
+    });
+    expect(model.cells[0]).toMatchObject({ label: "Zoom", value: "1/8 ", highlighted: false });
+    expect(model.cells[1]).toMatchObject({ label: "Stch", value: "/2  ", highlighted: false });
+    expect(model.cells[2]).toMatchObject({ label: "Nudg", value: "+5  ", highlighted: false });
+    expect(model.cells[4]).toMatchObject({ label: "Eucl", value: "12  ", highlighted: false });
+    expect(model.cells[6]).toMatchObject({ label: "Rvrs", value: "Audi", highlighted: true });
+    expect(model.cells[7]).toMatchObject({ label: "SqFl", value: "ON  ", highlighted: false });
   });
 });

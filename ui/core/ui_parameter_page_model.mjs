@@ -1,4 +1,4 @@
-import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtRevStyle, fmtSign } from './ui_constants.mjs';
+import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtPlayDir, fmtRes, fmtRevStyle, fmtSign, fmtStretch } from './ui_constants.mjs';
 
 const RND_ALG_NAMES = ['Pure', 'Gaus', 'Walk'];
 
@@ -26,6 +26,13 @@ export function labelValueParameterPageGridModel(input) {
 export function drumMidiDelayParameterPageGridModel(input) {
     return {
         cells: drumMidiDelayParameterPageCells(input),
+        grid: GENERIC_PARAMETER_PAGE_GRID_OPTIONS
+    };
+}
+
+export function drumLaneParameterPageGridModel(input) {
+    return {
+        cells: drumLaneParameterPageCells(input),
         grid: GENERIC_PARAMETER_PAGE_GRID_OPTIONS
     };
 }
@@ -96,6 +103,34 @@ export function drumMidiDelayParameterPageCells(input) {
         fmtSign(vals[5]),
         fmtBool(vals[6]),
         null
+    ];
+    return labelValueParameterPageCells({
+        labels: labels,
+        values: values,
+        knobTouched: input.knobTouched
+    });
+}
+
+export function drumLaneParameterPageCells(input) {
+    const labels = [
+        input.altMode ? 'Zoom' : 'Res',
+        'Stch',
+        input.altMode ? 'Nudg' : 'Shft',
+        'Lgto',
+        'Eucl',
+        '-',
+        input.altMode ? 'Rvrs' : 'Dir',
+        'SqFl'
+    ];
+    const values = [
+        fmtRes(input.tpsIdx),
+        fmtStretch(input.stretch),
+        fmtSign(input.shift),
+        '->',
+        String(input.euclidN),
+        '-',
+        input.altMode ? fmtRevStyle(input.playbackAudioReverse | 0) : fmtPlayDir(input.playbackDir | 0),
+        fmtBool(input.seqFollow ? 1 : 0)
     ];
     return labelValueParameterPageCells({
         labels: labels,
