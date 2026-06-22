@@ -373,6 +373,7 @@ export interface AutoRouteState {
   autoRouteActive: boolean;
   autoRouteWatchdog: number;
   autoRouteAppliedUuid: string;
+  pendingAutoRouteRequest: boolean;
 }
 
 /** Recording Workflow: arm/count-in/note-queue/scheduled-stop state. */

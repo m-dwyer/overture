@@ -47,12 +47,30 @@ export function routeCheckStatus(t, slots) {
     return routeCheckSchwungStatus(actualCh, slots);
 }
 
+/* Selectable index 8 is the "Apply routing" action row at the bottom of the
+ * list (0-7 are the 8 tracks). 9 items total, shown through a 4-row window. */
+export const ROUTE_CHECK_APPLY_INDEX = 8;
+const ROUTE_CHECK_ITEM_COUNT = 9; // 8 tracks + Apply routing
+
 export function routeCheckViewModel(selected, slots) {
-    selected = Math.max(0, Math.min(7, selected | 0));
-    const start = selected < 4 ? 0 : 4;
+    selected = Math.max(0, Math.min(ROUTE_CHECK_APPLY_INDEX, selected | 0));
+    /* Slide a 4-row window so `selected` is always visible; clamp to the list. */
+    let start = selected - (selected % 4);
+    if (start > ROUTE_CHECK_ITEM_COUNT - 4) start = ROUTE_CHECK_ITEM_COUNT - 4; // 5
     const rows = [];
     for (let row = 0; row < 4; row++) {
-        const t = start + row;
+        const idx = start + row;
+        if (idx >= ROUTE_CHECK_ITEM_COUNT) break;
+        if (idx === ROUTE_CHECK_APPLY_INDEX) {
+            rows.push({
+                track: -1,
+                text: 'Apply routing',
+                status: '',
+                active: selected === ROUTE_CHECK_APPLY_INDEX
+            });
+            continue;
+        }
+        const t = idx;
         const n = t + 1;
         const move = t < 4;
         const route = move ? ('Move Ch' + n) : ('Schw Ch' + (S.trackChannel[t] | 0));
@@ -65,7 +83,7 @@ export function routeCheckViewModel(selected, slots) {
     }
     return {
         title: 'ROUTE CHECK',
-        range: (start + 1) + '-' + (start + 4) + '/8',
+        range: (start + 1) + '-' + Math.min(start + 4, ROUTE_CHECK_ITEM_COUNT) + '/' + ROUTE_CHECK_ITEM_COUNT,
         rows: rows,
         footer: 'Jog scroll  Back/Menu'
     };

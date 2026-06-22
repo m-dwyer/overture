@@ -694,7 +694,7 @@ describe("UI descriptor seams", () => {
   test("route check view model preserves windowing and row labels", () => {
     expect(routeCheckViewModel(0, globalThis.shadow_get_slots())).toEqual({
       title: "ROUTE CHECK",
-      range: "1-4/8",
+      range: "1-4/9",
       footer: "Jog scroll  Back/Menu",
       rows: [
         { track: 0, text: "T1 Move Ch1", status: "MANUAL", active: true },
@@ -705,13 +705,33 @@ describe("UI descriptor seams", () => {
     });
 
     expect(routeCheckViewModel(5, globalThis.shadow_get_slots())).toMatchObject({
-      range: "5-8/8",
+      range: "5-8/9",
       rows: [
         { track: 4, text: "T5 Schw Ch5", status: "OK S1", active: false },
         { track: 5, text: "T6 Schw Ch6", status: "OK S2", active: true },
         { track: 6, text: "T7 Schw Ch7", status: "OK S3", active: false },
         { track: 7, text: "T8 Schw Ch8", status: "OK S3", active: false },
       ],
+    });
+  });
+
+  test("route check view model has a selectable Apply routing row at index 8", () => {
+    // selected===8 scrolls the window to its bottom (indices 5-8) and highlights
+    // the Apply routing action row; it carries no status and is not a track.
+    const model = routeCheckViewModel(8, globalThis.shadow_get_slots());
+    expect(model.range).toBe("6-9/9");
+    expect(model.footer).toBe("Jog scroll  Back/Menu");
+    expect(model.rows).toMatchObject([
+      { track: 5, text: "T6 Schw Ch6", active: false },
+      { track: 6, text: "T7 Schw Ch7", active: false },
+      { track: 7, text: "T8 Schw Ch8", active: false },
+      { track: -1, text: "Apply routing", status: "", active: true },
+    ]);
+
+    // selected stays clamped to the apply index (no 9th selectable beyond it).
+    expect(routeCheckViewModel(9, globalThis.shadow_get_slots()).rows[3]).toMatchObject({
+      text: "Apply routing",
+      active: true,
     });
   });
 

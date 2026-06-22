@@ -201,6 +201,7 @@ export function createInitialState() {
     autoRouteActive: false,                   /* overlay + input-lockout flag while the macro runs */
     autoRouteWatchdog: 0,                     /* ticks to hard-abort the macro */
     autoRouteAppliedUuid: '',                 /* guard: run the macro once per set */
+    pendingAutoRouteRequest: false,           /* Route Check jog-click -> drained by runAutoRouteRequest in tick */
     trackPadMode: new Array(8).fill(0),
     trackVelOverride: new Array(8).fill(0),
     trackLooper: new Array(8).fill(1),
