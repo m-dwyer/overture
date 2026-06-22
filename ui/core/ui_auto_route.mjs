@@ -52,10 +52,11 @@ const SHIFT = 49, JOG = 14, CLICK = 3, BACK = 51;
 /* 0-based track -> Move track-button CC: track N (1-based) = CC (44 - N). */
 const trackCC = t0 => 44 - (t0 + 1);
 
-/* FIRST-RUN-TUNABLE — jog relative-encoder direction values. Resolve on the
- * first on-device run; if the menu scrolls the wrong way, SWAP these two. */
-const JOG_DOWN = 0x7f;   // try 0x7f (-1); fallback 0x01
-const JOG_UP   = 0x01;
+/* Jog relative-encoder direction values. Verified on-device 2026-06-22:
+ * 0x01 scrolls DOWN, 0x7f scrolls UP (the initial guess was inverted — the
+ * Move-track channels came out mirror-imaged, ch14/13/12/11 for tracks 1-4). */
+const JOG_DOWN = 0x01;
+const JOG_UP   = 0x7f;
 
 const press = (cc, gap = 4) => ({ emit: [INJ(cc, 127), INJ(cc, 0)], gap });
 const hold  = (cc, val, gap = 2) => ({ emit: [INJ(cc, val)], gap });
