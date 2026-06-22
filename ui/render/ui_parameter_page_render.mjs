@@ -12,7 +12,6 @@ import {
     drumNoteFxParameterPageModel,
     genericParameterPageGridModel,
     drumMidiDelayParameterPageGridModel,
-    labelValueParameterPageGridModel,
     melodicNoteFxParameterPageGridModel,
     drumRepeatGrooveParameterPageModel,
     trackBankOverviewRoute
@@ -287,14 +286,4 @@ export function renderGenericParameterPageOverview(deps, bank) {
 
 export function renderGenericBankOverview(deps, bank) {
     return renderGenericParameterPageOverview(deps, bank);
-}
-
-function renderBankCells(deps, labels, values, opts) {
-    const model = labelValueParameterPageGridModel({
-        labels: labels,
-        values: values,
-        wideLabels: opts && opts.wideLabels,
-        knobTouched: S.knobTouched
-    });
-    renderEncoderValueGrid(deps, model.cells, model.grid);
 }
