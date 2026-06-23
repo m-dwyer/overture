@@ -1,29 +1,42 @@
 ---
 import "../styles/global.css";
 
+const trackGroups = [
+  {
+    label: "Ableton",
+    count: "4",
+    body: "Native Move tracks for the core of the set.",
+  },
+  {
+    label: "Schwung",
+    count: "4",
+    body: "Open tracks for custom synths, effects, and experiments.",
+  },
+];
+
 const productPoints = [
   {
-    kicker: "Native",
-    title: "Move's own engines stay in the set.",
-    body: "Overture is designed around Drift, Wavetable, Drum Sampler, and Melodic Sampler instead of replacing the instrument you already bought.",
+    label: "01",
+    title: "Eight tracks",
+    body: "Four Ableton tracks and four Schwung tracks share one performance surface.",
   },
   {
-    kicker: "Open",
-    title: "Schwung modules join the same performance surface.",
-    body: "Add open-engine tracks alongside the Ableton engines and keep sequencing, track movement, and editing under one UI language.",
+    label: "02",
+    title: "Move-first",
+    body: "The workflow stays close to the hardware: direct, compact, and built for decisions in the moment.",
   },
   {
-    kicker: "Fast",
-    title: "The interface is shaped for hardware decisions.",
-    body: "Compact views, OLED-first feedback, pad-driven navigation, and parameter peeking keep the workflow close to the Move.",
+    label: "03",
+    title: "Open engine",
+    body: "Schwung modules extend the sound palette without breaking the groovebox model.",
   },
 ];
 
 const statusItems = [
-  "Early installable build for Ableton Move",
-  "Real UI running in a browser emulator for local testing",
-  "Public browser demo planned for this site",
-  "Built on Schwung and dAVEBOx foundations",
+  "Built for Ableton Move",
+  "8-track architecture: 4 Ableton, 4 Schwung",
+  "Minimal performance interface",
+  "Coming soon",
 ];
 ---
 
@@ -34,7 +47,7 @@ const statusItems = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Overture is a hybrid groovebox for Ableton Move, combining Move's native engines with open Schwung modules."
+      content="Overture is a hybrid groovebox for Ableton Move, combining four Ableton tracks with four open Schwung tracks."
     />
     <link rel="icon" href={`${import.meta.env.BASE_URL}favicon.svg`} />
     <title>Overture | Hybrid groovebox for Ableton Move</title>
@@ -45,72 +58,51 @@ const statusItems = [
         <span class="brand-mark" aria-hidden="true">O</span>
         <span>Overture</span>
       </a>
-      <nav>
-        <a href="#instrument">Instrument</a>
-        <a href="#emulator">Emulator</a>
-        <a href="#status">Status</a>
-        <a href="https://github.com/m-dwyer/overture">GitHub</a>
-      </nav>
+      <a class="github-link" href="https://github.com/m-dwyer/overture">GitHub</a>
     </header>
 
     <main>
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Hybrid groovebox for Ableton Move</p>
+          <p class="eyebrow">Coming soon for Ableton Move</p>
           <h1>Overture</h1>
           <p class="lede">
-            Sequence Move's native engines and open Schwung modules from one fast, hardware-shaped performance interface.
+            A minimal hybrid groovebox: four Ableton tracks, four Schwung tracks, one focused performance instrument.
           </p>
-          <div class="actions" aria-label="Primary actions">
-            <a class="button primary" href="https://github.com/m-dwyer/overture">View on GitHub</a>
-            <a class="button secondary" href="#emulator">See the emulator</a>
-          </div>
         </div>
-
-        <figure class="hero-device">
-          <div class="device-frame">
-            <img
-              src={`${import.meta.env.BASE_URL}images/emulator-main.png`}
-              alt="Overture emulator showing the Move-style performance interface"
-              width="1200"
-              height="676"
-            />
-          </div>
-          <figcaption>Real Overture UI running in the browser emulator.</figcaption>
-        </figure>
       </section>
 
-      <section class="summary-strip" aria-label="Project summary">
-        <div>
-          <strong>8+</strong>
-          <span>hybrid tracks</span>
+      <section id="tracks" class="track-section" aria-label="Overture track architecture">
+        <div class="track-head">
+          <p class="eyebrow">8 tracks</p>
+          <h2>A hybrid set that still feels like one instrument.</h2>
+          <p>
+            Overture keeps the track model simple: the first four tracks stay close to Move's native engines, while the second four open the door to Schwung modules.
+          </p>
         </div>
-        <div>
-          <strong>4</strong>
-          <span>native Ableton engines</span>
-        </div>
-        <div>
-          <strong>WASM</strong>
-          <span>browser test harness</span>
-        </div>
-        <div>
-          <strong>Open</strong>
-          <span>Schwung module ecosystem</span>
+        <div class="track-cards">
+          {trackGroups.map((group) => (
+            <article>
+              <span>{group.label}</span>
+              <strong>{group.count}</strong>
+              <p>{group.body}</p>
+            </article>
+          ))}
         </div>
       </section>
 
       <section id="instrument" class="section split-section">
         <div class="section-copy">
-          <p class="eyebrow">One sequencer, two worlds</p>
-          <h2>A performance layer for Move, not a separate computer workflow.</h2>
+          <p class="eyebrow">Instrument</p>
+          <h2>Designed for hardware decisions.</h2>
           <p>
-            Overture augments the Move instead of turning it into a generic controller. The aim is a cohesive groovebox where Ableton engines and open modules can share timing, tracks, clips, and performance gestures.
+            Overture augments the Move instead of turning it into a generic controller. Native Ableton engines and open Schwung modules share timing, clips, track movement, and performance gestures.
           </p>
         </div>
         <div class="point-stack">
           {productPoints.map((point) => (
             <article class="point">
-              <span>{point.kicker}</span>
+              <span>{point.label}</span>
               <h3>{point.title}</h3>
               <p>{point.body}</p>
             </article>
@@ -118,27 +110,27 @@ const statusItems = [
         </div>
       </section>
 
-      <section id="emulator" class="section emulator-section">
-        <div class="section-copy">
-          <p class="eyebrow">Browser emulator</p>
-          <h2>Built against the real tool UI.</h2>
-          <p>
-            The local emulator runs Overture's fork of dAVEBOx compiled for the browser, which makes it useful for design iteration today and a natural public demo target later.
-          </p>
+      <section class="section feature-band" aria-label="Overture feature highlights">
+        <div>
+          <span class="feature-label">4 Ableton</span>
+          <p>Keep Move's native engines ready for the core parts of a set.</p>
         </div>
-        <div class="shot-grid" aria-label="Overture interface screenshots">
-          <img class="shot-large" src={`${import.meta.env.BASE_URL}images/session-view.png`} alt="Session view in the Overture emulator" />
-          <img src={`${import.meta.env.BASE_URL}images/menu-view.png`} alt="Menu view in the Overture emulator" />
-          <img src={`${import.meta.env.BASE_URL}images/oled-view.png`} alt="OLED view in the Overture emulator" />
+        <div>
+          <span class="feature-label">4 Schwung</span>
+          <p>Add open DSP tracks without leaving the same performance surface.</p>
+        </div>
+        <div>
+          <span class="feature-label">1 instrument</span>
+          <p>Sequence, edit, and perform both sides with one compact mental model.</p>
         </div>
       </section>
 
-      <section id="status" class="section status-panel">
+      <section id="soon" class="section status-panel">
         <div>
-          <p class="eyebrow">Project status</p>
-          <h2>Early build, public demo path already mapped.</h2>
+          <p class="eyebrow">Coming soon</p>
+          <h2>A new performance instrument for Move is taking shape.</h2>
           <p>
-            This site is the public shell. The emulator can later be mounted at <code>/try/</code> so visitors can experience the groovebox directly in the browser.
+            Overture is in active development as a polished, minimal groovebox layer for Ableton Move. The public launch page is here first; the instrument follows.
           </p>
         </div>
         <ul class="status-list">
