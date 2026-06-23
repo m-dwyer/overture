@@ -1,5 +1,5 @@
 # Overture — root task surface. Run everything from the repo root (no cd):
-#   mise run dev | typecheck | wasm | dsp | smoke | build | setup
+#   mise run dev | site-dev | typecheck | wasm | dsp | smoke | build | setup
 #
 # The orchestration is polyglot: the web emulator is TS/Vite (pnpm), while the
 # `tool` submodule builds via Docker (aarch64 gcc for dsp.so, emscripten for wasm)
@@ -25,6 +25,14 @@ pnpm -C overture-ui install
 [tasks.dev]
 description = "Serve the Overture emulator (real tool UI + mock host)"
 run = "pnpm -C web dev"
+
+[tasks.site-dev]
+description = "Serve the public Astro site"
+run = "pnpm -C site dev"
+
+[tasks.site-build]
+description = "Production build of the public Astro site"
+run = "pnpm -C site build"
 
 [tasks.typecheck]
 description = "Type-check the web harness"
