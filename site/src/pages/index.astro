@@ -1,42 +1,37 @@
 ---
 import "../styles/global.css";
 
-const trackGroups = [
-  {
-    label: "Ableton",
-    count: "4",
-    body: "Native Move tracks for the core of the set.",
-  },
-  {
-    label: "Schwung",
-    count: "4",
-    body: "Open tracks for custom synths, effects, and experiments.",
-  },
-];
-
 const productPoints = [
   {
-    label: "01",
-    title: "Eight tracks",
+    label: "Tracks",
+    value: "8 total",
     body: "Four Ableton tracks and four Schwung tracks share one performance surface.",
   },
   {
-    label: "02",
-    title: "Move-first",
-    body: "The workflow stays close to the hardware: direct, compact, and built for decisions in the moment.",
+    label: "Engines",
+    value: "4 + 4",
+    body: "Native Move engines stay close; Schwung modules extend the palette.",
   },
   {
-    label: "03",
-    title: "Open engine",
-    body: "Schwung modules extend the sound palette without breaking the groovebox model.",
+    label: "Workflow",
+    value: "Move-first",
+    body: "Direct, compact, and built for decisions in the moment.",
   },
 ];
 
 const statusItems = [
-  "Built for Ableton Move",
-  "8-track architecture: 4 Ableton, 4 Schwung",
-  "Minimal performance interface",
-  "Coming soon",
+  {
+    label: "Ableton",
+    value: "4 tracks",
+  },
+  {
+    label: "Schwung",
+    value: "4 tracks",
+  },
+  {
+    label: "Status",
+    value: "Coming soon",
+  },
 ];
 ---
 
@@ -72,26 +67,25 @@ const statusItems = [
         </div>
       </section>
 
-      <section id="tracks" class="track-section" aria-label="Overture track architecture">
-        <div class="track-head">
-          <p class="eyebrow">8 tracks</p>
-          <h2>A hybrid set that still feels like one instrument.</h2>
+      <section id="tracks" class="spec-section" aria-label="Overture track architecture">
+        <div class="section-copy">
+          <p class="eyebrow">Architecture</p>
+          <h2>One instrument. Two track worlds.</h2>
           <p>
             Overture keeps the track model simple: the first four tracks stay close to Move's native engines, while the second four open the door to Schwung modules.
           </p>
         </div>
-        <div class="track-cards">
-          {trackGroups.map((group) => (
-            <article>
-              <span>{group.label}</span>
-              <strong>{group.count}</strong>
-              <p>{group.body}</p>
-            </article>
+        <dl class="spec-list">
+          {statusItems.map((item) => (
+            <div>
+              <dt>{item.label}</dt>
+              <dd>{item.value}</dd>
+            </div>
           ))}
-        </div>
+        </dl>
       </section>
 
-      <section id="instrument" class="section split-section">
+      <section id="instrument" class="spec-section">
         <div class="section-copy">
           <p class="eyebrow">Instrument</p>
           <h2>Designed for hardware decisions.</h2>
@@ -99,45 +93,22 @@ const statusItems = [
             Overture augments the Move instead of turning it into a generic controller. Native Ableton engines and open Schwung modules share timing, clips, track movement, and performance gestures.
           </p>
         </div>
-        <div class="point-stack">
+        <div class="detail-list" aria-label="Overture design principles">
           {productPoints.map((point) => (
-            <article class="point">
+            <article>
               <span>{point.label}</span>
-              <h3>{point.title}</h3>
+              <strong>{point.value}</strong>
               <p>{point.body}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section class="section feature-band" aria-label="Overture feature highlights">
-        <div>
-          <span class="feature-label">4 Ableton</span>
-          <p>Keep Move's native engines ready for the core parts of a set.</p>
-        </div>
-        <div>
-          <span class="feature-label">4 Schwung</span>
-          <p>Add open DSP tracks without leaving the same performance surface.</p>
-        </div>
-        <div>
-          <span class="feature-label">1 instrument</span>
-          <p>Sequence, edit, and perform both sides with one compact mental model.</p>
-        </div>
-      </section>
-
-      <section id="soon" class="section status-panel">
-        <div>
-          <p class="eyebrow">Coming soon</p>
-          <h2>A new performance instrument for Move is taking shape.</h2>
-          <p>
-            Overture is in active development as a polished, minimal groovebox layer for Ableton Move. The public launch page is here first; the instrument follows.
-          </p>
-        </div>
-        <ul class="status-list">
-          {statusItems.map((item) => (
-            <li>{item}</li>
-          ))}
-        </ul>
+      <section id="soon" class="closing-section">
+        <p class="eyebrow">Coming soon</p>
+        <p>
+          Overture is in active development as a polished, minimal groovebox layer for Ableton Move.
+        </p>
       </section>
     </main>
 
