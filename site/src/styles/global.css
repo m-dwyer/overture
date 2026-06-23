@@ -91,8 +91,8 @@ footer {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 0.88fr) minmax(460px, 1fr);
-  gap: 54px;
+  grid-template-columns: minmax(0, 1fr) minmax(430px, 0.92fr);
+  gap: 84px;
   align-items: center;
   max-width: var(--max);
   min-height: min(760px, calc(100vh - 90px));
@@ -111,6 +111,7 @@ footer {
   position: relative;
   order: 2;
   width: 100%;
+  transform: translateY(-16px);
   aspect-ratio: 2 / 1;
   background: transparent;
   overflow: hidden;
@@ -168,10 +169,10 @@ h3 {
 }
 
 .lede {
-  max-width: 720px;
+  max-width: 760px;
   margin: 30px 0 0;
   color: var(--muted);
-  font-size: clamp(21px, 2.2vw, 29px);
+  font-size: clamp(21px, 1.9vw, 27px);
   line-height: 1.38;
 }
 
@@ -296,6 +297,7 @@ footer {
 @media (max-width: 940px) {
   .hero {
     grid-template-columns: 1fr;
+    gap: 54px;
     min-height: auto;
     padding-top: 74px;
   }
@@ -303,6 +305,7 @@ footer {
   .hero-display {
     order: 0;
     max-width: 720px;
+    transform: none;
   }
 
   .spec-section {
