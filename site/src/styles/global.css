@@ -318,13 +318,13 @@ footer {
 @media (max-width: 940px) {
   .hero {
     grid-template-columns: 1fr;
-    gap: 54px;
+    gap: 44px;
     min-height: auto;
-    padding-top: 74px;
+    padding-top: 56px;
+    padding-bottom: 72px;
   }
 
   .hero-display {
-    order: 0;
     max-width: 720px;
     transform: none;
   }
@@ -347,13 +347,13 @@ footer {
   }
 
   .hero {
-    gap: 44px;
-    padding-top: 62px;
-    padding-bottom: 74px;
+    gap: 34px;
+    padding-top: 42px;
+    padding-bottom: 56px;
   }
 
   h1 {
-    font-size: clamp(54px, 18vw, 86px);
+    font-size: clamp(52px, 17vw, 82px);
   }
 
   h2 {
@@ -362,6 +362,7 @@ footer {
 
   .lede {
     font-size: 20px;
+    margin-top: 24px;
   }
 
   .spec-list div,
