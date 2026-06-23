@@ -2,16 +2,18 @@ name: Deploy site to GitHub Pages
 
 on:
   push:
-    branches: ["main", "site/astro-landing-starter"]
+    branches: ["main"]
+  pull_request:
+    paths:
+      - ".github/workflows/pages.yml"
+      - "site/**"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -45,11 +47,17 @@ jobs:
           GITHUB_PAGES: "true"
 
       - name: Upload artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
 
   deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
