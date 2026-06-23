@@ -40,6 +40,7 @@ run = "pnpm -C web typecheck"
 
 [tasks.web-build]
 description = "Production build of the web emulator"
+depends = ["wasm"]   # web bundle imports overture-ui/dist/wasm/seq8.mjs
 run = "pnpm -C web build"
 
 [tasks.utest]
@@ -48,6 +49,7 @@ run = "pnpm -C overture-ui test"
 
 [tasks.itest]
 description = "Integration tests — real ui.js + seq8-wasm + emulator in Node (vitest, in web/)"
+depends = ["wasm"]   # loads overture-ui/dist/wasm/seq8.mjs; build it first (incremental)
 run = "pnpm -C web test:node"
 
 [tasks.cover]
@@ -83,6 +85,10 @@ run = "overture-ui/scripts/build.sh"
 
 [tasks.wasm]
 description = "Build the tool's seq8 -> wasm target via emscripten Docker"
+# Incremental: skip the (slow) emscripten build when the artifact is already
+# up-to-date vs the DSP sources, so depending tasks (web-build, itest) stay fast.
+sources = ["overture-ui/dsp/**/*.c", "overture-ui/dsp/**/*.h", "overture-ui/scripts/build-wasm.sh"]
+outputs = ["overture-ui/dist/wasm/seq8.mjs", "overture-ui/dist/wasm/seq8.wasm"]
 run = "overture-ui/scripts/build-wasm.sh"
 
 [tasks.smoke]

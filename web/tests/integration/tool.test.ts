@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll } from "vitest";
+import { describe, test, expect, beforeAll, afterEach } from "vitest";
 import { createHarness, type Harness } from "./harness.js";
 
 // One shared harness (re-importing ui.js per test isn't isolated without
@@ -6,6 +6,26 @@ import { createHarness, type Harness } from "./harness.js";
 describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
   let h: Harness;
   beforeAll(async () => { h = await createHarness(); }, 60_000);
+
+  // The harness is shared across tests (re-importing ui.js per test isn't
+  // isolated without resetModules). A test that throws before its own cleanup
+  // would otherwise leak open menus/overlays into the next test — that's what
+  // made a stale `/8` assertion in one test surface as a phantom "navigation"
+  // failure in another. Reset the view layer to a base state after every test
+  // (cheap: just flag pokes + one render, no gesture replay) so failures can't
+  // cascade. Tests still set up their own state; this is the safety net.
+  afterEach(() => {
+    Object.assign(h.ui() as Record<string, unknown>, {
+      globalMenuOpen: false, tapTempoOpen: false, routeCheckOpen: false,
+      routeCheckSelected: 0, schwungSoundPage: false, sessionOverlayHeld: false,
+      schwungCoRunSlot: -1, moveCoRunTrack: -1, autoRouteActive: false,
+      pendingInheritPicker: null, snapshotPicker: null, clearAutoMenu: null,
+      pendingSceneBakePicker: false, pendingMergePlacement: false,
+      confirmStateWipe: false, recordBlockedDialog: false, confirmLgto: false,
+      confirmXpose: false, confirmBakeScene: false, confirmBake: false,
+    });
+    h.step(1); // settle to the base view
+  });
 
   function openGlobalMenu(): void {
     h.hold(49); h.cc(50, 127); h.step(2); h.cc(50, 0); h.release(49); h.step(3);
@@ -121,7 +141,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     openRouteCheck();
     let text = h.rec.text();
     expect(text).toMatch(/ROUTE CHECK/);
-    expect(text).toMatch(/1-4\/8/);
+    expect(text).toMatch(/1-4\/9/);
     expect(text).toMatch(/T1 Move Ch1/);
     expect(text).toMatch(/T4 Move Ch4/);
     expect(text).toMatch(/MANUAL/);
@@ -131,7 +151,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.cc(14, 1); h.step(1);
     h.cc(14, 1); h.step(3);
     text = h.rec.text();
-    expect(text).toMatch(/5-8\/8/);
+    expect(text).toMatch(/5-8\/9/);
     expect(text).toMatch(/T5 Schw Ch5/);
     expect(text).toMatch(/OK S1/);
     expect(text).toMatch(/T8 Schw Ch8/);
