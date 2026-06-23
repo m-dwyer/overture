@@ -2,14 +2,13 @@ import * as THREE from "three";
 
 const W = 128;
 const H = 64;
-const FPS = 11;
+const ANIMATION_FRAMES_PER_SECOND = 11;
 const HERO_SCALE = 0.88;
 const HERO_X_SHIFT = 4;
 const HERO_Y_SHIFT = 4;
 
 type WaveformState = {
   bootFrame: number;
-  frameAccumulator: number;
   lastTime: number;
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -328,19 +327,14 @@ const animate = (state: WaveformState, time: number) => {
     state.lastTime = time;
   }
 
-  const delta = time - state.lastTime;
+  const delta = Math.min(time - state.lastTime, 100);
   state.lastTime = time;
-  state.frameAccumulator += delta;
 
-  const frameMs = 1000 / FPS;
-  while (state.frameAccumulator >= frameMs) {
-    if (!state.reducedMotion) {
-      state.bootFrame += 1;
-    }
-    state.frameAccumulator -= frameMs;
+  if (!state.reducedMotion) {
+    state.bootFrame += (delta / 1000) * ANIMATION_FRAMES_PER_SECOND;
+    renderFrame(state);
   }
 
-  renderFrame(state);
   state.animationFrame = window.requestAnimationFrame((nextTime) => animate(state, nextTime));
 };
 
@@ -358,8 +352,8 @@ export const initOvertureWaveform = (canvas: HTMLCanvasElement) => {
     canvas,
     alpha: true,
     antialias: false,
-    preserveDrawingBuffer: true,
-    powerPreference: "high-performance",
+    failIfMajorPerformanceCaveat: true,
+    powerPreference: "low-power",
   });
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(0, W, H, 0, -100, 100);
@@ -379,7 +373,6 @@ export const initOvertureWaveform = (canvas: HTMLCanvasElement) => {
 
   const state: WaveformState = {
     bootFrame: reducedMotion ? 54 : 0,
-    frameAccumulator: 0,
     lastTime: 0,
     renderer,
     scene,
@@ -394,6 +387,7 @@ export const initOvertureWaveform = (canvas: HTMLCanvasElement) => {
 
   resize(state);
   renderFrame(state);
+  canvas.closest(".hero-display")?.classList.add("is-webgl-ready");
 
   const observer = new ResizeObserver(() => resize(state));
   observer.observe(canvas);

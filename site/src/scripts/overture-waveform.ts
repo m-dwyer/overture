@@ -1,9 +1,18 @@
 const loadWaveform = async (canvas: HTMLCanvasElement) => {
-  const { initOvertureWaveform } = await import("./overture-waveform-scene");
-  initOvertureWaveform(canvas);
+  try {
+    const { initOvertureWaveform } = await import("./overture-waveform-scene");
+    initOvertureWaveform(canvas);
+  } catch {
+    canvas.closest(".hero-display")?.classList.add("has-waveform-fallback");
+  }
 };
 
 document.querySelectorAll<HTMLCanvasElement>("[data-overture-waveform]").forEach((canvas) => {
+  if (!("IntersectionObserver" in window)) {
+    void loadWaveform(canvas);
+    return;
+  }
+
   const observer = new IntersectionObserver(
     ([entry]) => {
       if (!entry.isIntersecting) {
