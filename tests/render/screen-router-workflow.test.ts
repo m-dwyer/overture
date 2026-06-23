@@ -34,6 +34,8 @@ function baseState(overrides: Record<string, unknown> = {}) {
     stateLoading: false,
     bootSplashTicks: 0,
     splashWasVisible: false,
+    booting: false,
+    autoRouteActive: false,
     actionPopupEndTick: -1,
     bankSelectTick: -1,
     jogTouched: false,
@@ -76,6 +78,7 @@ function deps(calls: DrawCall[], stepEditResult = true) {
     ensureGlobalMenuFresh: render("ensureGlobalMenuFresh"),
     drawGlobalMenu: render("drawGlobalMenu"),
     renderPerfModeOled: render("renderPerfModeOled"),
+    renderAutoRouteOverlay: render("renderAutoRouteOverlay"),
     renderSplashScreen: render("renderSplashScreen"),
     clear_screen: render("clear_screen"),
     renderSessionActionPopup: render("renderSessionActionPopup"),
@@ -147,6 +150,39 @@ describe("Screen router workflow", () => {
       drawUIImpl(baseState(state) as any, deps(calls) as any);
       expect(routedName(calls)).toBe(expected);
     }
+  });
+
+  test("boot splash masks auto-route, but a post-boot re-trigger shows the overlay", () => {
+    // While booting, the splash is the single loading surface even when the
+    // new-set routing macro is running underneath.
+    drawUIImpl(baseState({ booting: true, autoRouteActive: true }) as any, deps(calls) as any);
+    expect(routedName(calls)).toBe("renderSplashScreen");
+
+    // Once boot is over, a manual Route-Check re-trigger shows the routing overlay.
+    calls = [];
+    drawUIImpl(baseState({ booting: false, autoRouteActive: true }) as any, deps(calls) as any);
+    expect(routedName(calls)).toBe("renderAutoRouteOverlay");
+  });
+
+  test("boot does not mask answerable boot-time dialogs", () => {
+    // Version-mismatch confirm / inherit picker are set during init(); the boot
+    // splash must not paint over them.
+    drawUIImpl(baseState({ booting: true, confirmStateWipe: true }) as any, deps(calls) as any);
+    expect(routedName(calls)).toBe("drawStateWipeConfirm");
+  });
+
+  test("booting clears once a real view renders with nothing left loading", () => {
+    const state = baseState({ booting: true }) as any;
+    drawUIImpl(state, deps(calls) as any);
+    expect(state.booting).toBe(false);
+    expect(routedName(calls.filter((c) => c[0] !== "clear_screen"))).toBe("renderMelodicTrackIdleView");
+
+    // ...but stays set while still loading (splash holds, boot not yet finished).
+    const loading = baseState({ booting: true, bootSplashTicks: 8 }) as any;
+    calls = [];
+    drawUIImpl(loading, deps(calls) as any);
+    expect(loading.booting).toBe(true);
+    expect(routedName(calls)).toBe("renderSplashScreen");
   });
 
   test("global menu and tap tempo precede perf, splash, and normal view routing", () => {

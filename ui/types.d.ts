@@ -476,8 +476,9 @@ export interface RenderState {
   ledInitComplete: boolean;
   _origClearScreen: any;
   bootSplashTicks: number;
-  currentSplashIdx: number;
   splashWasVisible: boolean;
+  splashFrameTick: number;
+  booting: boolean;
 }
 
 /** Set load/save lifecycle, UI Sidecar, snapshots, undo/redo availability. */

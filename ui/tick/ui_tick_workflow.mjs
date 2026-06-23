@@ -45,6 +45,10 @@ import { runAutoRouteTickTasks, runAutoRouteRequest } from '../core/ui_auto_rout
 export function runTickWorkflow(S, deps) {
     S.tickCount++;
     if (S.bootSplashTicks > 0) S.bootSplashTicks--;
+    /* Boot splash is an animation (ui_splash.mjs): force a redraw every tick
+     * while it's visible so frames advance smoothly (drawUI is otherwise gated
+     * on screenDirty). The splash render derives its frame from S.splashFrameTick. */
+    if (S.bootSplashTicks > 0 || S.stateLoading) S.screenDirty = true;
     if (deps.tickTextEntry && deps.tickTextEntry()) S.screenDirty = true;
     if (deps.expireSchwungSoundStatusFlash && deps.expireSchwungSoundStatusFlash()) S.screenDirty = true;
 

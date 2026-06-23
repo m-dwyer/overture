@@ -24,8 +24,10 @@ export function drawUIImpl(S, deps) {
     }
     /* Auto-route: the blind gesture macro is driving Move's routing menu. Own the
      * OLED with a stable "Configuring… routing…" message so the user doesn't see
-     * the menu flicker. Top priority after the co-run OLED owners. */
-    if (S.autoRouteActive) {
+     * the menu flicker. Suppressed during boot — there the boot splash masks the
+     * new-set routing setup instead (below), keeping loading simple. This branch
+     * is for a post-boot manual Route-Check re-trigger. */
+    if (S.autoRouteActive && !S.booting) {
         deps.renderAutoRouteOverlay(deps.renderSurface());
         return;
     }
@@ -61,12 +63,19 @@ export function drawUIImpl(S, deps) {
     if (S.schwungSoundPage) { deps.renderSchwungSoundPage(deps.renderSurface()); return; }
     /* Perf Mode OLED takeover (Session View + Loop held or locked) */
     if (S.sessionView && (S.loopHeld || S.perfViewLocked)) { deps.renderPerfModeOled(deps.renderSurface()); return; }
-    if (S.stateLoading || S.bootSplashTicks > 0) {
+    /* Boot / loading splash. The single loading surface: state load, plus — while
+     * still booting — the new-set MIDI routing setup (auto-route), so the user
+     * sees one consistent screen and never the routing-menu churn underneath. */
+    if (S.stateLoading || S.bootSplashTicks > 0 || (S.booting && S.autoRouteActive)) {
         deps.renderSplashScreen(S, deps.renderSurface());
         return;
     }
     /* Not in splash mode — clear the entry-edge flag so the next splash rerolls. */
     if (S.splashWasVisible) S.splashWasVisible = false;
+    /* Reached a real view with nothing left loading: boot is over. The splash
+     * never preempts auto-route again this session (manual re-triggers show the
+     * routing overlay). Reset on the next fresh JS load via initial state. */
+    if (S.booting) S.booting = false;
 
     deps.clear_screen();
     if (S.sessionView) {

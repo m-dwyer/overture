@@ -1,81 +1,331 @@
-/* Auto-generated 128x64 splash bitmaps for the SESSION LOADING screen.
- * 1 bit per pixel, MSB-first, row-major. 16 bytes per row × 64 rows = 1024 bytes.
- * Each splash is independently encoded as a hex string and decoded once at
- * module load into a Uint8Array. The renderer picks one at random per splash
- * session via S.currentSplashIdx (rerolled on each splash entry edge). */
-
-const HEX_FRAMES = [
-    /* Original Overture splash (Untitled - May 20, 2026 at 14.49.53.bmp). */
-    '00ffffffffffffffffffffffffffffc001ffffffffffffffffffffffffffffe003ffe7ffffffffffffffffffffffffe007ffc3ffffffffe01ffffffffffffff00fff80ffffffffe01ffffffffffffff81fff003fffffffe01ffffffffffffffc3ffe000ffff3ffe03ffffffffffffffe7ffc0007ffe3ffe03ffffffffffffffffff80001ffc7fffffffffffffffffffffff00000ff8ffffffffffffffffffffffff00000ff8fffe07ffffffffffffffffffe0003e7efffe003ffffffffffffffffffc007c387fffc01ffff0ffffffffffffff80f8183ffe000fffc07ffffffffffffff1f0003ffe000fff003fffffffffffffffe00c1fff8007ff801fffffffffffffffe01c0fff8007f1c01ffffffffffffffffc3003ffa00fc0e1ffffffffffffffffffe0007f071e607ffffffffffefffffffff1000001be10ffffffffffffffffffffff0000007f1ffffffffffffffffffffffff000003ffffffffffffffffffffffffffc00003ff39dec31f8fffffffffffffffe00441ff319c830707fffffffffffffff870f0f830cd9f36726ffffffffffffff8c0087234c98306730efffffffffffffcd08c7320498722731ffffffffffffffc81b27320639f32731ffffffffffffffc8012702e638307064ffffffffffffffc80067dffffff7fdffffffffffffffff8c5843ffffffffffffffffffffffe7ff8c1943f87ffffffffffffffffffc47ff890183f863fffffffffffffffff047ff8c0183f860fffffffffffffffe304fff8cf1c3fe60e1fffffffffffff0307fff8c02c3ffe0e01fffffffffffc031ffff8fbac1fff8e00fffffffffffc037ffffdf1ec1ffffe00fffffffffc7c03fffffddfcc1ffffe00ffffffffc07c07ffffffdee41fffff80fffffffe007c1ffffffff2e61ffffff0ffffffe0007c7ffffffcf3e61ffffffcffffff00007ffffffffc07a63fffffffffffff00007ffffffdfc000677ffffffffffff00007ffffff8fe000603ffffffffffff0000fffffff07e000401ffffffffffff0003fffffff8fe000603ffffffffffff000ffffffffcff0007f77fffffffffff003fffffffc7ff000ffe3fffffffffff01ffffffff83ff800ffc1fffffffffff07ffffffff03ff800ffc0fffffffffff1fffffffff07ff800ffe0fffffffffffffffffffff87ff800fff1fffffffffffffffffffffcfff800fff3ffffffffffffffffffff9ffff800ffff8fffffffffffffffffff0ffffc01ffff07ffffffffffffffffff03fffc01fffe03fffffffffffffffffe03fffc01fffe01fffffffffffffffffc07fffc01ffff00fffffffffffffffff807fffe01ffff807ffffffffffffffff80ffffe03ffffc03ffffffffffffffff80ffffe03ffffc07ffffffffffffffffc1ffffe03ffffe1ffffffffffffffffff1ffffe03fffff3fffffffff',
-    /* dbBruce.bmp */
-    '0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003f0000000000000001ff41fe000000000000000000000000000007ff00000000000000003000000000000fffc000000000000001f8000000000001eff001c30000000007fc000000000001fff00de3800000000ffe000000000001e3f00ff3810000001ffe000000000001f1f00ff38fc000001fff000000000001f1f8ff7f9fc100001fffc00000000001e0f8ff7f9fe000003fffffa000000000e0f9ff3fbe6c00003ffffe3000000000e0fbc73f3ee000001ffffc7800000000e0fb871f3fc000000ffff0f800000000e0f3838f3fe0000007ffe0dc00000000e0f3c3833fc000000780e00c04000000f1f33f801e0000200700f03e00000000e1e1ff801f00000007c0fcfe0000000043c038000fe000000781ffff000000007fc018000ff000000603ffff000000007fc0000007f00000061fffff800000007f00000001f8000007fff3ffc0000000fe0000000000000007ff81ffc0000000f0043ffc0000000007ff01ffe00000000003ffff8000000007ff07ffe0000000000fffffe000000007ffffffe0000000003fe07ff800000007ffffffe0000000007e0001fc0000003fffe00f8000000000f800007c0000003fff803f80000000006000001e0000007ffc07ff8000000000000000000000003ffc7cff8000000000000000000000003ffdf0ff8000000000780000000000001ffff0ff000000000fff0000000000001fffffff000000001fff00000000000000fffffc000000001e07200183800000007ffff980000000060e0181cf800000002fff8180800000061c0781de000000000ff003c1e00000077c0f80fc00000000000003fff0000007fc1f807800000000180007fff8000007f81fe07800000000180007fe380000037839f07c000000000e000ffc0c0000033c3870fe000000000f8c1ffc1f8000039e3030fe000000000ffd3ff81fe000038f3031e7000040407ffffffffff8000387b9f1c780000000ffffc7fffffe0003819ff1838000000043ff87ffffff000381cfc0800000000003ffbbffffff000181c0000000000000f3fffcffffff000181c00000000000007ffffe3fffff0001ff800000800000007efffe0fffff0001ff80000000000001bff7ff07ffff0001fe00000000000003ffffffcfffff0000000010800000000fffffffffffff0000000000000000001f7fffffffffff000001000000000000373dfff0ffffff000000000400000000673dfff07f87ff000000000000000000ce7fffe07f87ff000000008000000001cf7fffe0ff87ff',
-    /* dlrDB.bmp */
-    'ffffffe3ffef8000007fffffffff8000fffffffffffff8000007ffffffffc000ffdffffffffffc000003fffffffffc00ff9e39e4181e0e01e061fffffffffc00ff9e39ccf88c47fff031fffffffffc00fe9e1cccf9c8f3373313fffffffff600f81c9ccc181993061bfffffffffffe80f99c8c9c1819f38c1bffffffffffffc0f9980e1cf9c9f38c1dffffffffffffc0f9980e1cf9cc67861cffffffffffffe0fc11e63c081e07221fffffffffffffa0fefbff7e1c7fbf7f9ffbfffffffffff0ffffffffffffffff9efffffffffffff9fffff87fffffffff9f7ffffffffffff9fffff07fffffffff0ffffffffffffffffffff0efdfffffff8ffffffffffffffefffff6cfcfffffff8ffbfffffffffffffffff61ec13fffff9efffffffffffff9fffffe7c877fff839ffafffffffffff9fffffcf80ffffff99be87ffffffffffbffffffb81ffffffc0fe83ffffffffffbffffff781c1fffff0be63ffffffffffbfffffef01787ff1f89e21ffffffffffbfffffdd020c3f07b89e0dffffffffffbffffffa02021e1fdc1e0ffffffffffbfffffff30647fff81c1007fffffffffbffffffe70f7ffff89c1007ffffffffffffffffa71fffffffbe5a07ffffffffffffffff8f1ffffffffe5e03ffffffffffffffff9f1fffffffff7f83ffffffffffffffff9e0fffffffff7fc1ffffffffffeffff7de5fffffffff7fe0fffffffffffffff7ffffffffffff7ff0ffffffffffffffe3ffffffffffff3ffcffffffffffffffe7ffffffffffff3ffcffffffffffffffe7fdbfffffffff3ffeffffffffffffffe3ffbfff3fffff1efffffffffffffffff3ffbfff1cffff0e3fffffffffffffffffff3fffc1ffff0f3fffffffffffffffffff9fffe3fffe079dffffffffffffffffff9ffffffffe07dcffffffffffffffffff9ffffffffe03feffffffffffffffffffc7fffffffc017ffffffffffffffffbffc7fffffffc010ffffffffffffffff3fec3fffffff0008fffffffffffffffe7fee3fe00ffe000c7ffffffffffffffe7fee1fc007fe00047fffffffffffffffffff1f8001fe0006bfffffffffecfffcebfe1f8001fc00031fffffffff98fffdfff60f8001fc00039ffffffff838fffffffa0fc001f80001feffffffc0fdfffffffc0fe001f80000fffffffe0ffdfffffffc07e103f800007fffffe03ffcffff7ff707f7f3f000003fffffe3fffcfffe7e7381fffff000001ffffffffffcfffefe3181ffffe000000fffffffffeffffdec318dffffe000000fffffffffefffffec31c1ffffe000001fffffffffefffffcc31e1dfffe000000bfffff3ffffffffc03df0cff9c0000003fffff03f87fffdc03e38e7f3c0000001fffff40007ffcd81067ce3e380000001fffff80007ff8681c0fc700780000000fffff88007fb8200e0fc781f00000002fffff84007',
-    /* bowiedb-dithered.png */
-    '0000000000000200000000000000000124924924924928aa492444422222222000000000000000000000001000000005108884492488a80a80842200891111104200200000020000242100440000000100440222224891000000100040888880241110808004000092108222080200250080001012228000008400000240440000402020100809008922000000049048480902024402200020000488124000010240109001108000021120024002122120090002200a0000a0800040022080080900491089000820101224111008048100480040000a000141000100010040044802480924808200004488088844112102400240000410028800008000010000201240092400480001244424442012120900124001112a228000000000888081404900092000bd000092220220000408040049200a04de8104008090090440412090000480037da02044140100201101040492402241df9200000c882082001040400012080bffc80127ff77be7c48851209248081015b500003ffffffff02004909124400882200400fb1323091ff1100204001242d5624025c35b4e6bd6e0424040924008aaf510019258631399c410121200092177aea0119a0cce6bd9c0848080492004bdf5e881c2cce20830e21024120004916f674011eefeebdefff01400809240003bb3a004fffffffffff101241000129516ea824035aab55355585000849240006f42901000000000000004921000092037d200048844890800042000424920082b6b408002000041248114a4080004823d5400249024900400200001212a40500a0120000100049042089490040012041ea201248822400110001009209240801508400020801224012404800800122c2ea2055204120000440124002000955c9af915502408000022510124094800b216880ab48102491208005001400525d41d2097581041004080880550149002ead68412ed441b12080802100480025f5caf40412aaad500012120822009202bb4f5a9000155b6049000041089200954d9bed00000aada00044880440004800069d76a885bafde09200222112490557972fdf4152bd4ea0002200000000404ad53b7ac8d75af5a1110844924aa416abbb3fffe5caef5ec00000000110015556d52edfd5775fab409244922042292ad7ba3ff6eaab7cfdc8001000090880b6ab6d377fed57572ec1248244814012ab6fb45fffeaabaeeb4000000010150056d6ea3bdb6d55d73d8111244902040115b76a7ef7eaadd2ab4492202210414836dbd85fff6555d5d69000888005100217af56fbbdca5a7b5b024802124044908af5a87fffc49155d28001200011020425aedabfef902456ab012004910150a10376a8f77f951048490808800424040848ad5c7ffb104102ac00822480812102025aaabfdf84a8d52c9040002208',
-    /* dbcoulier.png */
-    '00000000fe000000000000000000000000000001f00496c8000000000041000000000003d080206a000900240210400000000002c0210f0900200081208440000000000680004826490000100401100000000000b20200860002440410482000000000086000001390881020820280000000000109100001840100800090100000000018100301014842011044412000000000040039882121fffffe3c4888200000003c0086e68820ffffffff02200000000030002672c88bdffedde7ff0000000000c000335a6447d99a1083fe4000000003000099dd331618d2f6b84c410800000448000ca5988e9ad610bd1d100000000480006680ccccd046f6999c8000000002000072427506176610c35c804000000200009b013047fffffffffe040000000007dad8608213ffffffffff200800000400126d62c9800000000001004000000202cdb78d80290224820008410000000803249e85c608588424b24a00000000000192dbf760c20111080820080400000001da65bee830a44042432400400000000064db6de1495181048490080800000000149bcd704842104044942020000008001364f016120804321244008000000001894f3d8092a48108912002000000048064b3cc2220926cc04499100400000c0246b4d2608c497b944244002000000b00909d97842324cffc2924220000002601324b2000009097ee8490008400001c024966cd489202532f92484410000018424912714000c249b5e248004000002301b219988204082cdbf9221000000001842485b7884025964af920421200000c04cc246f0011911367fc9808800000081933035b9104146d99f682202000000436649052804046acb678608204000004009900040809099247fb08084000000130489000208404444bb820800200000002369004080101853eea0812400000210896609082200031b7680240100000030105244020880246ed112009040000064405924208000a48ff3009204000001c0020c9888210003bf86240041200009041012980108414877ff012410000006030009204402004c9f7f100104800014d800053010402601bdff8490402002490c0400d2811100346fff800412004822644002528804400a6fec9921008201271260213392c9100a1b7f8498922090e0007d08f31432407fdbf3e4864900069202708050130c807fffbe326164c121930a0820309a4988fffde9931916200c0ca0050010859240fffd694c8c9122103b74fc0408332989fffe94b23262508969a066600040d849ffff29198d1240224e84ef1204104647fffffa4c6191210032009b3ec1083333fffffce31a4c90001001358e0060910cdfffffb2c64242000007ad980026334e7fffcffc319240c0480dae242006c2663ffdffff24b134000010800c2442ec3b8defffff4c8c0',
-    /* dbdavethomas.png */
-    '55bf2556c0000001ffffffffffc00000a92d54aa00000001ffffffffffe000005aac929506fd8001fffffffffff10400955ea554364b7001ffffffffffffff00a4a754a8a0003e07e739c820607ffe006db2aa490df6039fe6198860603ffc34525d92ca6913c15f061999e64f267800b649524995b27c3e0e9c98604fb0f80095aaaa64680d271ce4cc18624f98f000b25d132587d918dce40c39e76738f0006d4964963a2be23e0086382060307824d93693290000028ffffffffffffffc00ad926a24000000dffffffffffffffe40a5a54ca000120023ffffffff9fffff00f4b4a4900880c800e0dbffb7000000009b16b2004000241c4034bf2580000000ab64968000120101001edeec90000010f4db5002c0024880800bfe5580000000d692b60070000400080577920000000076db24153c888000000ef6da400000007959ac034c002244800dbcd200000024fea56804ee210020000bd5b2100000006f7614096f840800020dea980200000075b4801335c00100100db546000000807dac0005bb729048800fa6a2400000106ed804094ff484000006d490000000006b700096db6ec890000ddb5204000000f6d80004ff7d4000000792480010004076d802052ddb09180087b600000004006fb80026d6d40008800e6a9000000000fb6c010164ba426404075542000000005bec400801342468000eda00000000086f560420007d36e8001b69200400048077fb0005243fd1da001b6d84000020007adf800267dcffe4107b2ca4800000007fb78081b5deeee900f6e6a0001000086dfac00b2adedf7200ddf652100000807edfc00bdfddbbac03ed33480000400037efe005f76edfd48ff7b6a9000000001efdb00afebf7eea0f7bd952210000401ebff0855faedb690fbcdb24000810081fdbf803b7f69fb41def6db6000100003bfefc017b6e1ba607edac92804080007f6ffe095f8036d901fbdb508010000037ffbfe4adc15ed900dedb6c100200003ffbfff2dbf4edac0036d926800001107dbff7f85b7adb68001bdb41000000003ffefffe4fb692ec0006db792100000093dfdf7f69db456480036a1400042000edfbfbfe36c809302000fdca800000006fffffff1690b69400004da950000000d9bedfefa6dfedc85000364812000000ff6ffffd92b616c028901b4680000088fff7ff80025bff006800024000400000db2ef600026b6c204c90031600008800df3cfe00015fed246802018090000000fd99f800025b7402480010c202000000ed0bd00020152880d920006480000000dcbfe000008b4010d208823000200000f8b900000040a4893200101400010040e536004448291213d824008122000000c90c020000042020c900040100000004d2c8100088928924d90840248000020084540001121144971004090050000000',
-    /* dbdavid-dithered.png */
-    '495557400000b55555554424aa49444422556a8b04440aa0ab6ab28915549292089554744812500455dfdd624122492902280028122800005576eed95c955484508848d10005240055bb75b6a549225254a0111444900200aa82a555555554a493a0808012021011525455555556aa525542a2528400008055490a552aaaaa94ab490000414002001ab4211256d5555556848291240080008b6d00a4aaaa7554abd20044105420220db5045225252aab4a0089004001480012bd515aaa909529542400210a9550080aa5294aaaaa48844d80a404055555002a92aaaab5aaa52a5a9401102aaaaa00156cad5296d55480554024080aab05005552b5295555255a50000268b5a01080ab555552549114928122a2a6de950440b5fbadadaaaa4a48408802bb75d041254afffffffdfd5202921134d5df571000abdffffffffeaaa840121356b5ed85620bcc67010607ff5200454d5beeb49010d7dc664f2667fea9012c25a6bbdd4148ae0d324b24f24d4a04240eab6d5608a2bc9932c104f31d2a1354457db6db46909cd838cf32f73aaa0aaa53abdb6aa9644c8399c506061d5255296d56b6adb7a06e1799d12f1ccea90a42dbbb6d6daee857fefffff9ffff292284a56fb6b6b5b0484aa4090a4252aa02012bfadbdaa55921252924d55aaaaa049005576d5556ea4894a8925555492a642257fdb6db552d5452550955552aa921500aab5b6d6812aaa928a52552a4145552adddedb5a8095554a428912952a24d4956b6b6d6b5656aab5544089449151aa2eb6b5b5aad055555b522a522aa48a80b5added6a95155556d5aa94892002502575ab5ab5dc5152abf7febdab5002a517d5555556a28a29555d574afdaaa89692baaaadbae9214456dbd5d756da82d10fd54aaad7689492a22d726dbb6eb444b2faa55555b4525454aadd3556aa8a120d5694a5557eab4a94257e95eba5654147fb6a9555aa492aa912abea5aab52150aad5554aab5549150495db54aa908abadf7bed29094a2442a143edaa544a55056baeb4a4a4aad554043ebee9492102515df7db551215555b2bdbd7baa548a551bbdfdd550495559576d35fbb552aa48ad6eab6845222aaaadaadeaef48a551237f7fdb6925495556aad65fbdaa94a40aabaab6d09125555d616db56fd2aa92a5dd77ddaa4a9492b554dfdff5eaa14546b7dd77742452aa4a8375655f749422abdab6add512a9254a51bebbf5da4a99556fdbdaaaa49492850ea7d6af6d20044fb56d6eaa0022aa91555afadada94429556dbbb54a209550c356b57576d49152bbb76d5aa50800442abbddaaab5a5428ebb6dab49254aa9452bb76b2aaaa90155d6dadd65b4a9509224b9aaaad552542eb76f6b5a4a25524a9aaeaaa52aa9010bdadabd55a555405254aab2aaa954a4556d775556b554892ab555daaaa4aa4',
-    /* dbgnome.png */
-    '80003ffffffffffffffff81007d8000180003ffffffffffffffff853243badb28000fdffffffffffeffff93305e800088001fdccc84183fff00f3c2395f852498001fd8ecbcd99fff9907e3301b112448003c18658413da7c6213fb849b089328003cdb618413d8f64fe8f2819ca64888003cd031bccb98f1b5f3e43a36204898001c1733841832791db879605c492448001ffffffffefffc67bb193ed8488128201ffffffffffffe6eec180631244228000ffffffffffffe5bb09c81d92508980003ffffffffffffc6fe1c0930909308000000005bff780273485840c24a246840000000ca65ec299838181202490908000000002ef6fc89c41c0100249122580000000013336d37c84e040849649128000000100a6b7a28020a4082240092482000010005d99229618e48309098489800000000015cfd0da5ce01044241048800000001014fed26d1cc8101290662482000000000b36f26711c224824fce8480000000000323b139c31080491efac090000002000249f00eee2002043b1ec88000000001419ed8c69084489077f7428220000020f8b7e833fd810103e6f7c08000000001f86939096c18304ba6bc898020000007fc7df844dc008606c6cf0880000000020eadcc067242009796fa06904000000bfccd7491001048018cb640804000003fa3667600d924424d2edd19800000be7da9db98622001108800da04848000fdef61feaf0842480420c800849008007bbb5ab72d0140024324252422800800f69e83f6c8f4049048d2244129810000ff2fbdd93fdffd0536da9252498010016a2d7c0f13dbdffdb7ad921244a49000db8fde7fb5fef7f7edb52d8930810400fd86f6ff78273d6e79b664e486801001a5d5b5fffc8841dbb5f79b3699920000fd6b7dfefe6b9247ed36df36ed808a0347eb07fdfe64ec915dcfdbcb778822f37a34fff3ff362da4db3b79bf768101ffa7cfffcfff99a66c38efffbddd8411b7bddff83ffda6d29b73cff7ffdf8007b5f65ff8bffeb259a27f9dbef6ff8843495bbff0ffff999b3a3e7defdfb88011dd7bbfe45fffc664cdb601edfde08204e5b6ffdfdfffe993363bf9deff04a010fb49ffb33ffff13249da039ff23080449f07ff7c7ffff46cc95e7f8fca00800473fffefffffffa4936777f9f644280213b27fbfffffffb1224ed9f2dc70382080fbfe7fffffff993c9b3ef2f991f842097f03ffffffff8cfe2cce71f001d8881f7fffffffffffb27f67f374760498802fffffffffffffa65b777ef06100e91203fffffffffffead6c9ccff269032800bfffffffffffff99bdeebffa22440a001efffcffffffff263561bfb8a4900840067ffdffffffff32ddedfbf911220c00416ffb7fffffff9a8c9effc651206820186ffb3fffffffccb777be12c4010800233ff4bfffffffb34d75f8d821109',
-    /* dbletterman.png */
-    '0000038067037ffac0212442000480008000018063007ffff0e003333330c000204000000002effb10f04000924d2444000000000000cffff860300000006608000000100000defe9900d080024b0092600080000001fffff8003800000780008180800300013fff6901b2c493430020c00000001001fffffc0030000000000001008c121001b7fedc90828493841a1000000f0000017ffffc70001f8000332020006e004001aef74cfc490893202130c3c0100000013ffffcf800c600010000592b6d640081a7ff6e0128116db4b32067b13999ff3f3ffcf33333e600000000525b56d61349ce4d1b595822db6da692cfccf999fefee7cffec9b3cc000c000040490ca64925b87cd66d3449b7a6dbb40000000001998fefff80c98c000c0000042100211000f6f6f210000091009249c000330c010ccfff3c01800000000000092500224922ed9f94905524924911000000300c000c6ff0fc098000000000184db3094b6da5327b99926dad6da95521800060180018cf9f38030000000000c0020002429200138ef3212d956932482400260000000807f9f80000000000000005214008000004ef631525b24920008003000c333000133ff1800c00930000004c0a6412400806edd84da359116a410008000c330000079ff800000004000000581a048960080729380d0000045b260000060626000007f07800000000000000c00c0318000003f0f800000003000200e0020086d00003f8380000000f20224cc40c0118000003f3780000000700300020040126800003e07000000000001054e01e018c000001f8f8000000000030008438039e000001fcf00000100700c23ac018038c000001fc700000180701f03800000004000001fc700000100200c0b000000000000001f8380000000000000000000034000000f8300000000000000000000000000000f2b00000000000000000000000000000f0100000000000000000000000000000fd300000000000000012492730000000f010000002491000000000033800002070100000000000c00024203b980024207250000002492412400000198c00fffffffffc00000000000000001d9c007fffffffff000200000000000001cc00e7ffffffffc001001c000020018edc03e78e3c8181fffff81980000000c6cc07e78f388181fffff031a0000000c6ee1f6787399f99efbef0227000000073fe3e0727318799c189e0336000000032de7c472393818188c1c066800000003bff7ce633939f989ce38076e00000001f6dbc6601839f9c94c3c066c40000000ffffc0471c7818080c1c1ff8e0000040f6dae0479c78181c198e3929400000007ffeffffffffffffffff31f3800000027bf47fffffffffffffffec76000000003ffc1ffdffffffe3fffff71e00000000bed400000008000000007b98000',
-    /* dbnothere.png */
-    'ffffbff7fffffa000009249000000000fffe478c7bfffe0000040003fe000000fffdfa10b7fff800002aaaa800aaaaaaffff00000bfff4000000000600000000fffa000007ffe0000002000000000000ff6400000bfff40000acaaaaa5244888fff0000003ffe8000002000000000000fd80000ad57fe00000b5555529492222fff0000420fff0000048a00000000000fd000052953fc00001554a92a4924888fe000001403ff0000002000000000000f800012a957fc00002b5555249241000e00080aad28fa0000555520022424240fc000000000f80000020000000000000f000036aaaae68000b55a40008888004f8000010000000000000000000000000e1254aa41000800016aab55040220820f8000301c000000000007ffc00000000f050a855120000002b4bfd522000008afc000202c00000001003ffff00000000780003000c0000000007fffd80000000057b2df433400000aa1ffeaa440000aa1004060847800000000fffff800000100a95fab199200000901fffd5108295450060c00c07800000000fffffc00000300291a23b75400001291ffeda800456a60001d01d0f800000001fffff0000010002288d7ab5500000081fffb5405156aa00815f76b4a00a00101ffeea412aaa560000fdff02000000001fff9db00001200000ffffb5401580002b5052a2a95aaa00003fff00000240001ce0a94000050005007fdd010017b400157746b2aaaaaa00003fee00000fca001cf9c3e00001000a401adc40001d75801fef6eabaaaa0503000ffc00003ffee01ff7fff0c00100030007fc6000ffffe01fe7ffb0c00000002006c00801add5143fdffd45000102000003703003ffffe01ff8ffb2c0000002400085e0057fe52a3febfe41800202000000738007fffed41e41ffa000000000100085020aea9552948ffe5300020200000000001bfdffa8185fffa0000101008401128017aaaaaa91f5ff5400020600142a40402ef7eae510eaaeb20006b000080800001fbffe3841ff1fc1c00bcc1030dd920876bffdca89fe9d2b400d213f802600003f7ffde0407fefc00806184b20d0d20168fff7da9bd75aaaf41b453f800ee0007ffff3e4207fff07ff0e024951e9a905d1ffcffaa9ffd44fffaa8a83d8b1f000e7fffff438ffe81ffffc01dffffffffffffffff7ffe0007ffffe01dffffffffffbffffeffeebfffffffeda7ce67018787fdffffffefffffffffffdfcc77251323fdfffff3cffffffffffffe1c326f9279658f0e31e1ce23fc06387c8d324186790f1f2482c19449f916927cd838e7927b9f8f24dbec02c1fdb21b3cc818cd2b330fe764d3cdb6cfbd92d37fffefffffdf7fdfff7dffeefb7ff7f777fffffffffffffffffffffffffffffff2edbb7f7effffffffffedbfffffffffe0c0005e3fffe1e0e383801fffffffff1',
-];
+/* Overture boot splash — animated.
+ *
+ * A 1-bit-native port of the p5.js "OVERTURE" boot animation authored in
+ * ~/src/move-boot/src/main.tsx (defaultSketch): an encoder-knob + waveform
+ * "signal lock" reveal that resolves into the OVERTURE wordmark.
+ *
+ * The original p5 sketch draws into a *grayscale* anti-aliased buffer. The real
+ * Move OLED is strictly 1-bit (schwung js_display.c: `buffer[..] = value ? 1 : 0`;
+ * the emulator's display sink is `shade = v ? FG : BG`). Reducing anti-aliased
+ * grayscale to 1-bit looks bad — thin AA strokes fragment into dashes under a
+ * threshold, and dithering the soft glows fills shapes with stipple noise. So
+ * we DON'T downsample grayscale: we keep all of the sketch's animation timing
+ * (the eased signal-in / ring-in / lock / wordmark phases and waveform drift)
+ * but render with crisp 1-bit-native primitives — solid Bresenham strokes, a
+ * midpoint-circle ring, a cleared knob interior, and a left-to-right wordmark
+ * wipe — which is the look these monochrome panels are made for.
+ *
+ * Animation timing: renderSplashScreen is called once per UI tick while the
+ * boot splash is visible (the tick workflow forces S.screenDirty during the
+ * splash so the OLED refreshes every tick). We advance one animation frame
+ * every SPLASH_TICKS_PER_FRAME ticks so the ~94 Hz device tick rate plays the
+ * sketch back near its native ~11 Hz. The per-splash frame counter
+ * (S.splashFrameTick) resets on each splash entry edge.
+ */
 
 export const SPLASH_W = 128;
 export const SPLASH_H = 64;
-export const SPLASH_COUNT = HEX_FRAMES.length;
 
-/* Decoded once at module load. SPLASH_FRAMES[i] is a Uint8Array of 1024 bytes. */
-export const SPLASH_FRAMES = HEX_FRAMES.map(function(hex) {
-    const arr = new Uint8Array(1024);
-    for (let i = 0; i < 1024; i++)
-        arr[i] = parseInt(hex.substr(i * 2, 2), 16);
-    return arr;
-});
+/* Device ticks per animation frame. JS tick rate is ~94 Hz (see CLAUDE.md), so
+ * 6 ticks/frame ≈ 15.7 fps — a snappy reveal. */
+export const SPLASH_TICKS_PER_FRAME = 6;
 
-/* Back-compat: legacy SPLASH_BITS alias points at the first frame. Existing
- * import sites can keep working; new code reads SPLASH_FRAMES[idx]. */
-export const SPLASH_BITS = SPLASH_FRAMES[0];
+/* Animation structure (frames):
+ *   INTRO   0 .. SPLASH_SETTLE_FRAME — signal sweeps in, knob locks, wordmark
+ *                                      wipes in. Plays once, settles quickly.
+ *   LOOP    >= SPLASH_SETTLE_FRAME    — the settled logo with a seamless
+ *                                      breathing idle (period SPLASH_LOOP_FRAMES).
+ *
+ * The splash is NOT a fixed-length clip. The screen router shows it while
+ * `stateLoading || bootSplashTicks > 0`, so it holds (looping) for exactly as
+ * long as the app is still loading. S.bootSplashTicks (ui_state.mjs) is only a
+ * MINIMUM floor — sized to guarantee the intro + a beat of settle always play
+ * even when loading finishes instantly. When loading outlasts the floor, the
+ * settle phase loops seamlessly until load completes, then the splash exits. */
+export const SPLASH_SETTLE_FRAME = 28;
+export const SPLASH_LOOP_FRAMES = 26;
 
-export function pickSplashIdx() {
-    /* TEMPORARY: pool restricted to frames 0–2 (Overture, dbBruce, dlrDB).
-     * Restore by changing the multiplier back to SPLASH_COUNT. */
-    return Math.floor(Math.random() * 3);
+const TWO_PI = Math.PI * 2;
+const PI = Math.PI;
+
+/* ---- p5-equivalent math helpers ----------------------------------------- */
+
+function clampN(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+function mapN(v, a, b, c, d) { return c + (v - a) * (d - c) / (b - a); }
+function lerpN(a, b, t) { return a + (b - a) * t; }
+function easeOutCubic(x) { return 1 - Math.pow(1 - x, 3); }
+function easeInOutCubic(x) {
+    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
-export function renderSplashFrame(deps, frame, width, height) {
-    const w = width || SPLASH_W;
-    const h = height || SPLASH_H;
-    const rowBytes = Math.ceil(w / 8);
-    for (let y = 0; y < h; y++) {
+function impactPulse(frame, start, duration) {
+    const u = clampN(mapN(frame, start, start + duration, 0, 1), 0, 1);
+    if (u <= 0 || u >= 1) return 0;
+    return Math.sin(u * PI) * (1 - u * 0.35);
+}
+
+function waveformDrift(frame) {
+    const fast = 0.24;
+    const slow = 0.12;
+    const settleStart = 20;
+    const settleEnd = 42;
+
+    if (frame <= settleStart) return frame * fast;
+
+    const settleFrames = settleEnd - settleStart;
+    if (frame >= settleEnd) {
+        return (
+            settleStart * fast +
+            settleFrames * ((fast + slow) * 0.5) +
+            (frame - settleEnd) * slow
+        );
+    }
+    const u = (frame - settleStart) / settleFrames;
+    const easedAverage = fast + (slow - fast) * (u * u * u - 0.5 * u * u * u * u) / u;
+    return settleStart * fast + (frame - settleStart) * easedAverage;
+}
+
+/* ---- 1-bit framebuffer + crisp rasterizer -------------------------------- */
+
+/* Reused across frames: one byte per pixel, 0 = off, 1 = lit. */
+const FB = new Uint8Array(SPLASH_W * SPLASH_H);
+
+function clearBuf() { FB.fill(0); }
+
+function plot(x, y, v) {
+    x |= 0; y |= 0;
+    if (x < 0 || x >= SPLASH_W || y < 0 || y >= SPLASH_H) return;
+    FB[y * SPLASH_W + x] = v;
+}
+
+/* Solid integer line (Bresenham) — continuous, no anti-aliasing. */
+function line(x0, y0, x1, y1, v) {
+    x0 = Math.round(x0); y0 = Math.round(y0);
+    x1 = Math.round(x1); y1 = Math.round(y1);
+    const dx = Math.abs(x1 - x0);
+    const dy = -Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+        plot(x0, y0, v);
+        if (x0 === x1 && y0 === y1) break;
+        const e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+}
+
+/* Connect a polyline of {x,y} points with solid segments. weight 2 draws a
+ * second pass one pixel below for a bolder line. */
+function polyline(pts, v, weight) {
+    for (let i = 1; i < pts.length; i++) {
+        line(pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, v);
+        if (weight >= 2) line(pts[i - 1].x, pts[i - 1].y + 1, pts[i].x, pts[i].y + 1, v);
+    }
+}
+
+/* Midpoint circle outline (1px). */
+function circle(cx, cy, r, v) {
+    cx = Math.round(cx); cy = Math.round(cy); r = Math.round(r);
+    if (r <= 0) { plot(cx, cy, v); return; }
+    let x = r;
+    let y = 0;
+    let err = 1 - r;
+    while (x >= y) {
+        plot(cx + x, cy + y, v); plot(cx + y, cy + x, v);
+        plot(cx - y, cy + x, v); plot(cx - x, cy + y, v);
+        plot(cx - x, cy - y, v); plot(cx - y, cy - x, v);
+        plot(cx + y, cy - x, v); plot(cx + x, cy - y, v);
+        y++;
+        if (err < 0) { err += 2 * y + 1; }
+        else { x--; err += 2 * (y - x) + 1; }
+    }
+}
+
+/* Filled disc — used to clear (v=0) the knob interior. */
+function disc(cx, cy, r, v) {
+    const r2 = r * r;
+    const minY = Math.ceil(cy - r);
+    const maxY = Math.floor(cy + r);
+    for (let y = minY; y <= maxY; y++) {
+        const dy = y - cy;
+        const span = Math.sqrt(Math.max(0, r2 - dy * dy));
+        const minX = Math.ceil(cx - span);
+        const maxX = Math.floor(cx + span);
+        for (let x = minX; x <= maxX; x++) plot(x, y, v);
+    }
+}
+
+/* ---- scene drawing -------------------------------------------------------- */
+
+const CENTER_X = 64;
+const CENTER_Y = 28;
+
+function buildWavePoints(startX, endX, ringIn, lock, drift, amp, detail) {
+    const wrapStart = CENTER_X - lerpN(10, 16, ringIn);
+    const wrapEnd = CENTER_X + lerpN(10, 16, ringIn);
+    const pts = [];
+    for (let x = startX; x <= endX; x += 1) {
+        const nx = x / SPLASH_W;
+        const wrap = clampN(mapN(x, wrapStart, wrapEnd, 0, 1), 0, 1);
+        const o = Math.sin(wrap * PI);
+        const y =
+            CENTER_Y + 1 +
+            Math.sin(nx * TWO_PI * 2.35 + drift) * lerpN(5, amp, lock) +
+            Math.sin(nx * TWO_PI * 7.1 + drift * 0.34) * detail +
+            o * lerpN(0, -11, ringIn);
+        pts.push({ x, y });
+    }
+    return pts;
+}
+
+/* amp is the target waveform amplitude (px); the wave grows from 5px to amp as
+ * lock goes 0→1. */
+function drawWaveform(signalIn, ringIn, lock, drift, amp) {
+    const right = Math.floor(lerpN(-14, 122, signalIn));
+    const startX = Math.max(6, right - 126);
+    const endX = Math.min(122, right);
+    if (endX < startX) return;
+    const pts = buildWavePoints(startX, endX, ringIn, lock, drift, amp, 1);
+    polyline(pts, 1, 2);
+}
+
+function drawEncoderKnob(ringIn, lockHit, turn) {
+    if (ringIn <= 0) return;
+    const outer = lerpN(5, 14, ringIn);
+    /* Clear a disc so the waveform doesn't collide with the ring. */
+    disc(CENTER_X, CENTER_Y, outer + 1, 0);
+    /* Ring outline (a second inner ring once locked in, for weight). */
+    circle(CENTER_X, CENTER_Y, outer, 1);
+    if (ringIn > 0.85) circle(CENTER_X, CENTER_Y, outer - 1, 1);
+    /* Pointer. */
+    const a = lerpN(-2.35, 0.35, turn) + lockHit * 0.1;
+    line(
+        CENTER_X + Math.cos(a) * 2, CENTER_Y + Math.sin(a) * 2,
+        CENTER_X + Math.cos(a) * (outer - 3), CENTER_Y + Math.sin(a) * (outer - 3),
+        1,
+    );
+}
+
+const WORDMARK_GLYPHS = {
+    O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+    V: ['10001', '10001', '10001', '01010', '01010', '00100', '00100'],
+    E: ['1111', '1000', '1000', '1110', '1000', '1000', '1111'],
+    R: ['1110', '1001', '1001', '1110', '1010', '1001', '1001'],
+    T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
+    U: ['1001', '1001', '1001', '1001', '1001', '1001', '0110'],
+};
+const WORDMARK = 'OVERTURE';
+const WORDMARK_SPACING = 1;
+
+function wordmarkWidth() {
+    let width = -1;
+    for (let i = 0; i < WORDMARK.length; i++) {
+        width += WORDMARK_GLYPHS[WORDMARK[i]][0].length + WORDMARK_SPACING;
+    }
+    return width;
+}
+
+/* Left-to-right wipe reveal — the 1-bit equivalent of the sketch's brightness
+ * fade-in. `appear` (0..1) drives the reveal edge across the wordmark. */
+function drawWordmark(appear) {
+    if (appear <= 0) return;
+    const width = wordmarkWidth();
+    const x0 = Math.floor((SPLASH_W - width) / 2);
+    const y = 56;
+    const revealX = x0 + appear * (width + 2);
+
+    let x = x0;
+    for (let i = 0; i < WORDMARK.length; i++) {
+        const glyph = WORDMARK_GLYPHS[WORDMARK[i]];
+        for (let row = 0; row < glyph.length; row++) {
+            for (let col = 0; col < glyph[row].length; col++) {
+                if (glyph[row][col] === '1' && (x + col) <= revealX) plot(x + col, y + row, 1);
+            }
+        }
+        x += glyph[0].length + WORDMARK_SPACING;
+    }
+}
+
+const SETTLED_AMP = 7.5;   /* settled waveform amplitude (px) */
+const BREATH_AMP = 1.4;    /* idle breathing depth (px) */
+
+/* Per-frame animation parameters, split into the one-shot INTRO and the
+ * seamless settled LOOP. At the intro→loop boundary every value matches (lock,
+ * ringIn, wordIn, signalIn all reach 1; breath starts at 0 = settled amp), and
+ * the loop is periodic in SPLASH_LOOP_FRAMES, so it holds and repeats with no
+ * visible seam for as long as the app keeps loading. */
+function frameParams(bootFrame) {
+    if (bootFrame < SPLASH_SETTLE_FRAME) {
+        return {
+            signalIn: easeOutCubic(clampN(mapN(bootFrame, 1, 9, 0, 1), 0, 1)),
+            ringIn: easeOutCubic(clampN(mapN(bootFrame, 5, 15, 0, 1), 0, 1)),
+            lock: easeOutCubic(clampN(mapN(bootFrame, 13, 23, 0, 1), 0, 1)),
+            wordIn: easeOutCubic(clampN(mapN(bootFrame, 17, 27, 0, 1), 0, 1)),
+            lockHit: impactPulse(bootFrame, 18, 7),
+            turn: easeInOutCubic(clampN(mapN(bootFrame, 6, 20, 0, 1), 0, 1)),
+            drift: waveformDrift(bootFrame),
+            amp: SETTLED_AMP,
+        };
+    }
+    /* LOOP: settled, with a seamless amplitude breath. Drift is frozen at its
+     * settle value so the waveform comes to rest instead of scrolling forever. */
+    const loopT = ((bootFrame - SPLASH_SETTLE_FRAME) % SPLASH_LOOP_FRAMES) / SPLASH_LOOP_FRAMES;
+    return {
+        signalIn: 1, ringIn: 1, lock: 1, wordIn: 1, lockHit: 0, turn: 1,
+        drift: waveformDrift(SPLASH_SETTLE_FRAME),
+        amp: SETTLED_AMP + Math.sin(loopT * TWO_PI) * BREATH_AMP,
+    };
+}
+
+/* Render animation frame `bootFrame` into FB. */
+function rasterizeFrame(bootFrame) {
+    clearBuf();
+    const p = frameParams(bootFrame);
+    drawWaveform(p.signalIn, p.ringIn, p.lock, p.drift, p.amp);
+    drawEncoderKnob(p.ringIn, p.lockHit, p.turn);
+    drawWordmark(p.wordIn);
+}
+
+/* ---- run emission --------------------------------------------------------- */
+
+/* Emit coalesced horizontal lit-runs via deps.fill_rect. */
+function emitFrame(deps) {
+    for (let y = 0; y < SPLASH_H; y++) {
+        const row = y * SPLASH_W;
         let runStart = -1;
-        const rowOff = y * rowBytes;
-        for (let x = 0; x < w; x++) {
-            const bit = (frame[rowOff + (x >> 3)] >> (7 - (x & 7))) & 1;
-            if (bit) {
+        for (let x = 0; x < SPLASH_W; x++) {
+            if (FB[row + x]) {
                 if (runStart < 0) runStart = x;
             } else if (runStart >= 0) {
                 deps.fill_rect(runStart, y, x - runStart, 1, 1);
                 runStart = -1;
             }
         }
-        if (runStart >= 0) deps.fill_rect(runStart, y, w - runStart, 1, 1);
+        if (runStart >= 0) deps.fill_rect(runStart, y, SPLASH_W - runStart, 1, 1);
     }
 }
 
+/* Render a single animation frame (rasterize + emit). Does NOT clear the
+ * screen — callers own that. Exposed for tests. */
+export function renderSplashAnimationFrame(deps, bootFrame) {
+    rasterizeFrame(bootFrame | 0);
+    emitFrame(deps);
+}
+
+/* Splash entry point, called once per tick while the boot splash is visible.
+ * Advances the animation off S.splashFrameTick, which resets on the entry edge
+ * (splashWasVisible false → true). */
 export function renderSplashScreen(state, deps) {
-    const picker = deps.pickSplashIdx || pickSplashIdx;
     if (!state.splashWasVisible) {
-        state.currentSplashIdx = picker();
+        state.splashFrameTick = 0;
         state.splashWasVisible = true;
+    } else {
+        state.splashFrameTick = (state.splashFrameTick | 0) + 1;
     }
+    const bootFrame = Math.floor((state.splashFrameTick | 0) / SPLASH_TICKS_PER_FRAME);
+
     deps.clear_screen();
-    const frame = SPLASH_FRAMES[state.currentSplashIdx % SPLASH_COUNT];
-    renderSplashFrame(deps, frame);
+    renderSplashAnimationFrame(deps, bootFrame);
 }

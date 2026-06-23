@@ -464,13 +464,25 @@ export function createInitialState() {
     pendingSetLoad: false,
     pendingDspSync: 0,
     stateLoading: false,
-    /* Boot splash: shown for ~2s on every fresh JS load (Move reboot or
-     * full module re-launch via Shift+Back). Back-suspend → resume keeps the
-     * existing module process and JS state, so the counter stays at 0 and
-     * the splash does NOT re-show on resume. Decremented in tick(). */
-    bootSplashTicks: 188,
-    currentSplashIdx: 0,    /* index into SPLASH_FRAMES — rerolled on each splash entry edge */
+    /* Boot splash: the animated OVERTURE reveal (ui_splash.mjs) shown on every
+     * fresh JS load (Move reboot or full module re-launch via Shift+Back).
+     * Back-suspend → resume keeps the existing module process and JS state, so
+     * the counter stays at 0 and the splash does NOT re-show on resume.
+     * Decremented in tick(). This is only a MINIMUM floor: the screen router
+     * shows the splash while `stateLoading || bootSplashTicks > 0`, so it holds
+     * (looping its seamless settle phase) until the app finishes loading. The
+     * floor guarantees the intro + a beat of settle always play even on instant
+     * loads — ~(SPLASH_SETTLE_FRAME 28 + 4) × SPLASH_TICKS_PER_FRAME 6 ≈ 192
+     * ticks ≈ 2s at the ~94 Hz tick rate. */
+    bootSplashTicks: 192,
     splashWasVisible: false,/* previous-tick flag for splash entry-edge detection */
+    splashFrameTick: 0,     /* ticks since splash entry edge; drives the animation frame */
+    /* True from fresh JS load until the first full boot (state load + new-set
+     * MIDI routing setup) completes. While set, the boot splash is the single
+     * loading surface — it masks the auto-route "Configuring routing…" overlay
+     * so boot stays simple for the user. Cleared once nothing is left loading;
+     * after that a manual Route-Check re-trigger shows the routing overlay. */
+    booting: true,
     pendingSuspendSave: false,
     pendingExitAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_exit_module */
     pendingHideAfterSave: false,   /* drained one tick after pendingSuspendSave fires; calls host_hide_module */
