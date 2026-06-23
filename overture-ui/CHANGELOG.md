@@ -1,0 +1,301 @@
+# Changelog
+
+All notable changes to Overture are documented here.
+
+Overture is a fork of [dAVEBOx](https://github.com/legsmechanical/schwung-davebox)
+(MIT, © Josh Gaines), branched at dAVEBOx `v1.0b3+19` and substantially diverged.
+Versioning restarted at `0.x` under the Overture name; the pre-fork `1.0b*`
+history below predates the rename and is kept for lineage. See
+[docs/UPSTREAM.md](docs/UPSTREAM.md) for the fork point and upstream-tracking process.
+
+Format follows [Keep a Changelog](https://keepachangelog.com). Add entries to
+`[Unreleased]` as user-facing changes land; `scripts/cut_release.sh` finalizes
+the section into a versioned heading at release time.
+
+## [Unreleased]
+### Features
+- **Improved boot splash.** New animated "OVERTURE" boot animation (1-bit,
+  load-driven) replacing the static splash bitmaps.
+- **Sound Edit presets.** Schwung Sound Edit can now save and load named presets
+  for the selected MIDI FX, Synth, FX 1, or FX 2 module without adding permanent
+  OLED clutter. Use Copy+jog-click to browse presets and Capture+jog-click to
+  save the current module parameters.
+- **Param Peek and shortcut help.** Touching a knob now opens a compact OLED
+  readout with the bank/context, human-readable target, current value, and
+  route/scope. AUTO Param Peek names common CCs (`CC7 Volume`, `CC74 Filter`),
+  uses plain targets for aftertouch and Schwung lanes, and reveals lane timing
+  detail when the knob is held. Holding Shift in Track View shows a compact
+  Shift+Step shortcut overlay.
+- **Hold a step + jog = step length (and the jog no longer changes banks mid-edit).** While holding a step (Step Edit), turning the jog wheel now sets that step's length, matching Move's "hold step + wheel" gesture. This also fixes a bug: previously the jog silently cycled parameter banks *underneath* the Step Edit screen, so you'd only discover the bank had moved (e.g. DELAY → NOTE FX) when you released the step.
+- **Bank position strip in the Track View header.** The header now shows a compact "you are here in the bank chain" strip on the right — the active bank is a tall block, the others short stubs — so you can see how many banks exist and where you are as you turn the jog (like Move's Device View). Replaces the old inconsistent `>>` hints.
+- **Side buttons select tracks (Move-native track navigation).** The four side buttons now **switch the active track** (CC top→bottom = tracks 1→4) instead of switching clips; **hold Shift** while pressing to reach tracks **5–8**. **Hold a side button** to reveal that track's **16 clips on the step buttons** — tap a step to select/launch a clip, release to exit. The side-button LEDs now show **track identity** (active track solid in its colour, the rest dim). Per-clip **Copy / Cut / Delete / hard-reset** move to **Session view** on the clip pads (Copy/Delete + pad), where they already lived; Track-View clip ops via the side buttons are retired. Shift+jog and Shift+bottom-pad still switch tracks as fallbacks.
+- **Key/Scale changes transpose your clips.** Editing the global **Key** or **Scale** now moves all melodic clips with it. Turning the knob previews live — pads relayout and (while playing) you hear every clip transposed to the candidate; clicking commits behind a **"Transpose clips?"** prompt (skipped when no clip has notes), and backing out cancels. Key changes transpose by the shortest distance; Scale changes remap by scale degree when the two scales have the same note count (Major↔Minor, Pent.Maj↔Pent.Min, Blues↔Whole-Tone) or snap to the nearest in-scale note when they differ. Scale-aware harmonies/arpeggios track the preview too. Drum tracks untouched; not undoable (the prompt is the guard).
+- **Co-run surface polish.** In both co-run modes (Schwung chain-edit and Move-native): out-of-key (non-root, in-scale) melodic pads now show dim track color instead of bright; the step-button grid is blanked except Step 3, which blinks dark-grey/bright-white as the exit affordance with its icon lit solid white; pressing Step 3 exits co-run (mirrors the Menu/Back exit). Blink runs off wall-clock so the rate matches across both modes. The Menu / Note-Session button (the secondary exit) is held solid bright white in Schwung co-run; in Move co-run it is disabled and its LED kept off (Step 3 / Back are the exits there). The Record button is kept dark in co-run. The side clip buttons show dark grey, with the slot/track the active dAVEBOx track is routed to blinking dark-grey/light-grey (slot 1 = top); layered Schwung slots on the same channel all blink.
+- **Co-run auto-opens the instrument the track plays.** Entering Schwung co-run on a track now opens directly to the chain slot whose receive channel matches that track — no more "which slot?" picker dialog. If no slot receives the track's channel, a brief "NO SLOT" notice shows and it falls back to slot 1. Switch to other slots from within the editor via the clip buttons.
+- **Per-lane automation loops.** Each CC/Sch automation lane can have its own independent loop length, resolution (playback speed), and zoom (step granularity). Loops cycle independently from the clip — set via Hold Loop on AUTO bank. Step buttons set loop length by page, jog adjusts by step. Left/Right changes resolution (playback speed). Up/Down changes zoom (step grid density). Delete+Loop or Loop+Delete resets the lane to clip defaults. Shift+Step 15 doubles the lane loop with data copy.
+- **Auto bank visual mode.** AUTO bank has a distinct look: warm-color step LED gradient (yellow→orange→red→white), grayscale pads, OLED automation graph with playhead cursor and progress bar. Step-edit shows compact graph + knob values split-screen. Breakpoint steps blip periodically to distinguish real points from interpolated values.
+- **Transport stop returns to resting values.** When transport stops, all CC lanes emit their resting values so parameters don't get stuck.
+
+### Fixes
+- **Boot splash shows on new sets.** Previously a new/empty set showed a black
+  screen then "Configuring routing…" instead of the splash; the splash now
+  covers the new-set routing setup.
+- **On-device module paths point at the right directory.** The DSP read its files from `modules/tools/davebox/` while the module installs as `modules/tools/overture/` (the `module.json` id), so the metronome click sample silently failed to load on device. Aligned all on-device paths (the `click-seq8.wav` loader and the wasm-glue default module dir) to `overture`.
+
+## [1.0b3] — 2026-05-30
+### Features
+- **Schwung chain knob automation (Sch lanes).** AUTO bank lanes can now target Schwung chain knob assignments (CC 102-109 absolute knob control). In ASSIGN mode, scroll left past AT to reach Sch1–Sch8 — each maps to a chain slot knob mapping. Recording, playback, resting values, step-edit, and delete all work identically to CC lanes. Routed via DSP `pfx_send` on the internal MIDI path — same-buffer delivery, no JS overhead. Requires patched Schwung with CC 102-109 chain handler; capability-gated (Sch lanes hidden on stock Schwung).
+
+### Fixes
+- **Pads silent on Schwung v0.9.16.** The DSP inbound pad capability sentinel (merged upstream in v0.9.16) caused dAVEBOx to disable the JS live-note path, but the DSP on_midi path could fail to produce sound on stock Schwung. Fixed by moving the dispatch gate from JS to DSP — the JS path now always queues live notes as a fallback, and the DSP suppresses duplicates only when confirmed active.
+
+## [1.0b2] — 2026-05-30
+### Performance / UX
+- **Lazy drum clip allocation.** Drum clips are now allocated per-track on drum mode entry instead of inline in every track. Default (1 drum track): ~7.5MB vs 60MB previously. No cap, no behavioral change.
+
+### Fixes
+- **Empty drum→melodic track conversion now reliably flips pad mode.** Previously, converting an empty drum track to melodic left DSP in drum mode (pads showed melodic layout but right half acted as velocity zones). Fixed by adding a get_param flush barrier for the empty-track path.
+- **`delete_held` flag now shares padmap self-heal.** Moved from a separate `t0_delete_held` set_param (vulnerable to onMidiMessage coalescing) into the padmap payload's 35th token, giving it the same tick-based reconciliation as `pad_dispatch_muted`.
+- **Incompatible state files prompt before erasing.** When loading a set saved by an older dAVEBOx version, a confirm dialog asks before wiping. "No" exits the module with the file preserved.
+
+## [1.0b] — 2026-05-29
+### Features
+- **Per-clip / per-lane playback direction (Dir knob on CLIP and DRUM LANE banks).** Four modes: Forward, Backward, Pingpong-forward, Pingpong-backward. Mix directions across drum lanes freely. Bake and Ableton export honor direction — output is a forward-playing clip with notes rearranged to match directional playback.
+- **Audio-reverse playback style (alt-mode on Dir knob).** Flip between Step (default) and Audio — in Audio mode, notes play "tape-reversed" during reverse motion. Pingpong + Audio gives fugue-machine-style one-forward + one-reversed cycle per note.
+- **NOTE FX Len knob (K5) — non-destructive fixed length.** Per-clip (melodic) or per-lane (drum) fixed pre-gate length. Values: -- (passthrough), .25, .50, .75, 1, 2, 4, 8, 16 steps. Applied at playback, bake, and export.
+- **Lgto (Legato) one-shot action on CLIP K8 / DRUM LANE K8.** Destructive rewrite: each note's gate extends to the next note's start. Undoable.
+- **HARMONY bank: Hrm3 added, Unison removed.** Three harmony intervals (Hrm1/Hrm2/Hrm3) at ±24 semitones each. Scale-aware when Scale Aware is on.
+- **Per-step trig conditions: Iter, Prob (was "Random"), and Ratchet.** Hold a step for the overlay. Iter gates steps on loop-cycle predicates (1/2 through 8/8). Prob rolls per-note at fire time (0–100%). Ratchet retriggers x2–x4 within one step. Applied across live playback, bake, and export.
+- **Bank alt-params toggle with jog-click instead of Shift.** Sticky toggle with a flashing arrow icon. Works on CLIP, DELAY, AUTOMATION, DRUM LANE, REPEAT GROOVE, ALL LANES. AUTOMATION alt = ASSIGN mode.
+- **CC automation latch overwrite recording.** Turn a knob to engage — continuously overwrites the lane along the playhead. Keeps writing even after you stop turning. Per-loop decimation keeps lanes clean.
+- **Melodic pad pressure → aftertouch (Track Config → AftTch).** Off / Poly / Channel modes. Recorded into clips and plays back as interpolated automation.
+- **AUTOMATION bank (renamed from CC PARAM).** Per-clip resting values with opt-in "—" floor, 1024-point cap, AT/CC type per knob, step LED gradient, knob-ring status colors, knob acceleration.
+- **Clear Automation is undoable.** Undo also restores automation lost during clip clear/copy/cut/bake/row operations.
+- **Save states (snapshots).** Up to 16 timestamped snapshots per set via Global Menu. Save, load (with confirm), and overwrite at cap.
+- **Export to Ableton Live (.ablbundle).** Full 8-track × 16-scene export with baked clip notes, drum polymeter flatten, route-aware instruments, self-contained samples, multi-cycle bake for randomized/delayed clips, and progress display.
+- **Track type conversion carries notes (Track Config → Mode).** Drums↔Keys translates sequenced notes. Empty tracks convert instantly.
+- **Co-run improvements.** Edit Slot knobs drive chain params. Edit Synth reliable track landing + clean LED handoff. Co-run exit is Menu; Back navigates within the editor. Drum pad hold works for Move's per-drum editor. Side clip buttons lit solid white in Edit Synth.
+- **Move-native knob spin stutters less in Edit Synth.** Shim coalesces CC detents per audio frame.
+- **ARP IN bank reset (Delete+jog on ARP IN bank).** Resets all TARP params in one gesture.
+- **Arp Steps overlay.** Jog-click on SEQ ARP or ARP IN for persistent step-interval editing (±24 scale degrees per step) + step-vel level editor. Loop+pad sets pattern loop length (1–8). Note/Session exits overlay. Pads suppressed during overlay.
+- **Sub-bar launch quant preserves playhead phase.** 1/16, 1/8, 1/4, 1/2 phase-align into the new clip instead of resetting to step 0.
+- **CLIP, DRUM LANE, and ALL LANES knob banks rearranged.** Consistent layout across banks. ALL LANES gains K1=Res (all 32 lanes) and K7=Dir (all lanes).
+- **Melodic and drum NOTE FX banks rearranged.** Drum NOTE FX now hosts the per-lane MIDI-note editor (K1+K2).
+- **Recording blocked in non-Forward direction.** Shows popup; bake first to freeze direction, then record.
+- **Copy/cut carries Dir and RvSt to destination.**
+- **Loop button blinks at ARP IN rate while track is latched.**
+- **Delay Retrig knob (DELAY K7).** New note-on drains in-flight echoes (default ON). Clock Feedback moves to Shift+K1.
+- **Shift+side row in Session View queues bar-quantized scene launch.**
+- **Hold empty melodic step → auto-activates with lastPlayedNote and opens step edit.**
+- **Tap Loop alone (drum track) unlatches all repeats on that track.**
+
+### Fixes
+- **Clear Session fully resets all state.** Global settings, mute/solo, snapshots, CC assigns, VelIn, JS state, TARP, channel, pad octave, route, looper all reset to factory defaults.
+- **Global params persist on change.** Key, scale, BPM, metronome, etc. save immediately instead of only on suspend.
+- **Pad drop self-heal.** Periodic readback detects and corrects stale pad_note_map entries within ~50ms.
+- **No stuck notes when changing playback direction during playback.**
+- **Fixed Move synth voice corruption after stopping legato playback.** No longer sends CC 123 for ROUTE_MOVE.
+- **Bank param resets also reset Dir, RvSt, SqFl.**
+- **Session view playing clips blink in sync with pad LEDs.**
+- **Step length adjust: pressing end-of-span step now shrinks the note.**
+- **OLED param display dismisses immediately on jog release.**
+- **NOTE FX Len=.25 no longer plays at double length.**
+- **First cycle after clip clear is no longer silent.**
+- **Recording-suppressor flags cleared on every clip launch.**
+- **REC arm no longer blocked by RvSt=Audio when Dir=Fwd.**
+- **Dir display no longer flickers on bank jog onto CLIP.**
+- **Capture+drum pad no longer cuts the playing note.**
+- **PP/Bwd bake uses rounded step indexing matching live playback.**
+- **SEQ ARP / ARP IN Retrig=On no longer stutters on rapid chord changes.**
+- **Arp Steps Off removed; Skip renamed Step.**
+- **Poly aftertouch works expressively under SEQ ARP and ARP IN.** DSP replays pressure onto every arp voice; fans AT across all sounding pitches.
+- **Bank reset also resets SEQ ARP step params in JS mirror.**
+- **HARMZ no longer drops notes during chords.** Output pitches are reference-counted per track.
+- **Arp Steps overlay no longer fires on drum tracks.**
+- **Drum step edit overlay uses 4-column layout matching melodic.**
+- **SEQ ARP / ARP IN Arp Gate defaults to 100% (was 50%).**
+- **Random mode selector moved to jog-click alt param (K8).**
+- **All Lanes bank requires jog-click confirmation on entry.**
+- **Step edit length knob refined with breakpoints and grid-snap.**
+- **Zombie clips after clear are fixed.** Two independent bugs (stale state_full cache + set_param coalescing) resolved.
+- **Pads no longer go silent after modifier toggle.** Self-heal reads back pad_dispatch_muted every 5 ticks.
+- **Drum vel-zone pad release sends note-off.**
+- **Lowest pad octave no longer ghost-lights three pads.**
+- **Perf Mode loop pads no longer leave hanging notes.**
+- **Clear Session no longer leaves track 1's pads stale.**
+- **Clip/drum-lane copy and cut preserve loop_start.**
+- **Selecting a clip with loop_start>0 lands on the correct page.**
+- **Clip Clear preserves clip structure (only wipes notes).** Drum clear likewise.
+- **Drum lane Reset also resets per-lane Rpt groove.**
+- **Focused clip plays by default on transport start.** Also on track switch and after clip clear.
+- **Press-Record during playback arms at next bar boundary (adaptive clips).**
+- **Per-track active param bank persists across track switches and reload.**
+- **Length and loop-window changes re-anchor playhead phase.**
+- **Loop Double works on clips with loop_start>0.**
+- **Drum lane Delete+pad does notes-only clear (preserves structure).**
+- **Drum repeats fire through track mute when pad is held.**
+- **Shift+pad no longer triggers Rpt1/Rpt2 latch on prior track.**
+- **Record-arming during play no longer drifts TARP timing.**
+- **Rpt1+Rpt2 rates persist across reload.**
+- **Input Quantize is per-track and snaps to actual rate value.** Melodic tracks gain per-track InQ on CLIP K6.
+- **Transport Stop unlatches TARP and Rpt1/Rpt2 across all tracks.**
+- **TARP latch survives track/route/channel changes.**
+- **Modal pad-interception fixed.** Pads no longer leak into synth during dialogs and modifiers on patched Schwung.
+- **VelIn applies to live pad monitoring on patched Schwung.** TARP output also respects VelIn.
+- **Velocity zone presses audible again on patched Schwung.**
+- **Recording into clips with non-zero loop start lands inside the window.**
+- **ARP IN first note after count-in records on step 0.**
+- **Delete+Play clears every latch across all tracks regardless of transport state.**
+- **Per-track octave shift persists per-set.**
+- **Stuck live notes when touching Arp Steps knob mid-hold fixed.**
+- **SEQ ARP Steps Mode takes effect on first turn.**
+- **Clear Session resets drum tracks back to Keys (except track 1).**
+- **Drum→Keys Mode flip actually takes effect on DSP.**
+- **Mute silences TARP/Rpt1/Rpt2 emission while keeping latch alive.**
+- **Co-run exit reclaims LEDs and clears modifiers.**
+- **Bank reset / param reset actually reaches DSP.** All reset sites routed through deferred drain.
+- **Coalescing remediation across copy/cut/clear/snapshot/scene/merge gestures.**
+- **Various display fixes:** active drum lane shows empty correctly, triplet ARP rate labels visible, CC PARAM OLED values clear after automation clear, bank reset routing fixed for drum CC PARAM, note-duration step LEDs match played length, track overview header drops Tr# indicator, AUTOMATION bank auto-dismisses, Shift hint overlay drops on compound modifier, drum-lane step copy flashes source.
+- **Hot-path debug probes gated behind compile flag.** Prevents RT thread throttle from forced file writes.
+- **Volume knob (CC 79) no longer stutters playback.** Dropped at top of MIDI handler.
+- **Shift+Step3 co-run shortcut is Track View only.**
+- **Side clip button focuses clip on press, not at legato boundary.**
+- **Save/Quit/Shift+Back no longer drops DSP save under coalescing.**
+- **Drum lane Cut gesture (Copy+Shift+lane+lane) now works.**
+- **Hanging notes during fast or polyphonic live play fixed.** Same-tick off+on pairs drain in arrival order.
+- **No more stuck notes when changing octave while holding a note.**
+
+### Performance / UX
+- **Pad input rewired to audio thread on patched Schwung.** Better chord cohesion and lower input latency.
+- **ROUTE_EXTERNAL latency jitter ~7.6× tighter on patched Schwung.** Stddev 10.25ms → 1.35ms.
+- **Count-in capture window tightened to last 1/8 note.**
+- **ARP IN plays through count-in.** ARP IN with Sync=Off captures during count-in pre-roll.
+- **Drum repeats during count-in + Repeat Sync toggle + true sub-step recording.**
+- **Co-run drum pads invert into track colors.** Selected lane = track color, others = white.
+- **Shift+bottom-row pads: active track is solid bright, others blink dim.**
+- **New splash art pool.** 7 new frames added, 2 dropped.
+- **Nudge knob folded onto Shift+K2 (Shft).**
+- **Loop and Capture buttons have visible dim grey ambient.**
+- **Shift+jog in Session View steps the active track.**
+- **Various knob speed improvements:** NoteFX Gate 4×, Quantize 2×, melodic step-edit pitch, CC bank acceleration.
+- **Step-entry velocity rule unified** across drum and melodic tracks.
+- **Track-bank OLED returns to overview faster (~1s instead of ~4s).**
+- **Recording CC automation no longer fights the knob.**
+- **Drum repeats respond to pad pressure.**
+- **Held CC step shows recorded value, not live knob value.**
+- **Drum Shift+Delete+Jog popup reads "LANE PARAMS RESET".**
+- **Alt-mode label "RvSt" renamed to "Rvrs".**
+- **Perf View knob LEDs show looper state.** Touch toggles looper.
+- **Sample tap in Session View is no-op (was incorrectly opening bake dialog).**
+
+### Documentation
+- **Full revision and reorganization of MANUAL.md.** Six parts, consolidated chapters, standardized terminology, verified all claims against source.
+
+## [0.4.0] — 2026-05-15
+### Fixes
+- **Input Quantize / Step Grid Misalignment:** Drum recording now uses midpoint-rounding step windows; Input Quantize correctly rounds to the nearest step boundary across all live recording paths.
+
+## [0.3.7] — 2026-05-14
+### Fixes
+- **Chord-press monitoring now plays every note.** Simultaneous pad presses no longer drop notes due to set_param coalescing. Live notes batch into a single payload per tick.
+- **Drum chord recording lands in one DSP buffer.** Batched into single payload per tick instead of one entry per tick.
+- **Drum recording inline-monitors via DSP.** Eliminates duplicate set_param collision on armed-track chord recordings.
+
+## [0.3.6] — 2026-05-14
+### Documentation
+- **MANUAL.md crash disclaimers softened for Schwung v0.9.13.** External MIDI routing no longer crashes on current Schwung.
+
+### Fixes
+- **Drum clip switches keep polyrhythmic lanes in phase.** All launch sites anchor each lane's playhead to its expected position based on elapsed time.
+
+### Features
+- **Loop window set via Loop+step range gesture.** Hold Loop + hold a page step + tap another to set loop window. Non-destructive — notes outside window preserved.
+
+### Performance / UX
+- **ARP IN latch visual feedback.** Latched pad LEDs stay lit white; Arp chip inverts on OLED.
+- **Loop clears latched ARP IN notes without dropping Ltch.**
+- **Re-press a latched note to drop it (accumulate mode).**
+
+## [0.3.5] — 2026-05-13
+### Features
+- **Shift+Step 3 — Edit Synth / Edit Slot shortcut.** One-press co-run entry for the active track's route type.
+- **Swing applies to ARP IN, SEQ ARP, and drum repeats with transport stopped.** Live one-shot taps always bypass swing.
+
+### Performance / UX
+- **Note/Session button LED blinks during co-run** to advertise exit gesture.
+
+### Fixes
+- **Drum step + pad LEDs refresh when switching clips from Session View while stopped.**
+- **Drum Rpt1/Rpt2 recording captures sub-step fires.** Multiple hits per step with InQ Off now recorded.
+- **Hanging notes during ARP IN chord-changing with swing resolved.** Echoes and deferred offs get per-event swing scheduling.
+
+## [0.3.0] — 2026-05-12
+### Features
+- **Euclidean rhythm knob (DRUM LANE K4).** Per-lane Bjorklund hit-count placer that diffs against existing hits.
+- **Capture + scene-row button** snapshots current performance into a scene row.
+- **Edit Slot... co-run** — hands OLED + jog to Schwung's chain editor (capability-gated to patched Schwung).
+- **Edit Synth... co-run** — hands OLED + jog to Move's native device editor (capability-gated to patched Schwung).
+
+### Performance / UX
+- **Perf View knob LEDs show looper state; touch toggles looper.**
+- **Unified step-entry velocity rule** across drum and melodic tracks.
+- **Nudge knob folded onto Shift+K2.** Frees a knob slot on CLIP/DRUM LANE/ALL LANES.
+- **Loop and Capture buttons have visible ambient lighting.**
+- **Shift+jog in Session View steps active track.**
+- **Various knob speed improvements** (Gate 4×, Quantize 2×, step-edit pitch).
+
+### Fixes
+- **Shift hint overlay drops on compound modifier press.**
+- **Drum-lane step copy flashes source step.**
+- **Hanging notes during fast polyphonic live play fixed.**
+- **Step-entry velocity consistency** — tapping a step writes fixed vel 100 instead of inheriting stale pad velocity.
+- **Shift+Step menu shortcuts target by label** instead of hardcoded indices.
+- **MIDI DLY Lvl defaults to 127 on all drum lanes** (was 0 on tracks 1–7).
+- **Panic sweeps all 16 MIDI channels on every active route.**
+
+### Persistence
+- UI sidecar v=4→v=6: adds per-track Euclidean counts, drumVelZoneArmed, and Schwung-slot assignment.
+
+## [0.2.0] — 2026-05-11
+### Features
+- Loop+Play restarts playback from the visible page
+- Perf Mode preset mods are individually toggleable; Latch is purely a mode switch
+- Perf Mode OLED redesigned with active mod list and footer chips
+- Top-row Perf pad LEDs are static (no flashing)
+
+### Fixes
+- Removed rec-arm count-in OLED takeover
+- Melodic live-recording note-off step-array mirror uses correct rounding
+
+### Performance / UX
+- Action popup duration halved (~520ms)
+- Step hold-to-save duration shortened (~750ms)
+
+### Documentation
+- MANUAL.md rewritten as comprehensive user guide
+- Performance Mode appendix updated
+
+## [0.1.0] — 2026-05-11
+
+Initial public release.
+
+### Features
+- 8 tracks (melodic + drum), 16 clips per track, up to 256 steps per clip
+- Per-clip effects chain: TARP, NOTE FX, HARMZ, MIDI DLY, SEQ ARP
+- Bake — render the effects chain back into note data (multi-loop, wrap mode)
+- Live recording with count-in pre-roll
+- 32-lane drum tracks with per-lane loop length, effects, and note repeat
+- Scale-aware everything: pitch random, harmonizer, delay, manual transposition
+- Performance Mode: 24 mods × 16 snapshot slots, hold/lock/latch interaction
+- 8 CC automation lanes per track, per-clip at 1/32 resolution
+- Mute/solo with 16 snapshot slots
+- Copy/paste for notes, steps, clips, and scenes
+- Per-track MIDI channel and routing (Move · Schwung · External)
+- Suspend/resume — background playback while browsing Move's native UI
+- Set state inheritance — duplicate a Move set, inherit dAVEBOx state by name
+
+### Known limitations
+- External MIDI input into Move-routed tracks crashes Move
+- Suspending while a Move-routed drum track is playing can crash Move
+- Volume knob briefly interrupts MIDI output
+- Powering Move off from within dAVEBOx causes a brief hang

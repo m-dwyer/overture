@@ -1,0 +1,46 @@
+{
+  // Type-check-only config for the QuickJS UI Runtime. `tsc --noEmit` is a CI
+  // gate beside the real pipeline (esbuild bundles ui/*.mjs -> dist/overture/ui.js);
+  // it NEVER emits files and nothing here ships to the device.
+  //
+  // Rollout is by `include`, not by `@ts-nocheck`: only files listed below are
+  // checked, so untyped modules never produce noise. Add a module to `include`
+  // when you type it (the boy-scout step). Goal state: `ui/**/*.mjs`.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    // Start loose: implicit any is tolerated so partially-typed neighbours don't
+    // explode. Tighten (strict, noImplicitAny, strictNullChecks) once the bulk of
+    // ui/*.mjs is in `include`.
+    "strict": false,
+    "noImplicitAny": false,
+    "lib": ["esnext"]
+  },
+  "include": [
+    "ui/types.d.ts",
+    "ui/host.d.ts",
+    "ui/core/ui_state.mjs",
+    "ui/core/ui_auto_route.mjs",
+    "ui/core/ui_constants.mjs",
+    "ui/core/ui_debug_log.mjs",
+    "ui/core/ui_parameter_page_model.mjs",
+    "ui/core/ui_motion.mjs",
+    "ui/render/ui_bank_chrome_render.mjs",
+    "ui/render/ui_track_chrome_render.mjs",
+    "ui/render/ui_oled_layout.mjs",
+    "ui/render/ui_idle_render.mjs",
+    "ui/render/ui_parameter_page_render.mjs",
+    "ui/view/ui_session_view_workflow.mjs",
+    "ui/perform/ui_recording_workflow.mjs",
+    "ui/perform/ui_live_note_workflow.mjs",
+    "ui/midi/ui_midi_external_workflow.mjs",
+    "ui/pad/ui_pad_workflow.mjs",
+    "ui/tick/ui_tick_tasks.mjs"
+  ]
+}
