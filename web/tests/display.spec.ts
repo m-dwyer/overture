@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { advanceTicks, waitReady } from "./wait";
 
 // Display-fidelity sweep: drive Overture to representative pages and lock a golden
 // OLED snapshot of each. Catches render-fidelity regressions (the font-overlap
@@ -56,26 +57,24 @@ async function boot(page: Page) {
   // literal device pixels (the readable default supersamples 8×). This suite IS the
   // device-pixel fidelity lock.
   await page.goto("/?exact");
-  await page.waitForFunction(() => {
-    const g = globalThis as DisplayPageGlobal;
-    const s = g.overtureUiState;
-    return Boolean(g.OVT && s && !s.stateLoading && s.bootSplashTicks === 0);
-  });
+  await waitReady(page);
 }
 async function snap(page: Page, name: string) {
-  await page.waitForTimeout(250);
+  // Flush the redraw for whatever input this scene injected, deterministically, then
+  // lock the frame. advanceTicks runs in-stack so the capture can't race the loop.
+  await advanceTicks(page, 4);
   await expect(page.locator("#oled")).toHaveScreenshot(`${name}.png`, { maxDiffPixelRatio: 0.02 });
 }
 async function enterTrackView(page: Page) {
   if ((await uiState(page)).sessionView) {
     await tap(page, 50); // Note/Session
-    await page.waitForTimeout(120);
+    await advanceTicks(page);
   }
 }
 async function selectTrack(page: Page, track: 0 | 1 | 2 | 3) {
   await enterTrackView(page);
   await tap(page, 43 - track); // side buttons: CC43=track 1 ... CC40=track 4
-  await page.waitForTimeout(120);
+  await advanceTicks(page);
 }
 async function jogToBank(page: Page, bank: number) {
   for (const dir of [1, -1] as const) {
@@ -83,7 +82,7 @@ async function jogToBank(page: Page, bank: number) {
       const s = await uiState(page);
       if (s.activeBank === bank) return;
       await jog(page, dir);
-      await page.waitForTimeout(80);
+      await advanceTicks(page);
     }
   }
   const s = await uiState(page);
@@ -92,14 +91,14 @@ async function jogToBank(page: Page, bank: number) {
 async function showBankOverview(page: Page, bank: number) {
   await jogToBank(page, bank);
   await encoderTouch(page, 0, true);
-  await page.waitForTimeout(120);
+  await advanceTicks(page);
   await encoderTouch(page, 0, false);
-  await page.waitForTimeout(80);
+  await advanceTicks(page);
 }
 async function showTouchedCell(page: Page, bank: number, encoderIdx: number) {
   await jogToBank(page, bank);
   await encoderTurn(page, encoderIdx, 1);
-  await page.waitForTimeout(120);
+  await advanceTicks(page);
 }
 
 test("default view", async ({ page }) => {
@@ -205,7 +204,7 @@ test("drum parameter page sweep", async ({ page }) => {
   await showBankOverview(page, 7);
   if (!(await uiState(page)).allLanesConfirmed) {
     await mi(page, 0xb0, 3, 127); // jog click confirms ALL LANES overview
-    await page.waitForTimeout(120);
+    await advanceTicks(page);
   }
   await snap(page, "17-param-page-drum-all-lanes");
 });
@@ -216,27 +215,27 @@ const oledWidth = (page: Page) => page.locator("#oled").evaluate((el) => (el as 
 
 test("oled readable default + exact toggle persists", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2500);
+  await waitReady(page);
   expect(await oledWidth(page)).toBe(1024); // readable default (128 × 8)
 
   await page.getByRole("button", { name: /OLED:/ }).click();
-  expect(await oledWidth(page)).toBe(128); // exact (1:1 device pixels)
+  await expect.poll(() => oledWidth(page)).toBe(128); // exact (1:1 device pixels)
 
   await page.reload(); // persisted via localStorage
-  await page.waitForTimeout(2500);
+  await waitReady(page);
   expect(await oledWidth(page)).toBe(128);
 
   // ?exact always forces exact regardless of the stored preference.
   await page.goto("/?exact");
-  await page.waitForTimeout(2500);
+  await waitReady(page);
   expect(await oledWidth(page)).toBe(128);
 
   // Forced exact mode is a test/display override, not a preference write.
   await page.evaluate(() => localStorage.setItem("ovt:oled-readable", "1"));
   await page.goto("/?exact");
-  await page.waitForTimeout(2500);
+  await waitReady(page);
   expect(await oledWidth(page)).toBe(128);
   await page.goto("/");
-  await page.waitForTimeout(2500);
+  await waitReady(page);
   expect(await oledWidth(page)).toBe(1024);
 });

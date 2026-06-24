@@ -67,6 +67,14 @@ run = "python3 scripts/coverage_gapmap.py"
 description = "Playwright E2E: emulator screenshots + manual-accuracy assertions (every *.spec.ts)"
 run = "pnpm -C web exec playwright test"
 
+[tasks.screenshot-report]
+description = "Open the last Playwright HTML report — side-by-side expected/actual/diff slider for visual-snapshot failures"
+run = "pnpm -C web exec playwright show-report"
+
+[tasks.screenshot-update]
+description = "Re-baseline OLED goldens (--update-snapshots). Use after a deliberate render change; eyeball the report first to confirm content is unchanged."
+run = "pnpm -C web exec playwright test --update-snapshots"
+
 [tasks.manual-assert]
 description = "Guard: drive every documented manual figure and assert its caption still holds (no regen)"
 run = "pnpm -C web manual:assert"

@@ -15,7 +15,11 @@ export default defineConfig({
   // dials itself down on smaller boxes / CI. Drop this if assertions flake under
   // load — the driver uses time-based settles, so very high contention can race.
   workers: "75%",
-  reporter: [["list"]],
+  // list: live progress in the terminal. html: a clickable failure report with a
+  // side-by-side expected/actual/diff slider for the visual snapshots — far easier
+  // than hunting for PNGs under test-results/. open:"never" keeps it from hijacking
+  // the terminal on every run; open it with `mise run screenshot-report`.
+  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {
     ...devices["Desktop Chrome"],
     baseURL: `http://localhost:${PORT}`,

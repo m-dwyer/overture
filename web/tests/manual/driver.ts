@@ -11,6 +11,14 @@ import {
   STEP_CC0,
 } from "../../src/lib/move-controls";
 import type { Driver } from "./types";
+import { advanceTicks, waitReady } from "../wait";
+
+// Device tick rate (App.tsx). The driver's settle() is expressed in milliseconds for
+// readability and back-compat, but is realised by advancing exactly that many ticks
+// synchronously — deterministic, never a wall-clock sleep. Keeping the ms interface
+// preserves the 21-scene manual generator's capture timing 1:1 while removing the race.
+const TICK_HZ = 94;
+const MS_PER_TICK = 1000 / TICK_HZ;
 
 // MIDI status byte for control-change messages. Re-exported under the historical
 // name `CC` because scenarios.ts imports it; everything else now comes from the
@@ -74,12 +82,11 @@ export function makeDriver(page: Page): Driver {
       [status, d1, d2]
     );
 
-  const settle = (ms = 250) => page.waitForTimeout(ms);
+  const settle = (ms = 250) => advanceTicks(page, Math.max(1, Math.round(ms / MS_PER_TICK)));
 
   async function boot() {
     await page.goto("/?manual=1");
-    await page.waitForFunction(() => Boolean((globalThis as typeof globalThis & { OVT?: unknown }).OVT));
-    await settle(2500);
+    await waitReady(page);
   }
 
   // --- raw button helpers -----------------------------------------------------

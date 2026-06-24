@@ -1,40 +1,20 @@
-// Root of the React emulator surface. Owns the boot/sink/render-loop logic ported
-// from the old main.ts: it builds the canvas display sink, the LED sink (records
-// maps + forwards to the shell controller), the localStorage file store, picks the
-// DSP (real seq8-wasm, or the JS mock via ?mock), boots the emulator core, runs the
-// ~94 Hz loop, and exposes globalThis.OVT. The host core stays untouched — this is
-// just the browser binding, now expressed as React + an imperative effect.
+// Root of the React emulator surface. This is now just the view + lifecycle wiring:
+// it owns the canvas/log/shell refs and the OLED readable⇄exact toggle, and an effect
+// orchestrates the async boot by composing the host modules (display/LED sinks,
+// keyboard input, DSP pick, tick loop, OVT handle). The browser-binding logic lives
+// in src/host/*; the host core stays untouched.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createEmulator, type Emulator } from "@/host/emulator.js";
 import { createBrowserFileStore } from "@/host/browser-file-store.js";
-import type { DisplaySink, FileStore, LedSink } from "@/host/sinks.js";
-import { createMockDsp } from "@/mock-dsp.js";
-import { createWasmDsp } from "@/wasm-dsp.js";
-import type { Dsp } from "@/dsp.js";
-import { setLedPaletteEntryRGB } from "@/led-palette.js";
-import { NAV, NOTE_OFF, NOTE_ON, STEP_CC0, type Send } from "@/lib/move-controls";
+import type { LedSink } from "@/host/sinks.js";
+import { createCanvasDisplaySink, OLED_READABLE_SCALE } from "@/host/canvas-display-sink";
+import { createShellLedSink } from "@/host/shell-led-sink";
+import { installKeyboardInput } from "@/host/keyboard-input";
+import { installOvt, pickDsp, startTickLoop } from "@/host/emulator-runtime";
+import { type Send } from "@/lib/move-controls";
 import { OledScreen } from "./OledScreen";
 import { Shell } from "./Shell";
 import { TooltipProvider } from "./ui/tooltip";
-
-const TICK_HZ = 94;
-const BLOCK_MS = (1000 * 128) / 44100; // one audio block of real time (~2.9 ms)
-// Real Move OLED: monochrome white pixels on black.
-const FG = "#f2f2f2";
-const BG = "#000000";
-// The device's `print` font is a 5×7 bitmap on a fixed 6px-wide grid; the tool
-// stacks menu rows only 9px apart (menu_layout LIST_LINE_HEIGHT) and right-aligns
-// values using text_width = chars × 6. Match that so text doesn't overlap and
-// alignment lands correctly. ~8px keeps glyphs inside the 9px line height. The
-// display sink multiplies all of these (coords, sizes, font px) by the active OLED
-// scale: every logical device pixel becomes a scale×scale block.
-const CHAR_W = 6;
-const FONT_PX = 8;
-const FONT_FAMILY = "ui-monospace, 'SF Mono', Menlo, monospace";
-// Readable default supersamples the 128×64 device buffer 8× (1024×512 backing): graphics
-// stay crisp scale-blocks and print() text renders anti-aliased and legible. Exact mode
-// (scale 1) reproduces the literal device pixels with nearest-neighbor CSS upscaling.
-const OLED_READABLE_SCALE = 8;
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,65 +54,7 @@ export function App() {
   // Stable handle to the emulator for the shell's button clicks (emu boots async).
   const send = useCallback<Send>((s, d1, d2) => emuRef.current?.sendInternal(s, d1, d2), []);
 
-  useEffect(() => {
-    const held = new Set<string>();
-    const stepFromCode = (code: string): number | null => {
-      if (/^Digit[1-9]$/.test(code)) return Number(code.slice(5));
-      if (code === "Digit0") return 10;
-      return null;
-    };
-    const targetIsEditable = (target: EventTarget | null): boolean => {
-      const el = target as HTMLElement | null;
-      if (!el) return false;
-      return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
-    };
-    const onDown = (e: KeyboardEvent) => {
-      if (targetIsEditable(e.target) || e.repeat || held.has(e.code)) return;
-      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
-        held.add(e.code);
-        send(0xb0, NAV.Shift, 127);
-        return;
-      }
-      const step = stepFromCode(e.code);
-      if (step !== null) {
-        held.add(e.code);
-        send(NOTE_ON, STEP_CC0 + step - 1, 127);
-        e.preventDefault();
-      }
-    };
-    const onUp = (e: KeyboardEvent) => {
-      if (!held.delete(e.code)) return;
-      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
-        send(0xb0, NAV.Shift, 0);
-        return;
-      }
-      const step = stepFromCode(e.code);
-      if (step !== null) {
-        send(NOTE_OFF, STEP_CC0 + step - 1, 0);
-        e.preventDefault();
-      }
-    };
-    const releaseAll = () => {
-      for (const code of Array.from(held)) {
-        held.delete(code);
-        if (code === "ShiftLeft" || code === "ShiftRight") {
-          send(0xb0, NAV.Shift, 0);
-          continue;
-        }
-        const step = stepFromCode(code);
-        if (step !== null) send(NOTE_OFF, STEP_CC0 + step - 1, 0);
-      }
-    };
-    window.addEventListener("keydown", onDown);
-    window.addEventListener("keyup", onUp);
-    window.addEventListener("blur", releaseAll);
-    return () => {
-      releaseAll();
-      window.removeEventListener("keydown", onDown);
-      window.removeEventListener("keyup", onUp);
-      window.removeEventListener("blur", releaseAll);
-    };
-  }, [send]);
+  useEffect(() => installKeyboardInput(send), [send]);
 
   // The shell hands up its imperative LED controller once its refs are populated.
   const onReady = useCallback(
@@ -146,8 +68,7 @@ export function App() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
+    if (!canvas) return;
 
     let logCount = 0;
     const log = (msg: string): void => {
@@ -161,112 +82,23 @@ export function App() {
       if (statusRef.current) statusRef.current.textContent = m;
     };
 
-    // ---- Canvas display sink (1-bit OLED; value 0=black, 1=white → BG/FG) -------
-    const shade = (v: number | boolean): string => (v ? FG : BG);
-    // Mirror the current OLED frame's printed text into a global so tests can
-    // assert what the screen actually says (e.g. the manual generator checks a
-    // figure landed on "DELAY"/"STEP EDIT"). A draw-order join is enough for
-    // substring checks; reset each frame on clearScreen. Same spirit as the
-    // existing emulator test hooks — observability, not app logic.
-    let oledFrame: string[] = [];
-    const publishOled = () => {
-      (globalThis as typeof globalThis & { __OVT_OLED_TEXT?: string }).__OVT_OLED_TEXT = oledFrame.join(" ");
-    };
-    // All draw ops scale logical device coordinates/sizes by the active OLED scale
-    // (read live from oledModeRef so the readable⇄exact toggle takes effect on the
-    // next tick). At scale 1 this is byte-for-byte the original 128×64 path.
-    const S = () => oledModeRef.current.scale;
-    const display: DisplaySink = {
-      clearScreen() {
-        ctx.fillStyle = BG;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        oledFrame = [];
-        publishOled();
-      },
-      fillRect(x, y, w, h, v) {
-        const s = S();
-        ctx.fillStyle = shade(v);
-        ctx.fillRect((x | 0) * s, (y | 0) * s, Math.max(0, w | 0) * s, Math.max(0, h | 0) * s);
-      },
-      drawRect(x, y, w, h, v) {
-        const s = S();
-        ctx.fillStyle = shade(v);
-        const X = (x | 0) * s,
-          Y = (y | 0) * s,
-          W = Math.max(0, w | 0) * s,
-          H = Math.max(0, h | 0) * s;
-        ctx.fillRect(X, Y, W, s);
-        ctx.fillRect(X, Y + H - s, W, s);
-        ctx.fillRect(X, Y, s, H);
-        ctx.fillRect(X + W - s, Y, s, H);
-      },
-      setPixel(x, y, v) {
-        const s = S();
-        ctx.fillStyle = shade(v);
-        ctx.fillRect((x | 0) * s, (y | 0) * s, s, s);
-      },
-      print(x, y, text, color) {
-        const s = S();
-        ctx.font = `${FONT_PX * s}px ${FONT_FAMILY}`;
-        ctx.textBaseline = "top";
-        ctx.fillStyle = color === 0 ? BG : FG;
-        // Draw on the device's fixed 6px-per-char grid (monospace, no kerning) so
-        // spacing and text_width-based alignment match the firmware font. fillText is
-        // anti-aliased, so readable mode (large backing store) renders smooth glyphs.
-        const str = String(text);
-        const baseX = (x | 0) * s;
-        const baseY = (y | 0) * s;
-        for (let i = 0; i < str.length; i++) ctx.fillText(str[i], baseX + i * CHAR_W * s, baseY);
-        if (str.trim()) { oledFrame.push(str); publishOled(); }
-      },
-      textWidth(text) {
-        return String(text).length * CHAR_W;
-      },
-      flush() {
-        /* drawn eagerly */
-      },
-    };
+    // Host binding: canvas → display sink (scale read live so the readable⇄exact
+    // toggle takes effect on the next tick), recorded LED sink forwarding to the
+    // shell once it mounts, and the localStorage-backed file store.
+    const display = createCanvasDisplaySink(canvas, () => oledModeRef.current.scale);
+    const leds: LedSink = createShellLedSink({
+      ledsMap,
+      buttonLedsMap,
+      getShell: () => shellLedsRef.current,
+    });
+    const files = createBrowserFileStore(localStorage);
 
-    // ---- LED sink → shell (records maps; forwards live once the shell is ready) -
-    const ledSink: LedSink = {
-      setLED(i, c) {
-        ledsMap.set(i, c);
-        shellLedsRef.current?.setLED(i, c);
-      },
-      setButtonLED(cc, c) {
-        buttonLedsMap.set(cc, c);
-        shellLedsRef.current?.setButtonLED(cc, c);
-      },
-      setPaletteEntryRGB(index, r, g, b) {
-        setLedPaletteEntryRGB(index, r, g, b);
-        for (const [i, c] of ledsMap) if (c === index) shellLedsRef.current?.setLED(i, c);
-        for (const [cc, c] of buttonLedsMap) if (c === index) shellLedsRef.current?.setButtonLED(cc, c);
-      },
-      clearAll() {
-        ledsMap.clear();
-        buttonLedsMap.clear();
-        shellLedsRef.current?.clearAll();
-      },
-    };
-
-    // ---- File store → repo fixtures overlaid with localStorage ------------------
-    const files: FileStore = createBrowserFileStore(localStorage);
-
-    let interval: ReturnType<typeof setInterval> | undefined;
+    let stopLoop: (() => void) | undefined;
     let cancelled = false;
     display.clearScreen();
 
     void (async () => {
-      // Behavior tier: real seq8 engine unless ?mock is set.
-      let dsp: Dsp = createMockDsp();
-      if (!new URLSearchParams(location.search).has("mock")) {
-        try {
-          dsp = await createWasmDsp((tag, b0, b1, b2, b3) => log(`dsp→midi [${tag}] ${b0} ${b1} ${b2} ${b3}`));
-          log("dsp: seq8-wasm (behavior tier)");
-        } catch (e) {
-          log("seq8-wasm load failed — using mock: " + ((e as Error)?.message || e));
-        }
-      }
+      const dsp = await pickDsp(log);
       if (cancelled) return;
 
       let emu: Emulator;
@@ -274,7 +106,7 @@ export function App() {
         emu = await createEmulator({
           dsp,
           display,
-          leds: ledSink,
+          leds,
           log,
           midi: {
             inject: (p) => log("inject_to_move " + JSON.stringify(p)),
@@ -296,44 +128,18 @@ export function App() {
         log("init() threw: " + ((e as Error)?.stack || e));
       }
 
-      // Replay any LEDs the tool set during init() into the shell controller.
+      // Replay any LEDs the tool set during init() into an already-mounted shell.
       for (const [i, c] of ledsMap) shellLedsRef.current?.setLED(i, c);
       for (const [cc, c] of buttonLedsMap) shellLedsRef.current?.setButtonLED(cc, c);
 
       setStatus("running");
-      let ticks = 0,
-        lastRenderT = performance.now();
-      interval = setInterval(() => {
-        const now = performance.now();
-        let blocks = Math.floor((now - lastRenderT) / BLOCK_MS);
-        if (blocks > 16) {
-          blocks = 16;
-          lastRenderT = now;
-        } else {
-          lastRenderT += blocks * BLOCK_MS;
-        }
-        emu.renderBlocks(blocks);
-        try {
-          emu.tick();
-        } catch (e) {
-          if (ticks % 94 === 0) log("tick() threw: " + ((e as Error)?.message || e));
-        }
-        ticks++;
-      }, 1000 / TICK_HZ);
-
-      // Console-driven input handle (parity with the old shell).
-      globalThis.OVT = {
-        dsp,
-        leds: ledsMap,
-        buttonLeds: buttonLedsMap,
-        midiIn: (s: number, d1: number, d2: number) => emu.sendInternal(s, d1, d2),
-        midiExt: (s: number, d1: number, d2: number) => emu.sendExternal(s, d1, d2),
-      };
+      stopLoop = startTickLoop(emu, log);
+      installOvt(emu, dsp, ledsMap, buttonLedsMap);
     })();
 
     return () => {
       cancelled = true;
-      if (interval) clearInterval(interval);
+      stopLoop?.();
     };
     // Mount-once boot; all referenced values are stable refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
