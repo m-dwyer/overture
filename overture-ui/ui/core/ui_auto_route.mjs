@@ -12,7 +12,8 @@
  * the wrong way, swap them). See overture-auto-route-draft.md.
  *
  * PURE + dependency-injected: no `globalThis`, no host calls except via `deps`.
- * NOT wired into the live tick pipeline yet — reachable only from its own test.
+ * Wired from `ui/tick/ui_tick_workflow.mjs`: set-load/resume paths arm it, and
+ * Route Check's Apply routing row can force a re-run.
  */
 
 export const ROUTE_SCHWUNG = 0, ROUTE_MOVE = 1;

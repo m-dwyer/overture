@@ -1,6 +1,10 @@
-# The dAVEBOx Manual
+# Overture UI Manual
 
-dAVEBOx is an 8-track MIDI sequencer for Ableton Move. It runs as a tool module inside [Schwung](https://github.com/charlesvestal/schwung) and uses Move's pads, knobs, and screen. dAVEBOx generates no audio — every note it produces goes to Move's native instruments, Schwung's effect chains, or an external synth over USB-A.
+Overture is an 8-track MIDI sequencer for Ableton Move. It runs as a tool module
+inside [Schwung](https://github.com/charlesvestal/schwung) and uses Move's pads,
+knobs, and screen. Overture generates no audio itself — every note it produces
+goes to Move's native instruments, Schwung chains, or an external synth over
+USB-A.
 
 ---
 
@@ -28,31 +32,20 @@ dAVEBOx is an 8-track MIDI sequencer for Ableton Move. It runs as a tool module 
 
 # 1. Quick Start
 
-## One-time setup
+## Default hybrid setup
 
-Before dAVEBOx can make sound, Move and Schwung need to receive on matching MIDI channels.
+The default Overture layout is:
 
-**Move** — set tracks 1–4 to receive on channels 1–4. Turn MIDI Out **off** on each (prevents echo loops):
+- **Tracks 1-4** route to Move's native instruments on MIDI channels 1-4.
+- **Tracks 5-8** route to Schwung slots 1-4 on MIDI channels 5-8.
 
-| Move track | MIDI In | MIDI Out |
-|---|---|---|
-| 1 | Ch 1 | Off |
-| 2 | Ch 2 | Off |
-| 3 | Ch 3 | Off |
-| 4 | Ch 4 | Off |
-
-**Schwung** — set slots 1–4 to receive on channels 5–8. Set each slot's Forward Channel to **Auto** (not Thru):
-
-| Schwung slot | Rcv Channel |
-|---|---|
-| 1 | Ch 5 |
-| 2 | Ch 6 |
-| 3 | Ch 7 |
-| 4 | Ch 8 |
+Overture auto-routes this default layout on set load/resume, and Route Check can
+re-apply the canonical routing if a track is silent. You still choose the Move
+presets/devices and the Schwung modules you want to play.
 
 ## Your first pattern
 
-1. Load a Schwung set and open dAVEBOx.
+1. Load a Schwung set and open Overture.
 2. You start in **Session View** — an 8-column clip grid. Tap **Note/Session** to switch to **Track View**.
 3. Open the Global Menu (**Shift + Note/Session**), navigate to **Mode**, and set it to **Drum**.
 4. Close the menu (Note/Session). The left 4×4 pads are now drum lanes.
@@ -984,7 +977,7 @@ Snapshots persist across reboots.
 
 ## Volume
 
-The Volume encoder controls master output only (passed to Move firmware). Per-track volume is not available in dAVEBOx — adjust gain on the destination (Move mixer or Schwung chain).
+The Volume encoder controls master output only (passed to Move firmware). Per-track volume is not available in Overture — adjust gain on the destination (Move mixer or Schwung chain).
 
 ---
 
@@ -995,7 +988,8 @@ The Volume encoder controls master output only (passed to Move firmware). Per-tr
 - **Tracks 1–4** → channels 1–4 → Move's native instruments
 - **Tracks 5–8** → channels 5–8 → Schwung slots 1–4
 
-Requires Move and Schwung configured per §1.
+Overture auto-routes the default setup on set load/resume. Use Route Check to
+inspect or re-apply it.
 
 ## Per-track settings (Track Config)
 

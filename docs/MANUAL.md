@@ -2,8 +2,7 @@
 
 Overture is a fork of **dAVEBOx** (the Schwung 8-track sequencer tool for Ableton
 Move). It keeps all of dAVEBOx's depth and **diverges only where it adopts
-Move-native muscle memory** (see `MOVE-RECONCILE.md` for the why, `DAVEBOX-CHANGES.md`
-for the how).
+Move-native muscle memory**.
 
 This manual documents **only what Overture changes**. For everything not listed
 here — recording, drum lanes, automation lanes, ARP, Performance Mode, banks,
@@ -11,10 +10,9 @@ bake/export, persistence — the authoritative reference is the vendored dAVEBOx
 **[`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md)** (its §15 Cheat Sheet is the
 full control inventory). Where a control below says "(unchanged)", it behaves exactly as
 the dAVEBOx manual describes. For an Overture-native, screenshot-driven walkthrough of the
-whole surface, see the generated [`generated/overture-reference.html`](generated/overture-reference.html).
+whole surface, see the generated [`generated/overture-reference.md`](generated/overture-reference.md).
 
-> Status: living document. Each shipped change in `DAVEBOX-CHANGES.md` lands a
-> section here. Changes not yet implemented are listed under **Planned** at the end.
+> Status: living document. This manual documents shipped Overture behaviour only.
 
 ---
 
@@ -139,14 +137,3 @@ keys notes are 1 full step.
 
 You can still override a step's length by holding the step and turning the jog
 wheel, or by using the Step Edit length control described in [`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md).
-
----
-
-## Planned (not yet implemented)
-
-Tracked in `DAVEBOX-CHANGES.md`; each lands a section here when shipped.
-
-- **#2** Relabel Menu/Note-Session; confirm it stays a pure toggle *(largely already done by the React shell)*.
-- **#3 (Phase B)** Per-step **velocity** on the Volume knob — the jog/length half shipped (above).
-- **#5** Demote jog-dive Global Menu pages onto Shift+Step where Move has equivalents.
-- **#6** Un-overload the Loop button.

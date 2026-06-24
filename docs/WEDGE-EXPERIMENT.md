@@ -1,4 +1,4 @@
-# Wedge experiment — the inject spike (ROADMAP "Next up" #1)
+# Wedge experiment — the inject spike
 
 **Question.** Inject `CC7` / encoder-CC on a Move-routed channel and **map what the real
 engines actually respond to** — which answers **#4 per-track volume** and tells us whether
@@ -103,7 +103,7 @@ path (cable-0 encoder CC), not by track CC.
 ---
 
 ## Recording the result
-Update memory `move-live-engine-seams` and `DAVEBOX-CHANGES.md` #4 with:
+Summary retained from the device spike:
 - CC7 → volume? (Test 1) ·  any other live CC? (Test 2) ·  encoder-on-mixer → volume? (Test 3)
 - The verdict on **#4 per-track volume** (which of Schwung-chain-level vs Move-mixer-inject to wire),
   and the strategic read on whether engine-param sequencing is worth building vs Move's native p-locks

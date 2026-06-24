@@ -10,9 +10,8 @@ are low:
 - **Behavior%** — `web/tests/integration/**` run the **real `ui.js` + seq8-wasm** (engine path).
 - **Union%** — covered by *either* tier (the honest "tested anywhere headless" number).
 
-See [`HEADLESS-COVERAGE-PLAN.md`](HEADLESS-COVERAGE-PLAN.md) for the strategy and
-[`HARNESS-EVOLUTION.md`](HARNESS-EVOLUTION.md) for where the harness goes next
-(fidelity ceiling, real-Schwung-host tier, manual generation).
+Use this file as the current headless-testing snapshot. Device-only gaps are
+tracked in [`DEVICE-SMOKE.md`](DEVICE-SMOKE.md).
 
 ---
 
@@ -61,6 +60,5 @@ singleton is now reset per `createHarness()`, killing cross-test state leakage).
   real audio/LED/OLED are all out of reach here — see
   [`DEVICE-SMOKE.md`](DEVICE-SMOKE.md) for the device-only complement.
 
-These ceilings — not the remaining % — are the real limit, and the subject of
-[`HARNESS-EVOLUTION.md`](HARNESS-EVOLUTION.md).
+These ceilings — not the remaining % — are the real limit.
 </content>

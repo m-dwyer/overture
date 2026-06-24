@@ -1,8 +1,7 @@
 # Overture — Architecture
 
-Deep in-tool design (track model, routing, display/state, FX, performance, fragility) lives in
-`HYBRID-GROOVEBOX.md`. This doc covers the **product/packaging architecture**: the runtime stack,
-the repo shape, the fork strategy, and how you modify each layer.
+This doc covers the **product/packaging architecture**: the runtime stack, the repo shape,
+the fork strategy, and how you modify each layer.
 
 ## Runtime stack (what runs on the Move)
 ```
@@ -92,7 +91,7 @@ preset-browser UI while the tool keeps pads/steps/transport and the sequencer ke
 calls `shadow_corun_begin/end` behind a capability gate. See `schwung/docs/CORUN.md` in upstream
 Schwung.
 
-## Track model (summary; full detail in HYBRID-GROOVEBOX.md)
+## Track model
 Two resource pools: **≤4 Ableton-engine slots** (`ROUTE_MOVE`, inject cable 2 by channel) +
 **unlimited hosted slots** (`ROUTE_SCHWUNG`, MIDI to Schwung slots) + external. Any UI track 1–4 can
 be Ableton *or* hosted; tracks 5+ are hosted-only. One uniform `track_view` + param descriptor → one
@@ -143,10 +142,9 @@ consistently**:
 - **Ableton tracks** → **Move-native co-run** → Move's own device-edit / preset UI.
 
 So Overture's *own* UI stays focused on the **sequencer**; sound/preset/param editing is delegated to
-the native, already-consistent editors. (The heavier "uniform `track_view` renders all params in-tool"
-described in `HYBRID-GROOVEBOX.md` remains an option for deeper unification, but delegate-via-co-run is
-the lower-code, lower-fragility default — and it's *why* chain-edit co-run is worth carrying in the
-`schwung` fork.)
+the native, already-consistent editors. A heavier "uniform `track_view` renders all params in-tool"
+model would be a separate product decision; delegate-via-co-run is the lower-code,
+lower-fragility default.
 
 Loading an engine follows the same rule. The user should see one route-aware
 sound command; Overture delegates Move-routed engine choice to Move's native

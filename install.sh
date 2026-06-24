@@ -5,4 +5,4 @@
 set -euo pipefail
 : "${MOVE_HOST:=move-em.local}"
 echo "Overture installer not implemented yet. Target: $MOVE_HOST"
-echo "Build order is tool-first; see docs/ROADMAP.md."
+echo "Build order is tool-first; see docs/ARCHITECTURE.md."

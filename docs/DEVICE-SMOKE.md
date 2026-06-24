@@ -1,10 +1,8 @@
 # Device Smoke Checklist — the irreducible on-device pass
 
-**Purpose.** Everything that *can* be verified headlessly now is (see
-[`HEADLESS-COVERAGE-PLAN.md`](HEADLESS-COVERAGE-PLAN.md) +
-[`COVERAGE-GAP-MAP.md`](COVERAGE-GAP-MAP.md): behavior tier ~63% lines, the
-persistence + AUTO/CC-p-lock edit paths proven against the real engine). This
-file is the **complement**: the short, ordered list of things that are
+**Purpose.** Everything that *can* be verified headlessly is summarized in
+[`COVERAGE-GAP-MAP.md`](COVERAGE-GAP-MAP.md). This file is the **complement**:
+the short, ordered list of things that are
 device-only *by nature* and can't be faked in the wasm/Node harness. A device
 trip should be this 5-minute pass — not a full re-test.
 

@@ -1,5 +1,5 @@
 // Move LED palette (index → CSS color). The exact 128-entry RGB table lives in
-// Move firmware and is not in the repo — UX.md flags it "unconfirmed". This is an
+// Move firmware and is not in the repo; this is an
 // APPROXIMATION built from the named indices in schwung shared/constants.mjs
 // (the tool's own source of truth), good enough to see which pads/steps/buttons
 // light and roughly what colour. Replace with a device-captured palette later.
