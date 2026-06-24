@@ -4,6 +4,7 @@
 import { createEmulator, type Emulator } from "../../src/host/emulator.js";
 import { createWasmDsp } from "../../src/wasm-dsp.js";
 import { memFiles, type DisplaySink, type LedSink, type FileStore } from "../../src/host/sinks.js";
+import { createHeadlessSchwungChain } from "./schwung-catalog.js";
 
 export interface PrintCall { x: number; y: number; text: string; color: number; }
 export interface RectCall { kind: "fill" | "draw"; x: number; y: number; w: number; h: number; value: number | boolean; }
@@ -157,8 +158,12 @@ export interface HarnessOptions {
 export async function createHarness(opts: HarnessOptions = {}): Promise<Harness> {
   const rec = recorder();
   const files = memFiles();
-  const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => rec.midiOut.push([tag, b0, b1, b2, b3]));
-  const emu = await createEmulator({ dsp, display: rec.display, leds: rec.ledSink, files, strict: opts.strict });
+  const schwung = await createHeadlessSchwungChain();
+  const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => {
+    schwung.routeDspMidi(tag, b0, b1, b2, b3);
+    rec.midiOut.push([tag, b0, b1, b2, b3]);
+  });
+  const emu = await createEmulator({ dsp, display: rec.display, leds: rec.ledSink, files, strict: opts.strict, schwung });
   // Teardown the prior test's leaked UI state: ui.js is a module singleton reused
   // across createHarness() calls, and init() preserves most of S by design (the
   // on-device Shift+Back resume model). Reset to pristine so each test is isolated.

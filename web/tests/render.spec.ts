@@ -42,6 +42,15 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
 });
 
+test("startup query selects track and note view after init settles", async ({ page }) => {
+  await page.goto("/?track=5&view=note");
+  await waitReady(page);
+  await page.waitForFunction(() => {
+    const state = (globalThis as { overtureUiState?: { activeTrack?: number; sessionView?: boolean } }).overtureUiState;
+    return state?.activeTrack === 4 && state.sessionView === false;
+  });
+});
+
 // The shell must (a) emit the exact device MIDI on a click and (b) drive a visible
 // re-render of the real UI.
 test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {

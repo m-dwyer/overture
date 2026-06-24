@@ -465,6 +465,10 @@ export function applySchwungSoundBrowserSelection(textKeyboard) {
     page.browserMessage = '';
     page.paramValueOverrides = {};
     refreshSchwungSoundPageModules();
+    page.paramDetail = componentHasParams(page, page.selectedIndex);
+    page.paramDetailIndex = 0;
+    page.touchedParam = null;
+    rememberSchwungSoundPosition(page);
     return true;
 }
 

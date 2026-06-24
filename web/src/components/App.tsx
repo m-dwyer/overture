@@ -11,7 +11,8 @@ import { createCanvasDisplaySink, OLED_READABLE_SCALE } from "@/host/canvas-disp
 import { createShellLedSink } from "@/host/shell-led-sink";
 import { installKeyboardInput } from "@/host/keyboard-input";
 import { installOvt, pickDsp, startTickLoop } from "@/host/emulator-runtime";
-import { type Send } from "@/lib/move-controls";
+import { CC, NAV, NOTE_OFF, NOTE_ON, ROW_CC, type Send } from "@/lib/move-controls";
+import { type BrowserSchwungDiagnostics, type BrowserSchwungHost, createBrowserSchwungChain } from "@/schwung/browser-chain";
 import { OledScreen } from "./OledScreen";
 import { Shell } from "./Shell";
 import { TooltipProvider } from "./ui/tooltip";
@@ -24,7 +25,10 @@ export function App() {
   const shellLedsRef = useRef<LedSink | null>(null);
   const searchParams = new URLSearchParams(location.search);
   const manualMode = searchParams.has("manual");
+  const diagMode = searchParams.has("diag");
   const forceExactOled = searchParams.has("exact");
+  const initialTrack = parseInitialTrack(searchParams.get("track"));
+  const initialView = parseInitialView(searchParams.get("view"));
   // OLED readability: supersampled "readable" view by default, toggleable to a 1:1
   // pixel-exact view for verifying literal device pixels. `?exact` forces exact
   // (deterministic for snapshot tests); otherwise persisted in localStorage.
@@ -48,6 +52,8 @@ export function App() {
   const [manualGesture, setManualGesture] = useState("");
   const [manualControls, setManualControls] = useState("");
   const [manualShowing, setManualShowing] = useState("");
+  const [schwungDiagnostics, setSchwungDiagnostics] = useState<BrowserSchwungDiagnostics | null>(null);
+  const schwungRef = useRef<BrowserSchwungHost | null>(null);
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
   const ledsMap = useRef(new Map<number, number>()).current;
@@ -57,6 +63,16 @@ export function App() {
   const send = useCallback<Send>((s, d1, d2) => emuRef.current?.sendInternal(s, d1, d2), []);
 
   useEffect(() => installKeyboardInput(send), [send]);
+
+  useEffect(() => {
+    const primeAudio = (): void => schwungRef.current?.primeAudioEngine();
+    window.addEventListener("pointerdown", primeAudio, { capture: true });
+    window.addEventListener("keydown", primeAudio, { capture: true });
+    return () => {
+      window.removeEventListener("pointerdown", primeAudio, { capture: true });
+      window.removeEventListener("keydown", primeAudio, { capture: true });
+    };
+  }, []);
 
   // The shell hands up its imperative LED controller once its refs are populated.
   const onReady = useCallback(
@@ -100,11 +116,25 @@ export function App() {
     const files = createBrowserFileStore(localStorage);
 
     let stopLoop: (() => void) | undefined;
+    let stopInitialTrack: (() => void) | undefined;
     let cancelled = false;
     display.clearScreen();
 
     void (async () => {
-      const dsp = await pickDsp(log);
+      let schwung: BrowserSchwungHost;
+      try {
+        schwung = await createBrowserSchwungChain({
+          log,
+          notify: (diagnostics) => setSchwungDiagnostics(diagnostics),
+        });
+        schwungRef.current = schwung;
+      } catch (e) {
+        setStatus("FAILED to load Schwung modules");
+        log("schwung load error: " + ((e as Error)?.stack || e));
+        return;
+      }
+
+      const dsp = await pickDsp(log, schwung);
       if (cancelled) return;
 
       let emu: Emulator;
@@ -119,6 +149,7 @@ export function App() {
             toChain: (a) => log("send_midi_to_dsp " + JSON.stringify(a)),
           },
           files,
+          schwung,
         });
       } catch (e) {
         setStatus("FAILED to load tool ui.js");
@@ -140,11 +171,13 @@ export function App() {
 
       setStatus("running");
       stopLoop = startTickLoop(emu, log);
+      stopInitialTrack = scheduleInitialState(emu, initialTrack, initialView);
       installOvt(emu, dsp, ledsMap, buttonLedsMap);
     })();
 
     return () => {
       cancelled = true;
+      stopInitialTrack?.();
       stopLoop?.();
     };
     // Mount-once boot; all referenced values are stable refs.
@@ -256,9 +289,134 @@ export function App() {
                 </div>
               </div>
             ) : null}
+            {diagMode ? (
+              <SchwungDiagnosticsDrawer
+                diagnostics={schwungDiagnostics}
+                onReset={() => schwungRef.current?.resetAudioEngine()}
+              />
+            ) : null}
           </div>
         </div>
       </div>
     </TooltipProvider>
+  );
+}
+
+function parseInitialTrack(value: string | null): number | null {
+  if (!value) return null;
+  const track = Number.parseInt(value, 10);
+  return Number.isFinite(track) && track >= 1 && track <= 8 ? track : null;
+}
+
+function parseInitialView(value: string | null): "note" | null {
+  return value === "note" ? "note" : null;
+}
+
+function applyInitialTrack(emu: Emulator, trackNumber: number | null, sessionView = false): void {
+  if (trackNumber == null || trackNumber === 1) return;
+  const trackIndex = trackNumber - 1;
+  if (sessionView) {
+    const note = 92 + trackIndex;
+    emu.sendInternal(NOTE_ON, note, 110);
+    emu.sendInternal(NOTE_OFF, note, 0);
+    return;
+  }
+  const needsShift = trackIndex >= 4;
+  const rowIndex = trackIndex % 4;
+  if (needsShift) emu.sendInternal(CC, NAV.Shift, 127);
+  emu.sendInternal(CC, ROW_CC[rowIndex], 127);
+  emu.sendInternal(CC, ROW_CC[rowIndex], 0);
+  if (needsShift) emu.sendInternal(CC, NAV.Shift, 0);
+}
+
+function enterNoteView(emu: Emulator): void {
+  emu.sendInternal(CC, NAV.Menu, 127);
+  emu.sendInternal(CC, NAV.Menu, 0);
+}
+
+function scheduleInitialState(emu: Emulator, trackNumber: number | null, view: "note" | null): () => void {
+  if ((trackNumber == null || trackNumber === 1) && view !== "note") return () => {};
+  let attempts = 0;
+  const timer = window.setInterval(() => {
+    attempts++;
+    const state = readOvertureUiState();
+    const settled = state &&
+      !state.stateLoading &&
+      !state.pendingSetLoad &&
+      !!state.ledInitComplete &&
+      (state.pendingDspSync | 0) === 0;
+    if (!settled && attempts < 40) return;
+    if (state && trackNumber != null && (state.activeTrack | 0) !== trackNumber - 1) {
+      applyInitialTrack(emu, trackNumber, !!state.sessionView);
+    }
+    const nextState = readOvertureUiState() ?? state;
+    if (view === "note" && nextState?.sessionView) enterNoteView(emu);
+    window.clearInterval(timer);
+  }, 50);
+  return () => window.clearInterval(timer);
+}
+
+function readOvertureUiState(): {
+  activeTrack?: number;
+  ledInitComplete?: boolean;
+  pendingDspSync?: number;
+  pendingSetLoad?: boolean;
+  sessionView?: boolean;
+  stateLoading?: boolean;
+} | null {
+  const state = (globalThis as {
+    overtureUiState?: {
+      activeTrack?: number;
+      ledInitComplete?: boolean;
+      pendingDspSync?: number;
+      pendingSetLoad?: boolean;
+      sessionView?: boolean;
+      stateLoading?: boolean;
+    };
+  }).overtureUiState;
+  return state ?? null;
+}
+
+function SchwungDiagnosticsDrawer({
+  diagnostics,
+  onReset,
+}: {
+  diagnostics: BrowserSchwungDiagnostics | null;
+  onReset(): void;
+}) {
+  const diag = diagnostics ?? { errors: [], midi: [], params: [], slots: [], worklet: {} };
+  return (
+    <aside className="w-[min(92vw,440px)] rounded border border-line bg-black/70 p-3 text-left text-[11px] text-muted">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h2 className="text-xs font-semibold tracking-[0.16em] text-accent">SCHWUNG AUDIO</h2>
+        <button
+          type="button"
+          onClick={onReset}
+          className="rounded border border-line px-2 py-0.5 text-[11px] text-text hover:border-accent"
+        >
+          Reset
+        </button>
+      </div>
+      <DiagBlock title="Chain" rows={diag.slots.map((slot) =>
+        `${slot.name} ch${slot.channel}: ${slot.midiFx || "--"} > ${slot.synth || "--"} > ${slot.fx1 || "--"} > ${slot.fx2 || "--"}`
+      )} />
+      <DiagBlock title="Worklet" rows={Object.entries(diag.worklet).map(([slot, state]) => `${slot}: ${state}`)} />
+      <DiagBlock title="Params" rows={diag.params.map((item) => `S${item.slot + 1} ${item.key}=${item.value}`)} />
+      <DiagBlock title="MIDI" rows={diag.midi.map((item) =>
+        `S${item.slot + 1} ${item.direction} ${item.status.toString(16)} ${item.d1} ${item.d2}`
+      )} />
+      <DiagBlock title="Errors" rows={diag.errors.map((item) => `${item.slotId}: ${item.message}`)} />
+    </aside>
+  );
+}
+
+function DiagBlock({ title, rows }: { title: string; rows: string[] }) {
+  return (
+    <section className="mt-2">
+      <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text">{title}</h3>
+      <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded bg-black/50 p-2 leading-snug">
+        {rows.length ? rows.join("\n") : "--"}
+      </pre>
+    </section>
   );
 }

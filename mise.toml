@@ -28,6 +28,7 @@ run = "pnpm -C web dev"
 
 [tasks.site-dev]
 description = "Serve the public Astro site"
+depends = ["emulator-dist"]
 run = "pnpm -C site dev"
 
 [tasks.site-build]
@@ -41,6 +42,25 @@ run = "pnpm -C web typecheck"
 [tasks.web-build]
 description = "Production build of the web emulator"
 depends = ["wasm"]   # web bundle imports overture-ui/dist/wasm/seq8.mjs
+run = "pnpm -C web build"
+
+[tasks.emulator-dist]
+description = "Prepare the static web emulator bundle served by the Astro site at /emulator/"
+depends = ["wasm"]
+sources = [
+  "web/index.html",
+  "web/package.json",
+  "web/postcss.config.js",
+  "web/tailwind.config.ts",
+  "web/tsconfig.json",
+  "web/vite.config.ts",
+  "web/public/**/*",
+  "web/src/**/*",
+  "overture-ui/ui/**/*",
+  "overture-ui/dist/wasm/seq8.mjs",
+  "overture-ui/dist/wasm/seq8.wasm",
+]
+outputs = ["web/dist/index.html"]
 run = "pnpm -C web build"
 
 [tasks.utest]

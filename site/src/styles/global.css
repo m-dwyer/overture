@@ -59,6 +59,12 @@ footer {
   align-items: center;
 }
 
+.header-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
 .brand {
   gap: 12px;
   color: var(--white);
@@ -87,6 +93,33 @@ footer {
 
 .github-link:hover {
   color: var(--white);
+}
+
+.primary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 34px;
+  min-height: 46px;
+  padding: 0 20px;
+  border: 1px solid var(--metal);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--black);
+  font-size: 15px;
+  font-weight: 760;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.primary-link:hover {
+  border-color: var(--white);
+  background: transparent;
+  color: var(--white);
+  transform: translateY(-1px);
 }
 
 .hero {
@@ -294,6 +327,36 @@ h3 {
   line-height: 1.08;
 }
 
+.try-main {
+  min-height: calc(100vh - 92px);
+}
+
+.try-hero {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 38px 24px 28px;
+}
+
+.try-hero h1 {
+  font-size: clamp(54px, 8vw, 104px);
+}
+
+.try-hero .lede {
+  max-width: 860px;
+  margin-top: 22px;
+  font-size: clamp(18px, 1.6vw, 23px);
+}
+
+.emulator-frame {
+  display: block;
+  width: 100%;
+  height: min(980px, calc(100vh - 250px));
+  min-height: 720px;
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  background: #050505;
+}
+
 footer {
   justify-content: space-between;
   gap: 14px 28px;
@@ -338,6 +401,7 @@ footer {
 @media (max-width: 640px) {
   .site-header,
   .hero,
+  .try-hero,
   .spec-section,
   .section,
   .closing-section,
@@ -382,6 +446,11 @@ footer {
   footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .emulator-frame {
+    height: calc(100vh - 250px);
+    min-height: 620px;
   }
 }
 

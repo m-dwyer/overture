@@ -20,8 +20,8 @@ export function TrackStrip({ send }: { send: Send }) {
           key={cc}
           cc={cc}
           send={send}
-          tooltip={`Track ${i + 1}`}
-          aria-label={`Track ${i + 1}`}
+          tooltip={`Track ${i + 1} / Shift+Track ${i + 5}`}
+          aria-label={`Track ${i + 1} / Shift Track ${i + 5}`}
           refCb={ledRef(reg.buttons, cc)}
           className={cn("w-2.5 flex-1 rounded-full border border-line", UNLIT)}
         />
