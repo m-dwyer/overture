@@ -13,6 +13,7 @@ import { installKeyboardInput } from "@/host/keyboard-input";
 import { installOvt, pickDsp, startTickLoop } from "@/host/emulator-runtime";
 import { CC, NAV, NOTE_OFF, NOTE_ON, ROW_CC, type Send } from "@/lib/move-controls";
 import { type BrowserSchwungDiagnostics, type BrowserSchwungHost, createBrowserSchwungChain } from "@/schwung/browser-chain";
+import { createManualSchwungChain } from "@/schwung/manual-catalog";
 import { OledScreen } from "./OledScreen";
 import { Shell } from "./Shell";
 import { TooltipProvider } from "./ui/tooltip";
@@ -123,10 +124,13 @@ export function App() {
     void (async () => {
       let schwung: BrowserSchwungHost;
       try {
-        schwung = await createBrowserSchwungChain({
+        const schwungOptions = {
           log,
-          notify: (diagnostics) => setSchwungDiagnostics(diagnostics),
-        });
+          notify: (diagnostics: BrowserSchwungDiagnostics) => setSchwungDiagnostics(diagnostics),
+        };
+        schwung = manualMode
+          ? await createManualSchwungChain(schwungOptions)
+          : await createBrowserSchwungChain(schwungOptions);
         schwungRef.current = schwung;
       } catch (e) {
         setStatus("FAILED to load Schwung modules");
