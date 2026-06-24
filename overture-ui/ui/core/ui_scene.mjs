@@ -1,7 +1,7 @@
 import { S } from './ui_state.mjs';
 import { NUM_TRACKS, LED_OFF, LED_STEP_CURSOR, PAD_MODE_DRUM } from './ui_constants.mjs';
-import { White, VividYellow, DarkGrey } from '/data/UserData/schwung/shared/constants.mjs';
-import { setLED } from '/data/UserData/schwung/shared/input_filter.mjs';
+import { White, VividYellow, DarkGrey } from '../shared/constants.mjs';
+import { setLED } from '../shared/input_filter.mjs';
 
 export function trackClipHasContent(t, sceneIdx) {
     return S.trackPadMode[t] === PAD_MODE_DRUM

@@ -14,6 +14,10 @@ the section into a versioned heading at release time.
 
 ## [Unreleased]
 ### Features
+- **Browser Schwung-chain audio in the emulator.** The web emulator now hosts
+  Moveforge-built Schwung module WASM through an AudioWorklet chain, exposes real
+  module metadata to Sound Edit, and the public site has a `/try/` route for the
+  playable emulator.
 - **Improved boot splash.** New animated "OVERTURE" boot animation (1-bit,
   load-driven) replacing the static splash bitmaps.
 - **Sound Edit presets.** Schwung Sound Edit can now save and load named presets

@@ -4,6 +4,7 @@
 // and the test harness are just different bindings of the same core.
 import type { Dsp } from "../dsp.js";
 import { type DisplaySink, type LedSink, type MidiSink, type FileStore, memFiles } from "./sinks.js";
+import { BrowserSchwungChain, type BrowserSchwungHost, createBrowserSchwungChain } from "../schwung/browser-chain.js";
 
 export interface EmulatorOptions {
   dsp: Dsp;
@@ -13,7 +14,7 @@ export interface EmulatorOptions {
   strict?: boolean;
   midi?: MidiSink;
   files?: FileStore;
-  slots?: Array<Record<string, unknown>>;
+  schwung?: BrowserSchwungHost;
   log?: (msg: string) => void;
 }
 
@@ -63,105 +64,17 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const log = opts.log ?? (() => {});
   const files = opts.files ?? memFiles();
   const midi: MidiSink = opts.midi ?? { inject: () => {}, toChain: () => {} };
-  const slots = opts.slots ?? [
-    { channel: 5, name: "Slot1" },
-    { channel: 6, name: "Slot2" },
-    { channel: 7, name: "Slot3" },
-    { channel: 8, name: "Slot4" },
-  ];
-  const chainParams = new Map<string, string>();
-  chainParams.set("0:midi_fx1_module", "arp");
-  chainParams.set("0:synth_module", "aurora");
-  chainParams.set("0:fx1_module", "freeverb");
-  chainParams.set("0:fx2_module", "");
-  chainParams.set("0:fx1:ui_hierarchy", JSON.stringify({
-    levels: {
-      root: {
-        knobs: [
-          { key: "mix", name: "Mix" },
-          { key: "room_size", name: "Room Size" },
-          { key: "damping", name: "Damping" },
-          { key: "width", name: "Width" },
-          { key: "predelay", name: "Pre-delay" },
-          { key: "low_cut", name: "Low Cut" },
-          { key: "mod_depth", name: "Mod Depth" },
-          { key: "freeze", name: "Freeze" },
-        ],
-      },
-    },
-  }));
-  chainParams.set("0:fx1:chain_params", JSON.stringify([
-    { key: "mix", name: "Mix", type: "float", min: 0, max: 1 },
-    { key: "room_size", name: "Room Size", type: "float", min: 0, max: 1 },
-    { key: "damping", name: "Damping", type: "float", min: 0, max: 1 },
-    { key: "width", name: "Width", type: "float", min: 0, max: 1 },
-    { key: "predelay", name: "Pre-delay", type: "float", min: 0, max: 250 },
-    { key: "low_cut", name: "Low Cut", type: "float", min: 20, max: 1000 },
-    { key: "mod_depth", name: "Mod Depth", type: "float", min: 0, max: 1 },
-    { key: "freeze", name: "Freeze", type: "bool" },
-  ]));
-  chainParams.set("0:synth:ui_hierarchy", JSON.stringify({
-    levels: {
-      root: {
-        knobs: [
-          { key: "gain", name: "Gain" },
-          { key: "tone", name: "Tone" },
-          { key: "filter_env_depth", name: "Filter Env Depth" },
-          { key: "enabled", name: "Enabled" },
-          { key: "drive", name: "Drive" },
-          { key: "attack", name: "Attack" },
-          { key: "decay", name: "Decay" },
-          { key: "release", name: "Release" },
-          { key: "stereo_width", name: "Stereo Width" },
-          { key: "output_level", name: "Output Level" },
-        ],
-      },
-    },
-  }));
-  chainParams.set("0:synth:chain_params", JSON.stringify([
-    { key: "gain", name: "Gain", type: "float", min: 0, max: 1 },
-    { key: "tone", name: "Tone", type: "enum", options: ["Dark", "Bright"] },
-    { key: "filter_env_depth", name: "Filter Env Depth", type: "float", rangeMin: -100, rangeMax: 100 },
-    { key: "enabled", name: "Enabled", type: "bool" },
-    { key: "drive", name: "Drive", type: "float", min: 0, max: 1 },
-    { key: "attack", name: "Attack", type: "float", min: 0, max: 1 },
-    { key: "decay", name: "Decay", type: "float", min: 0, max: 1 },
-    { key: "release", name: "Release", type: "float", min: 0, max: 1 },
-    { key: "stereo_width", name: "Stereo Width", type: "float", min: 0, max: 1 },
-    { key: "output_level", name: "Output Level", type: "float", min: 0, max: 1 },
-  ]));
-  chainParams.set("0:synth:gain", "0.5");
-  chainParams.set("0:synth:tone", "0");
-  chainParams.set("0:synth:filter_env_depth", "20");
-  chainParams.set("0:synth:enabled", "1");
-  chainParams.set("0:synth:drive", "0.25");
-  chainParams.set("0:synth:attack", "0.02");
-  chainParams.set("0:synth:decay", "0.4");
-  chainParams.set("0:synth:release", "0.7");
-  chainParams.set("0:synth:stereo_width", "0.8");
-  chainParams.set("0:synth:output_level", "0.9");
-  chainParams.set("0:synth:preset_count", "3");
-  chainParams.set("0:synth:preset", "1");
-  chainParams.set("0:synth:preset_name", "Analog Bass");
-  chainParams.set("0:synth:preset_name_0", "Warm Keys");
-  chainParams.set("0:synth:preset_name_1", "Analog Bass");
-  chainParams.set("0:synth:preset_name_2", "Glass Pad");
-  chainParams.set("0:fx1:mix", "0.28");
-  chainParams.set("0:fx1:room_size", "0.64");
-  chainParams.set("0:fx1:damping", "0.42");
-  chainParams.set("0:fx1:width", "0.9");
-  chainParams.set("0:fx1:predelay", "18");
-  chainParams.set("0:fx1:low_cut", "180");
-  chainParams.set("0:fx1:mod_depth", "0.12");
-  chainParams.set("0:fx1:freeze", "0");
-  const installedModules = [
-    { id: "arp", name: "Arpeggiator", version: "0.3.0", component_type: "midi_fx" },
-    { id: "chord", name: "Chord", version: "0.1.0", component_type: "midi_fx" },
-    { id: "linein", name: "Line In", version: "0.2.0", component_type: "sound_generator" },
-    { id: "aurora", name: "Aurora", version: "0.1.0", component_type: "sound_generator" },
-    { id: "freeverb", name: "Freeverb", version: "0.1.1", component_type: "audio_fx" },
-    { id: "delay", name: "Delay", version: "0.1.0", component_type: "audio_fx" },
-  ];
+  let schwung: BrowserSchwungHost;
+  if (opts.schwung) {
+    schwung = opts.schwung;
+  } else {
+    try {
+      schwung = await createBrowserSchwungChain({ log });
+    } catch (error) {
+      log("schwung catalog load failed: " + ((error as Error)?.message || error));
+      schwung = new BrowserSchwungChain({ modules: [] }, { log, audioEngine: null });
+    }
+  }
 
   // Display (1-bit OLED) → sink.
   const clear_screen = (): void => display.clearScreen();
@@ -216,7 +129,10 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const host_ensure_dir = (): number => 1;
   const host_remove_dir = (): number => 1;
   const move_midi_inject_to_move = (pkt: number[]): void => midi.inject(pkt);
-  const shadow_send_midi_to_dsp = (...a: unknown[]): void => midi.toChain(a);
+  const shadow_send_midi_to_dsp = (...a: unknown[]): void => {
+    midi.toChain(a);
+    schwung.sendMidiToDsp(a);
+  };
   let corunState: { target: number; id: number; keep_mask: number } | null = null;
   const shadow_corun_begin = (target: number, id: number, keepMask: number): void => {
     corunState = { target, id, keep_mask: keepMask };
@@ -228,21 +144,14 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   };
   const shadow_corun_state = (): { target: number; id: number; keep_mask: number } | null =>
     corunState ? { ...corunState } : null;
-  const shadow_get_slots = (): Array<Record<string, unknown>> => slots;
-  const shadow_get_param = (slot: number, key: string): string | null =>
-    chainParams.get(`${slot | 0}:${key}`) ?? null;
+  const shadow_get_slots = (): Array<Record<string, unknown>> => schwung.shadowGetSlots();
+  const shadow_get_param = (slot: number, key: string): string | null => schwung.shadowGetParam(slot, key);
   const shadow_set_param = (slot: number, key: string, val: string | number): boolean => {
-    const s = slot | 0;
-    const v = String(val ?? "");
-    if (key === "midi_fx1:module") chainParams.set(`${s}:midi_fx1_module`, v);
-    else if (key === "synth:module") chainParams.set(`${s}:synth_module`, v);
-    else if (key === "fx1:module") chainParams.set(`${s}:fx1_module`, v);
-    else if (key === "fx2:module") chainParams.set(`${s}:fx2_module`, v);
-    chainParams.set(`${s}:${key}`, v);
-    log("shadow_set_param " + JSON.stringify([s, key, v]));
-    return true;
+    const ok = schwung.shadowSetParam(slot, key, val);
+    log("shadow_set_param " + JSON.stringify([slot | 0, key, String(val ?? ""), ok]));
+    return ok;
   };
-  const host_list_modules = (): Array<Record<string, unknown>> => installedModules.map((m) => ({ ...m }));
+  const host_list_modules = (): Array<Record<string, unknown>> => schwung.hostListModules();
   const shadow_get_ui_flags = (): Record<string, unknown> => ({});
 
   Object.assign(globalThis, {

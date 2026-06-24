@@ -71,9 +71,9 @@ module.exports = {
       severity: 'warn',
       comment:
         'Schwung host modules (/data/UserData/schwung/shared/*) should be imported ' +
-        'only by the imperative shell (ui.js) and passed inward as deps. ~11 modules ' +
-        'currently import them directly; drive that down, then make error.',
-      from: { pathNot: 'ui/ui\\.js$' },
+        'only by ui/shared facade modules. Overture code imports those facades so ' +
+        'the device/browser boundary stays explicit and centralized.',
+      from: { pathNot: '^ui/shared/' },
       to: { path: '^/data/UserData/' },
     },
   ],

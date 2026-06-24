@@ -60,7 +60,11 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(ui.globalMenuState).toBeTruthy();
     ui.globalMenuState!.selectedIndex = idx;
     h.step(1);
-    h.press(3);
+    const item = ui.globalMenuItems?.find((entry) => entry?.label === "Edit Sound...") as
+      | { onAction?: () => void }
+      | undefined;
+    expect(item?.onAction).toBeTypeOf("function");
+    item!.onAction!();
     h.step(2);
   }
 
@@ -135,6 +139,25 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
 
     h.release(49); h.step(1);
     h.cc(50, 127); h.step(2); h.cc(50, 0); h.step(3);
+  });
+
+  test("Shift plus side track buttons selects tracks 5 through 8", () => {
+    const ui = h.ui();
+    ui.sessionView = false;
+    ui.activeTrack = 0;
+    h.step(1);
+
+    h.hold(49);
+    h.cc(43, 127); h.step(1); h.cc(43, 0); h.step(1);
+    expect(h.ui().activeTrack).toBe(4);
+    h.cc(42, 127); h.step(1); h.cc(42, 0); h.step(1);
+    expect(h.ui().activeTrack).toBe(5);
+    h.cc(41, 127); h.step(1); h.cc(41, 0); h.step(1);
+    expect(h.ui().activeTrack).toBe(6);
+    h.cc(40, 127); h.step(1); h.cc(40, 0); h.step(1);
+    expect(h.ui().activeTrack).toBe(7);
+    h.release(49);
+    h.step(1);
   });
 
   test("Route Check shows expected routes and detected Schwung slots", () => {
@@ -439,6 +462,35 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(1);
   });
 
+  test("Sound page encoders write selected FX 2 params through Schwung", () => {
+    const ui = h.ui();
+    ui.activeTrack = 4;
+    ui.sessionView = false;
+    h.hold(49);
+    h.tapStep(2);
+    h.release(49);
+    h.step(3);
+
+    h.tapStep(3); h.step(1); // Step 4 = FX 2
+    h.press(3);
+    h.step(2);
+    h.press(3);
+    h.step(2);
+
+    expect(globalThis.shadow_get_param(0, "fx2_module")).toBe("freeverb");
+    expect(ui.schwungSoundPage).toMatchObject({ selectedIndex: 3, paramDetail: true });
+    expect(globalThis.shadow_get_param(0, "fx2:room_size")).toBe("0.64");
+
+    h.encoder(1, 1);
+    h.step(2);
+
+    expect(globalThis.shadow_get_param(0, "fx2:room_size")).toBe("0.65");
+    expect(h.rec.text()).toMatch(/0\.65/);
+    globalThis.shadow_set_param(0, "fx2:module", "");
+    ui.schwungSoundPage = null;
+    h.step(1);
+  });
+
   test("Sound page resolves a non-default Schwung channel to the matching slot", () => {
     const ui = h.ui();
     const oldChannel = ui.trackChannel[4];
@@ -494,8 +546,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     ui.activeTrack = 0;
     try {
       openEditSoundFromGlobalMenu();
-      expect(h.rec.text()).toMatch(/CO-RUN/);
-      expect(h.rec.text()).toMatch(/UNAVAILABLE/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/CO-RUN/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/UNAVAILABLE/);
       expect(ui.pendingEditSoundEntry).toBeNull();
       h.step(30);
       expect(ui.moveCoRunTrack).toBe(-1);
@@ -512,8 +564,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.set("t0_channel", 5);
     try {
       openEditSoundFromGlobalMenu();
-      expect(h.rec.text()).toMatch(/MOVE CH>4/);
-      expect(h.rec.text()).toMatch(/Ch5/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/MOVE CH>4/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/Ch5/);
       expect(ui.pendingEditSoundEntry).toBeTruthy();
 
       h.step(36);

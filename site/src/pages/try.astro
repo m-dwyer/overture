@@ -1,0 +1,45 @@
+---
+import "../styles/global.css";
+
+const pageTitle = "Try Overture | Browser Emulator";
+const pageDescription = "Play the Overture browser emulator with the real Move-style UI and Schwung-chain audio.";
+const baseUrl = import.meta.env.BASE_URL;
+const emulatorParams = new URLSearchParams({ track: "5", view: "note" });
+if (Astro.url.searchParams.has("diag")) emulatorParams.set("diag", "1");
+const emulatorSearch = `?${emulatorParams.toString()}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={pageDescription} />
+    <link rel="icon" href={`${baseUrl}favicon.svg`} />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <header class="site-header" aria-label="Primary navigation">
+      <a class="brand" href={baseUrl} aria-label="Overture home">
+        <span class="brand-mark" aria-hidden="true">O</span>
+        <span>Overture</span>
+      </a>
+      <a class="github-link" href="https://github.com/m-dwyer/overture">GitHub</a>
+    </header>
+    <main class="try-main">
+      <section class="try-hero">
+        <div>
+          <p class="eyebrow">Browser emulator</p>
+          <h1>Try Overture</h1>
+          <p class="lede">The Move panel, OLED, pads, sequencer WASM, and Schwung module chain run directly in your browser.</p>
+        </div>
+      </section>
+      <iframe
+        class="emulator-frame"
+        src={`${baseUrl}emulator/${emulatorSearch}`}
+        title="Overture browser emulator"
+        allow="autoplay; midi"
+      ></iframe>
+    </main>
+  </body>
+</html>

@@ -14,7 +14,7 @@
 
 import {
     createValue, createEnum, createToggle, createAction, createDivider
-} from '/data/UserData/schwung/shared/menu_items.mjs';
+} from '../shared/menu_items.mjs';
 import {
     NOTE_KEYS, SCALE_NAMES, PAD_MODE_DRUM, NUM_CLIPS,
     fmtRoute, fmtNA, fmtVelOverride

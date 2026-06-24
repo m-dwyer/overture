@@ -3,11 +3,26 @@ name: Deploy site to GitHub Pages
 on:
   push:
     branches: ["main"]
+    paths:
+      - ".github/workflows/pages.yml"
+      - "site/**"
+      - "web/**"
+      - "overture-ui/**"
+      - "mise.toml"
   pull_request:
     paths:
       - ".github/workflows/pages.yml"
       - "site/**"
+      - "web/**"
+      - "overture-ui/**"
+      - "mise.toml"
   workflow_dispatch:
+    inputs:
+      deploy_to_pages:
+        description: "Deploy this run to the live GitHub Pages site"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -22,24 +37,58 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Checkout Moveforge
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/moveforge
+          path: moveforge
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          package_json_file: site/package.json
+          version: 10.33.2
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          cache-dependency-path: site/pnpm-lock.yaml
+          cache-dependency-path: |
+            site/pnpm-lock.yaml
+            web/pnpm-lock.yaml
+            overture-ui/pnpm-lock.yaml
+            moveforge/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install site dependencies
         run: pnpm install --frozen-lockfile
         working-directory: site
 
-      - name: Build
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Install Moveforge dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: moveforge
+
+      - name: Build Moveforge WASM modules
+        run: ./scripts/build-wasm.sh
+        working-directory: moveforge
+
+      - name: Build Overture seq8 WASM
+        run: ./scripts/build-wasm.sh
+        working-directory: overture-ui
+
+      - name: Build emulator
+        run: pnpm build
+        working-directory: web
+        env:
+          MOVEFORGE_ROOT: ${{ github.workspace }}/moveforge
+
+      - name: Build site
         run: pnpm build
         working-directory: site
         env:
@@ -47,13 +96,20 @@ jobs:
           GITHUB_PAGES: "true"
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: |
+          github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+          github.event_name == 'workflow_dispatch' && inputs.deploy_to_pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' && inputs.deploy_to_pages
+    concurrency:
+      group: pages-live
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write

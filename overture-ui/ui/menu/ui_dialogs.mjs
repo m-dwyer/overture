@@ -2,8 +2,8 @@ import { S } from '../core/ui_state.mjs';
 import { MCUFONT } from '../core/ui_constants.mjs';
 import {
     drawMenuHeader, drawMenuList, menuLayoutDefaults
-} from '/data/UserData/schwung/shared/menu_layout.mjs';
-import { formatItemValue } from '/data/UserData/schwung/shared/menu_items.mjs';
+} from '../shared/menu_layout.mjs';
+import { formatItemValue } from '../shared/menu_items.mjs';
 import { SNAPSHOT_CAP } from '../persist/ui_persistence.mjs';
 import { routeCheckSlots, routeCheckViewModel } from '../core/ui_route_check.mjs';
 

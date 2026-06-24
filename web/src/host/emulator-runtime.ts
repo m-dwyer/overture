@@ -6,6 +6,7 @@ import { createMockDsp } from "../mock-dsp";
 import { createWasmDsp } from "../wasm-dsp";
 import type { Dsp } from "../dsp";
 import type { Emulator } from "./emulator";
+import type { BrowserSchwungHost } from "@/schwung/browser-chain";
 
 const TICK_HZ = 94;
 const BLOCK_MS = (1000 * 128) / 44100; // one audio block of real time (~2.9 ms)
@@ -15,10 +16,13 @@ const BLOCKS_PER_TICK = Math.round(1000 / TICK_HZ / BLOCK_MS);
 
 /** Behavior tier: the real seq8-wasm engine, or the JS mock when `?mock` is set or
  *  wasm fails to load. */
-export async function pickDsp(log: (msg: string) => void): Promise<Dsp> {
+export async function pickDsp(log: (msg: string) => void, schwung?: BrowserSchwungHost): Promise<Dsp> {
   if (new URLSearchParams(location.search).has("mock")) return createMockDsp();
   try {
-    const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => log(`dsp→midi [${tag}] ${b0} ${b1} ${b2} ${b3}`));
+    const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => {
+      schwung?.routeDspMidi(tag, b0, b1, b2, b3);
+      log(`dsp→midi [${tag}] ${b0} ${b1} ${b2} ${b3}`);
+    });
     log("dsp: seq8-wasm (behavior tier)");
     return dsp;
   } catch (e) {

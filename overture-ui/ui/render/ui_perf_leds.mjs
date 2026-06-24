@@ -10,7 +10,7 @@ import {
     DeepMagenta,
     PurpleBlue,
     White
-} from '/data/UserData/schwung/shared/constants.mjs';
+} from '../shared/constants.mjs';
 
 import {
     LED_OFF,

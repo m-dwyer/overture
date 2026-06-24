@@ -73,7 +73,10 @@ const statusItems = [
         <span class="brand-mark" aria-hidden="true">O</span>
         <span>Overture</span>
       </a>
-      <a class="github-link" href="https://github.com/m-dwyer/overture">GitHub</a>
+      <nav class="header-links" aria-label="Links">
+        <a class="github-link" href={`${baseUrl}try/`}>Try</a>
+        <a class="github-link" href="https://github.com/m-dwyer/overture">GitHub</a>
+      </nav>
     </header>
 
     <main>
@@ -94,6 +97,7 @@ const statusItems = [
           <p class="lede">
             A minimal hybrid groovebox: four Ableton tracks, four Schwung tracks, one focused performance instrument.
           </p>
+          <a class="primary-link" href={`${baseUrl}try/`}>Try it out</a>
         </div>
       </section>
 

@@ -14,8 +14,8 @@ import { trackClipHasContent } from '../core/ui_scene.mjs';
 import { visibleParamList } from '../sound/ui_sound_page_model.mjs';
 import {
     White, Red, Green, Blue, DarkBlue, LightGrey, DarkGrey, Cyan, PurpleBlue, VividYellow
-} from '/data/UserData/schwung/shared/constants.mjs';
-import { setLED, setButtonLED } from '/data/UserData/schwung/shared/input_filter.mjs';
+} from '../shared/constants.mjs';
+import { setLED, setButtonLED } from '../shared/input_filter.mjs';
 
 const lastSentNoteLED   = new Array(128).fill(-1);
 const lastSentButtonLED = new Array(128).fill(-1);

@@ -8,7 +8,7 @@
 import {
     Red, Blue, Green, DarkBlue, Mustard, DeepGreen,
     BrightGreen, BrightPink, RoyalBlue, DarkOlive, DeepWine
-} from '/data/UserData/schwung/shared/constants.mjs';
+} from '../shared/constants.mjs';
 
 export const OVERTURE_HOME = '/data/UserData/overture';
 
