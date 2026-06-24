@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { BrowserSchwungChain, normalizeHostModuleList } from "../../src/schwung/browser-chain.js";
+import { createManualSchwungChain } from "../../src/schwung/manual-catalog.js";
 import type { AudioEngineConfig, ChainAudioEngine, ChainSlotSpec, WorkletMessage } from "../../src/schwung/audio-engine.js";
 import type { SchwungCatalog } from "../../src/schwung/module-metadata.js";
 
@@ -36,6 +37,16 @@ class FakeEngine implements ChainAudioEngine {
 }
 
 describe("BrowserSchwungChain", () => {
+  test("manual profile gives documentation figures a stable Aurora sound world", async () => {
+    const chain = await createManualSchwungChain({ audioEngine: null });
+
+    expect(chain.shadowGetParam(0, "synth_module")).toBe("aurora");
+    expect(chain.shadowGetParam(0, "synth:gain")).toBe("0.5");
+    expect(chain.shadowGetParam(0, "synth:preset_name_0")).toBe("Warm Keys");
+    expect(chain.shadowGetParam(0, "fx1_module")).toBe("freeverb");
+    expect(chain.shadowGetParam(0, "fx1:mix")).toBe("0.28");
+  });
+
   test("serves module metadata, params, and presets through host shims", () => {
     const chain = new BrowserSchwungChain(makeCatalog(), { audioEngine: null });
 

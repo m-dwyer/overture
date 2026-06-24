@@ -61,7 +61,7 @@ export const ARIA = {
   volume: "Volume",
   pad: (n: number) => `Pad ${n}`,
   step: (n: number) => `Step ${n}`,
-  track: (n: number) => `Track ${n}`,
+  track: (n: number) => `Track ${n} / Shift Track ${n + 4}`,
   encoder: (n: number) => `Encoder ${n}`,
 } as const;
 
