@@ -1,17 +1,17 @@
 import type { FileStore } from "./sinks.js";
 import manifestJson from "../../fixtures/userdata/overture/sound_presets/manifest.json?raw";
-import brightLeadJson from "../../fixtures/userdata/overture/sound_presets/example-test-synth-bright-lead.json?raw";
-import drivenBassJson from "../../fixtures/userdata/overture/sound_presets/example-test-synth-driven-bass.json?raw";
-import softPadJson from "../../fixtures/userdata/overture/sound_presets/example-test-synth-soft-pad.json?raw";
+import brightLeadJson from "../../fixtures/userdata/overture/sound_presets/example-aurora-bright-lead.json?raw";
+import drivenBassJson from "../../fixtures/userdata/overture/sound_presets/example-aurora-driven-bass.json?raw";
+import softPadJson from "../../fixtures/userdata/overture/sound_presets/example-aurora-soft-pad.json?raw";
 
 const STORAGE_PREFIX = "ovt:";
 const MANIFEST_PATH = "/data/UserData/overture/sound_presets/manifest.json";
 
 const FIXTURES = new Map<string, string>([
   [MANIFEST_PATH, manifestJson],
-  ["/data/UserData/overture/sound_presets/example-test-synth-bright-lead.json", brightLeadJson],
-  ["/data/UserData/overture/sound_presets/example-test-synth-driven-bass.json", drivenBassJson],
-  ["/data/UserData/overture/sound_presets/example-test-synth-soft-pad.json", softPadJson],
+  ["/data/UserData/overture/sound_presets/example-aurora-bright-lead.json", brightLeadJson],
+  ["/data/UserData/overture/sound_presets/example-aurora-driven-bass.json", drivenBassJson],
+  ["/data/UserData/overture/sound_presets/example-aurora-soft-pad.json", softPadJson],
 ]);
 
 function storageKey(path: string): string {

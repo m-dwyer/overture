@@ -86,6 +86,7 @@ export interface Driver {
   stepEditClose(step: number): Promise<void>;
   setStepLength(step: number, detents: number): Promise<void>;
   shiftStep(step: number): Promise<void>;
+  copyJogClick(): Promise<void>;
   // session-view clip ops
   copyClip(src: number, dst: number): Promise<void>;
   cutClip(src: number, dst: number): Promise<void>;

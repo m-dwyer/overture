@@ -1,7 +1,7 @@
 # Schwung Framework — dAVEBOx Limitations & Lessons
 
 Practical lessons learned building dAVEBOx within the Schwung framework. Complements
-CLAUDE.md (which documents what's built); this document explains *why* things are
+AGENTS.md (which documents what's built); this document explains *why* things are
 built the way they are and what to watch for in future work.
 
 ---

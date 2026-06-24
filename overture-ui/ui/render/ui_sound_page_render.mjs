@@ -6,7 +6,7 @@ import {
     selectedParamList,
     truncText,
     visibleParamList
-} from '../core/ui_sound_edit_model.mjs';
+} from '../sound/ui_sound_page_model.mjs';
 import {
     compactLayoutLabel,
     compactLayoutValue,
@@ -228,11 +228,18 @@ export function renderSchwungSoundPage(surface) {
                 surface.print(0, 32, truncText(page.browserMessage, 21), 1);
             return true;
         }
-        const start = Math.max(0, Math.min(page.browserIndex | 0, Math.max(0, page.browserItems.length - 3)));
-        for (let i = 0; i < 3; i++) {
+        const rowCount = 4;
+        const start = Math.max(0, Math.min(page.browserIndex | 0, Math.max(0, page.browserItems.length - rowCount)));
+        for (let i = 0; i < rowCount; i++) {
             const idx = start + i;
             if (idx >= page.browserItems.length) break;
-            surface.print(0, 16 + i * 14, (idx === page.browserIndex ? '>' : ' ') + page.browserItems[idx].name, 1);
+            const item = page.browserItems[idx];
+            const y = 14 + i * 12;
+            if (item && item.divider) {
+                renderSoundBrowserDivider(surface, y);
+                continue;
+            }
+            surface.print(0, y, (idx === page.browserIndex ? '>' : ' ') + item.name, 1);
         }
         return true;
     }
@@ -247,4 +254,12 @@ export function renderSchwungSoundPage(surface) {
     else if (page.browserMessage)
         surface.print(0, 54, truncText(page.browserMessage, 21), 1);
     return true;
+}
+
+function renderSoundBrowserDivider(surface, y) {
+    if (surface.fill_rect) {
+        surface.fill_rect(0, y + 5, 128, 1, 1);
+        return;
+    }
+    surface.print(0, y, '---------------------', 1);
 }

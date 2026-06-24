@@ -241,9 +241,10 @@ describe("input dispatch workflow", () => {
   test("step buttons select Sound page components before Track View step handling", () => {
     const c = calls();
     const S: any = {
-      schwungSoundPage: { paramDetail: true },
+      schwungSoundPage: { paramDetail: true, selectedIndex: 1 },
       schwungCoRunSlot: -1,
       moveCoRunTrack: -1,
+      shiftHeld: false,
       stepOpTick: -1,
     };
 
@@ -256,6 +257,57 @@ describe("input dispatch workflow", () => {
     expect(S.stepOpTick).toBe(-1);
     expect(c.log).toEqual([
       ["selectSoundComponent", 3],
+      ["redraw"],
+    ]);
+  });
+
+  test("shift-step on the selected Sound page component enters Schwung deep edit", () => {
+    const c = calls();
+    const S: any = {
+      schwungSoundPage: { track: 4, slot: 0, selectedIndex: 1, paramDetail: true },
+      schwungCoRunSlot: -1,
+      moveCoRunTrack: -1,
+      shiftHeld: true,
+      stepOpTick: -1,
+    };
+
+    onStepButtonsImpl(S, {
+      selectSchwungSoundComponent: c.fn("selectSoundComponent"),
+      closeSchwungSoundPage: c.fn("closeSoundPage"),
+      enterSchwungCoRun: c.fn("enterSchwung"),
+      forceRedraw: c.fn("redraw"),
+      createTrackViewStepWorkflowDeps: c.fn("trackDeps"),
+    }, 17, 127);
+
+    expect(S.stepOpTick).toBe(-1);
+    expect(c.log).toEqual([
+      ["closeSoundPage"],
+      ["enterSchwung", 4, 0],
+      ["redraw"],
+    ]);
+  });
+
+  test("shift-step on a different Sound page component still selects it", () => {
+    const c = calls();
+    const S: any = {
+      schwungSoundPage: { track: 4, slot: 0, selectedIndex: 1, paramDetail: true },
+      schwungCoRunSlot: -1,
+      moveCoRunTrack: -1,
+      shiftHeld: true,
+      stepOpTick: -1,
+    };
+
+    onStepButtonsImpl(S, {
+      selectSchwungSoundComponent: c.fn("selectSoundComponent"),
+      closeSchwungSoundPage: c.fn("closeSoundPage"),
+      enterSchwungCoRun: c.fn("enterSchwung"),
+      forceRedraw: c.fn("redraw"),
+      createTrackViewStepWorkflowDeps: c.fn("trackDeps"),
+    }, 18, 127);
+
+    expect(S.stepOpTick).toBe(-1);
+    expect(c.log).toEqual([
+      ["selectSoundComponent", 2],
       ["redraw"],
     ]);
   });

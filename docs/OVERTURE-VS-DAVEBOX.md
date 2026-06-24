@@ -6,10 +6,12 @@ players already have muscle memory.** If a control isn't mentioned here, it work
 exactly like dAVEBOx.
 
 This page is the friendly overview — "I know dAVEBOx (or Move), what's different?".
-For the precise, per-change delta spec see [`MANUAL.md`](MANUAL.md). To learn the whole
-instrument Overture-natively, read the self-contained, screenshot-driven
-[`generated/overture-reference.md`](generated/overture-reference.md)
-(`pnpm -C web reference:generate`). The upstream dAVEBOx control inventory is vendored as a
+For the precise, per-change delta spec see
+[`OVERTURE-DAVEBOX-DIFFERENCES.md`](OVERTURE-DAVEBOX-DIFFERENCES.md). To learn the whole
+instrument Overture-natively, read [`MANUAL.md`](MANUAL.md), or generate the
+self-contained, screenshot-driven reference with `pnpm -C web reference:generate`
+and open `docs/generated/overture-reference.html`.
+The upstream dAVEBOx control inventory is vendored as a
 diff baseline at [`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md).
 
 ## At a glance
@@ -58,4 +60,6 @@ inconsistent `>>` hints and is display-only.
 ## Future changes
 
 Future divergences should be tracked as fresh issues or design notes. Once behaviour
-ships, it belongs in [`MANUAL.md`](MANUAL.md) and the generated reference.
+ships, it belongs in [`MANUAL.md`](MANUAL.md), the generated reference, and when it
+changes upstream dAVEBOx behavior,
+[`OVERTURE-DAVEBOX-DIFFERENCES.md`](OVERTURE-DAVEBOX-DIFFERENCES.md).

@@ -1,9 +1,13 @@
-import { OVERTURE_HOME } from './ui_constants.mjs';
-import { dlog } from './ui_debug_log.mjs';
+import { OVERTURE_HOME } from '../core/ui_constants.mjs';
+import { dlog } from '../core/ui_debug_log.mjs';
 import {
-    clampComponentIndex,
     selectedParamList
-} from './ui_sound_edit_model.mjs';
+} from './ui_sound_page_model.mjs';
+import {
+    presetScope,
+    selectedComponent,
+    selectedModule
+} from './ui_sound_preset_scope.mjs';
 
 const SOUND_PRESET_DIR = OVERTURE_HOME + '/sound_presets';
 const SOUND_PRESET_MANIFEST = SOUND_PRESET_DIR + '/manifest.json';
@@ -44,26 +48,6 @@ function sanitizeFilePart(value) {
     return value || 'preset';
 }
 
-function componentPrefix(component) {
-    if (!component || !component.param) return '';
-    return component.param.replace(':module', '');
-}
-
-function selectedModule(page) {
-    const idx = clampComponentIndex(page && page.selectedIndex);
-    return page && page.modules ? page.modules[idx] : null;
-}
-
-function selectedComponent(components, page) {
-    return components[clampComponentIndex(page && page.selectedIndex)];
-}
-
-function presetScope(component, module) {
-    const prefix = componentPrefix(component);
-    if (!prefix || !module || !module.id) return null;
-    return { prefix, moduleId: String(module.id), scope: prefix + '/' + String(module.id) };
-}
-
 function uniquePresetId(scope, name, ts) {
     return sanitizeFilePart(scope.replace('/', '_')) + '-' + sanitizeFilePart(name) + '-' + String(ts || nowMs());
 }
@@ -89,7 +73,7 @@ function captureParams(slot, params) {
 }
 
 export function suggestedSchwungSoundPresetName(components, page) {
-    const base = defaultPresetName(selectedModule(page));
+    const base = defaultPresetName();
     const presets = listSchwungSoundPresets(components, page);
     for (let i = 1; i < 1000; i++) {
         const candidate = base + ' ' + i;

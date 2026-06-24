@@ -224,7 +224,7 @@ export const scenes: Scene[] = [
     shots: [
       {
         file: "09c-schwung-sound.png",
-        expect: { activeTrack: 4, oledIncludes: ["SYNTH", "linein"] },
+        expect: { activeTrack: 4, oledIncludes: ["SYNTH", "aurora"] },
         title: "Open Sound on a Schwung track",
         action: "Select track 5, then hold Shift + tap Step 3",
         showing: "Schwung Sound page: module params are mapped to K1-K8",

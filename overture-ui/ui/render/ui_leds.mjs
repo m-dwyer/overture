@@ -11,7 +11,7 @@ import {
     CC_GRADIENT_BASE, CC_GRADIENT_LEVELS, CC_SCRATCH_PALETTE_BASE
 } from '../core/ui_constants.mjs';
 import { trackClipHasContent } from '../core/ui_scene.mjs';
-import { visibleParamList } from '../core/ui_sound_edit_model.mjs';
+import { visibleParamList } from '../sound/ui_sound_page_model.mjs';
 import {
     White, Red, Green, Blue, DarkBlue, LightGrey, DarkGrey, Cyan, PurpleBlue, VividYellow
 } from '/data/UserData/schwung/shared/constants.mjs';

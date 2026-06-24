@@ -15,7 +15,11 @@ const FOLDER = {
     // core — foundational shared state, constants, routing tables, helpers
     'ui_state.mjs': 'core', 'ui_constants.mjs': 'core', 'ui_routes.mjs': 'core',
     'ui_route_check.mjs': 'core', 'ui_scene.mjs': 'core', 'ui_motion.mjs': 'core',
-    'ui_sound_edit.mjs': 'core', 'ui_note_edit_helpers.mjs': 'core',
+    'ui_note_edit_helpers.mjs': 'core',
+    // sound — Sound Page workflow, model, and preset adapters
+    'ui_sound_page.mjs': 'sound', 'ui_sound_page_model.mjs': 'sound',
+    'ui_sound_preset_repository.mjs': 'sound', 'ui_sound_preset_scope.mjs': 'sound',
+    'ui_schwung_factory_preset_adapter.mjs': 'sound',
     // render — anything whose job is drawing the OLED / LEDs
     'ui_render_surface.mjs': 'render', 'ui_leds.mjs': 'render', 'ui_perf_leds.mjs': 'render',
     'ui_led_init_workflow.mjs': 'render',

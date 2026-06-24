@@ -2,34 +2,34 @@
   "v": 1,
   "presets": [
     {
-      "id": "example-test-synth-bright-lead",
+      "id": "example-aurora-bright-lead",
       "name": "Bright Lead",
       "ts": 3,
-      "scope": "synth/test-synth",
+      "scope": "synth/aurora",
       "componentPrefix": "synth",
-      "moduleId": "test-synth",
-      "moduleName": "Test Synth",
-      "file": "/data/UserData/overture/sound_presets/example-test-synth-bright-lead.json"
+      "moduleId": "aurora",
+      "moduleName": "Aurora",
+      "file": "/data/UserData/overture/sound_presets/example-aurora-bright-lead.json"
     },
     {
-      "id": "example-test-synth-soft-pad",
+      "id": "example-aurora-soft-pad",
       "name": "Soft Pad",
       "ts": 2,
-      "scope": "synth/test-synth",
+      "scope": "synth/aurora",
       "componentPrefix": "synth",
-      "moduleId": "test-synth",
-      "moduleName": "Test Synth",
-      "file": "/data/UserData/overture/sound_presets/example-test-synth-soft-pad.json"
+      "moduleId": "aurora",
+      "moduleName": "Aurora",
+      "file": "/data/UserData/overture/sound_presets/example-aurora-soft-pad.json"
     },
     {
-      "id": "example-test-synth-driven-bass",
+      "id": "example-aurora-driven-bass",
       "name": "Driven Bass",
       "ts": 1,
-      "scope": "synth/test-synth",
+      "scope": "synth/aurora",
       "componentPrefix": "synth",
-      "moduleId": "test-synth",
-      "moduleName": "Test Synth",
-      "file": "/data/UserData/overture/sound_presets/example-test-synth-driven-bass.json"
+      "moduleId": "aurora",
+      "moduleName": "Aurora",
+      "file": "/data/UserData/overture/sound_presets/example-aurora-driven-bass.json"
     }
   ]
 }

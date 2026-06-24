@@ -3,7 +3,8 @@
   Source: legsmechanical/schwung-davebox MANUAL.md @ 9fe1bcb (2026-06-05).
   This is the upstream dAVEBOx manual, kept verbatim as the fork baseline and the
   diff target for ../OVERTURE-VS-DAVEBOX.md. Overture's own divergences are
-  documented in ../MANUAL.md and the generated ../generated/overture-reference.md.
+  documented in ../OVERTURE-DAVEBOX-DIFFERENCES.md and the locally generated
+  reference manual.
   Refresh with: cp ../../../schwung-davebox/MANUAL.md ./DAVEBOX-MANUAL.md (then re-add this header).
 -->
 

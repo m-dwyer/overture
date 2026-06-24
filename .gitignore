@@ -7,6 +7,8 @@ dist/
 # Local developer env (MOVE_HOST etc.)
 .env
 
-# Generated manual guides (open locally; the committed .md is the source of truth).
-# See README → Docs for how to generate and open them.
-docs/generated/*.html
+# Generated manual guides/screenshots (local build artifacts).
+# See README -> Docs for how to generate and open them.
+docs/generated/**
+!docs/generated/
+!docs/generated/.gitkeep

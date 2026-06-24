@@ -44,22 +44,28 @@ Implemented and device-verified:
 - String, filepath, and canvas params are visible but intentionally read-only in Overture.
 - Parameter touch/turn feedback uses an Overture-owned focused param-peek view instead of debug CC/key diagnostics.
 - Helm was tested on device with curated params and encoder editing.
-- `Deep Edit` preserves access to Schwung's existing chain editor.
+- Module factory presets exposed through `preset_count` / `preset` / `preset_name` can be applied as starting points from Overture's preset browser.
+- Overture user presets remain separate from module factory presets: after applying a factory preset, user tweaks are saved back through Overture's own preset manager.
+- `Deep Edit` preserves best-effort access to Schwung's existing chain editor.
 - `Menu` is the supported Sound page exit. Back/`<` is intentionally unclaimed for this page until there is an input ownership hook.
 - Move-native tracks keep their existing co-run behavior.
 - Schwung remains untouched and pinned to upstream v0.9.18.
 
 Current implementation shape:
 
-- Overture keeps the public Sound workflow facade in `ui/core/ui_sound_edit.mjs`.
-- Module/parameter normalization and edit math live in `ui/core/ui_sound_edit_model.mjs`.
-- OLED rendering lives in `ui/core/ui_sound_edit_render.mjs`.
+- Overture keeps the public Sound workflow facade in `ui/sound/ui_sound_page.mjs`.
+- Module/parameter normalization and edit math live in `ui/sound/ui_sound_page_model.mjs`.
+- Overture user preset save/load lives in `ui/sound/ui_sound_preset_repository.mjs`.
+- Schwung module factory preset discovery/application lives in `ui/sound/ui_schwung_factory_preset_adapter.mjs`.
+- Shared Browser row/selectability semantics live in `ui/components/ui_browser_model.mjs`.
+- OLED rendering lives in `ui/render/ui_sound_page_render.mjs`.
 - Input dispatch continues to call the facade functions, including Sound-page Step 1-4 component selection, so public behavior stays owned by Overture.
 
 Known limitation:
 
 - Physical Back/`<` exits to stock Move from this context. Without a Schwung-side input ownership hook, Overture cannot safely claim it as a Sound page back action.
 - File/string/canvas params need bespoke editors before they should become writable from Overture.
+- Overture does not directly load a module's bespoke `ui.js` or `ui_chain.js`. `Deep Edit` can enter Schwung's chain editor, but reliable native module UI fallback from the Overture co-run context would require a future Schwung-side hook. That hook is intentionally out of scope for this phase.
 - The Sound detail focused peek is functional; broader OLED polish should come from more real-module sweeps rather than speculative layout work.
 - Remaining device sweep targets:
   - one moveforge synth;
@@ -70,6 +76,10 @@ Known limitation:
   - `<component>:module` / `*_module`
   - `<component>:ui_hierarchy`
   - `<component>:chain_params`
+  - optional factory preset convention:
+    - `<component>:preset_count`
+    - `<component>:preset`
+    - `<component>:preset_name`
 
 ## Goals
 
@@ -86,6 +96,7 @@ Known limitation:
 - Reimplementing Schwung's module host in Overture.
 - Changing Schwung shared-memory layouts unless there is no smaller capability hook.
 - Making tracks 5-8 Move-native.
+- Guaranteeing native module UI fallback from Overture without Schwung changes.
 
 ## Product Direction
 
@@ -97,9 +108,11 @@ Overture should own the quick Sound workflow:
 - show loaded module names;
 - browse compatible modules by component type;
 - apply selected module;
-- expose an obvious `Deep Edit` path.
+- apply module factory presets as starting points when the module exposes Schwung's preset convention;
+- save/load Overture user presets as the cohesive groovebox-level preset system;
+- expose an obvious best-effort `Deep Edit` path.
 
-The Sound page should remain a navigation/list UI, not a parameter bank.
+The Sound page is now parameter-first when a selected component exposes visible params. Module browsing, factory preset application, Overture preset save/load, and deep edit remain explicit actions around that main Overture-owned parameter surface.
 
 ### 2. Module Identity Model
 
@@ -137,7 +150,9 @@ Current stage:
 - generic numeric, enum, and bool editing is Overture-owned through active encoder banks;
 - touched/turned params temporarily replace the bank grid with a focused param-peek view showing name, value, range/status, and knob number;
 - string, filepath, and canvas params remain visible/read-only;
-- bespoke module UIs remain in Schwung Deep Edit.
+- module factory presets remain module-owned starting points;
+- Overture user presets are the main save/load path after tweaking;
+- bespoke module UIs remain a best-effort Schwung Deep Edit fallback.
 
 Potential next stages:
 
@@ -160,6 +175,21 @@ Desired future behavior:
 
 This likely requires a minimal Schwung capability hook or input ownership mode. It should be scoped to active overtake tools and should not change Move-native co-run behavior.
 
+### 6. Module UI Fallback
+
+Current safe rule:
+
+- Overture does not import or execute a module's `ui.js` or `ui_chain.js`.
+- `Deep Edit` hands off to Schwung's existing editor path.
+- If Schwung can show the module through `ui_hierarchy`, `chain_params`, preset fallback, or its own normal chain UI, the user can use that path.
+
+Out of scope for this phase:
+
+- adding a Schwung API such as `shadow_open_component_ui(slot, componentKey)`;
+- duplicating Schwung's UI loading, parameter shims, callback capture, and event routing inside Overture.
+
+Reasoning: Schwung has low-level `shadow_load_ui_module(path)` / `host_load_ui_module(path)` helpers, but those only evaluate JS files. They are not a safe high-level "open this loaded component UI" API from Overture's co-run context.
+
 ## Minimal Schwung Hooks To Consider
 
 Only add these if Overture cannot do the job through existing APIs:
@@ -170,6 +200,10 @@ Only add these if Overture cannot do the job through existing APIs:
   - lets a tool claim Back/`<` while active;
   - prevents claimed input from reaching stock Move;
   - still forwards the event to the tool UI.
+- native module UI fallback capability:
+  - lets Overture request best-effort opening of the loaded component's own UI;
+  - keeps Schwung responsible for JS loading, callback isolation, param shims, and event routing;
+  - intentionally not implemented in this phase.
 - optional module metadata hook, if existing params prove too inconsistent:
   - exposes declared params, presets, display categories, and read-only/editor capability flags.
 
@@ -182,11 +216,13 @@ All hooks should be capability-gated from Overture with `typeof hook === "functi
 - How far should Overture go with filepath/string editors before it becomes a second Schwung UI?
 - Should Back/`<` support wait for an upstream Schwung hook, or should Overture continue documenting Menu-only exit?
 - What is the minimum module metadata needed to make browsing feel polished?
+- Should factory preset browsing stay in the same preset browser as Overture user presets, or move behind a secondary action once the preset list grows?
 
 ## Suggested Next Milestones
 
 1. Run the remaining device sweep across one moveforge synth, one upstream Schwung synth, one audio FX, and one MIDI FX.
 2. Broaden module fixture coverage for `ui_hierarchy` and `chain_params` shapes seen in real modules.
-3. Draft a small upstream Schwung issue/PR for input ownership if Back/`<` should become an Overture Sound page action.
+3. Confirm factory preset apply -> tweak -> Overture user preset save on the same device sweep.
 4. Decide whether module enumeration needs `shadow_list_modules_for_component(componentType)` or the current host list path is enough.
-5. Add bespoke editors only for read-only param families that have a clear Overture UX.
+5. Draft a small upstream Schwung issue/PR for input ownership if Back/`<` should become an Overture Sound page action.
+6. Add bespoke editors only for read-only param families that have a clear Overture UX.
