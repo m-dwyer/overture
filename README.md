@@ -18,6 +18,9 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 - `docs/generated/overture-beginner-guide.md` — screenshot-driven beginner guide generated from the browser emulator (`pnpm -C web manual:generate`).
 - `docs/generated/overture-reference.md` — the comprehensive, self-contained reference manual: a screenshot-driven tour of the whole surface, same emulator pipeline (`pnpm -C web reference:generate`).
   - **Accuracy guard:** each figure declares an `expect` (the state/OLED text its caption claims). `pnpm -C web test:e2e` runs `tests/manual-assertions.spec.ts` (ungated) which drives every figure and fails if a behaviour change makes a screenshot or caption wrong — even before anyone regenerates. `pnpm -C web manual:check` regenerates both guides and fails if the committed markdown is stale.
+  - **Read locally:** each generator also emits a standalone, figure-embedded `.html` beside the `.md` (gitignored — a build artifact). Generate and open:
+    - Beginner: `pnpm -C web manual:generate && open docs/generated/overture-beginner-guide.html`
+    - Reference: `pnpm -C web reference:generate && open docs/generated/overture-reference.html`
 - `docs/reference/DAVEBOX-MANUAL.md` — the upstream dAVEBOx manual, vendored verbatim as our diff baseline (not a dependency of the manuals above).
 - `docs/QUICK-START.md` — first-run setup for Move channels, Schwung slots, track selection, clip reveal, and sound editing.
 - `docs/PHILOSOPHY.md` — what Overture is, what it isn't, the principles behind it.
