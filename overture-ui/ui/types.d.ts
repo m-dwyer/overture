@@ -571,6 +571,47 @@ export interface ParameterPageGridModel {
   grid: ParameterPageGridOptions;
 }
 
+/** One editable/readable parameter exposed through a Parameter Page. */
+export interface ParameterPageParam {
+  label: string;
+  value: string;
+  rawValue?: string | number;
+  type?: string;
+  min?: string | number;
+  max?: string | number;
+  rangeMin?: string | number;
+  rangeMax?: string | number;
+}
+
+/** Transient focused feedback for the last touched or turned encoder. */
+export interface FocusedParameter {
+  knob: number;
+  label: string;
+  value?: string | number;
+  displayValue: string;
+  type?: string;
+  min?: string | number;
+  max?: string | number;
+  rangeMin?: string | number;
+  rangeMax?: string | number;
+  status?: "peek" | "edited" | "empty" | "unmapped" | "unavailable" | "readOnly";
+  expireAtMs?: number;
+  expireTick?: number;
+}
+
+/** Shared render contract for Parameter Page surfaces. */
+export interface ParameterPageModel {
+  title: string;
+  context?: string;
+  cells: ParameterPageCellSlot[];
+  pageIndex: number;
+  pageCount: number;
+  touchedParam?: FocusedParameter | null;
+  status?: string;
+  emptyText?: string;
+  grid?: Partial<ParameterPageGridOptions>;
+}
+
 // ===========================================================================
 // Deps — NOT declared here.
 //
