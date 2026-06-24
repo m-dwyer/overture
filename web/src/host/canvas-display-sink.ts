@@ -2,6 +2,7 @@
 // out of App.tsx so the device-pixel render path is a plain, unit-testable module
 // with no React. value 0 = black (BG), nonzero = white (FG) — monochrome Move OLED.
 import type { DisplaySink } from "./sinks";
+import { DEVICE_FONT } from "./device-font";
 
 // Real Move OLED: monochrome white pixels on black.
 const FG = "#f2f2f2";
@@ -9,10 +10,12 @@ const BG = "#000000";
 // The device's `print` font is a 5×7 bitmap on a fixed 6px-wide grid; the tool
 // stacks menu rows only 9px apart (menu_layout LIST_LINE_HEIGHT) and right-aligns
 // values using text_width = chars × 6. Match that so text doesn't overlap and
-// alignment lands correctly. ~8px keeps glyphs inside the 9px line height. The
-// sink multiplies all of these (coords, sizes, font px) by the active OLED scale:
-// every logical device pixel becomes a scale×scale block.
+// alignment lands correctly. The sink multiplies all of these (coords, sizes) by
+// the active OLED scale: every logical device pixel becomes a scale×scale block.
 const CHAR_W = 6;
+// Smooth ("Sharp"/readable) text path only: the device font rendered with the
+// browser's anti-aliased system font, supersampled, for a legible on-screen view.
+// ~8px keeps glyphs inside the 9px line height.
 const FONT_PX = 8;
 const FONT_FAMILY = "ui-monospace, 'SF Mono', Menlo, monospace";
 // Readable default supersamples the 128×64 device buffer 8× (1024×512 backing):
@@ -22,11 +25,17 @@ const FONT_FAMILY = "ui-monospace, 'SF Mono', Menlo, monospace";
 export const OLED_READABLE_SCALE = 8;
 
 /**
- * Build a DisplaySink that draws onto `canvas`. `getScale` is read live on every
- * op so the readable⇄exact toggle takes effect on the next tick without a rebuild;
- * at scale 1 this is byte-for-byte the original 128×64 device path.
+ * Build a DisplaySink that draws onto `canvas`. `getScale` and `getSmooth` are read
+ * live on every op so the readable⇄exact toggle takes effect on the next tick without
+ * a rebuild. Graphics are always crisp integer blocks; only text has two paths —
+ * `getSmooth()` true → the legible anti-aliased "Sharp" view for the browser; false
+ * → true 1-bit device glyphs (deterministic, hardware-faithful) for "Exact" + tests.
  */
-export function createCanvasDisplaySink(canvas: HTMLCanvasElement, getScale: () => number): DisplaySink {
+export function createCanvasDisplaySink(
+  canvas: HTMLCanvasElement,
+  getScale: () => number,
+  getSmooth: () => boolean
+): DisplaySink {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("createCanvasDisplaySink: 2D context unavailable");
 
@@ -72,16 +81,32 @@ export function createCanvasDisplaySink(canvas: HTMLCanvasElement, getScale: () 
     },
     print(x, y, text, color) {
       const s = getScale();
-      ctx.font = `${FONT_PX * s}px ${FONT_FAMILY}`;
-      ctx.textBaseline = "top";
-      ctx.fillStyle = color === 0 ? BG : FG;
-      // Draw on the device's fixed 6px-per-char grid (monospace, no kerning) so
-      // spacing and text_width-based alignment match the firmware font. fillText is
-      // anti-aliased, so readable mode (large backing store) renders smooth glyphs.
       const str = String(text);
+      // Both paths draw on the device's fixed 6px-per-char grid (monospace, no
+      // kerning) so spacing and text_width-based alignment match the firmware font.
       const baseX = (x | 0) * s;
       const baseY = (y | 0) * s;
-      for (let i = 0; i < str.length; i++) ctx.fillText(str[i], baseX + i * CHAR_W * s, baseY);
+      ctx.fillStyle = color === 0 ? BG : FG;
+      if (getSmooth()) {
+        // "Sharp"/readable: anti-aliased system font, supersampled — legible on screen.
+        ctx.font = `${FONT_PX * s}px ${FONT_FAMILY}`;
+        ctx.textBaseline = "top";
+        for (let i = 0; i < str.length; i++) ctx.fillText(str[i], baseX + i * CHAR_W * s, baseY);
+      } else {
+        // "Exact": the literal device 5×7 glyphs as 1-bit s×s blocks. No fillText, no
+        // anti-aliasing → byte-stable and pixel-identical to the hardware OLED.
+        for (let i = 0; i < str.length; i++) {
+          const rows = DEVICE_FONT[str[i]];
+          if (!rows) continue;
+          const cx = baseX + i * CHAR_W * s;
+          for (let row = 0; row < rows.length; row++) {
+            const bits = rows[row];
+            for (let col = 0; col < bits.length; col++) {
+              if (bits[col] === "1") ctx.fillRect(cx + col * s, baseY + row * s, s, s);
+            }
+          }
+        }
+      }
       if (str.trim()) {
         oledFrame.push(str);
         publishOled();

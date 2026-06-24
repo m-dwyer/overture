@@ -33,11 +33,13 @@ export function App() {
     return localStorage.getItem("ovt:oled-readable") !== "0";
   });
   const oledScale = readable ? OLED_READABLE_SCALE : 1;
-  // The display sink (built once in the boot effect) reads scale from this ref, so
-  // toggling repaints at the new density on the next tick without a reboot.
-  const oledModeRef = useRef({ scale: oledScale });
+  // The display sink (built once in the boot effect) reads scale + smooth from this
+  // ref, so toggling repaints at the new density / text path on the next tick without
+  // a reboot. smooth = readable: "Sharp" anti-aliased text vs "Exact" 1-bit glyphs.
+  const oledModeRef = useRef({ scale: oledScale, smooth: readable });
   useLayoutEffect(() => {
     oledModeRef.current.scale = oledScale;
+    oledModeRef.current.smooth = readable;
     if (!forceExactOled) {
       localStorage.setItem("ovt:oled-readable", readable ? "1" : "0");
     }
@@ -85,7 +87,11 @@ export function App() {
     // Host binding: canvas → display sink (scale read live so the readable⇄exact
     // toggle takes effect on the next tick), recorded LED sink forwarding to the
     // shell once it mounts, and the localStorage-backed file store.
-    const display = createCanvasDisplaySink(canvas, () => oledModeRef.current.scale);
+    const display = createCanvasDisplaySink(
+      canvas,
+      () => oledModeRef.current.scale,
+      () => oledModeRef.current.smooth
+    );
     const leds: LedSink = createShellLedSink({
       ledsMap,
       buttonLedsMap,

@@ -214,28 +214,27 @@ test("drum parameter page sweep", async ({ page }) => {
 const oledWidth = (page: Page) => page.locator("#oled").evaluate((el) => (el as HTMLCanvasElement).width);
 
 test("oled readable default + exact toggle persists", async ({ page }) => {
+  // This only exercises the readable⇄exact width preference (localStorage + ?exact),
+  // which React applies to the canvas on mount — independent of the emulator engine.
+  // So poll the canvas width directly (locator.evaluate auto-waits for #oled) rather
+  // than waiting for a full emulator boot on every navigation.
   await page.goto("/");
-  await waitReady(page);
-  expect(await oledWidth(page)).toBe(1024); // readable default (128 × 8)
+  await expect.poll(() => oledWidth(page)).toBe(1024); // readable default (128 × 8)
 
   await page.getByRole("button", { name: /OLED:/ }).click();
   await expect.poll(() => oledWidth(page)).toBe(128); // exact (1:1 device pixels)
 
   await page.reload(); // persisted via localStorage
-  await waitReady(page);
-  expect(await oledWidth(page)).toBe(128);
+  await expect.poll(() => oledWidth(page)).toBe(128);
 
   // ?exact always forces exact regardless of the stored preference.
   await page.goto("/?exact");
-  await waitReady(page);
-  expect(await oledWidth(page)).toBe(128);
+  await expect.poll(() => oledWidth(page)).toBe(128);
 
   // Forced exact mode is a test/display override, not a preference write.
   await page.evaluate(() => localStorage.setItem("ovt:oled-readable", "1"));
   await page.goto("/?exact");
-  await waitReady(page);
-  expect(await oledWidth(page)).toBe(128);
+  await expect.poll(() => oledWidth(page)).toBe(128);
   await page.goto("/");
-  await waitReady(page);
-  expect(await oledWidth(page)).toBe(1024);
+  await expect.poll(() => oledWidth(page)).toBe(1024);
 });
