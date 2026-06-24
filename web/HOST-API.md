@@ -48,7 +48,7 @@ Call counts are from a static scan of `ui/*` (rough frequency → priority):
 - `shadow_corun_end()`
 - `shadow_corun_state() -> { target, id, keep_mask } | null`
 
-## Gotchas to replicate (they shape UX; see tool CLAUDE.md)
+## Gotchas to replicate (they shape UX; see root AGENTS.md)
 - **Coalescing:** only the LAST `set_param` per audio buffer reaches DSP; `shadow_send_midi_to_dsp`
   shares that channel. In `onMidiMessage`, if both fire, the set_param is lost.
 - **`host_module_get_param` from `onMidiMessage` returns null** — only valid in tick/render.

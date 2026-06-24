@@ -221,7 +221,7 @@ Expected: scp transfers complete, no errors.
 
 - [ ] **Step 3: Reboot Move**
 
-Run the restart command from root CLAUDE.md (single line):
+Run the restart command from root AGENTS.md (single line):
 ```sh
 ssh root@move.local "for name in MoveOriginal Move MoveLauncher MoveMessageDisplay shadow_ui schwung link-subscriber display-server schwung-manager; do pids=\$(pidof \$name 2>/dev/null || true); [ -n \"\$pids\" ] && kill -9 \$pids 2>/dev/null || true; done && /etc/init.d/move start >/dev/null 2>&1"
 ```

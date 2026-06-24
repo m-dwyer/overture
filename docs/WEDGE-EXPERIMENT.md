@@ -13,7 +13,7 @@ engine-param sequencing from Overture is worth building *given Move already does
 - **D-Bus → no mixer/volume set method** (only a read-only ScreenReader "Track Volume" announcement).
 - **Verdict:** per-track volume on Move's engine tracks has no clean injection/IPC route. Only
   in-Overture option = scale in schwung's audio composite (`chain_slots[t].volume`, Link-Audio rebuild),
-  a future build (schwung's mix gain, not Move's fader). Matches `overture-ui/MANUAL.md:976`. **Deprioritized.**
+  a future build (schwung's mix gain, not Move's fader). Matches `docs/MANUAL.md`. **Deprioritized.**
 - **Tooling:** experiments now use the pure-JS **`inject-probe`** (`overture/docs/INJECT-PROBE.md`) —
   no DSP/docker. The DSP `engine-probe` below is kept for history.
 - Side-finding: holding a *step* + injected CC79 edits that step's **velocity** (possible #3B path).

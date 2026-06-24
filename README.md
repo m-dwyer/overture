@@ -25,9 +25,10 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
     - Reference: `pnpm -C web reference:generate && open docs/generated/overture-reference.html`
 - `docs/reference/DAVEBOX-MANUAL.md` — the upstream dAVEBOx manual, vendored verbatim as our diff baseline (not a dependency of the manuals above).
 - `docs/QUICK-START.md` — first-run setup for the hybrid route model, Schwung slots, track selection, clip reveal, and sound editing.
+- `docs/MANUAL.md` — the full Overture tool manual.
+- `docs/OVERTURE-DAVEBOX-DIFFERENCES.md` — the precise per-change delta from upstream dAVEBOx.
 - `docs/PHILOSOPHY.md` — what Overture is, what it isn't, the principles behind it.
 - `docs/ARCHITECTURE.md` — the runtime stack, the monorepo + fork strategy, moveforge, how to modify it.
-- `docs/MANUAL.md` — the Overture manual: what diverges from dAVEBOx, per shipped change.
 - `docs/EMULATOR.md` — the browser UX-dev harness (real UI + mocked host/hardware); the first build target.
 - `docs/ABLETON-ENGINE-ACCESS.md` — the empirical findings on what's reachable in Move's real engines (the foundation).
 

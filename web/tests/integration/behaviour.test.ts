@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeAll } from "vitest";
 import { createHarness, type Harness } from "./harness.js";
 
-// Behavioural spec derived from overture-ui/MANUAL.md §15 Cheat Sheet — the tool manual,
+// Behavioural spec derived from docs/MANUAL.md §15 Cheat Sheet — the tool manual,
 // NOT the Move manual. Each test pins a documented behaviour by asserting ENGINE
 // TRUTH (get_param) or emitted MIDI, never how the OLED is drawn. These exist so
 // that when Overture changes a documented behaviour, we update the

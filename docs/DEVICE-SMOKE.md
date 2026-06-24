@@ -12,7 +12,7 @@ hardware I/O (LED/OLED/palette/MIDI), or the export packager. Pure host-side JS
 logic with green `mise run utest && mise run itest` does **not** need this.
 
 **Deploy reminder.** JS changes need a full reboot, not just Back/Shift+Back
-(`init()` re-runs in the same runtime). See `overture-ui/CLAUDE.md` →
+(`init()` re-runs in the same runtime). See `AGENTS.md` →
 Session workflow. Check `seq8-pad-drop.log` and `seq8-jserr.log` first thing.
 
 ---
@@ -42,7 +42,7 @@ Run top-to-bottom; each step leaves the device in a good state for the next.
 ### 2. Real audio (the class of bug headless tests miss)
 - [ ] **Metronome.** Global menu (Shift+Menu) → Metro = Play, start transport → **you hear the click.** → *Audible, on-beat. (A wrong on-device path compiles + passes all headless tests but is silent.)*
 - [ ] **Voice release.** Play a melodic clip, stop → **notes release** (no stuck/ringing voices). → *`pfx_send` voice-off actually reaches the synth.*
-- [ ] **External MIDI / ROUTE_MOVE.** If using a track routed to Move with external in: confirm **no echo cascade / crash** (cable-2 re-injection). → *ROUTE_SCHWUNG vs ROUTE_MOVE behaves per `overture-ui/CLAUDE.md`.*
+- [ ] **External MIDI / ROUTE_MOVE.** If using a track routed to Move with external in: confirm **no echo cascade / crash** (cable-2 re-injection). → *ROUTE_SCHWUNG vs ROUTE_MOVE behaves per `AGENTS.md`.*
 
 ### 3. Hardware I/O
 - [ ] **Pads & encoders.** Play pads (notes 68–99), turn the 8 knobs, jog wheel, step buttons → **real MIDI reaches the engine** and the UI responds at the ~94 Hz tick. → *No dropped input, no lag spikes (RT scheduling).*
@@ -62,7 +62,7 @@ Run top-to-bottom; each step leaves the device in a good state for the next.
 
 ### 7. Schwung host integration
 - [ ] **Co-run.** Enter Move/Schwung co-run, edit a sound, exit → **clean handoff** (OLED returns to Overture, no desync). → *SHM/`shadow_corun_*` are stubbed headless.*
-- [ ] **New global set_param keys.** If this change added any *new* global (non-`tN_`) set_param key: confirm it reaches DSP with a one-line `seq8_ilog` — the host **silently drops** new global keys (see `overture-ui/CLAUDE.md` → Critical constraints).
+- [ ] **New global set_param keys.** If this change added any *new* global (non-`tN_`) set_param key: confirm it reaches DSP with a one-line `seq8_ilog` — the host **silently drops** new global keys (see `AGENTS.md` → Critical constraints).
 
 ### 8. QuickJS
 - [ ] The bundle parse gate (`bundle_ui.sh`) passed at build, but **exercise any new/changed JS path once on device** — QuickJS runtime behavior (not syntax) can still diverge from V8.

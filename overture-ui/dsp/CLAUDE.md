@@ -1,6 +1,6 @@
 # dAVEBOx DSP
 
-Read this when starting DSP work. Covers details not in root CLAUDE.md.
+Read this when starting DSP work. Covers details not in root AGENTS.md.
 
 ## Files
 
