@@ -33,6 +33,7 @@ run = "pnpm -C site dev"
 
 [tasks.site-build]
 description = "Production build of the public Astro site"
+depends = ["emulator-dist"]
 run = "pnpm -C site build"
 
 [tasks.typecheck]

@@ -8,7 +8,7 @@ import {
     MoveDown,
     MoveMute,
     MoveDelete
-} from '/data/UserData/schwung/shared/constants.mjs';
+} from '../shared/constants.mjs';
 
 import {
     MoveNoteSession,

@@ -99,7 +99,7 @@ export interface UiState {
   ccLaneLength: number[][][];
   ccLaneTps: number[][][];
   ccLaneResTps: number[][][];
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 declare global {

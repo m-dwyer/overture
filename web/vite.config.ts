@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, readdir, readFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -111,6 +111,7 @@ function copyMoveforgeAssets(): Plugin {
       outDir = resolve(config.root, config.build.outDir);
     },
     async closeBundle() {
+      const missing: string[] = [];
       const wasmSrc = resolve(MOVEFORGE_ROOT, "web/wasm");
       const wasmOut = join(outDir, "wasm");
       await mkdir(wasmOut, { recursive: true });
@@ -122,16 +123,22 @@ function copyMoveforgeAssets(): Plugin {
           wasmCount++;
         }
       } catch (error) {
-        this.warn(`no Moveforge WASM found under ${wasmSrc}: ${(error as Error).message}`);
+        missing.push(`Moveforge WASM directory ${wasmSrc}: ${(error as Error).message}`);
       }
-      if (wasmCount === 0) this.warn("copied 0 Moveforge .wasm files; Schwung audio will be unavailable");
+      if (wasmCount === 0) missing.push("copied 0 Moveforge .wasm files");
 
       const modulesSrc = resolve(MOVEFORGE_ROOT, "src/modules");
       const modulesOut = join(outDir, "modules");
       await mkdir(modulesOut, { recursive: true });
-      await copyFile(join(modulesSrc, "index.json"), join(modulesOut, "index.json")).catch((error: unknown) => {
-        this.warn(`could not copy Moveforge module index: ${(error as Error).message}`);
-      });
+      let moduleIds: string[] = [];
+      try {
+        const indexBytes = await readFile(join(modulesSrc, "index.json"), "utf8");
+        await copyFile(join(modulesSrc, "index.json"), join(modulesOut, "index.json"));
+        const index = JSON.parse(indexBytes) as { modules?: Array<{ id?: unknown }> };
+        moduleIds = (index.modules ?? []).map((entry) => String(entry.id ?? "")).filter(Boolean);
+      } catch (error) {
+        missing.push(`Moveforge module index ${join(modulesSrc, "index.json")}: ${(error as Error).message}`);
+      }
       try {
         for (const entry of await readdir(modulesSrc, { withFileTypes: true })) {
           if (!entry.isDirectory() || entry.name.startsWith("_")) continue;
@@ -143,7 +150,18 @@ function copyMoveforgeAssets(): Plugin {
           }
         }
       } catch (error) {
-        this.warn(`could not copy Moveforge module metadata: ${(error as Error).message}`);
+        missing.push(`Moveforge module metadata under ${modulesSrc}: ${(error as Error).message}`);
+      }
+      for (const moduleId of moduleIds) {
+        await access(join(modulesOut, moduleId, "module.json")).catch(() => {
+          missing.push(`missing copied module metadata for ${moduleId}`);
+        });
+        await access(join(wasmOut, `${moduleId}.wasm`)).catch(() => {
+          missing.push(`missing copied WASM for ${moduleId}`);
+        });
+      }
+      if (missing.length > 0) {
+        this.error(`Moveforge assets are incomplete. Set MOVEFORGE_ROOT to a checkout with built web WASM.\n- ${missing.join("\n- ")}`);
       }
     },
   };

@@ -9,13 +9,123 @@
  * modules that use them join tsconfig `include`.
  */
 
-// --- Host shared MODULES (imported by on-device absolute path) ---
-// Bodyless ambient declaration: the module resolves as `any`, so any named
-// import (`import { Red } from '/data/UserData/schwung/shared/constants.mjs'`)
-// type-checks as `any`. We only need these imports to RESOLVE for the gate —
-// the real modules are bundled by esbuild on-device and remapped to the schwung
-// checkout by vitest for tests. This keeps `pnpm typecheck` self-contained: no
-// schwung checkout, no tsconfig `paths`/`baseUrl`, runs on any clone.
+// --- Host shared MODULES (facades re-export the on-device absolute path) ---
+declare module '/data/UserData/schwung/shared/constants.mjs' {
+  export const Black: number;
+  export const DarkGrey: number;
+  export const LightGrey: number;
+  export const White: number;
+  export const BrightRed: number;
+  export const DeepRed: number;
+  export const HotMagenta: number;
+  export const BrightPink: number;
+  export const LightMagenta: number;
+  export const DeepViolet: number;
+  export const DarkPurple: number;
+  export const DeepMagenta: number;
+  export const DeepWine: number;
+  export const Bright: number;
+  export const LightYellow: number;
+  export const VividYellow: number;
+  export const BurntOrange: number;
+  export const Mustard: number;
+  export const DeepBrownYellow: number;
+  export const Olive: number;
+  export const DarkOlive: number;
+  export const BrightGreen: number;
+  export const Cyan: number;
+  export const DeepGreen: number;
+  export const OliveGreen: number;
+  export const DarkOliveGreen: number;
+  export const DarkGrassGreen: number;
+  export const DarkTeal: number;
+  export const DeepTeal: number;
+  export const RoyalBlue: number;
+  export const SkyBlue: number;
+  export const LightBlue: number;
+  export const DeepBlue: number;
+  export const DarkBlue: number;
+  export const DeepBlueIndigo: number;
+  export const PurpleBlue: number;
+  export const DarkIndigo: number;
+  export const BlueViolet: number;
+  export const Purple: number;
+  export const DeepPlum: number;
+  export const DarkViolet: number;
+  export const WinePurple: number;
+  export const DarkRose: number;
+  export const Blue: number;
+  export const Green: number;
+  export const Red: number;
+  export const MidiNoteOff: number;
+  export const MidiNoteOn: number;
+  export const MidiPolyAftertouch: number;
+  export const MidiCC: number;
+  export const MidiPC: number;
+  export const MidiChAftertouch: number;
+  export const MidiWheel: number;
+  export const MidiSysexStart: number;
+  export const MidiSysexEnd: number;
+  export const MidiClock: number;
+  export const MidiCCOn: number;
+  export const MidiCCOff: number;
+  export const MoveMainTouch: number;
+  export const MoveMainButton: number;
+  export const MoveMainKnob: number;
+  export const MoveShift: number;
+  export const MoveMenu: number;
+  export const MoveBack: number;
+  export const MoveCapture: number;
+  export const MoveDown: number;
+  export const MoveUp: number;
+  export const MoveUndo: number;
+  export const MoveLoop: number;
+  export const MoveCopy: number;
+  export const MoveLeft: number;
+  export const MoveRight: number;
+  export const MovePlay: number;
+  export const MoveRec: number;
+  export const MoveMute: number;
+  export const MoveRecord: number;
+  export const MoveSample: number;
+  export const MoveDelete: number;
+  export const MovePads: number[];
+  export const MoveSteps: number[];
+  export const MoveCCButtons: number[];
+  export const MoveNoteButtons: number[];
+  export const MoveRGBLeds: number[];
+  export const MoveWhiteLeds: number[];
+}
+declare module '/data/UserData/schwung/shared/input_filter.mjs' {
+  export function isNoiseMessage(data: number[]): boolean;
+  export function setLED(note: number, color: number, force?: boolean): void;
+  export function setButtonLED(cc: number, color: number, force?: boolean): void;
+  export function decodeDelta(value: number): number;
+}
+declare module '/data/UserData/schwung/shared/logger.mjs' {
+  export function installConsoleOverride(moduleName: string): void;
+}
+declare module '/data/UserData/schwung/shared/menu_items.mjs' {
+  export function createInfo(label: string, value: any): any;
+  export function createValue(label: string, options: any): any;
+  export function createEnum(label: string, options: any): any;
+  export function createToggle(label: string, options: any): any;
+  export function createAction(label: string, onAction: Function): any;
+  export function createDivider(label?: string): any;
+  export function formatItemValue(item: any, editing?: boolean, editValue?: any): string;
+}
+declare module '/data/UserData/schwung/shared/menu_nav.mjs' {
+  export function createMenuState(): any;
+  export function handleMenuInput(...args: any[]): any;
+}
+declare module '/data/UserData/schwung/shared/menu_stack.mjs' {
+  export function createMenuStack(): any;
+}
+declare module '/data/UserData/schwung/shared/menu_layout.mjs' {
+  export function drawMenuHeader(title: string, titleRight?: string): void;
+  export function drawMenuList(options: any): void;
+  export const menuLayoutDefaults: any;
+}
 declare module '/data/UserData/schwung/shared/*';
 
 // --- Build-time feature flag (NOT a host global) ---

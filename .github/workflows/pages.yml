@@ -7,11 +7,15 @@ on:
       - ".github/workflows/pages.yml"
       - "site/**"
       - "web/**"
+      - "overture-ui/**"
+      - "mise.toml"
   pull_request:
     paths:
       - ".github/workflows/pages.yml"
       - "site/**"
       - "web/**"
+      - "overture-ui/**"
+      - "mise.toml"
   workflow_dispatch:
 
 permissions:
@@ -27,24 +31,58 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Checkout Moveforge
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/moveforge
+          path: moveforge
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          package_json_file: site/package.json
+          version: 10.33.2
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-          cache-dependency-path: site/pnpm-lock.yaml
+          cache-dependency-path: |
+            site/pnpm-lock.yaml
+            web/pnpm-lock.yaml
+            overture-ui/pnpm-lock.yaml
+            moveforge/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install site dependencies
         run: pnpm install --frozen-lockfile
         working-directory: site
 
-      - name: Build
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Install Moveforge dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: moveforge
+
+      - name: Build Moveforge WASM modules
+        run: ./scripts/build-wasm.sh
+        working-directory: moveforge
+
+      - name: Build Overture seq8 WASM
+        run: ./scripts/build-wasm.sh
+        working-directory: overture-ui
+
+      - name: Build emulator
+        run: pnpm build
+        working-directory: web
+        env:
+          MOVEFORGE_ROOT: ${{ github.workspace }}/moveforge
+
+      - name: Build site
         run: pnpm build
         working-directory: site
         env:

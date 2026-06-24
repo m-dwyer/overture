@@ -344,9 +344,9 @@ function scheduleInitialState(emu: Emulator, trackNumber: number | null, view: "
       !state.stateLoading &&
       !state.pendingSetLoad &&
       !!state.ledInitComplete &&
-      (state.pendingDspSync | 0) === 0;
+      ((state.pendingDspSync ?? 0) | 0) === 0;
     if (!settled && attempts < 40) return;
-    if (state && trackNumber != null && (state.activeTrack | 0) !== trackNumber - 1) {
+    if (state && trackNumber != null && ((state.activeTrack ?? 0) | 0) !== trackNumber - 1) {
       applyInitialTrack(emu, trackNumber, !!state.sessionView);
     }
     const nextState = readOvertureUiState() ?? state;

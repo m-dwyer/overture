@@ -60,7 +60,11 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(ui.globalMenuState).toBeTruthy();
     ui.globalMenuState!.selectedIndex = idx;
     h.step(1);
-    h.press(3);
+    const item = ui.globalMenuItems?.find((entry) => entry?.label === "Edit Sound...") as
+      | { onAction?: () => void }
+      | undefined;
+    expect(item?.onAction).toBeTypeOf("function");
+    item!.onAction!();
     h.step(2);
   }
 
@@ -542,8 +546,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     ui.activeTrack = 0;
     try {
       openEditSoundFromGlobalMenu();
-      expect(h.rec.text()).toMatch(/CO-RUN/);
-      expect(h.rec.text()).toMatch(/UNAVAILABLE/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/CO-RUN/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/UNAVAILABLE/);
       expect(ui.pendingEditSoundEntry).toBeNull();
       h.step(30);
       expect(ui.moveCoRunTrack).toBe(-1);
@@ -560,8 +564,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.set("t0_channel", 5);
     try {
       openEditSoundFromGlobalMenu();
-      expect(h.rec.text()).toMatch(/MOVE CH>4/);
-      expect(h.rec.text()).toMatch(/Ch5/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/MOVE CH>4/);
+      expect(ui.actionPopupLines.join(" ")).toMatch(/Ch5/);
       expect(ui.pendingEditSoundEntry).toBeTruthy();
 
       h.step(36);

@@ -8,7 +8,7 @@ import {
     MoveDown,
     MoveMute,
     MoveDelete
-} from '/data/UserData/schwung/shared/constants.mjs';
+} from './shared/constants.mjs';
 
 import {
     Red,
@@ -32,34 +32,34 @@ import {
     White,
     SkyBlue,
     DeepBlue
-} from '/data/UserData/schwung/shared/constants.mjs';
+} from './shared/constants.mjs';
 
 import {
     setLED,
     setButtonLED,
     isNoiseMessage,
     decodeDelta
-} from '/data/UserData/schwung/shared/input_filter.mjs';
+} from './shared/input_filter.mjs';
 
 import {
     installConsoleOverride
-} from '/data/UserData/schwung/shared/logger.mjs';
+} from './shared/logger.mjs';
 
 import {
     createInfo, createValue, createEnum, createToggle, createAction, createDivider, formatItemValue
-} from '/data/UserData/schwung/shared/menu_items.mjs';
+} from './shared/menu_items.mjs';
 
 import {
     createMenuState, handleMenuInput
-} from '/data/UserData/schwung/shared/menu_nav.mjs';
+} from './shared/menu_nav.mjs';
 
 import {
     createMenuStack
-} from '/data/UserData/schwung/shared/menu_stack.mjs';
+} from './shared/menu_stack.mjs';
 
 import {
     drawMenuHeader, drawMenuList, menuLayoutDefaults
-} from '/data/UserData/schwung/shared/menu_layout.mjs';
+} from './shared/menu_layout.mjs';
 
 import {
     createTextKeyboard
@@ -729,8 +729,8 @@ function reapplyPalette() { move_midi_internal_send(_CC_REAPPLY_PKT); }
 
 function editSoundForTrack(t) {
     const popup = requestEditSoundForTrack(t, {
-        hasCoRun: typeof shadow_corun_begin === 'function',
-        hasMoveInject: typeof move_midi_inject_to_move === 'function'
+        hasCoRun: typeof globalThis.shadow_corun_begin === 'function',
+        hasMoveInject: typeof globalThis.move_midi_inject_to_move === 'function'
     });
     showActionPopup(popup.title, popup.body);
 }

@@ -63,7 +63,7 @@ function copyWebEmulator() {
       try {
         await access(webDist, constants.R_OK);
       } catch {
-        this.warn("web/dist not found; run `pnpm -C ../web build` before building the site to publish /emulator/");
+        this.error("web/dist not found; run `pnpm -C ../web build` before building the site to publish /emulator/");
         return;
       }
       await cp(webDist, resolve(siteDist, "emulator"), { recursive: true });
