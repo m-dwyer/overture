@@ -703,7 +703,7 @@ Most OLED screens already have separate render modules and adjacent tests.
 - `ui/render/ui_step_edit_render.mjs`
 - `ui/render/ui_modal_render.mjs`
 - `ui/render/ui_prompt_render.mjs`
-- `ui/render/ui_sound_edit_render.mjs`
+- `ui/render/ui_sound_page_render.mjs`
 - `tests/render/*`
 
 ### Why It Is A Seam
@@ -1208,7 +1208,7 @@ Sound Page behavior and rendering are split across sound, component, and render 
 - `ui/sound/ui_sound_preset_repository.mjs`
 - `ui/sound/ui_schwung_factory_preset_adapter.mjs`
 - `ui/components/ui_browser_model.mjs`
-- `ui/render/ui_sound_edit_render.mjs`
+- `ui/render/ui_sound_page_render.mjs`
 - `tests/render/sound-leds.test.ts`
 
 ### Why It Is A Seam

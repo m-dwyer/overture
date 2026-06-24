@@ -114,7 +114,7 @@ import {
     touchSchwungSoundVisibleParam,
     toggleSchwungSoundParamDetail
 } from './sound/ui_sound_page.mjs';
-import { renderSchwungSoundPage } from './render/ui_sound_edit_render.mjs';
+import { renderSchwungSoundPage } from './render/ui_sound_page_render.mjs';
 import {
     PARAM_PEEK_DETAIL_TICKS
 } from './core/ui_motion.mjs';
