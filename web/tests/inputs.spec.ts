@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitReady } from "./wait";
 
 // Input-completeness contract: the shell must be able to produce every input the
 // real device emits. Here we assert the capacitive knob-touch notes (0..9) and the
@@ -34,7 +35,7 @@ async function center(page: import("@playwright/test").Page, label: string) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(2500);
+  await waitReady(page);
   await startCapture(page);
 });
 

@@ -19,6 +19,9 @@ import { TooltipProvider } from "./ui/tooltip";
 
 const TICK_HZ = 94;
 const BLOCK_MS = (1000 * 128) / 44100; // one audio block of real time (~2.9 ms)
+// Audio blocks the free-running loop renders per tick at TICK_HZ (~4). Used by the
+// OVT.advanceTicks test hook so a synchronously-driven tick matches a wall-clock one.
+const BLOCKS_PER_TICK = Math.round(1000 / TICK_HZ / BLOCK_MS);
 // Real Move OLED: monochrome white pixels on black.
 const FG = "#f2f2f2";
 const BG = "#000000";
@@ -328,6 +331,18 @@ export function App() {
         buttonLeds: buttonLedsMap,
         midiIn: (s: number, d1: number, d2: number) => emu.sendInternal(s, d1, d2),
         midiExt: (s: number, d1: number, d2: number) => emu.sendExternal(s, d1, d2),
+        // Deterministic test drive: synchronously advance the emulator N main-loop
+        // iterations (mirrors the setInterval body above). Input is already applied
+        // synchronously by midiIn — this flushes the dirty-gated redraw and any
+        // two-tick-deferred display work in-stack, so a test never races the
+        // wall-clock loop (which starves under load). No-op effect at rest; the
+        // background interval keeps running and only ever redraws the same frame.
+        advanceTicks: (n = 1) => {
+          for (let i = 0; i < n; i++) {
+            emu.renderBlocks(BLOCKS_PER_TICK);
+            emu.tick();
+          }
+        },
       };
     })();
 

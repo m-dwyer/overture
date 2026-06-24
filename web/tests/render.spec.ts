@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { advanceTicks, waitReady } from "./wait";
 
 type PageGlobal = typeof globalThis & {
   OVT: {
@@ -20,7 +21,7 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
   page.on("pageerror", (e) => pageErrors.push(e.message));
 
   await page.goto("/");
-  await page.waitForTimeout(2500); // past the splash; let init() + ticks settle
+  await waitReady(page); // boot complete: tool handle up, state loaded, splash done
 
   await page.screenshot({ path: "shot.png" });
   await page.locator("#oled").screenshot({ path: "shot-oled.png" });
@@ -48,7 +49,7 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
   page.on("pageerror", (e) => pageErrors.push(e.message));
 
   await page.goto("/");
-  await page.waitForTimeout(3000); // past the splash, into the main view
+  await waitReady(page); // boot complete, on the resting main view
   await page.locator("#oled").screenshot({ path: "shot-session.png" });
 
   // (a) A DOM shell button delivers the exact device MIDI. Use Step 1 (CC16) —
@@ -70,7 +71,7 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
   await mi(0xb0, 50, 127); // Menu down → openGlobalMenu
   await mi(0xb0, 50, 0);
   await mi(0xb0, 49, 0);   // Shift up
-  await page.waitForTimeout(400);
+  await advanceTicks(page, 4); // flush the menu-open redraw deterministically
   await page.locator("#oled").screenshot({ path: "shot-menu.png" });
 
   const before = await readFile("shot-session.png");
@@ -81,7 +82,7 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
 
 test("keyboard Shift plus number key sends Shift + Step", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(3000);
+  await waitReady(page); // handlers are wired only after boot — was the Array [] flake
 
   await page.evaluate(() => {
     const g = globalThis as PageGlobal;
