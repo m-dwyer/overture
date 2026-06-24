@@ -17,6 +17,12 @@ on:
       - "overture-ui/**"
       - "mise.toml"
   workflow_dispatch:
+    inputs:
+      deploy_to_pages:
+        description: "Deploy this run to the live GitHub Pages site"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -90,13 +96,20 @@ jobs:
           GITHUB_PAGES: "true"
 
       - name: Upload artifact
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: |
+          github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+          github.event_name == 'workflow_dispatch' && inputs.deploy_to_pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
 
   deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' && inputs.deploy_to_pages
+    concurrency:
+      group: pages-live
+      cancel-in-progress: false
     permissions:
       contents: read
       pages: write
