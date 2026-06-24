@@ -1,10 +1,10 @@
-import { S } from './ui_state.mjs';
-import { dlog } from './ui_debug_log.mjs';
+import { S } from '../core/ui_state.mjs';
+import { dlog } from '../core/ui_debug_log.mjs';
 import {
     EDIT_SOUND_PREFLIGHT_TICKS,
     describeEditSoundForTrack,
     schSlotsForTrack
-} from './ui_routes.mjs';
+} from '../core/ui_routes.mjs';
 import {
     SCHWUNG_SOUND_COMPONENTS,
     clampComponentIndex,
@@ -17,7 +17,7 @@ import {
     readSchwungModuleIdentity,
     readSchwungModuleName,
     visibleParamList
-} from './ui_sound_edit_model.mjs';
+} from './ui_sound_page_model.mjs';
 import {
     expireStatusFlash,
     showStatusFlash
@@ -28,18 +28,27 @@ import {
     rotateConfirmPrompt
 } from '../components/ui_confirm_prompt.mjs';
 import {
-    listSchwungModuleFactoryPresets,
+    createBrowserDivider,
+    createBrowserItem,
+    firstSelectableBrowserIndex,
+    isSelectableBrowserItem,
+    nextSelectableBrowserIndex
+} from '../components/ui_browser_model.mjs';
+import {
     listSchwungSoundPresets,
-    loadSchwungModuleFactoryPreset,
     loadSchwungSoundPreset,
     saveSchwungSoundPreset,
     suggestedSchwungSoundPresetName
-} from './ui_sound_preset_manager.mjs';
+} from './ui_sound_preset_repository.mjs';
+import {
+    listSchwungModuleFactoryPresets,
+    loadSchwungModuleFactoryPreset
+} from './ui_schwung_factory_preset_adapter.mjs';
 
 const SOUND_PARAM_PEEK_MS = 1000;
 const SOUND_STATUS_FLASH_TICKS = 90;
-const CREATE_PRESET_ENTRY = { name: 'Create new', createNew: true };
-const MODULE_PRESET_DIVIDER = { divider: true, name: '' };
+const CREATE_PRESET_ENTRY = createBrowserItem('Create new', { createNew: true });
+const MODULE_PRESET_DIVIDER = createBrowserDivider('');
 
 export {
     SCHWUNG_SOUND_COMPONENTS,
@@ -127,31 +136,6 @@ function releaseSoundBrowserPadModalState() {
     S.shiftTrackLEDActive = false;
     S.pendingPadNoteMapRecompute = true;
     soundEditTraceState('release-pad-modal-after', S.schwungSoundPage);
-}
-
-function isSelectableBrowserItem(item) {
-    return !!item && !item.divider;
-}
-
-function firstSelectableBrowserIndex(items) {
-    for (let i = 0; i < items.length; i++) {
-        if (isSelectableBrowserItem(items[i])) return i;
-    }
-    return 0;
-}
-
-function nextSelectableBrowserIndex(items, from, delta) {
-    const n = items ? items.length : 0;
-    if (n <= 0) return 0;
-    const step = delta >= 0 ? 1 : -1;
-    let idx = Math.max(0, Math.min(n - 1, from | 0));
-    for (let guard = 0; guard < n; guard++) {
-        const next = idx + step;
-        if (next < 0 || next >= n) return idx;
-        idx = next;
-        if (isSelectableBrowserItem(items[idx])) return idx;
-    }
-    return idx;
 }
 
 function rememberSchwungSoundPosition(page) {

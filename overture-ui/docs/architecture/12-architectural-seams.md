@@ -1191,27 +1191,29 @@ Very high.
 - Model one ownership rule as a context capability later.
 - Defer broad co-run migration.
 
-## 32. Sound Edit
+## 32. Sound Page
 
 ### Name
 
-Sound Edit Seam
+Sound Page Seam
 
 ### Description
 
-Sound edit behavior and rendering are split across core and render modules.
+Sound Page behavior and rendering are split across sound, component, and render modules.
 
 ### Files Involved
 
-- `ui/core/ui_sound_edit.mjs`
-- `ui/core/ui_sound_edit_model.mjs`
-- `ui/core/ui_sound_preset_manager.mjs`
+- `ui/sound/ui_sound_page.mjs`
+- `ui/sound/ui_sound_page_model.mjs`
+- `ui/sound/ui_sound_preset_repository.mjs`
+- `ui/sound/ui_schwung_factory_preset_adapter.mjs`
+- `ui/components/ui_browser_model.mjs`
 - `ui/render/ui_sound_edit_render.mjs`
 - `tests/render/sound-leds.test.ts`
 
 ### Why It Is A Seam
 
-The model/render split is close to the target architecture. However sound edit also has modal/co-run characteristics and host shadow APIs.
+The model/render split is close to the target architecture. However Sound Page also has modal/co-run characteristics and host shadow APIs.
 
 ### Coupling Level
 

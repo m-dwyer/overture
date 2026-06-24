@@ -17,11 +17,11 @@ import {
   selectSchwungSoundComponent,
   touchSchwungSoundVisibleParam,
   toggleSchwungSoundParamDetail,
-} from "@overture-ui/core/ui_sound_edit.mjs";
+} from "@overture-ui/sound/ui_sound_page.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_edit_render.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
 import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, drumRepeatGrooveParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel, melodicNoteFxParameterPageGridModel, trackBankOverviewRoute } from "@overture-ui/core/ui_parameter_page_model.mjs";
-import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/core/ui_sound_preset_manager.mjs";
+import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/sound/ui_sound_preset_repository.mjs";
 import { fmtArpRate } from "@overture-ui/core/ui_constants.mjs";
 
 describe("UI descriptor seams", () => {

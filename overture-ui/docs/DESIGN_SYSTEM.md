@@ -170,6 +170,14 @@ A Browser should:
 Module, preset, file, and option browsers should share this behavior even when
 their data sources differ.
 
+### Implementation Boundary
+
+Browser row semantics live in `ui/components/ui_browser_model.mjs`. Feature
+modules should provide domain rows and payloads, then rely on the shared Browser
+model for divider rows, selectability, first selectable row, and jog movement.
+Rendering can remain specialized while the OLED grammar is still converging, but
+new feature code should not create one-off divider or selection rules inline.
+
 ## LED Language
 
 LED meaning should be defined once and reused:
@@ -206,9 +214,15 @@ Near-term convergence path:
 1. Treat `ui_oled_layout.mjs` as the start of shared OLED primitives.
 2. Extract a shared `ParamPage` model/render contract from Sound Page behavior.
 3. Migrate one simple existing legacy bank/page to the shared contract.
-4. Move repeated browser, status flash, and focused-param behavior into shared
+4. Keep the Sound Page implementation under `ui/sound/`, with `ui/core/`
+   reserved for shared runtime state, constants, routes, and other cross-feature
+   primitives.
+5. Split domain storage/adapters from page workflow: Overture sound presets live
+   in a repository module, while Schwung module factory presets live behind a
+   Schwung adapter.
+6. Move repeated browser, status flash, and focused-param behavior into shared
    components when the second consumer appears.
-5. Update docs and tests to call user-facing surfaces Pages, while preserving
+7. Update docs and tests to call user-facing surfaces Pages, while preserving
    legacy `bank` identifiers where they name current code or DSP protocol.
 
 First implementation anchor: `renderGenericParameterPageOverview()` now builds a

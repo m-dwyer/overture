@@ -43,6 +43,8 @@ declare function host_hide_module(): void;
 
 // --- MIDI / DSP delivery (also commonly passed inward as deps) ---
 declare function shadow_send_midi_to_dsp(bytes: number[]): void;
+declare function shadow_get_param(slot: number, key: string): string | null;
+declare function shadow_set_param(slot: number, key: string, value: string): boolean | void;
 declare function move_midi_internal_send(bytes: number[]): void;
 declare function move_midi_external_send(bytes: number[]): void;
 

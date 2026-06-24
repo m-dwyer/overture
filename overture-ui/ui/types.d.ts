@@ -135,6 +135,7 @@ export interface PadSurfaceState {
   padLayoutChromatic: boolean[];
   lastPlayedNote: number;
   lastPadVelocity: number;
+  lastPushedMuted: boolean;
   liveActiveNotes: Set<number>;
 }
 

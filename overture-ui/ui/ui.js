@@ -113,7 +113,7 @@ import {
     selectSchwungSoundComponent,
     touchSchwungSoundVisibleParam,
     toggleSchwungSoundParamDetail
-} from './core/ui_sound_edit.mjs';
+} from './sound/ui_sound_page.mjs';
 import { renderSchwungSoundPage } from './render/ui_sound_edit_render.mjs';
 import {
     PARAM_PEEK_DETAIL_TICKS

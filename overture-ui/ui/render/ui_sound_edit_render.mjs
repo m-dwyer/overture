@@ -6,7 +6,7 @@ import {
     selectedParamList,
     truncText,
     visibleParamList
-} from '../core/ui_sound_edit_model.mjs';
+} from '../sound/ui_sound_page_model.mjs';
 import {
     compactLayoutLabel,
     compactLayoutValue,

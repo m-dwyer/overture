@@ -53,9 +53,11 @@ Implemented and device-verified:
 
 Current implementation shape:
 
-- Overture keeps the public Sound workflow facade in `ui/core/ui_sound_edit.mjs`.
-- Module/parameter normalization and edit math live in `ui/core/ui_sound_edit_model.mjs`.
-- Overture user preset save/load lives in `ui/core/ui_sound_preset_manager.mjs`.
+- Overture keeps the public Sound workflow facade in `ui/sound/ui_sound_page.mjs`.
+- Module/parameter normalization and edit math live in `ui/sound/ui_sound_page_model.mjs`.
+- Overture user preset save/load lives in `ui/sound/ui_sound_preset_repository.mjs`.
+- Schwung module factory preset discovery/application lives in `ui/sound/ui_schwung_factory_preset_adapter.mjs`.
+- Shared Browser row/selectability semantics live in `ui/components/ui_browser_model.mjs`.
 - OLED rendering lives in `ui/render/ui_sound_edit_render.mjs`.
 - Input dispatch continues to call the facade functions, including Sound-page Step 1-4 component selection, so public behavior stays owned by Overture.
 

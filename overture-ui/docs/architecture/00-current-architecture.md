@@ -21,7 +21,7 @@ This document describes the current implementation of `overture/overture-ui/ui` 
 
 `core/ui_constants.mjs` owns hardware constants, track/pad counts, bank definitions, formatting helpers, colors, and layout-level values. Many modules import these directly.
 
-`core/ui_routes.mjs`, `core/ui_scene.mjs`, `core/ui_motion.mjs`, `core/ui_sound_edit*.mjs`, and route-check helpers provide domain-specific derivations and sound-edit behavior, but they still generally read or write `S` directly.
+`core/ui_routes.mjs`, `core/ui_scene.mjs`, `core/ui_motion.mjs`, `sound/ui_sound_page*.mjs`, and route-check helpers provide domain-specific derivations and sound-page behavior, but they still generally read or write `S` directly.
 
 ### Input Workflows
 
