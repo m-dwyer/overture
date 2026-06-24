@@ -355,10 +355,10 @@ export const scenes: Scene[] = [
     slug: "editing-schwung-sounds",
     body: [
       "Shift + Step 3 edits the active track's sound source. On a Schwung-routed track, Overture opens its own Sound page for the matching Schwung slot instead of immediately handing you to Schwung's chain editor.",
-      "The Sound page has four components: MIDI FX, Synth, FX 1, and FX 2. While the page is open, Step 1-4 jumps directly to those components. If the selected component exposes parameters through Schwung metadata, Overture opens directly in parameter detail.",
+      "The Sound page has four components: MIDI FX, Synth, FX 1, and FX 2. While the page is open, Step 1-4 jumps directly to those components. Shift + the already-selected component step enters Schwung's deeper chain editor for the current slot. If the selected component exposes parameters through Schwung metadata, Overture opens directly in parameter detail.",
       "Parameter detail is an 8-encoder bank: K1-K8 edit the visible params, and turning the jog moves to the next or previous bank when a module exposes more than eight. Touching or turning an encoder briefly opens a focused param peek with a larger value and range bar. Numeric, enum, and bool params are editable; string, file, and canvas params are shown read-only.",
       "Copy + jog-click opens the preset browser. Overture user presets appear first; module factory presets appear as starting points when the loaded module exposes Schwung's `preset_count` / `preset` / `preset_name` convention. After applying a factory preset, tweak the params and use Capture + jog-click to save the result as an Overture user preset.",
-      "Menu exits this Overture Sound page. Deep Edit is a best-effort fallback into Schwung's own chain editor for module-specific UIs; Overture does not directly import or execute a module's `ui.js` or `ui_chain.js`.",
+      "Menu exits this Overture Sound page. Deep Edit is a best-effort fallback into Schwung's own chain editor for module-specific UIs; use Shift + jog-click, or Shift + the selected component step. Overture does not directly import or execute a module's `ui.js` or `ui_chain.js`.",
     ],
     shots: [
       {

@@ -2411,6 +2411,8 @@ function createInputDispatchWorkflowDeps() {
         createSideButtonWorkflowDeps,
         createTrackViewStepWorkflowDeps,
         createTransportCcWorkflowDeps,
+        closeSchwungSoundPage,
+        enterSchwungCoRun,
         exitMoveNativeCoRun,
         exitSchwungCoRun,
         forceRedraw,

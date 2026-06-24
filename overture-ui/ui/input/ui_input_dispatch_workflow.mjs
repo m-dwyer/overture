@@ -241,6 +241,16 @@ export function onStepButtonsImpl(S, deps, d1, d2) {
         if (d2 > 0) {
             const idx = d1 - 16;
             if (idx >= 0 && idx <= 3 && deps.selectSchwungSoundComponent) {
+                if (S.shiftHeld && (S.schwungSoundPage.selectedIndex | 0) === idx &&
+                        (S.schwungSoundPage.slot | 0) >= 0 &&
+                        deps.closeSchwungSoundPage && deps.enterSchwungCoRun) {
+                    const track = S.schwungSoundPage.track | 0;
+                    const slot = S.schwungSoundPage.slot | 0;
+                    deps.closeSchwungSoundPage();
+                    deps.enterSchwungCoRun(track, slot);
+                    deps.forceRedraw();
+                    return;
+                }
                 deps.selectSchwungSoundComponent(idx);
                 deps.forceRedraw();
             }

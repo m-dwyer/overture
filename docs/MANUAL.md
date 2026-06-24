@@ -1045,11 +1045,12 @@ On Schwung-routed tracks, the compact Sound Edit page can browse modules, edit v
 | Control | Action |
 |---|---|
 | Step 1-4 | Select MIDI FX, Synth, FX 1, or FX 2 |
+| Shift + selected Step 1-4 | Enter Schwung's deeper chain editor for the current slot |
 | Jog rotate | Change parameter page |
 | Jog click | Browse modules for the selected component |
 | Copy + jog click | Browse saved presets for the selected module |
 | Capture + jog click | Save the selected module's current parameter values as a named preset |
-| Shift + jog click | Enter Schwung's deeper chain editor |
+| Shift + jog click | Enter Schwung's deeper chain editor for the current slot |
 | Menu | Back out of the browser, then close Sound Edit |
 
 Saved Sound Edit presets are global across sets and are stored under Overture's user-data folder on Move.
