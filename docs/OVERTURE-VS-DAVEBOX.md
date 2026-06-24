@@ -8,7 +8,7 @@ exactly like dAVEBOx.
 This page is the friendly overview — "I know dAVEBOx (or Move), what's different?".
 For the precise, per-change delta spec see [`MANUAL.md`](MANUAL.md). To learn the whole
 instrument Overture-natively, read the self-contained, screenshot-driven
-[`generated/overture-reference.html`](generated/overture-reference.html)
+[`generated/overture-reference.md`](generated/overture-reference.md)
 (`pnpm -C web reference:generate`). The upstream dAVEBOx control inventory is vendored as a
 diff baseline at [`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md).
 
@@ -55,11 +55,7 @@ strip** — a tick per parameter bank with the active one as a tall block — so
 see how many banks exist and where you are as you turn the jog. It replaces dAVEBOx's
 inconsistent `>>` hints and is display-only.
 
-## Not yet changed
+## Future changes
 
-A few divergences are planned but not shipped (Menu/Note-Session relabel, per-step
-**velocity** on the Volume knob, demoting some Global-Menu pages onto Shift+Step,
-un-overloading the Loop button). They're tracked in
-[`DAVEBOX-CHANGES.md`](DAVEBOX-CHANGES.md), and each lands in [`MANUAL.md`](MANUAL.md)
-when it ships. The reasoning behind the whole reconciliation lives in
-[`MOVE-RECONCILE.md`](MOVE-RECONCILE.md).
+Future divergences should be tracked as fresh issues or design notes. Once behaviour
+ships, it belongs in [`MANUAL.md`](MANUAL.md) and the generated reference.

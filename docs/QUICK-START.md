@@ -5,18 +5,15 @@ This is the shortest path to the default hybrid setup: Move engines on tracks
 both. Overture's route system is more flexible than this template, but this is
 the setup new users should start with.
 
-## 1. Prepare Move tracks 1-4
+## 1. Open or create a Move Set
 
 On Move, create or open a Set with the four native tracks you want Overture to
 sequence.
 
-- Track 1 receives MIDI channel 1.
-- Track 2 receives MIDI channel 2.
-- Track 3 receives MIDI channel 3.
-- Track 4 receives MIDI channel 4.
-- Leave Move's own transport stopped when sequencing from Overture.
+- Overture auto-routes Move tracks 1-4 to MIDI channels 1-4 on set load/resume.
 - Pick the Move presets/devices in Move's native UI first; Overture can enter
   native sound editing with Edit Sound and diagnose routing with Route Check.
+- Leave Move's own transport stopped when sequencing from Overture.
 
 Overture drives these tracks by MIDI injection into the running Move engine. It
 does not replace MoveOriginal.
@@ -30,14 +27,15 @@ slots.
 - Track 6 is expected on channel 6.
 - Track 7 is expected on channel 7.
 - Track 8 is expected on channel 8.
+- Overture configures the route channels; you still choose which modules occupy
+  the Schwung slots.
 - Load a sound generator into each Schwung slot you want to play.
 - Avoid leaving a slot in thru mode if you expect Overture to own that track's
   sound.
 
 Use Route Check from Overture's Global Menu if a track is silent. It shows the
 expected Move/Schwung route and the detected Schwung slot status where the host
-can report it. Setup Health in `ROADMAP.md` will expand this into a fuller
-first-run check.
+can report it. The final Route Check row can re-apply the canonical routing.
 
 ## 3. Select tracks with the side buttons
 
@@ -90,4 +88,4 @@ native per-step parameter automation. Overture's wedge is unified depth:
   export.
 - A single surface grammar for track selection, clip reveal, and sound editing.
 
-For detailed controls, read `docs/MANUAL.md` and `overture-ui/MANUAL.md`.
+For detailed controls, read `docs/MANUAL.md` and the generated reference.

@@ -2,7 +2,7 @@
 
 A browser harness that runs Overture's **real UI** (and, later, real DSP) against a **mock of the
 Schwung host + Move hardware**, so UX iterates in seconds instead of build→deploy→device. Lives in
-`overture/web/`. It is the first design loop for Overture-native UX work in `ROADMAP.md`.
+`overture/web/`. It is the first design loop for Overture-native UX work.
 
 ## Why this, not the real stack
 The real stack can't run locally: **MoveOriginal is a closed aarch64 binary bound to the SPI
@@ -42,7 +42,7 @@ Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Rep
 - **co-run:** `shadow_corun_begin/end/state` (+ the gated `typeof` checks) → stub editor view.
 
 > Replicate the *gotchas* that shape UX where cheap: input coalescing, `get_param`-null-from-onMidi,
-> the LED per-tick budget (see `HYBRID-GROOVEBOX.md` / dAVEBOx limitations). They affect interaction
+> the LED per-tick budget (see `overture-ui/docs/SCHWUNG_DAVEBOX_LIMITATIONS.md`). They affect interaction
 > design, so the mock should behave like the host, not idealised.
 
 ## Reuse from moveforge (don't absorb it)
@@ -56,7 +56,7 @@ moveforge's emulator is *module-focused*; Overture's hosts the **tool** + render
 ## What it can't validate (device-only — don't over-trust)
 Real Ableton-engine sound, the motion effect on real engines, device timing/coalescing/jitter, inject
 latency, latency parity, co-run's real behavior, and the exact LED budget. Use the emulator first;
-confirm those items on device for the relevant `ROADMAP.md` phase.
+confirm those items on device when they matter to the change under test.
 
 ## Build / run
 The emulator lives in `web/`, but Vite remaps the tool's on-device imports to

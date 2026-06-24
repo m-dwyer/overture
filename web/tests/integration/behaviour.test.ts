@@ -1,10 +1,10 @@
 import { describe, test, expect, beforeAll } from "vitest";
 import { createHarness, type Harness } from "./harness.js";
 
-// Behavioural spec derived from overture-ui/MANUAL.md §15 Cheat Sheet — the Overture manual,
+// Behavioural spec derived from overture-ui/MANUAL.md §15 Cheat Sheet — the tool manual,
 // NOT the Move manual. Each test pins a documented behaviour by asserting ENGINE
 // TRUTH (get_param) or emitted MIDI, never how the OLED is drawn. These exist so
-// that when Overture changes a behaviour (docs/DAVEBOX-CHANGES.md), we update the
+// that when Overture changes a documented behaviour, we update the
 // expectation first (TDD): edit test -> it fails on the old behaviour -> implement.
 //
 // Topology (probed): track index 0 defaults to a DRUM track, index 1 to MELODIC.
@@ -76,8 +76,7 @@ describe("Overture Phase 4 — clips left off stay off", () => {
   }, 60_000);
 });
 
-// Track-View navigation — the function-preservation behaviours Change #1 will
-// repurpose (DAVEBOX-CHANGES.md). These assert UI-mode state via the Overture test
+// Track-View navigation. These assert UI-mode state via the Overture test
 // hook (h.ui() = S), which has no DSP get_param read-back. Boot is Session view, so
 // these enter Note/Track view first. NOTE: requires the tool fork's UI-state hook
 // (globalThis.overtureUiState).
