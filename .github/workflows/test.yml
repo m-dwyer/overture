@@ -1,0 +1,57 @@
+name: Fast Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  PNPM_VERSION: "10.33.2"
+
+concurrency:
+  group: fast-test-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            overture-ui/pnpm-lock.yaml
+
+      - name: Install Overture UI dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: overture-ui
+
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Verify Overture UI
+        run: pnpm verify
+        working-directory: overture-ui
+
+      - name: Typecheck web
+        run: pnpm typecheck
+        working-directory: web
