@@ -10,7 +10,8 @@ bake/export, persistence — the authoritative reference is the vendored dAVEBOx
 **[`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md)** (its §15 Cheat Sheet is the
 full control inventory). Where a control below says "(unchanged)", it behaves exactly as
 the dAVEBOx manual describes. For an Overture-native, screenshot-driven walkthrough of the
-whole surface, see the generated [`generated/overture-reference.md`](generated/overture-reference.md).
+whole surface, generate the local reference with `pnpm -C web reference:generate` and open
+`docs/generated/overture-reference.html`.
 
 > Status: living document. This manual documents shipped Overture behaviour only.
 

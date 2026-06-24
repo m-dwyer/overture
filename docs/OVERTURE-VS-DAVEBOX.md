@@ -7,9 +7,9 @@ exactly like dAVEBOx.
 
 This page is the friendly overview — "I know dAVEBOx (or Move), what's different?".
 For the precise, per-change delta spec see [`MANUAL.md`](MANUAL.md). To learn the whole
-instrument Overture-natively, read the self-contained, screenshot-driven
-[`generated/overture-reference.md`](generated/overture-reference.md)
-(`pnpm -C web reference:generate`). The upstream dAVEBOx control inventory is vendored as a
+instrument Overture-natively, generate the self-contained, screenshot-driven reference
+with `pnpm -C web reference:generate` and open `docs/generated/overture-reference.html`.
+The upstream dAVEBOx control inventory is vendored as a
 diff baseline at [`reference/DAVEBOX-MANUAL.md`](reference/DAVEBOX-MANUAL.md).
 
 ## At a glance

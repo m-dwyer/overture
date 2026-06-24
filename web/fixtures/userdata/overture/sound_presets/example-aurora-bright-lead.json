@@ -1,12 +1,12 @@
 {
   "v": 1,
-  "id": "example-test-synth-bright-lead",
+  "id": "example-aurora-bright-lead",
   "name": "Bright Lead",
   "ts": 3,
   "componentPrefix": "synth",
   "componentLabel": "Synth",
-  "moduleId": "test-synth",
-  "moduleName": "Test Synth",
+  "moduleId": "aurora",
+  "moduleName": "Aurora",
   "state": "",
   "params": {
     "gain": "0.68",

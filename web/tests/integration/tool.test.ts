@@ -257,7 +257,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     expect(ui.pendingEditSoundEntry).toBeNull();
     expect(ui.schwungSoundPage).toMatchObject({ track: 4, slot: 0, selectedIndex: 1, paramDetail: true });
     expect(h.rec.text()).toMatch(/T5 SYNTH/);
-    expect(h.rec.text()).toMatch(/\[linein\]/);
+    expect(h.rec.text()).toMatch(/\[aurora\]/);
     expect(h.rec.text()).toMatch(/Gain 0\.5/);
     expect(globalThis.shadow_corun_state()).toBeNull();
     h.cc(50, 127); h.step(1); h.cc(50, 0); h.step(3);
@@ -340,9 +340,9 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.press(3);
     h.step(2);
 
-    expect(globalThis.shadow_get_param(0, "synth_module")).toBe("test-synth");
+    expect(globalThis.shadow_get_param(0, "synth_module")).toBe("aurora");
     expect(h.rec.text()).toMatch(/T5 SYNTH/);
-    expect(h.rec.text()).toMatch(/\[test-synth\]/);
+    expect(h.rec.text()).toMatch(/\[aurora\]/);
     ui.schwungSoundPage = null;
     h.step(1);
   });
@@ -351,7 +351,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     const ui = h.ui();
     ui.activeTrack = 4;
     ui.sessionView = false;
-    globalThis.shadow_set_param(0, "synth:module", "test-synth");
+    globalThis.shadow_set_param(0, "synth:module", "aurora");
     try {
       h.hold(49);
       h.tapStep(2);
@@ -362,8 +362,8 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       h.step(2);
 
       expect(ui.schwungSoundPage).toMatchObject({ browser: true, browserIndex: 1 });
-      expect(h.rec.prints.some((p) => p.x === 0 && p.y === 16 && p.text === " Line In")).toBe(true);
-      expect(h.rec.prints.some((p) => p.x === 0 && p.y === 30 && p.text === ">Test Synth")).toBe(true);
+      expect(h.rec.prints.some((p) => p.x === 0 && p.text === " Line In")).toBe(true);
+      expect(h.rec.prints.some((p) => p.x === 0 && p.text === ">Aurora")).toBe(true);
     } finally {
       globalThis.shadow_set_param(0, "synth:module", "linein");
       ui.schwungSoundPage = null;

@@ -71,9 +71,35 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   ];
   const chainParams = new Map<string, string>();
   chainParams.set("0:midi_fx1_module", "arp");
-  chainParams.set("0:synth_module", "linein");
+  chainParams.set("0:synth_module", "aurora");
   chainParams.set("0:fx1_module", "freeverb");
   chainParams.set("0:fx2_module", "");
+  chainParams.set("0:fx1:ui_hierarchy", JSON.stringify({
+    levels: {
+      root: {
+        knobs: [
+          { key: "mix", name: "Mix" },
+          { key: "room_size", name: "Room Size" },
+          { key: "damping", name: "Damping" },
+          { key: "width", name: "Width" },
+          { key: "predelay", name: "Pre-delay" },
+          { key: "low_cut", name: "Low Cut" },
+          { key: "mod_depth", name: "Mod Depth" },
+          { key: "freeze", name: "Freeze" },
+        ],
+      },
+    },
+  }));
+  chainParams.set("0:fx1:chain_params", JSON.stringify([
+    { key: "mix", name: "Mix", type: "float", min: 0, max: 1 },
+    { key: "room_size", name: "Room Size", type: "float", min: 0, max: 1 },
+    { key: "damping", name: "Damping", type: "float", min: 0, max: 1 },
+    { key: "width", name: "Width", type: "float", min: 0, max: 1 },
+    { key: "predelay", name: "Pre-delay", type: "float", min: 0, max: 250 },
+    { key: "low_cut", name: "Low Cut", type: "float", min: 20, max: 1000 },
+    { key: "mod_depth", name: "Mod Depth", type: "float", min: 0, max: 1 },
+    { key: "freeze", name: "Freeze", type: "bool" },
+  ]));
   chainParams.set("0:synth:ui_hierarchy", JSON.stringify({
     levels: {
       root: {
@@ -114,11 +140,25 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   chainParams.set("0:synth:release", "0.7");
   chainParams.set("0:synth:stereo_width", "0.8");
   chainParams.set("0:synth:output_level", "0.9");
+  chainParams.set("0:synth:preset_count", "3");
+  chainParams.set("0:synth:preset", "1");
+  chainParams.set("0:synth:preset_name", "Analog Bass");
+  chainParams.set("0:synth:preset_name_0", "Warm Keys");
+  chainParams.set("0:synth:preset_name_1", "Analog Bass");
+  chainParams.set("0:synth:preset_name_2", "Glass Pad");
+  chainParams.set("0:fx1:mix", "0.28");
+  chainParams.set("0:fx1:room_size", "0.64");
+  chainParams.set("0:fx1:damping", "0.42");
+  chainParams.set("0:fx1:width", "0.9");
+  chainParams.set("0:fx1:predelay", "18");
+  chainParams.set("0:fx1:low_cut", "180");
+  chainParams.set("0:fx1:mod_depth", "0.12");
+  chainParams.set("0:fx1:freeze", "0");
   const installedModules = [
     { id: "arp", name: "Arpeggiator", version: "0.3.0", component_type: "midi_fx" },
     { id: "chord", name: "Chord", version: "0.1.0", component_type: "midi_fx" },
     { id: "linein", name: "Line In", version: "0.2.0", component_type: "sound_generator" },
-    { id: "test-synth", name: "Test Synth", version: "0.1.0", component_type: "sound_generator" },
+    { id: "aurora", name: "Aurora", version: "0.1.0", component_type: "sound_generator" },
     { id: "freeverb", name: "Freeverb", version: "0.1.1", component_type: "audio_fx" },
     { id: "delay", name: "Delay", version: "0.1.0", component_type: "audio_fx" },
   ];

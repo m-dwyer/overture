@@ -269,6 +269,60 @@ describe("UI descriptor seams", () => {
     expect(S.schwungSoundPage?.statusFlash).toBe(null);
   });
 
+  test("Schwung Sound preset browser appends factory presets as starting points", () => {
+    const files = new Map<string, string>();
+    files.set("/data/UserData/overture/sound_presets/manifest.json", JSON.stringify({
+      v: 1,
+      presets: [
+        {
+          id: "user-dust",
+          name: "User Dust",
+          ts: 20,
+          scope: "synth/dustline",
+          componentPrefix: "synth",
+          moduleId: "dustline",
+          file: "/data/UserData/overture/sound_presets/user-dust.json",
+        },
+      ],
+    }));
+    const values: Record<string, string> = {
+      synth_module: "dustline",
+      "synth:chain_params": JSON.stringify([{ key: "macro", name: "Macro" }]),
+      "synth:macro": "0.5",
+      "synth:preset_count": "3",
+      "synth:preset": "1",
+      "synth:preset_name": "Factory Bass",
+    };
+    const writes: Array<[number, string, string]> = [];
+    Reflect.set(globalThis, "host_read_file", (path: string) => files.get(path) ?? null);
+    Reflect.set(globalThis, "host_pad_block", () => true);
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => values[key] ?? "");
+    Reflect.set(globalThis, "shadow_set_param", (slot: number, key: string, value: string) => {
+      writes.push([slot, key, value]);
+      if (key === "synth:preset") {
+        values[key] = value;
+        values["synth:preset_name"] = value === "2" ? "Factory Lead" : "Factory " + (parseInt(value, 10) + 1);
+      }
+      return true;
+    });
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    expect(openSchwungSoundPresetBrowser()).toBe(true);
+    expect(S.schwungSoundPage?.browserItems).toMatchObject([
+      { name: "User Dust" },
+      { name: "", divider: true },
+      { name: "01", factoryPreset: true, index: 0 },
+      { name: "Factory Bass", factoryPreset: true, index: 1 },
+      { name: "03", factoryPreset: true, index: 2 },
+    ]);
+
+    S.schwungSoundPage!.browserIndex = 4;
+    expect(applySchwungSoundBrowserSelection()).toBe(true);
+    expect(writes).toEqual([[0, "synth:preset", "2"]]);
+    expect(S.schwungSoundPage?.statusFlash).toMatchObject({ text: "FACTORY" });
+    expect(S.schwungSoundPage?.componentParams[1]).toMatchObject([{ key: "macro", value: "0.5" }]);
+  });
+
   test("Schwung Sound preset manager saves under Overture home with a manifest", () => {
     const files = new Map<string, string>();
     const ensured: string[] = [];

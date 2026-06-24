@@ -356,12 +356,14 @@ export const scenes: Scene[] = [
     body: [
       "Shift + Step 3 edits the active track's sound source. On a Schwung-routed track, Overture opens its own Sound page for the matching Schwung slot instead of immediately handing you to Schwung's chain editor.",
       "The Sound page has four components: MIDI FX, Synth, FX 1, and FX 2. While the page is open, Step 1-4 jumps directly to those components. If the selected component exposes parameters through Schwung metadata, Overture opens directly in parameter detail.",
-      "Parameter detail is an 8-encoder bank: K1-K8 edit the visible params, and turning the jog moves to the next or previous bank when a module exposes more than eight. Touching or turning an encoder briefly opens a focused param peek with a larger value and range bar. Numeric, enum, and bool params are editable; string, file, and canvas params are shown read-only. Menu exits this Overture Sound page. Deep Edit still enters Schwung's own chain editor for bespoke module UIs.",
+      "Parameter detail is an 8-encoder bank: K1-K8 edit the visible params, and turning the jog moves to the next or previous bank when a module exposes more than eight. Touching or turning an encoder briefly opens a focused param peek with a larger value and range bar. Numeric, enum, and bool params are editable; string, file, and canvas params are shown read-only.",
+      "Copy + jog-click opens the preset browser. Overture user presets appear first; module factory presets appear as starting points when the loaded module exposes Schwung's `preset_count` / `preset` / `preset_name` convention. After applying a factory preset, tweak the params and use Capture + jog-click to save the result as an Overture user preset.",
+      "Menu exits this Overture Sound page. Deep Edit is a best-effort fallback into Schwung's own chain editor for module-specific UIs; Overture does not directly import or execute a module's `ui.js` or `ui_chain.js`.",
     ],
     shots: [
       {
         file: "ref-16-schwung-sound.png",
-        expect: { activeTrack: 4, oledIncludes: ["SYNTH", "linein"] },
+        expect: { activeTrack: 4, oledIncludes: ["SYNTH", "aurora"] },
         title: "Open the Schwung Sound page",
         action: "Select track 5, then hold Shift + tap Step 3",
         showing: "Sound page: Synth component params are mapped to K1-K8",
@@ -393,7 +395,7 @@ export const scenes: Scene[] = [
       },
       {
         file: "ref-18-schwung-components.png",
-        expect: { activeTrack: 4, oledIncludes: ["FX1"] },
+        expect: { activeTrack: 4, oledIncludes: ["FX1", "freeverb", "Mix"] },
         title: "Jump between Schwung components",
         action: "While Sound is open, tap Step 3",
         showing: "Component jump: Step 1-4 select MIDI FX, Synth, FX 1, FX 2",
@@ -403,6 +405,26 @@ export const scenes: Scene[] = [
         },
         caption:
           "Inside the Sound page, Step 1-4 are direct component jumps: MIDI FX, Synth, FX 1, and FX 2. Components with visible params open in detail; otherwise they show the module overview/browser path.",
+      },
+      {
+        file: "ref-19-schwung-presets.png",
+        expect: { activeTrack: 4, oledIncludes: ["Synth Presets", "Driven Bass", "Warm Keys", "Analog Bass"] },
+        title: "Load user or factory presets",
+        action: "Return to Synth, hold Copy + press the jog, then turn the jog",
+        showing: "Preset browser: Overture user presets first, module factory presets after",
+        targets: [
+          { aria: ARIA.step(2), name: "Step 2 = Synth" },
+          { aria: ARIA.copy, name: "Copy" },
+          { aria: ARIA.jogClick, name: "Jog click" },
+          { aria: ARIA.jog, name: "Jog scroll" },
+        ],
+        drive: async (d) => {
+          await d.tapStep(2);
+          await d.copyJogClick();
+          await d.turnJog(2);
+        },
+        caption:
+          "The preset browser keeps Overture's own user presets at the top of the list. Factory rows are read from the loaded module's Schwung preset params and act as starting points; after loading one, Capture + jog-click saves the edited result as an Overture preset.",
       },
     ],
   },

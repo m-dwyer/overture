@@ -28,7 +28,9 @@ import {
     rotateConfirmPrompt
 } from '../components/ui_confirm_prompt.mjs';
 import {
+    listSchwungModuleFactoryPresets,
     listSchwungSoundPresets,
+    loadSchwungModuleFactoryPreset,
     loadSchwungSoundPreset,
     saveSchwungSoundPreset,
     suggestedSchwungSoundPresetName
@@ -37,6 +39,7 @@ import {
 const SOUND_PARAM_PEEK_MS = 1000;
 const SOUND_STATUS_FLASH_TICKS = 90;
 const CREATE_PRESET_ENTRY = { name: 'Create new', createNew: true };
+const MODULE_PRESET_DIVIDER = { divider: true, name: '' };
 
 export {
     SCHWUNG_SOUND_COMPONENTS,
@@ -124,6 +127,31 @@ function releaseSoundBrowserPadModalState() {
     S.shiftTrackLEDActive = false;
     S.pendingPadNoteMapRecompute = true;
     soundEditTraceState('release-pad-modal-after', S.schwungSoundPage);
+}
+
+function isSelectableBrowserItem(item) {
+    return !!item && !item.divider;
+}
+
+function firstSelectableBrowserIndex(items) {
+    for (let i = 0; i < items.length; i++) {
+        if (isSelectableBrowserItem(items[i])) return i;
+    }
+    return 0;
+}
+
+function nextSelectableBrowserIndex(items, from, delta) {
+    const n = items ? items.length : 0;
+    if (n <= 0) return 0;
+    const step = delta >= 0 ? 1 : -1;
+    let idx = Math.max(0, Math.min(n - 1, from | 0));
+    for (let guard = 0; guard < n; guard++) {
+        const next = idx + step;
+        if (next < 0 || next >= n) return idx;
+        idx = next;
+        if (isSelectableBrowserItem(items[idx])) return idx;
+    }
+    return idx;
 }
 
 function rememberSchwungSoundPosition(page) {
@@ -298,11 +326,15 @@ export function openSchwungSoundPresetBrowser() {
         S.screenDirty = true;
         return true;
     }
-    const items = listSchwungSoundPresets(SCHWUNG_SOUND_COMPONENTS, page);
+    const userPresets = listSchwungSoundPresets(SCHWUNG_SOUND_COMPONENTS, page);
+    const factoryPresets = listSchwungModuleFactoryPresets(SCHWUNG_SOUND_COMPONENTS, page);
+    const items = factoryPresets.length
+        ? userPresets.concat([MODULE_PRESET_DIVIDER], factoryPresets)
+        : userPresets;
     page.browser = true;
     page.browserKind = 'preset';
     page.browserItems = items;
-    page.browserIndex = 0;
+    page.browserIndex = firstSelectableBrowserIndex(items);
     page.noList = items.length === 0;
     page.browserMessage = items.length ? '' : 'NO PRESETS';
     page.overwriteConfirm = null;
@@ -388,16 +420,21 @@ export function applySchwungSoundBrowserSelection(textKeyboard) {
     }
     if (page.browserKind === 'preset') {
         const entry = page.browserItems[page.browserIndex | 0];
+        if (!isSelectableBrowserItem(entry)) return true;
         OVERTURE_DEBUG_LOG && dlog('INFO', 'sound-edit preset-apply index=' + (page.browserIndex | 0)
             + ' name=' + (entry && entry.name ? entry.name : '')
             + ' module=' + (entry && entry.moduleId ? entry.moduleId : ''));
-        const result = loadSchwungSoundPreset(SCHWUNG_SOUND_COMPONENTS, page, entry);
+        const result = entry && entry.factoryPreset
+            ? loadSchwungModuleFactoryPreset(SCHWUNG_SOUND_COMPONENTS, page, entry)
+            : loadSchwungSoundPreset(SCHWUNG_SOUND_COMPONENTS, page, entry);
         page.browser = false;
         page.browserKind = '';
         page.browserItems = [];
         page.browserIndex = 0;
         page.noList = false;
-        showStatusFlash(page, result && result.ok ? 'LOADED' : ((result && result.reason) || 'LOAD FAILED'), S.tickCount, SOUND_STATUS_FLASH_TICKS);
+        showStatusFlash(page, result && result.ok
+            ? (entry && entry.factoryPreset ? 'FACTORY' : 'LOADED')
+            : ((result && result.reason) || 'LOAD FAILED'), S.tickCount, SOUND_STATUS_FLASH_TICKS);
         page.paramValueOverrides = {};
         releaseSoundBrowserPadModalState();
         refreshSchwungSoundPageModules();
@@ -407,6 +444,7 @@ export function applySchwungSoundBrowserSelection(textKeyboard) {
     }
     if (page.browserKind === 'preset-save') {
         const entry = page.browserItems[page.browserIndex | 0];
+        if (!isSelectableBrowserItem(entry)) return true;
         if (!entry) return false;
         if (entry.createNew) {
             const initialText = suggestedSchwungSoundPresetName(SCHWUNG_SOUND_COMPONENTS, page);
@@ -455,8 +493,7 @@ export function rotateSchwungSoundPage(delta) {
             S.screenDirty = true;
             return true;
         }
-        const n = page.browserItems.length;
-        if (n > 0) page.browserIndex = Math.max(0, Math.min(n - 1, (page.browserIndex | 0) + delta));
+        page.browserIndex = nextSelectableBrowserIndex(page.browserItems, page.browserIndex, delta);
     } else if (page.paramDetail) {
         const params = visibleParamList(page);
         const pageCount = Math.max(1, Math.ceil(params.length / 8));

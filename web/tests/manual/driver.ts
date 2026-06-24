@@ -299,6 +299,12 @@ export function makeDriver(page: Page): Driver {
     await releaseCc(NAV.Shift);
   }
 
+  async function copyJogClick() {
+    await holdCc(NAV.Copy);
+    await jogClick();
+    await releaseCc(NAV.Copy);
+  }
+
   // --- session-view clip ops (Copy 60 / Delete 119 + clip pads) ---------------
   async function copyClip(src: number, dst: number) {
     await holdCc(NAV.Copy);
@@ -397,6 +403,7 @@ export function makeDriver(page: Page): Driver {
     stepEditClose,
     setStepLength,
     shiftStep,
+    copyJogClick,
     copyClip,
     cutClip,
     deleteClip,

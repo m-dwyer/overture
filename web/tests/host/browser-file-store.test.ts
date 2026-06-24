@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { createBrowserFileStore } from "../../src/host/browser-file-store.js";
 
 const MANIFEST = "/data/UserData/overture/sound_presets/manifest.json";
-const BRIGHT = "/data/UserData/overture/sound_presets/example-test-synth-bright-lead.json";
+const BRIGHT = "/data/UserData/overture/sound_presets/example-aurora-bright-lead.json";
 
 class MemoryStorage implements Storage {
   private readonly items = new Map<string, string>();
@@ -20,9 +20,9 @@ describe("browser file store", () => {
 
     const manifest = JSON.parse(files.read(MANIFEST)!);
     expect(manifest.presets).toMatchObject([
-      { id: "example-test-synth-bright-lead", scope: "synth/test-synth", moduleId: "test-synth" },
-      { id: "example-test-synth-soft-pad", scope: "synth/test-synth", moduleId: "test-synth" },
-      { id: "example-test-synth-driven-bass", scope: "synth/test-synth", moduleId: "test-synth" },
+      { id: "example-aurora-bright-lead", scope: "synth/aurora", moduleId: "aurora" },
+      { id: "example-aurora-soft-pad", scope: "synth/aurora", moduleId: "aurora" },
+      { id: "example-aurora-driven-bass", scope: "synth/aurora", moduleId: "aurora" },
     ]);
 
     const preset = JSON.parse(files.read(BRIGHT)!);
@@ -30,14 +30,14 @@ describe("browser file store", () => {
       name: "Bright Lead",
       componentPrefix: "synth",
       componentLabel: "Synth",
-      moduleId: "test-synth",
+      moduleId: "aurora",
       params: { gain: "0.68", tone: "1", output_level: "0.9" },
     });
   });
 
   test("overlays browser writes on top of fixture files", () => {
     const files = createBrowserFileStore(new MemoryStorage());
-    files.write(BRIGHT, JSON.stringify({ id: "example-test-synth-bright-lead", name: "Local Edit" }));
+    files.write(BRIGHT, JSON.stringify({ id: "example-aurora-bright-lead", name: "Local Edit" }));
 
     expect(JSON.parse(files.read(BRIGHT)!).name).toBe("Local Edit");
   });
@@ -48,23 +48,23 @@ describe("browser file store", () => {
       v: 1,
       presets: [
         {
-          id: "user-test-synth",
+          id: "user-aurora",
           name: "My Test",
           ts: 999,
-          scope: "synth/test-synth",
+          scope: "synth/aurora",
           componentPrefix: "synth",
-          moduleId: "test-synth",
-          file: "/data/UserData/overture/sound_presets/user-test-synth.json",
+          moduleId: "aurora",
+          file: "/data/UserData/overture/sound_presets/user-aurora.json",
         },
       ],
     }));
     const files = createBrowserFileStore(storage);
 
     expect(JSON.parse(files.read(MANIFEST)!).presets.map((p: { id: string }) => p.id)).toEqual([
-      "user-test-synth",
-      "example-test-synth-bright-lead",
-      "example-test-synth-soft-pad",
-      "example-test-synth-driven-bass",
+      "user-aurora",
+      "example-aurora-bright-lead",
+      "example-aurora-soft-pad",
+      "example-aurora-driven-bass",
     ]);
   });
 });

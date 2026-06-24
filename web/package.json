@@ -16,7 +16,7 @@
     "manual:generate": "MANUAL_GENERATE=1 playwright test tests/manual-shots.spec.ts",
     "reference:generate": "REFERENCE_GENERATE=1 playwright test tests/manual-reference.spec.ts",
     "manual:assert": "playwright test tests/manual-assertions.spec.ts",
-    "manual:check": "pnpm manual:generate && pnpm reference:generate && git -C .. diff --exit-code -- docs/generated/overture-beginner-guide.md docs/generated/overture-reference.md"
+    "manual:check": "pnpm manual:generate && pnpm reference:generate && pnpm manual:assert"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

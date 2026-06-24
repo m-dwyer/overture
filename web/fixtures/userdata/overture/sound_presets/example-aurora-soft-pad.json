@@ -1,12 +1,12 @@
 {
   "v": 1,
-  "id": "example-test-synth-soft-pad",
+  "id": "example-aurora-soft-pad",
   "name": "Soft Pad",
   "ts": 2,
   "componentPrefix": "synth",
   "componentLabel": "Synth",
-  "moduleId": "test-synth",
-  "moduleName": "Test Synth",
+  "moduleId": "aurora",
+  "moduleName": "Aurora",
   "state": "",
   "params": {
     "gain": "0.48",
