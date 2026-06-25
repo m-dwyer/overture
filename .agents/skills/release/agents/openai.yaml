@@ -1,0 +1,7 @@
+interface:
+  display_name: "Release"
+  short_description: "Cut and publish an Overture SemVer release."
+  default_prompt: "Prepare an Overture release."
+
+policy:
+  allow_implicit_invocation: false

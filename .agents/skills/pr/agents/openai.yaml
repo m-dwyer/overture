@@ -1,0 +1,7 @@
+interface:
+  display_name: "Prepare PR"
+  short_description: "Generate and polish a PR body from the current branch."
+  default_prompt: "Prepare a PR for the current branch."
+
+policy:
+  allow_implicit_invocation: false
