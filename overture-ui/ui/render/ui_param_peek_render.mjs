@@ -1,5 +1,5 @@
 import { S } from '../core/ui_state.mjs';
-import { paramPeekInfo } from '../core/ui_motion.mjs';
+import { paramPeekInfo } from '../motion/ui_motion_model.mjs';
 import { renderParameterPage } from '../components/ui_parameter_page.mjs';
 
 export function renderParamPeek(deps) {

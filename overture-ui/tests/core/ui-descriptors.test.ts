@@ -2,7 +2,7 @@ import { describe, beforeEach, test, expect } from "vitest";
 import { S } from "@overture-ui/core/ui_state.mjs";
 import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@overture-ui/core/ui_routes.mjs";
 import { routeCheckStatus, routeCheckViewModel } from "@overture-ui/core/ui_route_check.mjs";
-import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/core/ui_motion.mjs";
+import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/motion/ui_motion_model.mjs";
 import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, drumRepeatGrooveParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel, melodicNoteFxParameterPageGridModel, trackBankOverviewRoute } from "@overture-ui/core/ui_parameter_page_model.mjs";
 import { fmtArpRate } from "@overture-ui/core/ui_constants.mjs";
 

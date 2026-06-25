@@ -117,7 +117,7 @@ import {
 import { renderSchwungSoundPage } from './render/ui_sound_page_render.mjs';
 import {
     PARAM_PEEK_DETAIL_TICKS
-} from './core/ui_motion.mjs';
+} from './motion/ui_motion_model.mjs';
 import {
     renderTrackBankOverview
 } from './render/ui_parameter_page_render.mjs';

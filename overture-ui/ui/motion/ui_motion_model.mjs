@@ -1,6 +1,6 @@
-import { S, effectiveClip } from './ui_state.mjs';
-import { BANKS, PAD_MODE_DRUM, SCENE_LETTERS, col4, fmtLen, fmtPct, fmtSign } from './ui_constants.mjs';
-import { routeScopeShortLabel } from './ui_routes.mjs';
+import { S, effectiveClip } from '../core/ui_state.mjs';
+import { BANKS, PAD_MODE_DRUM, SCENE_LETTERS, col4, fmtLen, fmtPct, fmtSign } from '../core/ui_constants.mjs';
+import { routeScopeShortLabel } from '../core/ui_routes.mjs';
 
 export const PARAM_PEEK_DETAIL_TICKS = 47;               /* ~500ms at 94Hz */
 
