@@ -8,10 +8,10 @@ Release actions tag, push, build a tarball, and may publish a GitHub release. Do
 Use this workflow:
 
 1. Confirm the requested version, normalized without a leading `v`.
-2. Verify the current branch is `main`.
-3. Verify the working tree is clean, including no untracked files.
-4. Verify `overture-ui/CHANGELOG.md` has non-empty `[Unreleased]` content.
-5. Verify tag `v<version>` does not already exist.
+2. Run `.agents/skills/release/scripts/prepare_release.sh <version>` and read the preflight output.
+3. Verify the current branch is `main`.
+4. Verify the working tree is clean, including no untracked files.
+5. Verify `overture-ui/CHANGELOG.md` has non-empty `[Unreleased]` content.
 6. Summarize the exact commands that will run and ask for confirmation.
 7. After confirmation, run `cd overture-ui && ./scripts/cut_release.sh <version>`.
 8. After the script succeeds, generate condensed release notes:

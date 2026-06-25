@@ -3,7 +3,7 @@ name: pr
 description: Prepare a pull request for the current branch. Use when the user explicitly asks to prepare, draft, or create a PR for current branch changes.
 ---
 
-Run `./scripts/prepare_pr.sh --base main`, then read `.pr-body.md`.
+Run `.agents/skills/pr/scripts/prepare_pr.sh --base main`, then read `.pr-body.md`.
 
 Fill only the judgment sections: `Summary`, `Verification`, `User-visible changes`, and `Follow-up / risk`.
 
