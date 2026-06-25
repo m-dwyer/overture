@@ -4,23 +4,26 @@
 
 ## Session workflow
 
-- **Start of session**: run `~/schwung-docs/update.sh` and report the result. Then read `graphify-out/GRAPH_REPORT.md` to orient on god nodes and community structure. If unsure about a platform API, grep `~/schwung-docs/` rather than assuming. Check for pad-drop diagnostic: `ssh ableton@move.local "cat /data/UserData/schwung/seq8-pad-drop.log 2>/dev/null"` — if non-empty, report to user immediately (see **Pad drop diagnostic** below).
 - **Validate before acting** — read or grep actual code first. Never act on assumptions.
 - **Branching** — create a new branch for each refactor / major feature addition / major revision (`git checkout -b <descriptive-name>` off `main` before any code changes). Small, isolated fixes can land directly on main. When in doubt, branch. One commit per logical change. Merge to main with fast-forward when the work is verified and approved.
-- **Deploy and verify on device before reporting done** — always build+install and confirm on Move.
-- **Reboot after every deploy** — Back suspends (JS stays in memory); Shift+Back fully exits but does NOT reload JS from disk. Full reboot required for JS changes.
-- **JS-only deploy**: `cd overture-ui && ./scripts/bundle_ui.sh && ./scripts/install.sh` then restart. `build.sh` required for DSP changes (also copies all JS).
-- **Restart Move** (Armbian/systemd): `overture-ui/scripts/install.sh` now does this automatically after deploy. Manual reload: `ssh root@move.local "systemctl stop move-launcher.service; for name in MoveOriginal Move MoveMessageDisplay shadow_ui schwung link-subscriber display-server schwung-manager; do pkill -9 -x \"\$name\" 2>/dev/null; done; sleep 1; systemctl start move-launcher.service"`. A bare `systemctl restart move-launcher.service` is NOT enough — the unit is `KillMode=process`, so it only bounces MoveLauncher/MoveOriginal while the Schwung stack (shadow_ui, schwung-manager, display-server) double-forks to PID 1 and survives stale → Move-native/Schwung desync (blank OLED). This is a service restart, not an OS `reboot` (reboot has caused a "move terminated" freeze).
 - **AGENTS.md**: update at session end or after a major phase — not after routine task work.
 - **README.md**: keep the project overview and docs index current when repo-level docs move or major user-facing surfaces change.
-- **`overture-ui/CHANGELOG.md` `[Unreleased]`** — for every `feat:` or `fix:` commit, add a short entry under the appropriate subsection (`### Features` / `### Fixes` / `### Performance / UX` / `### Documentation`). `overture-ui/scripts/cut_release.sh` finalizes the section into a versioned heading at release time; if the section is empty the script refuses to cut a release.
-- **docs/MANUAL.md stays current** — when a `feat:` or `fix:` commit changes user-visible behavior (controls, displays, pad/button semantics, persistence, workflows), update `docs/MANUAL.md` in the same commit. Skip for internal-only changes (refactors, DSP plumbing, build, debug logging). When ambiguous, ask the user.
 - **Cutting a release**: `cd overture-ui && ./scripts/cut_release.sh <version>` (e.g. `0.2.0`). Requires clean tree (including no untracked files — park untracked `notes/` files aside if needed, but NOT the tracked `CHANGELOG.md`, which the release reads and finalizes), non-empty `[Unreleased]`, no existing `v<version>` tag. The script: finalizes CHANGELOG, bumps `release.json` *and* `module.json` (atomic — Module Store update detection compares installed `module.json` against repo `release.json`), runs `build.sh` for a fresh tarball, commits, tags, pushes main + tag. After it succeeds, publish the release with condensed user-facing notes: `python3 scripts/condense_changelog.py <ver> > dist/release-notes-v<ver>.md` → `gh release create v<ver> dist/overture-module.tar.gz --title "v<ver>" --notes-file dist/release-notes-v<ver>.md`. Then `./scripts/draft_announcement.sh <ver>` copies a Discord-pasteable announcement to the macOS clipboard for manual paste into the Schwung Discord release channel.
 - **State version bump**: **Avoid bumping the state version** — users see a confirm dialog on mismatch and lose their session data. Prefer migrating old fields in `seq8_load_state` (default missing keys, clamp out-of-range values). Only bump when the format is genuinely incompatible (struct layout change that can't be migrated). When a bump is unavoidable during dev, wipe state files on device: `ssh root@move.local "find /data/UserData/schwung/set_state -name 'seq8-state.json' -exec rm {} \; && find /data/UserData/schwung/set_state -name 'seq8-ui-state.json' -exec rm {} \;"`.
 - **DSP calls / pfx code**: read `overture-ui/docs/DAVEBOX_API.md` for parameter keys, structs, and algorithm details.
 - **DSP work**: read `overture-ui/dsp/CLAUDE.md` for logging, build, state format keys, and deferred save details.
-- **Schwung patches**: see `docs/SCHWUNG_PATCHES.md`. Fork at `legsmechanical/schwung`. Deploy: `cd ~/schwung && ./scripts/build.sh && ./scripts/install.sh local --skip-confirmation`.
+- **Schwung patches**: see `overture-ui/docs/SCHWUNG_PATCHES.md`. Fork at `legsmechanical/schwung`.
 - **Capability gating**: patched-Schwung features gate on `typeof shadow_xxx === 'function'`. See `Edit Sound...` / `editSoundForTrack()` for the pattern.
+
+## Commit workflow
+
+- Use one logical commit per completed change.
+- Use Conventional Commit subjects: `feat:`, `fix:`, `perf:`, `docs:`, `refactor:`, `test:`, `build:`, `chore:`, or `release:`.
+- Prefer concise, user-meaningful subjects, e.g. `fix: prevent AUTO lane header duplication`.
+- For every user-visible `feat:`, `fix:`, or `perf:`, update `overture-ui/CHANGELOG.md` under `[Unreleased]` in the matching subsection.
+- When controls, displays, pad/button semantics, persistence, or workflows change, update `docs/MANUAL.md` in the same commit. Skip for internal-only changes.
+- Before committing code changes, run `cd overture-ui && pnpm verify`.
+- For releases, choose SemVer intentionally: patch for fixes/polish, minor for new user-facing capability, major only for deliberate breaking changes after `1.0.0`.
 
 Overture is a Schwung **tool module** (`component_type: "tool"`) for Ableton Move,
 forked from dAVEBOx and extended into a cohesive groovebox surface for Move's native
@@ -38,21 +41,19 @@ The architecture (ADR-0001 deep modules by runtime concept; `overture-ui/CONTEXT
 - **Tests** — extend the module's `tests/<folder>/*.test.ts` to pin the behavior you change.
 - **Language** — name things per `overture-ui/CONTEXT.md`; if you coin a load-bearing term, add it there.
 
-**The ratchet (run before every commit):** `cd overture-ui && pnpm verify` (= `typecheck` + `depcruise` + `test`). It fails closed — a type regression, a forbidden import, or a broken test blocks you. `error`-severity dep rules hold today and must never regress; `warn`-severity rules are enumerated known debt to drive toward zero. **Never loosen a ratchet to make a change pass — fix the change.** (No CI: this is local-only, so `pnpm verify` is the gate. Optionally install it as a pre-push hook, but git hooks aren't committed — this rule is the source of truth.)
+**The ratchet (run before every commit):** `cd overture-ui && pnpm verify` (= `typecheck` + `depcruise` + `test`). It fails closed — a type regression, a forbidden import, or a broken test blocks you. `error`-severity dep rules hold today and must never regress; `warn`-severity rules are enumerated known debt to drive toward zero. **Never loosen a ratchet to make a change pass — fix the change.** GitHub workflows also run for PRs, but local verify is the development gate.
 
-## Upcoming tasks — see [notes/TODO.md](notes/TODO.md)
-
-## Build / deploy / debug
+## Build / debug
 
 ```sh
 cd overture-ui
-./scripts/build.sh && ./scripts/install.sh      # DSP change (also copies all JS)
-./scripts/bundle_ui.sh && ./scripts/install.sh  # JS-only
-nm -D dist/overture/dsp.so | grep GLIBC             # verify ≤ 2.35
+./scripts/build.sh                         # full DSP + UI bundle
+./scripts/bundle_ui.sh                     # JS-only bundle
+nm -D dist/overture/dsp.so | grep GLIBC    # verify <= 2.35
 ssh ableton@move.local "tail -f /data/UserData/schwung/seq8.log"
 ```
 
-**JS modules** live under `overture-ui/ui/`: `ui.js` (the composition root) stays at the `ui/` root, and the `ui_*.mjs` modules are grouped into concept folders — `render/`, `input/`, `midi/`, `pad/`, `drum/`, `bank/`, `sync/`, `view/`, `perform/`, `menu/`, `persist/`, `tick/`, `corun/`, `lifecycle/`, `core/`. They bundle into `overture-ui/dist/overture/ui.js` by `overture-ui/scripts/bundle_ui.sh` (esbuild, run on the HOST; `build.sh` invokes it outside Docker). esbuild resolves the dep graph itself, so there is **no manual ORDER list** and adding a new `ui_*.mjs` (in any folder) needs no bundler edit; it also renames colliding top-level names and honors aliased local imports, so the wrapper pattern (`pure(deps,…)` in a `.mjs` + same-named thin wrapper in `ui.js`) just works. The script then runs a **QuickJS parse gate** (the device's exact `qjs` from `schwung/libs/quickjs`) — this catches QuickJS-fatal issues the V8 tests and `node --check` miss, because those run against *source*, never the bundle. Needs `pnpm -C overture-ui install` (esbuild is the tool's own build dep, `overture-ui/package.json`; `bundle_ui.sh` falls back to the web workspace / `$ESBUILD` for older checkouts). Always run the bundler before deploying JS changes. **DSP**: see `overture-ui/dsp/CLAUDE.md`.
+**JS modules** live under `overture-ui/ui/`: `ui.js` (the composition root) stays at the `ui/` root, and `ui_*.mjs` modules are grouped by runtime concept. Current top-level folders include `bank/`, `components/`, `core/`, `corun/`, `drum/`, `input/`, `lifecycle/`, `menu/`, `midi/`, `motion/`, `pad/`, `perform/`, `persist/`, `render/`, `shared/`, `sound/`, `sync/`, `tick/`, and `view/`. They bundle into `overture-ui/dist/overture/ui.js` by `overture-ui/scripts/bundle_ui.sh` (esbuild, run on the host; `build.sh` invokes it outside Docker). esbuild resolves the dep graph itself, so there is **no manual ORDER list** and adding a new `ui_*.mjs` in any folder needs no bundler edit. The script then runs a **QuickJS parse gate** (the device's exact `qjs` from `schwung/libs/quickjs`) — this catches QuickJS-fatal issues the V8 tests and `node --check` miss, because those run against source, never the bundle. **DSP**: see `overture-ui/dsp/CLAUDE.md`.
 
 **Groovebox design system** lives under `overture-ui/ui/components/`. Reusable OLED, pad,
 button, and modal primitives should be created there and consumed by feature
@@ -90,7 +91,7 @@ Set-duplicate inheritance: when init detects a Copy-suffixed name + missing stat
 
 ## Pad drop diagnostic
 
-Intermittent: drum pads go silent while sequencer plays. Self-heal in `tick()` re-pushes padmap on mismatch. DSP logs drops to `seq8-pad-drop.log`. Session start check: `ssh ableton@move.local "cat /data/UserData/schwung/seq8-pad-drop.log 2>/dev/null"` — if non-empty, report to user.
+Intermittent: drum pads go silent while sequencer plays. Self-heal in `tick()` re-pushes padmap on mismatch. When investigating pad silence on hardware, check `seq8-pad-drop.log` and report non-empty diagnostics to the user.
 
 ## QuickJS compatibility
 
@@ -119,10 +120,3 @@ shadow_ui runs QuickJS, not V8. Node.js `--check` is NOT a reliable validator.
 - `bankParams[t][b][k]`: 7 banks, refreshed via `tN_cC_pfx_snapshot`. Track config uses dedicated arrays + `readTrackConfig`/`applyTrackConfig` — NOT in bankParams.
 - `pendingDefaultSetParams`: first-run defaults drain one per tick after state settles.
 - **JS tick rate**: ~94 Hz on device. `STEP_HOLD_TICKS=19` calibrated for ~94 Hz. Older constants use 196 Hz assumptions.
-
-## graphify
-
-Knowledge graph at `graphify-out/`. Auto-updates via post-commit hook.
-
-- **Session start**: read `graphify-out/GRAPH_REPORT.md` after docs update.
-- **Before grep** — use graphify first for navigation/relationship/call-chain questions. `query` (BFS), `query --dfs` (impact), `path` (shortest path), `explain` (definition). Grep only when graphify can't answer or target is outside the codebase.
