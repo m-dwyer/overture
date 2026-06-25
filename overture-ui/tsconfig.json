@@ -30,7 +30,7 @@
     "ui/core/ui_constants.mjs",
     "ui/core/ui_debug_log.mjs",
     "ui/core/ui_parameter_page_model.mjs",
-    "ui/core/ui_motion.mjs",
+    "ui/motion/ui_motion_model.mjs",
     "ui/components/ui_browser_model.mjs",
     "ui/components/ui_parameter_page.mjs",
     "ui/sound/ui_sound_page_model.mjs",

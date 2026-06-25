@@ -48,6 +48,12 @@ the section into a versioned heading at release time.
   covers the new-set routing setup.
 - **On-device module paths point at the right directory.** The DSP read its files from `modules/tools/davebox/` while the module installs as `modules/tools/overture/` (the `module.json` id), so the metronome click sample silently failed to load on device. Aligned all on-device paths (the `click-seq8.wav` loader and the wasm-glue default module dir) to `overture`.
 
+### Performance / UX
+- **Track Page Param Peek uses focused parameter feedback.** Touching or turning
+  Track Page knobs now uses the same readable focused-parameter OLED pattern as
+  Sound Edit, including prominent values and range/status feedback where
+  available.
+
 ## [1.0b3] — 2026-05-30
 ### Features
 - **Schwung chain knob automation (Sch lanes).** AUTO bank lanes can now target Schwung chain knob assignments (CC 102-109 absolute knob control). In ASSIGN mode, scroll left past AT to reach Sch1–Sch8 — each maps to a chain slot knob mapping. Recording, playback, resting values, step-edit, and delete all work identically to CC lanes. Routed via DSP `pfx_send` on the internal MIDI path — same-buffer delivery, no JS overhead. Requires patched Schwung with CC 102-109 chain handler; capability-gated (Sch lanes hidden on stock Schwung).

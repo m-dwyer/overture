@@ -14,7 +14,7 @@ const WEB = resolve(TOOL, '..', 'web');
 const FOLDER = {
     // core — foundational shared state, constants, routing tables, helpers
     'ui_state.mjs': 'core', 'ui_constants.mjs': 'core', 'ui_routes.mjs': 'core',
-    'ui_route_check.mjs': 'core', 'ui_scene.mjs': 'core', 'ui_motion.mjs': 'core',
+    'ui_route_check.mjs': 'core', 'ui_scene.mjs': 'core', 'ui_motion_model.mjs': 'motion',
     'ui_note_edit_helpers.mjs': 'core',
     // sound — Sound Page workflow, model, and preset adapters
     'ui_sound_page.mjs': 'sound', 'ui_sound_page_model.mjs': 'sound',

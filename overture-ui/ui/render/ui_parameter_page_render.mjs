@@ -4,7 +4,7 @@ import {
     PAD_MODE_DRUM,
     TPS_VALUES,
 } from '../core/ui_constants.mjs';
-import { motionOverviewModel } from '../core/ui_motion.mjs';
+import { motionOverviewModel } from '../motion/ui_motion_model.mjs';
 import {
     allLanesParameterPageGridModel,
     drumLaneParameterPageGridModel,

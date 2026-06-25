@@ -165,7 +165,10 @@ The primary editing environment. Shows the active track's clip.
 | Loop (hold) | Enter loop view |
 | Loop (hold) + jog | Adjust clip length ±1 step |
 
-The OLED shows all 8 knob parameters and values. Touching a knob highlights its row. The LED below each knob lights when that parameter differs from default.
+The OLED shows all 8 knob parameters and values on the active page. Touching or
+turning a knob opens focused parameter feedback with the readable parameter
+name, current value, and range or route context when available. The LED below
+each knob lights when that parameter differs from default.
 
 ## Switching tracks while playing
 
@@ -532,8 +535,9 @@ Each of the 8 knobs controls its own automation lane — a recordable stream of 
 
 **Assigning what a knob controls:** jog click to enter alt mode on this bank, then turn a knob to step through the target options: aftertouch (AT), any CC number (CC0–CC127), or — on Schwung-routed tracks with patched Schwung — Schwung chain knob assignments (Sch1–Sch8). Sch lanes automate the knob assignments configured on the track's chain slot. The assignment applies to the whole track — all clips on that track share it.
 
-**Param Peek:** touch any knob to show its bank/context, target, value, and
-route. AUTO lanes use human-readable targets where possible, such as
+**Param Peek:** touch any knob to show focused feedback for that parameter:
+bank/context, target, current value, and range or route context. AUTO lanes use
+human-readable targets where possible, such as
 `Aftertouch`, `CC7 Volume`, `CC74 Filter`, `Schwung knob 5`, or
 `No target assigned`. Move-routed AUTO lanes identify the target conservatively
 as the current Move parameter target for that physical knob. Hold the knob to

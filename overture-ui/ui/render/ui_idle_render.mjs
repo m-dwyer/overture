@@ -7,7 +7,7 @@ import {
     SCALE_DISPLAY,
     SCENE_LETTERS
 } from '../core/ui_constants.mjs';
-import { motionIdleModel } from '../core/ui_motion.mjs';
+import { motionIdleModel } from '../motion/ui_motion_model.mjs';
 import { renderTrackRow } from './ui_track_chrome_render.mjs';
 import {
     refreshCcGraphData,

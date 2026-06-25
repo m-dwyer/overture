@@ -1,7 +1,7 @@
 import { S } from '../core/ui_state.mjs';
 import { col4, col5 } from '../core/ui_constants.mjs';
 import { effectiveClip } from './ui_leds.mjs';
-import { autoLaneLabel } from '../core/ui_motion.mjs';
+import { autoLaneLabel } from '../motion/ui_motion_model.mjs';
 import {
     refreshCcGraphData,
     renderCcGraphPlot,

@@ -1,7 +1,7 @@
 import { S } from '../core/ui_state.mjs';
 import { PAD_MODE_DRUM } from '../core/ui_constants.mjs';
 import { effectiveClip } from './ui_leds.mjs';
-import { autoLaneLabel } from '../core/ui_motion.mjs';
+import { autoLaneLabel } from '../motion/ui_motion_model.mjs';
 
 export function renderLoopView(deps) {
     const loopL2 = 'STEP BTN=by page';
