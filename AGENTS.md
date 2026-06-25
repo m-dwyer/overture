@@ -23,6 +23,7 @@
 - For every user-visible `feat:`, `fix:`, or `perf:`, update `overture-ui/CHANGELOG.md` under `[Unreleased]` in the matching subsection.
 - When controls, displays, pad/button semantics, persistence, or workflows change, update `docs/MANUAL.md` in the same commit. Skip for internal-only changes.
 - Before committing code changes, run `cd overture-ui && pnpm verify`.
+- For PRs, use the `pr` Agent Skill or run `scripts/prepare_pr.sh` to generate `.pr-body.md`, then fill the judgment sections before `gh pr create`.
 - For releases, choose SemVer intentionally: patch for fixes/polish, minor for new user-facing capability, major only for deliberate breaking changes after `1.0.0`.
 
 Overture is a Schwung **tool module** (`component_type: "tool"`) for Ableton Move,

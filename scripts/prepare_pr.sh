@@ -2,13 +2,60 @@
 # Prepare a deterministic pull request body for gh pr create.
 #
 # Usage:
-#   scripts/prepare_pr.sh [base-branch]
-#   gh pr create --base main --title "$(git log -1 --pretty=%s)" --body-file .pr-body.md
+#   scripts/prepare_pr.sh [--base main] [--title "docs: update workflow"] [--output .pr-body.md]
+#   gh pr create --base main --title "docs: update workflow" --body-file .pr-body.md
 
 set -euo pipefail
 
-BASE_REF="${1:-main}"
+BASE_REF="main"
 OUT_FILE="${PR_BODY_FILE:-.pr-body.md}"
+PR_TITLE=""
+
+usage() {
+    sed -n '2,7p' "$0" >&2
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --base|-b)
+            if [ $# -lt 2 ]; then
+                echo "error: --base requires a value" >&2
+                exit 1
+            fi
+            BASE_REF="$2"
+            shift 2
+            ;;
+        --title|-t)
+            if [ $# -lt 2 ]; then
+                echo "error: --title requires a value" >&2
+                exit 1
+            fi
+            PR_TITLE="$2"
+            shift 2
+            ;;
+        --output|-o)
+            if [ $# -lt 2 ]; then
+                echo "error: --output requires a value" >&2
+                exit 1
+            fi
+            OUT_FILE="$2"
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        -*)
+            echo "error: unknown option '$1'" >&2
+            usage
+            exit 1
+            ;;
+        *)
+            BASE_REF="$1"
+            shift
+            ;;
+    esac
+done
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
@@ -24,7 +71,9 @@ fi
 
 MERGE_BASE="$(git merge-base HEAD "$BASE_REF")"
 BRANCH_NAME="$(git branch --show-current)"
-DEFAULT_TITLE="$(git log -1 --pretty=%s)"
+if [ -z "$PR_TITLE" ]; then
+    PR_TITLE="$(git log -1 --pretty=%s)"
+fi
 COMMIT_COUNT="$(git rev-list --count "$MERGE_BASE"..HEAD)"
 
 if [ "$COMMIT_COUNT" -gt 0 ]; then
@@ -86,7 +135,7 @@ cat > "$OUT_FILE" <<EOF
 
 - Branch: \`$BRANCH_NAME\`
 - Base: \`$BASE_REF\`
-- Suggested title: \`$DEFAULT_TITLE\`
+- Suggested title: \`$PR_TITLE\`
 - Commits since base: $COMMIT_COUNT
 
 ## Commits
@@ -107,4 +156,4 @@ EOF
 echo "Wrote $OUT_FILE"
 echo
 echo "Create the PR with:"
-echo "  gh pr create --base ${BASE_REF#origin/} --title \"$DEFAULT_TITLE\" --body-file $OUT_FILE"
+echo "  gh pr create --base ${BASE_REF#origin/} --title \"$PR_TITLE\" --body-file $OUT_FILE"
