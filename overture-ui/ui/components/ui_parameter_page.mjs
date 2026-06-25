@@ -133,7 +133,7 @@ function renderFocusedParameter(surface, model) {
     if (status) {
         surface.print(0, 54, status, 1);
     } else if (!renderFocusedRangeBar(surface, touched)) {
-        surface.print(0, 54, 'Page ' + (model.pageIndex + 1) + '/' + model.pageCount, 1);
+        surface.print(0, 54, model.status ? truncText(model.status, 21) : 'Page ' + (model.pageIndex + 1) + '/' + model.pageCount, 1);
     }
     return true;
 }

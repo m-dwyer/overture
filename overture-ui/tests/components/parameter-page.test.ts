@@ -100,5 +100,25 @@ describe("Parameter Page component", () => {
     expect(focusCalls).toContainEqual(["print", 0, 14, "Filter Env Depth", 1]);
     expect(focusCalls).toContainEqual(["print", 58, 38, "62", 0]);
     expect(focusCalls).toContainEqual(["fill", 0, 55, 128, 1, 1]);
+
+    const statusCalls: DrawCall[] = [];
+    renderParameterPage(surface(statusCalls), {
+      title: "CLIP T1",
+      context: "Clip A",
+      cells: [],
+      pageIndex: 0,
+      pageCount: 1,
+      touchedParam: {
+        knob: 8,
+        label: "Seq Follow",
+        value: "ON",
+        displayValue: "ON",
+        type: "boolean",
+        status: "peek",
+      },
+      status: "Route: Move Ch1",
+    });
+
+    expect(statusCalls).toContainEqual(["print", 0, 54, "Route: Move Ch1", 1]);
   });
 });

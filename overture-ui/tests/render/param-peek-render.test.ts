@@ -34,21 +34,19 @@ describe("Param Peek presentation", () => {
     S.playing = false;
   });
 
-  test("renders Param Peek rows from the motion descriptor", () => {
+  test("renders Param Peek through shared focused parameter feedback", () => {
     const calls: DrawCall[] = [];
     renderParamPeek(createDeps(calls));
 
-    expect(calls).toEqual([
-      ["fill", 0, 0, 128, 9, 1],
-      ["print", 4, 1, "AUTO T1 Clip A", 0],
-      ["print", 4, 13, "Move target", 1],
-      ["print", 4, 25, "Value 64", 1],
-      ["print", 4, 38, "Clip A, Lane 2", 1],
-      ["print", 4, 52, "Route: Move Ch1", 1],
-    ]);
+    expect(calls).toContainEqual(["fill", 0, 0, 128, 9, 1]);
+    expect(calls).toContainEqual(["print", 2, 1, "AUTO T1 Clip A Cl", 0]);
+    expect(calls).toContainEqual(["print", 110, 1, "K2", 0]);
+    expect(calls).toContainEqual(["print", 0, 14, "Move target", 1]);
+    expect(calls).toContainEqual(["print", 58, 38, "64", 0]);
+    expect(calls).toContainEqual(["fill", 0, 55, 128, 1, 1]);
   });
 
-  test("truncates long Param Peek detail fields", () => {
+  test("wraps long focused parameter labels", () => {
     S.trackRoute[0] = 0;
     S.trackCCType[0][1] = 2;
     S.trackCCAssign[0][1] = 8;
@@ -57,6 +55,7 @@ describe("Param Peek presentation", () => {
     const calls: DrawCall[] = [];
     renderParamPeek(createDeps(calls));
 
-    expect(calls).toContainEqual(["print", 4, 13, "Sch K8 Very Long Sc.", 1]);
+    expect(calls).toContainEqual(["print", 0, 14, "Sch K8 Very Long", 1]);
+    expect(calls).toContainEqual(["print", 0, 24, "Schwung", 1]);
   });
 });

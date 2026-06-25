@@ -1,16 +1,30 @@
+import { S } from '../core/ui_state.mjs';
 import { paramPeekInfo } from '../core/ui_motion.mjs';
+import { renderParameterPage } from '../components/ui_parameter_page.mjs';
 
 export function renderParamPeek(deps) {
     const p = paramPeekInfo();
-    deps.fill_rect(0, 0, 128, 9, 1);
-    deps.print(4, 1, truncText(p.header, 20), 0);
-    deps.print(4, 13, truncText(p.target, 20), 1);
-    deps.print(4, 25, truncText(p.value, 20), 1);
-    deps.print(4, 38, truncText(p.detail, 20), 1);
-    deps.print(4, 52, truncText(p.route, 20), 1);
+    return renderParameterPage(deps, {
+        title: p.header,
+        context: p.detail,
+        cells: [],
+        pageIndex: 0,
+        pageCount: 1,
+        touchedParam: {
+            knob: (S.knobTouched | 0) + 1,
+            label: p.target,
+            value: p.rawValue == null ? focusedDisplayValue(p) : p.rawValue,
+            displayValue: focusedDisplayValue(p),
+            type: p.type,
+            min: p.min,
+            max: p.max,
+            status: p.status || 'peek'
+        },
+        status: p.route
+    });
 }
 
-function truncText(s, maxLen) {
-    s = String(s || '');
-    return s.length > maxLen ? s.substring(0, Math.max(0, maxLen - 1)) + '.' : s;
+function focusedDisplayValue(p) {
+    if (p.displayValue != null) return String(p.displayValue);
+    return String(p.value || '').replace(/^Value\s+/, '').replace(/^Route:\s+/, '') || '--';
 }

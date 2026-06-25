@@ -147,7 +147,8 @@ export function paramPeekInfo() {
             target: 'Melodic AUTO only',
             value: 'Use DRUM/NOTE banks',
             detail: 'Drum track',
-            route: 'Route: ' + routeScopeShortLabel(t)
+            route: 'Route: ' + routeScopeShortLabel(t),
+            status: 'unavailable'
         };
     }
     if (bank === 6 && S.trackPadMode[t] !== PAD_MODE_DRUM) {
@@ -162,26 +163,33 @@ export function paramPeekInfo() {
                 target: 'Lane ' + (k + 1) + ' / Clip ' + clipLabel,
                 value: 'Route: ' + routeScopeShortLabel(t),
                 detail: 'Loop ' + loopLen + ' steps',
-                route: 'Res ' + tpsDisplay(resTps) + ' Zoom ' + tpsDisplay(zoomTps)
+                route: 'Res ' + tpsDisplay(resTps) + ' Zoom ' + tpsDisplay(zoomTps),
+                displayValue: routeScopeShortLabel(t)
             };
         }
+        const rawValue = S.playing ? S.trackCCLiveVal[t][k] : S.clipCCVal[t][ac][k];
         return {
             header: 'AUTO T' + (t + 1) + ' Clip ' + clipLabel,
             target: autoLaneTargetLabel(t, k),
             value: autoLaneValueLabel(t, ac, k),
             detail: 'Clip ' + clipLabel + ', Lane ' + (k + 1),
-            route: 'Route: ' + routeScopeShortLabel(t)
+            route: 'Route: ' + routeScopeShortLabel(t),
+            displayValue: rawValue >= 0 && rawValue <= 127 ? String(rawValue) : 'No value set',
+            rawValue: rawValue,
+            min: 0,
+            max: 127,
+            type: 'number'
         };
     }
     if (bank === 1 && S.trackPadMode[t] === PAD_MODE_DRUM) {
         const lane = S.activeDrumLane[t] | 0;
         const drumNoteTargets = [
-            { target: 'Lane Octave', value: 'Note ' + (S.drumLaneNote[t][lane] | 0), detail: 'Lane ' + (lane + 1) + ', octave jumps' },
-            { target: 'Lane Note', value: 'Note ' + (S.drumLaneNote[t][lane] | 0), detail: 'Lane ' + (lane + 1) + ', semitone' },
-            { target: 'Velocity Offset', value: fmtSign(S.bankParams[t][1][1] | 0), detail: 'Lane ' + (lane + 1) },
-            { target: 'Quantize', value: fmtPct(S.drumLaneQnt[t] | 0), detail: 'Lane ' + (lane + 1) },
-            { target: 'Note Length', value: fmtLen(S.drumLaneLenMode[t][lane] | 0), detail: 'Lane ' + (lane + 1) },
-            { target: 'Gate Time', value: fmtPct(S.bankParams[t][1][0] | 0), detail: 'Lane ' + (lane + 1) },
+            { target: 'Lane Octave', value: 'Note ' + (S.drumLaneNote[t][lane] | 0), detail: 'Lane ' + (lane + 1) + ', octave jumps', rawValue: S.drumLaneNote[t][lane] | 0 },
+            { target: 'Lane Note', value: 'Note ' + (S.drumLaneNote[t][lane] | 0), detail: 'Lane ' + (lane + 1) + ', semitone', rawValue: S.drumLaneNote[t][lane] | 0 },
+            { target: 'Velocity Offset', value: fmtSign(S.bankParams[t][1][1] | 0), detail: 'Lane ' + (lane + 1), rawValue: S.bankParams[t][1][1] | 0, min: -127, max: 127, type: 'number' },
+            { target: 'Quantize', value: fmtPct(S.drumLaneQnt[t] | 0), detail: 'Lane ' + (lane + 1), rawValue: S.drumLaneQnt[t] | 0, min: 0, max: 100, type: 'number' },
+            { target: 'Note Length', value: fmtLen(S.drumLaneLenMode[t][lane] | 0), detail: 'Lane ' + (lane + 1), rawValue: S.drumLaneLenMode[t][lane] | 0 },
+            { target: 'Gate Time', value: fmtPct(S.bankParams[t][1][0] | 0), detail: 'Lane ' + (lane + 1), rawValue: S.bankParams[t][1][0] | 0, min: 0, max: 400, type: 'number' },
         ];
         const info = drumNoteTargets[k];
         if (info) {
@@ -189,6 +197,11 @@ export function paramPeekInfo() {
                 header: 'NOTE FX T' + (t + 1) + ' Drum',
                 target: info.target,
                 value: 'Value ' + info.value,
+                displayValue: info.value,
+                rawValue: info.rawValue,
+                min: info.min,
+                max: info.max,
+                type: info.type,
                 detail: info.detail,
                 route: 'Route: ' + routeScopeShortLabel(t)
             };
@@ -202,7 +215,9 @@ export function paramPeekInfo() {
             target: 'No target assigned',
             value: 'Value --',
             detail: 'Knob ' + (k + 1),
-            route: 'Route: ' + routeScopeShortLabel(t)
+            route: 'Route: ' + routeScopeShortLabel(t),
+            displayValue: '--',
+            status: 'unmapped'
         };
     }
     const val = S.bankParams[t][bank][k];
@@ -215,6 +230,11 @@ export function paramPeekInfo() {
         header: bankName + ' T' + (t + 1),
         target: pm.full,
         value: 'Value ' + (pm.fmt ? pm.fmt(val) : String(val)),
+        displayValue: pm.fmt ? pm.fmt(val) : String(val),
+        rawValue: val,
+        min: pm.min,
+        max: pm.max,
+        type: 'number',
         detail: scope,
         route: 'Route: ' + routeScopeShortLabel(t)
     };
