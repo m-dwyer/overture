@@ -9,7 +9,7 @@ trip should be this 5-minute pass — not a full re-test.
 **When to run it.** After any change that touches: DSP audio/voices, the bundle
 (QuickJS surface), Schwung host integration (co-run, set_param delivery),
 hardware I/O (LED/OLED/palette/MIDI), or the export packager. Pure host-side JS
-logic with green `mise run utest && mise run itest` does **not** need this.
+logic with green `mise run verify` does **not** need this.
 
 **Deploy reminder.** JS changes need a full reboot, not just Back/Shift+Back
 (`init()` re-runs in the same runtime). See `AGENTS.md` →

@@ -1,5 +1,5 @@
 # Overture — root task surface. Run everything from the repo root (no cd):
-#   mise run dev | site-dev | typecheck | wasm | dsp | smoke | build | setup
+#   mise run dev | site-dev | verify | test | wasm | dsp | smoke | build | setup
 #
 # The orchestration is polyglot: the web emulator is TS/Vite (pnpm), while the
 # `tool` submodule builds via Docker (aarch64 gcc for dsp.so, emscripten for wasm)
@@ -37,8 +37,12 @@ depends = ["emulator-dist"]
 run = "pnpm -C site build"
 
 [tasks.typecheck]
-description = "Type-check the web harness"
+description = "Type-check the web harness and current Overture tool scaffold"
 run = "pnpm -C web typecheck"
+
+[tasks.verify]
+description = "Current Overture ratchet: typecheck + dependency-cruiser + replacement core tests"
+run = "pnpm -C web verify"
 
 [tasks.web-build]
 description = "Production build of the web emulator"
@@ -57,7 +61,8 @@ sources = [
   "web/vite.config.ts",
   "web/public/**/*",
   "web/src/**/*",
-  "overture-ui/ui/**/*",
+  "overture-next/src/**/*",
+  "overture-next/ui/**/*",
   "overture-ui/dist/wasm/seq8.mjs",
   "overture-ui/dist/wasm/seq8.wasm",
 ]
@@ -85,8 +90,12 @@ description = "Regenerate the coverage gap-map table from both vitest reports (r
 run = "python3 scripts/coverage_gapmap.py"
 
 [tasks.screenshot]
-description = "Playwright E2E: emulator screenshots + manual-accuracy assertions (every *.spec.ts)"
-run = "pnpm -C web exec playwright test"
+description = "Current emulator Playwright smoke/input tests"
+run = "pnpm -C web test:e2e"
+
+[tasks.reference-screenshot]
+description = "Reference Playwright suite from the dAVEBOx-fork era; port scenarios into current tests deliberately"
+run = "pnpm -C web test:e2e:reference"
 
 [tasks.screenshot-report]
 description = "Open the last Playwright HTML report — side-by-side expected/actual/diff slider for visual-snapshot failures"
@@ -105,8 +114,12 @@ description = "Regenerate both manuals and fail if the committed markdown is sta
 run = "pnpm -C web manual:check"
 
 [tasks.test]
-description = "All tests: tool unit (vitest) + web integration (vitest) + E2E incl. manual-accuracy assertions (playwright)"
-depends = ["utest", "itest", "screenshot"]
+description = "Current Overture tests: replacement ratchet + emulator E2E"
+depends = ["verify", "screenshot"]
+
+[tasks.reference-test]
+description = "Reference dAVEBOx-fork tests: legacy overture-ui unit suite + seq8-wasm web integration"
+depends = ["utest", "itest"]
 
 [tasks.dsp]
 description = "Cross-compile the tool's device dsp.so (aarch64, GLIBC<=2.35) via Docker"
