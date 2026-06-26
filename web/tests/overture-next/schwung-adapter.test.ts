@@ -21,17 +21,17 @@ describe("Overture Next Schwung adapter", () => {
   });
 
   test("converts domain note commands to Move USB-MIDI packets", () => {
-    expect(moveCommandToPacket({ kind: "move-note-on", track: 2, note: 64, velocity: 101 })).toEqual([
+    expect(moveCommandToPacket({ kind: "track-note-on", trackIndex: 2, note: 64, velocity: 101 })).toEqual([
       0x29,
       0x92,
       64,
       101,
     ]);
-    expect(moveCommandToPacket({ kind: "move-note-off", track: 2, note: 64 })).toEqual([0x28, 0x82, 64, 0]);
+    expect(moveCommandToPacket({ kind: "track-note-off", trackIndex: 2, note: 64 })).toEqual([0x28, 0x82, 64, 0]);
   });
 
   test("masks packet fields to the MIDI ranges used by Move", () => {
-    expect(moveCommandToPacket({ kind: "move-note-on", track: 18, note: 200, velocity: 255 })).toEqual([
+    expect(moveCommandToPacket({ kind: "track-note-on", trackIndex: 18, note: 200, velocity: 255 })).toEqual([
       0x29,
       0x92,
       72,
@@ -48,7 +48,7 @@ describe("Overture Next Schwung adapter", () => {
     } as Record<string, unknown>;
     const adapter = createSchwungAdapter(host);
 
-    adapter.commands.execute({ kind: "move-note-on", track: 1, note: 60, velocity: 90 });
+    adapter.commands.execute({ kind: "track-note-on", trackIndex: 1, note: 60, velocity: 90 });
 
     expect(packets).toEqual([[0x29, 0x91, 60, 90]]);
     expect("injectMoveNoteOn" in adapter).toBe(false);

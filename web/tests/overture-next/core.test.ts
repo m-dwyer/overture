@@ -48,8 +48,8 @@ describe("Overture Next core", () => {
 
     expect(core.state.transport.playhead).toBe(1);
     expect(core.drainHostCommands()).toEqual([
-      { kind: "move-note-on", track: 0, note: 61, velocity: 100 },
-      { kind: "move-note-off", track: 0, note: 61 },
+      { kind: "track-note-on", trackIndex: 0, note: 61, velocity: 100 },
+      { kind: "track-note-off", trackIndex: 0, note: 61 },
     ]);
     expect(core.drainHostCommands()).toEqual([]);
   });
@@ -78,11 +78,11 @@ describe("Overture Next core", () => {
     expect(pattern.steps[4].active).toBe(true);
   });
 
-  test("creates Move-routed tracks with independent patterns", () => {
+  test("creates tracks with independent patterns", () => {
     const tracks = createTracks();
 
     expect(tracks).toHaveLength(8);
-    expect(tracks[5].route).toEqual({ kind: "move", channel: 5 });
+    expect(tracks[5]).toMatchObject({ index: 5, name: "Track 6" });
     tracks[0].pattern.steps[1].active = true;
     expect(tracks[1].pattern.steps[1].active).toBe(false);
   });
@@ -109,8 +109,8 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 12; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
-      { kind: "move-note-on", track: 0, note: 72, velocity: 100 },
-      { kind: "move-note-off", track: 0, note: 72 },
+      { kind: "track-note-on", trackIndex: 0, note: 72, velocity: 100 },
+      { kind: "track-note-off", trackIndex: 0, note: 72 },
     ]);
   });
 });

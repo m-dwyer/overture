@@ -20,10 +20,15 @@ type HostFunction = (...args: unknown[]) => unknown;
 type GlobalHost = Record<string, unknown>;
 
 export function moveCommandToPacket(command: HostCommand): MoveMidiPacket {
-  if (command.kind === "move-note-on") {
-    return [(2 << 4) | CIN_NOTE_ON, 0x90 | (command.track & 0x0f), command.note & 0x7f, command.velocity & 0x7f];
+  const channel = moveChannelForTrack(command.trackIndex);
+  if (command.kind === "track-note-on") {
+    return [(2 << 4) | CIN_NOTE_ON, 0x90 | channel, command.note & 0x7f, command.velocity & 0x7f];
   }
-  return [(2 << 4) | CIN_NOTE_OFF, 0x80 | (command.track & 0x0f), command.note & 0x7f, 0];
+  return [(2 << 4) | CIN_NOTE_OFF, 0x80 | channel, command.note & 0x7f, 0];
+}
+
+function moveChannelForTrack(trackIndex: number): number {
+  return trackIndex & 0x0f;
 }
 
 export function moveMidiToInput(data: readonly number[], stepCount: number): CoreInput | null {
