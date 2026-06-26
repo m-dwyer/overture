@@ -290,7 +290,7 @@ function rasterizeFrame(bootFrame) {
 
 /* ---- run emission --------------------------------------------------------- */
 
-/* Emit coalesced horizontal lit-runs via deps.fill_rect. */
+/* Emit coalesced horizontal lit-runs via deps.fillRect. */
 function emitFrame(deps) {
     for (let y = 0; y < SPLASH_H; y++) {
         const row = y * SPLASH_W;
@@ -299,11 +299,11 @@ function emitFrame(deps) {
             if (FB[row + x]) {
                 if (runStart < 0) runStart = x;
             } else if (runStart >= 0) {
-                deps.fill_rect(runStart, y, x - runStart, 1, 1);
+                deps.fillRect(runStart, y, x - runStart, 1, 1);
                 runStart = -1;
             }
         }
-        if (runStart >= 0) deps.fill_rect(runStart, y, SPLASH_W - runStart, 1, 1);
+        if (runStart >= 0) deps.fillRect(runStart, y, SPLASH_W - runStart, 1, 1);
     }
 }
 
@@ -326,6 +326,6 @@ export function renderSplashScreen(state, deps) {
     }
     const bootFrame = Math.floor((state.splashFrameTick | 0) / SPLASH_TICKS_PER_FRAME);
 
-    deps.clear_screen();
+    deps.clear();
     renderSplashAnimationFrame(deps, bootFrame);
 }

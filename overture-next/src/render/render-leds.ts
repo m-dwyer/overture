@@ -1,10 +1,10 @@
-import type { LedView, OvertureHostAdapter } from "../core/types";
+import type { LedPort, LedView } from "../core/types";
 
-export function renderLeds(view: LedView, adapter: OvertureHostAdapter): void {
+export function renderLeds(view: LedView, leds: LedPort): void {
   for (const step of view.steps) {
-    adapter.setLed(step.index, step.color);
+    leds.setLed(step.index, step.color);
   }
   for (const button of view.buttons) {
-    adapter.setButtonLed(button.cc, button.color);
+    leds.setButtonLed(button.cc, button.color);
   }
 }

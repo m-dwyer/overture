@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc -p ../overture-next/tsconfig.json",
     "depcruise": "pnpm -C ../overture-ui exec depcruise -c ../overture-next/.dependency-cruiser.cjs ../overture-next/src ../overture-next/ui",
-    "verify": "pnpm typecheck && pnpm depcruise && pnpm test:node tests/overture-next/core.test.ts",
+    "verify": "pnpm typecheck && pnpm depcruise && pnpm test:node tests/overture-next/*.test.ts",
     "test:node": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test tests/render.spec.ts tests/inputs.spec.ts",
