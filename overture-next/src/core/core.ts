@@ -1,4 +1,4 @@
-import { CC_MENU, CC_PLAY, ROW_CC, STEP_NOTE_FIRST, parseMoveInput, type CoreInput } from "./input";
+import type { CoreInput } from "./input";
 import { getPatternStep, togglePatternStep } from "./pattern";
 import { createTracks, getTrack, selectTrackFromRow } from "./track";
 import { advanceTransport, createTransport, toggleTransport } from "./transport";
@@ -53,11 +53,6 @@ export function createOvertureCore(): OvertureCore {
       const step = getPatternStep(track.pattern, nextStep);
       if (step?.active) injectStep(nextStep);
     }
-  }
-
-  function dispatchInput(data: readonly number[]): boolean {
-    const input = parseMoveInput(data, activeTrack().pattern.length);
-    return input ? applyInput(input) : false;
   }
 
   function applyInput(input: CoreInput): boolean {
@@ -133,13 +128,13 @@ export function createOvertureCore(): OvertureCore {
     const lowerTrack = state.activeTrack % 4;
     return {
       steps: activeTrack().pattern.steps.map((step, i) => ({
-        index: STEP_NOTE_FIRST + i,
+        step: i,
         color: i === state.transport.playhead ? 120 : step.active ? 48 : 0,
       })),
       buttons: [
-        ...ROW_CC.map((cc, row) => ({ cc, color: row === lowerTrack ? 120 : 12 })),
-        { cc: CC_PLAY, color: state.transport.playing ? 16 : 4 },
-        { cc: CC_MENU, color: state.sessionView ? 44 : 8 },
+        ...[0, 1, 2, 3].map((row) => ({ kind: "track-row" as const, row, color: row === lowerTrack ? 120 : 12 })),
+        { kind: "play", color: state.transport.playing ? 16 : 4 },
+        { kind: "menu", color: state.sessionView ? 44 : 8 },
       ],
     };
   }
@@ -152,5 +147,5 @@ export function createOvertureCore(): OvertureCore {
     return hostCommands.splice(0);
   }
 
-  return { state, init, tick, dispatchInput, applyInput, getView, drainHostCommands };
+  return { state, init, tick, applyInput, getView, drainHostCommands };
 }

@@ -46,14 +46,14 @@ export interface TrackScreenView {
 export type ScreenView = SplashScreenView | TrackScreenView;
 
 export interface StepLedView {
-  index: number;
+  step: number;
   color: number;
 }
 
-export interface ButtonLedView {
-  cc: number;
-  color: number;
-}
+export type ButtonLedView =
+  | { kind: "track-row"; row: number; color: number }
+  | { kind: "play"; color: number }
+  | { kind: "menu"; color: number };
 
 export interface LedView {
   steps: StepLedView[];
@@ -87,8 +87,10 @@ export interface DisplayPort {
 }
 
 export interface LedPort {
-  setLed(index: number, color: number): void;
-  setButtonLed(cc: number, color: number): void;
+  setStepLed(step: number, color: number): void;
+  setTrackRowLed(row: number, color: number): void;
+  setPlayLed(color: number): void;
+  setMenuLed(color: number): void;
 }
 
 export interface HostCommandPort {
@@ -99,7 +101,6 @@ export interface OvertureCore {
   readonly state: CoreState;
   init(): void;
   tick(): void;
-  dispatchInput(data: readonly number[]): boolean;
   applyInput(input: CoreInput): boolean;
   getView(): OvertureView;
   drainHostCommands(): HostCommand[];
