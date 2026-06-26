@@ -9,6 +9,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "next:typecheck": "tsc -p ../overture-next/tsconfig.json",
+    "next:depcruise": "pnpm -C ../overture-ui exec depcruise -c ../overture-next/.dependency-cruiser.cjs ../overture-next/src ../overture-next/ui",
+    "next:verify": "pnpm next:typecheck && pnpm next:depcruise && pnpm test:node tests/overture-next/core.test.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:node": "vitest run",
