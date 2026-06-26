@@ -40,7 +40,6 @@ export function renderDrumLaneBankOverview(deps) {
     const tpsIdx = Math.max(0, TPS_VALUES.indexOf(S.drumLaneTPS[t]));
     const sqfl   = S.clipSeqFollow[t][ac] ? 1 : 0;
     const eucN = Math.min(S.drumLaneEuclidN[t][lane] | 0, len);
-    deps.drawBankHeading('DRUM LANE');
     const model = drumLaneParameterPageGridModel({
         altMode: S.altMode,
         tpsIdx: tpsIdx,
@@ -52,7 +51,9 @@ export function renderDrumLaneBankOverview(deps) {
         seqFollow: sqfl,
         knobTouched: S.knobTouched
     });
-    renderEncoderValueGrid(deps, model.cells, model.grid);
+    renderHeadedGridOverview(deps, model, function() {
+        deps.drawBankHeading('DRUM LANE');
+    });
 }
 
 /**
@@ -73,10 +74,6 @@ export function renderAllLanesConfirm(deps) {
  */
 export function renderAllLanesBankOverview(deps) {
     const t = S.activeTrack;
-    deps.fill_rect(0, 0, 128, 9, 1);
-    deps.print(4, 1, (Math.floor(S.tickCount / 24) % 2 === 0 ? 'ALL' : '   ') + ' LANES', 0);
-    deps.print(106, 1, 'Tr' + (S.activeTrack + 1), 0);
-    deps.drawAltArrow(98, true, deps.altIndicatorActive(S.activeTrack, S.activeBank));
     const model = allLanesParameterPageGridModel({
         altMode: S.altMode,
         resolution: S.bankParams[t][7][0],
@@ -89,6 +86,21 @@ export function renderAllLanesBankOverview(deps) {
         syncRepeat: S.bankParams[t][7][7],
         knobTouched: S.knobTouched
     });
+    renderHeadedGridOverview(deps, model, function() {
+        deps.fill_rect(0, 0, 128, 9, 1);
+        deps.print(4, 1, (Math.floor(S.tickCount / 24) % 2 === 0 ? 'ALL' : '   ') + ' LANES', 0);
+        deps.print(106, 1, 'Tr' + (S.activeTrack + 1), 0);
+        deps.drawAltArrow(98, true, deps.altIndicatorActive(S.activeTrack, S.activeBank));
+    });
+}
+
+/**
+ * @param {ParameterPageRenderDeps} deps
+ * @param {import('../types').ParameterPageGridModel} model
+ * @param {() => void} renderHeading
+ */
+function renderHeadedGridOverview(deps, model, renderHeading) {
+    renderHeading();
     renderEncoderValueGrid(deps, model.cells, model.grid);
 }
 
