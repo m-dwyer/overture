@@ -11,19 +11,16 @@ import type { Page } from "@playwright/test";
 
 type OvtGlobal = typeof globalThis & {
   OVT?: { advanceTicks(n: number): void };
-  overtureRuntime?: { isBootSplashVisible(): boolean };
-  overtureUiState?: { stateLoading?: boolean };
+  overtureRuntime?: { isReady(): boolean };
 };
 
-// Boot is complete and interactive: the tool handle exists, persisted state has
-// loaded, and the boot splash has finished. The one true "page is ready" gate —
-// replaces every "sleep ~2500ms past the splash". (Boot itself is driven by the
-// real loop, so this still waits on an observable condition rather than ticks.)
+// Boot is complete and interactive: the tool handle exists and the runtime says
+// it is ready. This replaces every "sleep ~2500ms past the splash" with an
+// observable condition driven by the real loop.
 export function waitReady(page: Page): Promise<unknown> {
   return page.waitForFunction(() => {
     const g = globalThis as OvtGlobal;
-    const s = g.overtureUiState;
-    return Boolean(g.OVT && s && !s.stateLoading && g.overtureRuntime && !g.overtureRuntime.isBootSplashVisible());
+    return Boolean(g.OVT && g.overtureRuntime?.isReady());
   });
 }
 

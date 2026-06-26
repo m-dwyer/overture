@@ -14,6 +14,7 @@ export interface OvertureRuntime {
   tick(): void;
   onMidiMessage(data: readonly number[]): void;
   onUnload(): void;
+  isReady(): boolean;
   isBootSplashVisible(): boolean;
 }
 
@@ -56,6 +57,10 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
     return splashTicks > 0;
   }
 
+  function isReady(): boolean {
+    return !isBootSplashVisible();
+  }
+
   function applyInput(input: CoreInput): void {
     core.applyInput(input);
   }
@@ -94,5 +99,5 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
     return core.state.tracks[core.state.activeTrack].pattern.length;
   }
 
-  return { core, init, tick, onMidiMessage, onUnload, isBootSplashVisible };
+  return { core, init, tick, onMidiMessage, onUnload, isReady, isBootSplashVisible };
 }
