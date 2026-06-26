@@ -191,13 +191,14 @@ export function renderDrumMidiDelayBankOverview(deps) {
     const t     = S.activeTrack;
     const vals  = S.bankParams[t][3];
     const knobs = BANKS[3].knobs;
-    deps.drawBankHeading(BANKS[3].name);
     const model = drumMidiDelayParameterPageGridModel({
         knobs: knobs,
         vals: vals,
         knobTouched: S.knobTouched
     });
-    renderEncoderValueGrid(deps, model.cells, model.grid);
+    renderHeadedGridOverview(deps, model, function() {
+        deps.drawBankHeading(BANKS[3].name);
+    });
 }
 
 /**
