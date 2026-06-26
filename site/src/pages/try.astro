@@ -1,8 +1,9 @@
 ---
 import "../styles/global.css";
 
-const pageTitle = "Try Overture | Browser Emulator";
-const pageDescription = "Play the Overture browser emulator with the real Move-style UI and Schwung-chain audio.";
+const pageTitle = "Try Overture | dAVEBOx fork browser emulator";
+const pageDescription =
+  "Try the Overture browser emulator: an experimental dAVEBOx fork built on Schwung, running the real Move-style UI and Schwung-chain audio.";
 const baseUrl = import.meta.env.BASE_URL;
 const emulatorParams = new URLSearchParams({ track: "5", view: "note" });
 if (Astro.url.searchParams.has("diag")) emulatorParams.set("diag", "1");
@@ -29,9 +30,12 @@ const emulatorSearch = `?${emulatorParams.toString()}`;
     <main class="try-main">
       <section class="try-hero">
         <div>
-          <p class="eyebrow">Browser emulator</p>
+          <p class="eyebrow">Browser emulator · dAVEBOx-derived</p>
           <h1>Try Overture</h1>
-          <p class="lede">The Move panel, OLED, pads, sequencer WASM, and Schwung module chain run directly in your browser.</p>
+          <p class="lede">
+            This experimental fork of dAVEBOx runs the Move panel, OLED, pads,
+            sequencer WASM, and Schwung module chain directly in your browser.
+          </p>
         </div>
       </section>
       <iframe

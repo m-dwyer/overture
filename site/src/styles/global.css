@@ -252,6 +252,23 @@ h3 {
   font-size: 18px;
 }
 
+.text-link,
+footer a {
+  color: var(--white);
+  text-decoration: underline;
+  text-decoration-color: var(--quiet);
+  text-underline-offset: 4px;
+  transition:
+    color 160ms ease,
+    text-decoration-color 160ms ease;
+}
+
+.text-link:hover,
+footer a:hover {
+  color: var(--metal);
+  text-decoration-color: var(--metal);
+}
+
 .spec-list,
 .detail-list {
   display: grid;

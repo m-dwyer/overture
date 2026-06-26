@@ -1,8 +1,14 @@
 # Overture
 
-**One installable groovebox that augments Ableton Move** — sequence Move's own 4 real
-Ableton engines (Drift / Wavetable / Drum & Melodic Sampler) *and* up to N open-engine
-tracks (any Schwung/moveforge module), under one cohesive UI, from a single install.
+Overture is an experimental fork of
+[dAVEBOx](https://github.com/legsmechanical/schwung-davebox), built on
+[Schwung](https://github.com/charlesvestal/schwung), exploring a hybrid
+groovebox workflow for Ableton Move.
+
+The experiment is one installable groovebox that augments Ableton Move: sequence
+Move's own 4 real Ableton engines (Drift / Wavetable / Drum & Melodic Sampler)
+and up to N open-engine tracks (any Schwung/moveforge module), under one
+cohesive UI, from a single install.
 
 Install Overture → it runs on top of Move → you get an 8-track (4 Ableton + 4+ open)
 sequencer with a co-run editing mode for the Ableton sounds and the full Schwung module
@@ -12,9 +18,9 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 > and browser Schwung-chain audio from Moveforge-built modules. The first
 > Overture-native changes (track navigation, clip reveal, auto-routing, Route Check,
 > Edit Sound, Param Peek, sound presets, and per-step length) are implemented. The tool
-> is a fork of [dAVEBOx](https://github.com/legsmechanical/schwung-davebox); shipped
-> behaviour belongs in the manual/generated reference, while new plans should start from
-> fresh issues or design notes rather than stale phase roadmaps.
+> remains a dAVEBOx-derived work; shipped behaviour belongs in the manual/generated
+> reference, while new plans should start from fresh issues or design notes rather
+> than stale phase roadmaps.
 
 ## Docs
 - `docs/generated/` — local generated manuals and screenshots from the browser emulator. The directory is gitignored except for `.gitkeep`; regenerate outputs when you want to read or inspect them locally.
@@ -35,5 +41,8 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 - `docs/ABLETON-ENGINE-ACCESS.md` — the empirical findings on what's reachable in Move's real engines (the foundation).
 
 ## Credits / licence
-Built on **Schwung** (© Charles Vestal, MIT) and **dAVEBOx** (© Josh Gaines, MIT). Overture
-bundles and extends both; all attribution preserved. See those projects' licences.
+Overture exists because of **dAVEBOx** (© Josh Gaines, MIT) and **Schwung**
+(© Charles Vestal, MIT). dAVEBOx and Schwung provide the foundation: the Move
+tool lineage, Schwung runtime, sequencing surface, and much of the underlying
+behaviour. Overture is a derivative experiment on top of that work, not a
+from-scratch replacement. See those projects' licences.
