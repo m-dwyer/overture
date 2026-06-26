@@ -36,7 +36,7 @@ export function createOvertureCore(): OvertureCore {
     }
     if (input.kind === "play") {
       const playing = toggleTransport(state.transport);
-      if (!playing) hostCommands.push({ kind: "move-note-off", track: activeTrack().route.channel, note: 60 });
+      if (!playing) hostCommands.push({ kind: "track-note-off", trackIndex: state.activeTrack, note: 60 });
       return true;
     }
     if (input.kind === "menu") {
@@ -61,8 +61,8 @@ export function createOvertureCore(): OvertureCore {
     state.lastInjectedStep = step;
     const track = activeTrack();
     hostCommands.push(
-      { kind: "move-note-on", track: track.route.channel, note: patternStep.note, velocity: patternStep.velocity },
-      { kind: "move-note-off", track: track.route.channel, note: patternStep.note },
+      { kind: "track-note-on", trackIndex: track.index, note: patternStep.note, velocity: patternStep.velocity },
+      { kind: "track-note-off", trackIndex: track.index, note: patternStep.note },
     );
   }
 

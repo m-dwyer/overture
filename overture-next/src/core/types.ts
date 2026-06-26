@@ -14,8 +14,8 @@ export interface CoreState {
 }
 
 export type HostCommand =
-  | { kind: "move-note-on"; track: number; note: number; velocity: number }
-  | { kind: "move-note-off"; track: number; note: number };
+  | { kind: "track-note-on"; trackIndex: number; note: number; velocity: number }
+  | { kind: "track-note-off"; trackIndex: number; note: number };
 
 export interface OvertureCore {
   readonly state: CoreState;

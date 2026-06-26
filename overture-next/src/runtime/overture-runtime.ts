@@ -47,8 +47,8 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
 
   function onUnload(): void {
     adapter.commands.execute({
-      kind: "move-note-off",
-      track: core.state.tracks[core.state.activeTrack].route.channel,
+      kind: "track-note-off",
+      trackIndex: core.state.activeTrack,
       note: 60,
     });
   }
