@@ -15,7 +15,6 @@ type DisplayPageGlobal = typeof globalThis & {
     activeBank: number;
     sessionView: boolean;
     allLanesConfirmed?: boolean;
-    bootSplashTicks?: number;
     stateLoading?: boolean;
   };
 };

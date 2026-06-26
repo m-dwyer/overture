@@ -4,12 +4,9 @@ import { createDefaultPattern } from "../../../overture-next/src/core/pattern";
 import { createTracks } from "../../../overture-next/src/core/track";
 
 describe("Overture Next core", () => {
-  test("starts with a splash view and settles into the track view", () => {
+  test("starts directly in the track view", () => {
     const core = createOvertureCore();
     core.init();
-
-    expect(core.getView().screen.kind).toBe("splash");
-    for (let i = 0; i < 48; i++) core.tick();
 
     const view = core.getView();
     expect(view.screen).toMatchObject({
@@ -24,7 +21,6 @@ describe("Overture Next core", () => {
   test("dispatches transport, track selection, and step toggle as state changes", () => {
     const core = createOvertureCore();
     core.init();
-    for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.applyInput({ kind: "play" })).toBe(true);
     expect(core.state.transport.playing).toBe(true);
@@ -43,7 +39,6 @@ describe("Overture Next core", () => {
   test("emits Move note commands when the playhead reaches an active step", () => {
     const core = createOvertureCore();
     core.init();
-    for (let i = 0; i < 48; i++) core.tick();
 
     core.applyInput({ kind: "play" });
     core.applyInput({ kind: "step", step: 1 });
@@ -62,7 +57,6 @@ describe("Overture Next core", () => {
   test("returns LED view data without touching a host adapter", () => {
     const core = createOvertureCore();
     core.init();
-    for (let i = 0; i < 48; i++) core.tick();
 
     const view = core.getView();
     expect(view.leds.steps.slice(0, 5)).toEqual([
@@ -96,7 +90,6 @@ describe("Overture Next core", () => {
   test("wraps the transport playhead through the active track pattern length", () => {
     const core = createOvertureCore();
     core.init();
-    for (let i = 0; i < 48; i++) core.tick();
 
     core.applyInput({ kind: "play" });
     for (let i = 0; i < 12 * 16; i++) core.tick();
@@ -107,7 +100,6 @@ describe("Overture Next core", () => {
   test("uses the active step note when emitting Move commands", () => {
     const core = createOvertureCore();
     core.init();
-    for (let i = 0; i < 48; i++) core.tick();
 
     core.state.tracks[0].pattern.steps[1].note = 72;
     core.applyInput({ kind: "play" });

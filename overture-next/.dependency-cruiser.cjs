@@ -40,9 +40,9 @@ module.exports = {
     {
       name: "core-does-not-know-host-or-render",
       severity: "error",
-      comment: "Core owns domain state and decisions; it must not import host adapters, renderers, or UI shell code.",
+      comment: "Core owns domain state and decisions; it must not import host adapters, renderers, runtime orchestration, or UI shell code.",
       from: { path: "^src/core/" },
-      to: { path: "^(src/(host|render)/|ui/)" },
+      to: { path: "^(src/(host|render|runtime)/|ui/)" },
     },
     {
       name: "host-stays-at-boundary",
@@ -50,7 +50,7 @@ module.exports = {
       comment:
         "Host adapters translate commands and surfaces only. They may use core/types, but not core behavior or renderers.",
       from: { path: "^src/host/" },
-      to: { path: "^(src/core/(core|input|pattern|track|transport)\\.ts$|src/render/|ui/)" },
+      to: { path: "^(src/core/(core|input|pattern|track|transport)\\.ts$|src/(render|runtime)/|ui/)" },
     },
     {
       name: "render-stays-presentational",
@@ -58,7 +58,22 @@ module.exports = {
       comment:
         "Renderers consume view types and surfaces. They must not import host adapters or core behavior modules.",
       from: { path: "^src/render/" },
-      to: { path: "^(src/host/|src/core/(core|input|pattern|track|transport)\\.ts$|ui/)" },
+      to: { path: "^(src/(host|runtime)/|src/core/(core|input|pattern|track|transport)\\.ts$|ui/)" },
+    },
+    {
+      name: "runtime-owns-orchestration",
+      severity: "error",
+      comment:
+        "Runtime coordinates core, renderers, and host ports; lower layers must not import runtime modules.",
+      from: { path: "^src/(core|host|render)/" },
+      to: { path: "^src/runtime/" },
+    },
+    {
+      name: "runtime-uses-host-ports",
+      severity: "error",
+      comment: "Runtime depends on host port types, not concrete Schwung adapters.",
+      from: { path: "^src/runtime/" },
+      to: { path: "^src/host/(?!types\\.ts$)" },
     },
     {
       name: "no-next-imports-legacy-ui",

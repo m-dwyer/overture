@@ -1,7 +1,8 @@
 import { renderSplashScreen } from "./ui_splash.mjs";
-import type { DisplayPort, ScreenView } from "../core/types";
+import type { DisplayPort } from "../core/types";
+import type { RenderableScreenView } from "./types";
 
-export function renderScreen(view: ScreenView, display: DisplayPort): void {
+export function renderScreen(view: RenderableScreenView, display: DisplayPort): void {
   if (view.kind === "splash") {
     renderSplashScreen({
       splashWasVisible: view.splashWasVisible,

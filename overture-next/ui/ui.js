@@ -1,53 +1,28 @@
-import { createOvertureCore } from '../src/core/core.ts';
 import { createSchwungAdapter } from '../src/host/schwung-adapter.ts';
-import { renderLeds } from '../src/render/render-leds.ts';
-import { renderScreen } from '../src/render/render-screen.ts';
 import { installSchwungRuntime } from '../src/host/schwung-runtime.ts';
+import { createOvertureRuntime } from '../src/runtime/overture-runtime.ts';
 
 const adapter = createSchwungAdapter();
-const core = createOvertureCore();
+const runtime = createOvertureRuntime(adapter);
 
 installSchwungRuntime({
   init() {
-    core.init();
-    render();
+    runtime.init();
   },
   tick() {
-    core.tick();
-    drainCommands();
-    render();
+    runtime.tick();
   },
   onMidiMessageInternal(data) {
-    dispatchMoveMidi(data);
+    runtime.onMidiMessage(data);
   },
   onMidiMessageExternal(data) {
-    dispatchMoveMidi(data);
+    runtime.onMidiMessage(data);
   },
   onUnload() {
-    adapter.commands.execute({ kind: 'move-note-off', track: core.state.tracks[core.state.activeTrack].route.channel, note: 60 });
+    runtime.onUnload();
   },
 }, {
-  overtureNext: core,
-  overtureUiState: core.state,
+  overtureNext: runtime.core,
+  overtureRuntime: runtime,
+  overtureUiState: runtime.core.state,
 });
-
-function drainCommands() {
-    for (const command of core.drainHostCommands()) adapter.commands.execute(command);
-}
-
-function dispatchMoveMidi(data) {
-    const input = adapter.input.parseMoveInput(data, activePatternLength());
-    if (input) core.applyInput(input);
-    drainCommands();
-}
-
-function activePatternLength() {
-    return core.state.tracks[core.state.activeTrack].pattern.length;
-}
-
-function render() {
-    adapter.runtime.publishState(core.state);
-    const view = core.getView();
-    renderScreen(view.screen, adapter.display);
-    renderLeds(view.leds, adapter.leds);
-}

@@ -4,14 +4,9 @@ import { createTracks, getTrack, selectTrackFromRow } from "./track";
 import { advanceTransport, createTransport, toggleTransport } from "./transport";
 import type { CoreState, HostCommand, LedView, OvertureCore, OvertureView, ScreenView } from "./types";
 
-const BOOT_SPLASH_TICKS = 48;
-
 export function createOvertureCore(): OvertureCore {
   const tracks = createTracks();
   const state: CoreState = {
-    bootSplashTicks: BOOT_SPLASH_TICKS,
-    splashWasVisible: false,
-    splashFrameTick: 0,
     stateLoading: false,
     pendingSetLoad: false,
     pendingDspSync: 0,
@@ -28,9 +23,6 @@ export function createOvertureCore(): OvertureCore {
   const hostCommands: HostCommand[] = [];
 
   function init(): void {
-    state.bootSplashTicks = BOOT_SPLASH_TICKS;
-    state.splashWasVisible = false;
-    state.splashFrameTick = 0;
     state.stateLoading = false;
     state.pendingSetLoad = false;
     state.pendingDspSync = 0;
@@ -38,15 +30,6 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function tick(): void {
-    if (state.bootSplashTicks > 0) {
-      if (!state.splashWasVisible) {
-        state.splashWasVisible = true;
-        state.splashFrameTick = 0;
-      } else {
-        state.splashFrameTick++;
-      }
-      state.bootSplashTicks--;
-    }
     const track = activeTrack();
     const nextStep = advanceTransport(state.transport, track.pattern.length);
     if (nextStep !== null) {
@@ -100,14 +83,6 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function getScreenView(): ScreenView {
-    if (state.bootSplashTicks > 0) {
-      return {
-        kind: "splash",
-        splashWasVisible: state.splashWasVisible,
-        splashFrameTick: state.splashFrameTick,
-      };
-    }
-    state.splashWasVisible = false;
     return {
       kind: "track",
       title: "OVERTURE NEXT",

@@ -3,9 +3,6 @@ import type { TrackState } from "./track";
 import type { TransportState } from "./transport";
 
 export interface CoreState {
-  bootSplashTicks: number;
-  splashWasVisible: boolean;
-  splashFrameTick: number;
   stateLoading: boolean;
   pendingSetLoad: boolean;
   pendingDspSync: number;
@@ -27,12 +24,6 @@ export interface StepView {
   playhead: boolean;
 }
 
-export interface SplashScreenView {
-  kind: "splash";
-  splashWasVisible: boolean;
-  splashFrameTick: number;
-}
-
 export interface TrackScreenView {
   kind: "track";
   title: string;
@@ -43,7 +34,7 @@ export interface TrackScreenView {
   steps: StepView[];
 }
 
-export type ScreenView = SplashScreenView | TrackScreenView;
+export type ScreenView = TrackScreenView;
 
 export interface StepLedView {
   step: number;

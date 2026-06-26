@@ -15,12 +15,11 @@
  * midpoint-circle ring, a cleared knob interior, and a left-to-right wordmark
  * wipe — which is the look these monochrome panels are made for.
  *
- * Animation timing: renderSplashScreen is called once per UI tick while the
- * boot splash is visible (the tick workflow forces S.screenDirty during the
- * splash so the OLED refreshes every tick). We advance one animation frame
+ * Animation timing: the runtime coordinator calls renderSplashScreen once per
+ * UI tick while the boot splash is visible. We advance one animation frame
  * every SPLASH_TICKS_PER_FRAME ticks so the ~94 Hz device tick rate plays the
- * sketch back near its native ~11 Hz. The per-splash frame counter
- * (S.splashFrameTick) resets on each splash entry edge.
+ * sketch back near its native ~11 Hz. The runtime-owned per-splash frame
+ * counter resets on each splash entry edge.
  */
 
 export const SPLASH_W = 128;
@@ -36,12 +35,8 @@ export const SPLASH_TICKS_PER_FRAME = 6;
  *   LOOP    >= SPLASH_SETTLE_FRAME    — the settled logo with a seamless
  *                                      breathing idle (period SPLASH_LOOP_FRAMES).
  *
- * The splash is NOT a fixed-length clip. The screen router shows it while
- * `stateLoading || bootSplashTicks > 0`, so it holds (looping) for exactly as
- * long as the app is still loading. S.bootSplashTicks (ui_state.mjs) is only a
- * MINIMUM floor — sized to guarantee the intro + a beat of settle always play
- * even when loading finishes instantly. When loading outlasts the floor, the
- * settle phase loops seamlessly until load completes, then the splash exits. */
+ * The splash renderer is not a loading policy. Runtime decides how long the
+ * splash view is shown; this module only draws the requested animation frame. */
 export const SPLASH_SETTLE_FRAME = 28;
 export const SPLASH_LOOP_FRAMES = 26;
 
@@ -315,8 +310,8 @@ export function renderSplashAnimationFrame(deps, bootFrame) {
 }
 
 /* Splash entry point, called once per tick while the boot splash is visible.
- * Advances the animation off S.splashFrameTick, which resets on the entry edge
- * (splashWasVisible false → true). */
+ * Advances the animation off the runtime-owned splash frame counter, which
+ * resets on the entry edge (splashWasVisible false → true). */
 export function renderSplashScreen(state, deps) {
     if (!state.splashWasVisible) {
         state.splashFrameTick = 0;

@@ -11,7 +11,8 @@ import type { Page } from "@playwright/test";
 
 type OvtGlobal = typeof globalThis & {
   OVT?: { advanceTicks(n: number): void };
-  overtureUiState?: { bootSplashTicks?: number; stateLoading?: boolean };
+  overtureRuntime?: { isBootSplashVisible(): boolean };
+  overtureUiState?: { stateLoading?: boolean };
 };
 
 // Boot is complete and interactive: the tool handle exists, persisted state has
@@ -22,7 +23,7 @@ export function waitReady(page: Page): Promise<unknown> {
   return page.waitForFunction(() => {
     const g = globalThis as OvtGlobal;
     const s = g.overtureUiState;
-    return Boolean(g.OVT && s && !s.stateLoading && s.bootSplashTicks === 0);
+    return Boolean(g.OVT && s && !s.stateLoading && g.overtureRuntime && !g.overtureRuntime.isBootSplashVisible());
   });
 }
 
