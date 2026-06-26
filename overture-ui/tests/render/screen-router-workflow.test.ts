@@ -226,4 +226,31 @@ describe("Screen router workflow", () => {
       expect(routedName(calls.filter((call) => call[0] !== "clear_screen"))).toBe(expected);
     }
   });
+
+  test("Track View knob-touch feedback follows the active Parameter Page policy", () => {
+    drawUIImpl(baseState({ activeBank: 6, knobTouched: 2 }) as any, deps(calls) as any);
+    expect(calls.map((call) => call[0])).toContain("renderParamPeek");
+    expect(calls.map((call) => call[0])).not.toContain("renderTrackBankOverview");
+
+    calls = [];
+    drawUIImpl(baseState({
+      activeBank: 5,
+      knobTouched: 2,
+      trackPadMode: [1, 0, 0, 0, 0, 0, 0, 0],
+      activeDrumLane: [3, 0, 0, 0, 0, 0, 0, 0],
+    }) as any, deps(calls) as any);
+    expect(calls.map((call) => call[0])).not.toContain("renderParamPeek");
+    expect(calls).toContainEqual(["syncDrumRepeatState", 0, 3]);
+    expect(calls.map((call) => call[0])).toContain("renderTrackBankOverview");
+
+    calls = [];
+    drawUIImpl(baseState({
+      activeBank: 7,
+      knobTouched: 0,
+      allLanesConfirmed: false,
+      trackPadMode: [1, 0, 0, 0, 0, 0, 0, 0],
+    }) as any, deps(calls) as any);
+    expect(calls.map((call) => call[0])).not.toContain("renderParamPeek");
+    expect(calls.map((call) => call[0])).toContain("renderTrackBankOverview");
+  });
 });

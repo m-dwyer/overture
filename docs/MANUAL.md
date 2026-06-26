@@ -166,9 +166,10 @@ The primary editing environment. Shows the active track's clip.
 | Loop (hold) + jog | Adjust clip length ±1 step |
 
 The OLED shows all 8 knob parameters and values on the active page. Touching or
-turning a knob opens focused parameter feedback with the readable parameter
-name, current value, and range or route context when available. The LED below
-each knob lights when that parameter differs from default.
+turning a knob gives page-owned feedback: melodic value pages and AUTO use
+focused parameter feedback, while drum pages keep the overview visible and
+highlight the touched slot so lane and repeat context stays on screen. The LED
+below each knob lights when that parameter differs from default.
 
 ## Switching tracks while playing
 

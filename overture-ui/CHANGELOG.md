@@ -49,10 +49,10 @@ the section into a versioned heading at release time.
 - **On-device module paths point at the right directory.** The DSP read its files from `modules/tools/davebox/` while the module installs as `modules/tools/overture/` (the `module.json` id), so the metronome click sample silently failed to load on device. Aligned all on-device paths (the `click-seq8.wav` loader and the wasm-glue default module dir) to `overture`.
 
 ### Performance / UX
-- **Track Page Param Peek uses focused parameter feedback.** Touching or turning
-  Track Page knobs now uses the same readable focused-parameter OLED pattern as
-  Sound Edit, including prominent values and range/status feedback where
-  available.
+- **Track Page touch feedback is page-owned.** Melodic value pages and AUTO keep
+  the readable focused-parameter OLED pattern, while drum pages keep their
+  overview visible and highlight the touched slot so lane and repeat context
+  stays on screen.
 
 ## [1.0b3] — 2026-05-30
 ### Features

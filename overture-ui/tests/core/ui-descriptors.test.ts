@@ -3,7 +3,7 @@ import { S } from "@overture-ui/core/ui_state.mjs";
 import { describeEditSoundForTrack, matchingSchwungSlotMask, routeScopeShortLabel } from "@overture-ui/core/ui_routes.mjs";
 import { routeCheckStatus, routeCheckViewModel } from "@overture-ui/core/ui_route_check.mjs";
 import { PARAM_PEEK_DETAIL_TICKS, autoLaneLabel, motionIdleModel, motionOverviewModel, paramPeekInfo } from "@overture-ui/motion/ui_motion_model.mjs";
-import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, drumRepeatGrooveParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel, melodicNoteFxParameterPageGridModel, trackBankOverviewRoute } from "@overture-ui/core/ui_parameter_page_model.mjs";
+import { allLanesParameterPageGridModel, drumLaneParameterPageGridModel, drumMidiDelayParameterPageGridModel, drumNoteFxParameterPageModel, drumRepeatGrooveParameterPageModel, genericParameterPageGridModel, labelValueParameterPageGridModel, melodicNoteFxParameterPageGridModel, parameterPageFeedbackPolicy, trackBankOverviewRoute } from "@overture-ui/core/ui_parameter_page_model.mjs";
 import { fmtArpRate } from "@overture-ui/core/ui_constants.mjs";
 
 describe("UI descriptor seams", () => {
@@ -529,5 +529,18 @@ describe("UI descriptor seams", () => {
     expect(trackBankOverviewRoute({ isDrum: false, bank: 1, allLanesConfirmed: true })).toBe("melodicNoteFx");
     expect(trackBankOverviewRoute({ isDrum: true, bank: 3, allLanesConfirmed: true })).toBe("drumMidiDelay");
     expect(trackBankOverviewRoute({ isDrum: false, bank: 3, allLanesConfirmed: true })).toBe("generic");
+  });
+
+  test("parameter page feedback policy is owned by the active page route", () => {
+    expect(parameterPageFeedbackPolicy({ isDrum: false, bank: 6, allLanesConfirmed: true })).toBe("focused");
+    expect(parameterPageFeedbackPolicy({ isDrum: false, bank: 1, allLanesConfirmed: true })).toBe("focused");
+    expect(parameterPageFeedbackPolicy({ isDrum: false, bank: 3, allLanesConfirmed: true })).toBe("focused");
+    expect(parameterPageFeedbackPolicy({ isDrum: true, bank: 0, allLanesConfirmed: true })).toBe("overview");
+    expect(parameterPageFeedbackPolicy({ isDrum: true, bank: 1, allLanesConfirmed: true })).toBe("overview");
+    expect(parameterPageFeedbackPolicy({ isDrum: true, bank: 3, allLanesConfirmed: true })).toBe("overview");
+    expect(parameterPageFeedbackPolicy({ isDrum: true, bank: 5, allLanesConfirmed: true })).toBe("overview");
+    expect(parameterPageFeedbackPolicy({ isDrum: true, bank: 7, allLanesConfirmed: true })).toBe("overview");
+    expect(parameterPageFeedbackPolicy({ isDrum: true, bank: 7, allLanesConfirmed: false })).toBe("mode-owned");
+    expect(parameterPageFeedbackPolicy({ isDrum: true, bank: 6, allLanesConfirmed: true })).toBe("focused");
   });
 });

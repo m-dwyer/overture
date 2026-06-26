@@ -40,6 +40,7 @@
     "ui/sound/ui_sound_page.mjs",
     "ui/render/ui_bank_chrome_render.mjs",
     "ui/render/ui_track_chrome_render.mjs",
+    "ui/render/ui_screen_router_workflow.mjs",
     "ui/render/ui_oled_layout.mjs",
     "ui/render/ui_idle_render.mjs",
     "ui/render/ui_parameter_page_render.mjs",

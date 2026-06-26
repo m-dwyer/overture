@@ -1,5 +1,20 @@
 import { PAD_MODE_DRUM, POLL_INTERVAL } from '../core/ui_constants.mjs';
+import { parameterPageFeedbackPolicy } from '../core/ui_parameter_page_model.mjs';
 
+/**
+ * @typedef {Object<string, any>} ScreenRouterDeps
+ * @property {() => any} renderSurface
+ * @property {() => void} clear_screen
+ * @property {(track: number, bank: number) => boolean} bankHasAltParams
+ * @property {(deps: any) => void} renderParamPeek
+ * @property {(deps: any, bank: number) => void} renderTrackBankOverview
+ * @property {(track: number, lane: number) => void} syncDrumRepeatState
+ */
+
+/**
+ * @param {import('../types').State} S
+ * @param {ScreenRouterDeps} deps
+ */
 export function drawUIImpl(S, deps) {
     /* CO-RUN: shadow_ui's chain editor owns the OLED while this is active.
      * Skip every Overture draw path so it doesn't fight the chain editor's
@@ -90,6 +105,7 @@ export function drawUIImpl(S, deps) {
     /* Track View — priority display state machine */
     const bank      = S.activeBank;
     const inTimeout = S.bankSelectTick >= 0 || S.jogTouched;
+    const isDrumTrack = S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM;
 
     /* Compress-limit override: highest priority for ~1500ms after a blocked compress */
     if (S.stretchBlockedEndTick >= 0) {
@@ -142,7 +158,7 @@ export function drawUIImpl(S, deps) {
     }
 
     /* Auto bank idle display: lane info + automation graph + progress bar */
-    if (bank === 6 && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM &&
+    if (bank === 6 && !isDrumTrack &&
             !S.loopHeld && S.knobTouched < 0 && !inTimeout) {
         deps.renderMotionIdleView(deps.renderSurface());
         return;
@@ -150,20 +166,25 @@ export function drawUIImpl(S, deps) {
 
     if (bank >= 0 && (S.knobTouched >= 0 || inTimeout ||
             (S.altMode && deps.bankHasAltParams(S.activeTrack, bank)) ||
-            (S.shiftHeld && bank === 1 && S.trackPadMode[S.activeTrack] !== PAD_MODE_DRUM))) {
-        if (S.knobTouched >= 0 && !S.stepIntervalMode) {
+            (S.shiftHeld && bank === 1 && !isDrumTrack))) {
+        if (S.knobTouched >= 0 && !S.stepIntervalMode &&
+                parameterPageFeedbackPolicy({
+                    isDrum: isDrumTrack,
+                    bank: bank,
+                    allLanesConfirmed: !!S.allLanesConfirmed
+                }) === 'focused') {
             deps.renderParamPeek(deps.renderSurface());
             return;
         }
         const bankRenderDeps = deps.renderSurface();
-        if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM && bank === 5) {
+        if (isDrumTrack && bank === 5) {
             const t    = S.activeTrack;
             const lane = S.activeDrumLane[t];
             deps.syncDrumRepeatState(t, lane);
         }
         deps.renderTrackBankOverview(bankRenderDeps, bank);
 
-    } else if (S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM) {
+    } else if (isDrumTrack) {
         deps.renderDrumTrackIdleView(deps.renderSurface());
     } else {
         deps.renderMelodicTrackIdleView(deps.renderSurface());

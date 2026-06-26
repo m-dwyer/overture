@@ -98,9 +98,10 @@ Default Parameter Page layout:
 - right edge or footer: page position when paginated;
 - footer: status, warning, browser hint, or selected target when useful.
 
-Encoder cells should show compact label over compact value. If a value changes
-or a knob is touched, prefer a focused parameter view over cramming more text
-into the grid.
+Encoder cells should show compact label over compact value. Each Parameter Page
+owns its touch feedback policy: focused parameter view for pages where one
+readable value is most useful, overview highlighting where page context matters,
+and mode-owned rendering for special screens that should not be overridden.
 
 ### Focused Parameter Feedback
 

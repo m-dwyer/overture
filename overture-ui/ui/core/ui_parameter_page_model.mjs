@@ -140,6 +140,10 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtLen, fmtPct, fmtPlayDir, fmtR
  * @typedef {'drumLane' | 'allLanesConfirm' | 'allLanes' | 'drumNoteFx' | 'drumRepeatGroove' | 'motion' | 'melodicNoteFx' | 'drumMidiDelay' | 'generic'} TrackBankOverviewRoute
  */
 
+/**
+ * @typedef {'focused' | 'overview' | 'mode-owned'} ParameterPageFeedbackPolicy
+ */
+
 const RND_ALG_NAMES = ['Pure', 'Gaus', 'Walk'];
 
 /** @type {import('../types').ParameterPageGridOptions} */
@@ -311,6 +315,24 @@ export function trackBankOverviewRoute(input) {
     if (!isDrum && bank === 1) return 'melodicNoteFx';
     if (isDrum && bank === 3) return 'drumMidiDelay';
     return 'generic';
+}
+
+/**
+ * @param {TrackBankOverviewRouteInput} input
+ * @returns {ParameterPageFeedbackPolicy}
+ */
+export function parameterPageFeedbackPolicy(input) {
+    const route = trackBankOverviewRoute(input);
+    if (route === 'allLanesConfirm') return 'mode-owned';
+    if (route === 'motion') return 'focused';
+    if (route === 'drumLane' ||
+            route === 'allLanes' ||
+            route === 'drumNoteFx' ||
+            route === 'drumRepeatGroove' ||
+            route === 'drumMidiDelay') {
+        return 'overview';
+    }
+    return 'focused';
 }
 
 /**
