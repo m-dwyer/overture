@@ -78,6 +78,11 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
     h.step(2);
   }
 
+  function touchJog(on: boolean): void {
+    h.emu.sendInternal(on ? 0x90 : 0x80, 9, on ? 127 : 0);
+    h.step(2);
+  }
+
   test("boots into the main view and the engine is queryable", () => {
     // Real UI printed the track strip (digits 1..8) to the OLED.
     expect(h.rec.text()).toMatch(/[1-8]/);
@@ -761,6 +766,28 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       expect(text).toMatch(/Route: Move Ch1/);
     } finally {
       touchKnob(0, false);
+    }
+  });
+
+  test("drum REPEAT GROOVE jog-touch overview does not blank the OLED", () => {
+    const ui = h.ui();
+    ui.activeTrack = 0;
+    ui.activeBank = 5;
+    ui.sessionView = false;
+    ui.trackPadMode[0] = 1;
+    ui.activeDrumLane[0] = 0;
+    ui.knobTouched = -1;
+    ui.jogTouched = false;
+    ui.bankSelectTick = -1;
+    ui.altMode = false;
+
+    try {
+      touchJog(true);
+      const frame = h.snapshot();
+      expect(frame.text).toMatch(/REPEAT GROOVE/);
+      expect(frame.prints.length + frame.rects.length + frame.pixels.length).toBeGreaterThan(0);
+    } finally {
+      touchJog(false);
     }
   });
 

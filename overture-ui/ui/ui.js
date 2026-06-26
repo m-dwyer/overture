@@ -1281,6 +1281,10 @@ function refreshDrumLaneBankParams(t, lane) {
     return getTrackClipSyncFacade().refreshDrumLaneBankParams(t, lane);
 }
 
+function syncDrumRepeatState(t, lane) {
+    return getTrackClipSyncFacade().readDrumRepeatState(t, lane);
+}
+
 /* Full drum-track resync after track switches. Side-button selection,
  * Shift+pad, and Shift+jog all need the same lane metadata, active-lane
  * steps, clip-content dots, and bank params. */

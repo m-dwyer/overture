@@ -43,6 +43,9 @@ the section into a versioned heading at release time.
 - **Transport stop returns to resting values.** When transport stops, all CC lanes emit their resting values so parameters don't get stuck.
 
 ### Fixes
+- **Repeat Groove jog-touch no longer blanks the OLED.** Holding the jog on the
+  drum Repeat Groove page now keeps the page overview visible instead of hitting
+  a missing render-time sync dependency.
 - **Boot splash shows on new sets.** Previously a new/empty set showed a black
   screen then "Configuring routing…" instead of the splash; the splash now
   covers the new-set routing setup.

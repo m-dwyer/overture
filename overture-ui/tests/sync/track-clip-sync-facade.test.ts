@@ -9,6 +9,20 @@ function createFacadeState() {
     seqActiveNotes: new Set<number>([99]),
     seqLastStep: 5,
     seqNoteOnClipTick: 10,
+    drumRepeatGate: [[0, 0]],
+    drumRepeatGateLen: [[8, 8]],
+    drumRepeatVelScale: [
+      [
+        new Array(8).fill(100),
+        new Array(8).fill(100),
+      ],
+    ],
+    drumRepeatNudge: [
+      [
+        new Array(8).fill(0),
+        new Array(8).fill(0),
+      ],
+    ],
   };
 }
 
@@ -68,6 +82,25 @@ describe("Track / Clip Sync facade", () => {
     expect(deps.readTrackConfig).toBeTypeOf("function");
     expect(deps.readTarpStepVel).toBeTypeOf("function");
     expect(deps.readDrumRepeatRates).toBeTypeOf("function");
+  });
+
+  test("reads Repeat Groove state through the facade host getter", () => {
+    const calls: Array<[string, ...unknown[]]> = [];
+    const S = createFacadeState();
+    const facade = createTrackClipSyncFacade(
+      S,
+      createFacadeDeps({
+        t0_l1_repeat_state: "5 80 90 100 110 120 130 140 150 -2 0 3 4 5 6 7 8 0 4",
+      }, calls),
+    );
+
+    facade.readDrumRepeatState(0, 1);
+
+    expect(calls).toEqual([["getParamUndefined", "t0_l1_repeat_state"]]);
+    expect(S.drumRepeatGate[0][1]).toBe(5);
+    expect(S.drumRepeatGateLen[0][1]).toBe(4);
+    expect(S.drumRepeatVelScale[0][1]).toEqual([80, 90, 100, 110, 120, 130, 140, 150]);
+    expect(S.drumRepeatNudge[0][1]).toEqual([-2, 0, 3, 4, 5, 6, 7, 8]);
   });
 
   test("refreshes current sequencer notes through the facade host getter", () => {

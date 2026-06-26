@@ -1,5 +1,6 @@
 import { PAD_MODE_DRUM } from '../core/ui_constants.mjs';
 import {
+    readDrumRepeatStateFromDsp,
     readDrumRepeatRatesFromDsp,
     readTrackArpStepConfigFromDsp,
     readTrackConfigFromDsp,
@@ -43,6 +44,12 @@ export function createTrackClipSyncFacade(S, deps) {
         return refreshDrumLaneBankParamsFromDsp(S, {
             host_module_get_param: deps.optionalHostModuleGetParamUndefined(),
             TPS_VALUES: deps.TPS_VALUES
+        }, track, lane);
+    }
+
+    function readDrumRepeatState(track, lane) {
+        return readDrumRepeatStateFromDsp(S, {
+            host_module_get_param: deps.optionalHostModuleGetParamUndefined()
         }, track, lane);
     }
 
@@ -118,6 +125,7 @@ export function createTrackClipSyncFacade(S, deps) {
     return {
         createClipStateSyncDeps,
         createDrumClipSyncDeps,
+        readDrumRepeatState,
         readDrumRepeatRates,
         readTarpStepVel,
         readTrackConfig,
