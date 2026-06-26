@@ -553,6 +553,7 @@ export interface ParameterPageGridOptions {
   preserveSlots: boolean;
   startY: number;
   valueYOffset: number;
+  rowGap?: number;
 }
 
 /** One visible encoder cell in a Parameter Page overview grid. */

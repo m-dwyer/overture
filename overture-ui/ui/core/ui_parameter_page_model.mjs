@@ -109,7 +109,11 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtLen, fmtPct, fmtPlayDir, fmtR
 
 /**
  * @typedef {Object} DrumRepeatGrooveStepModel
+ * @property {number} slot
+ * @property {string} label
  * @property {boolean} active
+ * @property {boolean} empty
+ * @property {'on' | 'off' | 'empty'} gateState
  * @property {boolean} gateOn
  * @property {string} value
  * @property {boolean} highlighted
@@ -117,7 +121,12 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtLen, fmtPct, fmtPlayDir, fmtR
 
 /**
  * @typedef {Object} DrumRepeatGrooveParameterPageModel
- * @property {DrumRepeatGrooveStepModel[]} steps
+ * @property {string} title
+ * @property {'velocity' | 'nudge'} valueMode
+ * @property {string} valueLabel
+ * @property {DrumRepeatGrooveStepModel[]} slots
+ * @property {import('../types').ParameterPageCellSlot[]} cells
+ * @property {import('../types').ParameterPageGridOptions} grid
  */
 
 /**
@@ -139,6 +148,15 @@ export const GENERIC_PARAMETER_PAGE_GRID_OPTIONS = {
     preserveSlots: true,
     startY: 12,
     valueYOffset: 12
+};
+
+/** @type {import('../types').ParameterPageGridOptions} */
+export const REPEAT_GROOVE_PARAMETER_PAGE_GRID_OPTIONS = {
+    preformatted: true,
+    preserveSlots: true,
+    startY: 12,
+    valueYOffset: 12,
+    rowGap: 24
 };
 
 /**
@@ -221,19 +239,51 @@ export function melodicNoteFxParameterPageGridModel(input) {
  * @returns {DrumRepeatGrooveParameterPageModel}
  */
 export function drumRepeatGrooveParameterPageModel(input) {
+    const valueMode = input.altMode ? 'nudge' : 'velocity';
     /** @type {DrumRepeatGrooveStepModel[]} */
-    const steps = [];
+    const slots = [];
+    /** @type {import('../types').ParameterPageCellSlot[]} */
+    const cells = [];
     for (let k = 0; k < 8; k++) {
         const active = k < input.gateLength;
         const nudge = input.nudge[k];
-        steps.push({
+        const label = repeatGrooveSlotLabel(valueMode, k);
+        const value = active ? col4(input.altMode ? repeatGrooveNudgeLabel(nudge) : input.velocityScale[k] + '%') : '';
+        const highlighted = input.knobTouched === k;
+        const gateOn = active && !!(input.gateBits & (1 << k));
+        slots.push({
+            slot: k,
+            label: label,
             active: active,
-            gateOn: active && !!(input.gateBits & (1 << k)),
-            value: active ? col4(input.altMode ? repeatGrooveNudgeLabel(nudge) : input.velocityScale[k] + '%') : '',
-            highlighted: input.knobTouched === k
+            empty: !active,
+            gateState: active ? (gateOn ? 'on' : 'off') : 'empty',
+            gateOn: gateOn,
+            value: value,
+            highlighted: highlighted
         });
+        cells.push(active ? {
+            label: label,
+            value: value,
+            highlighted: highlighted
+        } : null);
     }
-    return { steps: steps };
+    return {
+        title: 'REPEAT GROOVE',
+        valueMode: valueMode,
+        valueLabel: input.altMode ? 'Nudge' : 'Velocity',
+        slots: slots,
+        cells: cells,
+        grid: REPEAT_GROOVE_PARAMETER_PAGE_GRID_OPTIONS
+    };
+}
+
+/**
+ * @param {'velocity' | 'nudge'} valueMode
+ * @param {number} slot
+ * @returns {string}
+ */
+function repeatGrooveSlotLabel(valueMode, slot) {
+    return (valueMode === 'nudge' ? 'Nud' : 'Vel') + (slot + 1);
 }
 
 /**

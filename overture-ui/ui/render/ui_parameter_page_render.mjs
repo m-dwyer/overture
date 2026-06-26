@@ -15,7 +15,7 @@ import {
     drumRepeatGrooveParameterPageModel,
     trackBankOverviewRoute
 } from '../core/ui_parameter_page_model.mjs';
-import { renderEncoderValueGrid } from './ui_oled_layout.mjs';
+import { encoderValueGridPositions, renderEncoderValueGrid } from './ui_oled_layout.mjs';
 
 /**
  * @typedef {Object} ParameterPageRenderDeps
@@ -148,10 +148,6 @@ export function renderDrumRepeatGrooveBankOverview(deps) {
     deps.fill_rect(0, 0, 128, 9, 0);
     deps.fill_rect(0, 0, 128, 1, 1);
     deps.fill_rect(0, 8, 128, 1, 1);
-    deps.print(4, 1, 'REPEAT GROOVE', 1);
-    if (!S.sessionView && deps.bankHasAltParams(S.activeTrack, S.activeBank)) {
-        deps.drawAltArrow(98, false, deps.altIndicatorActive(S.activeTrack, S.activeBank));
-    }
     const model = drumRepeatGrooveParameterPageModel({
         altMode: S.altMode,
         gateBits: S.drumRepeatGate[t][lane],
@@ -160,14 +156,20 @@ export function renderDrumRepeatGrooveBankOverview(deps) {
         nudge: S.drumRepeatNudge[t][lane],
         knobTouched: S.knobTouched
     });
+    deps.print(4, 1, model.title, 1);
+    if (!S.sessionView && deps.bankHasAltParams(S.activeTrack, S.activeBank)) {
+        deps.drawAltArrow(98, false, deps.altIndicatorActive(S.activeTrack, S.activeBank));
+    }
+    const positions = encoderValueGridPositions(model.grid);
     for (let k = 0; k < 8; k++) {
-        const step = model.steps[k];
-        const colX = 4 + (k % 4) * 30;
-        const rowY = k < 4 ? 12 : 36;
+        const step = model.slots[k];
+        const pos = positions[k];
+        const colX = pos.x;
+        const rowY = pos.y;
         const hi   = step.highlighted;
         if (hi) deps.fill_rect(colX, rowY, 24, 24, 1);
-        if (!step.active) continue;
-        if (step.gateOn) {
+        if (step.empty) continue;
+        if (step.gateState === 'on') {
             deps.fill_rect(colX, rowY + 1, 24, 4, hi ? 0 : 1);
         } else {
             const bc = hi ? 0 : 1;

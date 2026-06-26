@@ -90,9 +90,7 @@ export function renderEncoderValueGrid(surface, cells, opts) {
         return;
     }
     const useSparse = mode === 'sparse';
-    const positions = useSparse
-        ? sparseTwoPositions(opts.startY == null ? 18 : opts.startY)
-        : grid4x2Positions(opts.startY == null ? 14 : opts.startY);
+    const positions = encoderValueGridPositions(opts);
     const labelMax = opts.labelMax || (useSparse ? 8 : 4);
     const valueMax = opts.valueMax || (useSparse ? 8 : 4);
     const valueYOffset = opts.valueYOffset == null ? 8 : opts.valueYOffset;
@@ -117,14 +115,26 @@ export function renderEncoderValueGrid(surface, cells, opts) {
     renderPageRail(surface, pageIdx, pageCount, opts.pageRail || {});
 }
 
-function grid4x2Positions(startY) {
+export function encoderValueGridPositions(opts) {
+    opts = opts || {};
+    const mode = opts.mode || 'encoder-grid';
+    const useSparse = mode === 'sparse';
+    return useSparse
+        ? sparseTwoPositions(opts.startY == null ? 18 : opts.startY)
+        : grid4x2Positions(
+            opts.startY == null ? 14 : opts.startY,
+            opts.rowGap == null ? 22 : opts.rowGap
+        );
+}
+
+function grid4x2Positions(startY, rowGap) {
     const out = [];
     const startX = 4;
     const colW = 30;
     for (let i = 0; i < 8; i++) {
         out.push({
             x: startX + (i % 4) * colW,
-            y: startY + Math.floor(i / 4) * 22
+            y: startY + Math.floor(i / 4) * rowGap
         });
     }
     return out;

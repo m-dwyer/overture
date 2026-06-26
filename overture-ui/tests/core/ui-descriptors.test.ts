@@ -469,7 +469,7 @@ describe("UI descriptor seams", () => {
     expect(model.cells[7]).toMatchObject({ label: "Algo", value: "Walk", highlighted: true });
   });
 
-  test("drum repeat groove Parameter Page model preserves gates, inactive steps, and alt nudge text", () => {
+  test("drum repeat groove Parameter Page model exposes slots, cells, gates, and alt nudge text", () => {
     const normal = drumRepeatGrooveParameterPageModel({
       altMode: false,
       gateBits: 0b00000101,
@@ -479,11 +479,27 @@ describe("UI descriptor seams", () => {
       knobTouched: 1,
     });
 
-    expect(normal.steps).toHaveLength(8);
-    expect(normal.steps[0]).toEqual({ active: true, gateOn: true, value: "80% ", highlighted: false });
-    expect(normal.steps[1]).toEqual({ active: true, gateOn: false, value: "90% ", highlighted: true });
-    expect(normal.steps[2]).toEqual({ active: true, gateOn: true, value: "100%", highlighted: false });
-    expect(normal.steps[4]).toEqual({ active: false, gateOn: false, value: "", highlighted: false });
+    expect(normal).toMatchObject({
+      title: "REPEAT GROOVE",
+      valueMode: "velocity",
+      valueLabel: "Velocity",
+      grid: {
+        preformatted: true,
+        preserveSlots: true,
+        startY: 12,
+        valueYOffset: 12,
+        rowGap: 24,
+      },
+    });
+    expect(normal.slots).toHaveLength(8);
+    expect(normal.cells).toHaveLength(8);
+    expect(normal.slots[0]).toEqual({ slot: 0, label: "Vel1", active: true, empty: false, gateState: "on", gateOn: true, value: "80% ", highlighted: false });
+    expect(normal.slots[1]).toEqual({ slot: 1, label: "Vel2", active: true, empty: false, gateState: "off", gateOn: false, value: "90% ", highlighted: true });
+    expect(normal.slots[2]).toEqual({ slot: 2, label: "Vel3", active: true, empty: false, gateState: "on", gateOn: true, value: "100%", highlighted: false });
+    expect(normal.slots[4]).toEqual({ slot: 4, label: "Vel5", active: false, empty: true, gateState: "empty", gateOn: false, value: "", highlighted: false });
+    expect(normal.cells[0]).toMatchObject({ label: "Vel1", value: "80% ", highlighted: false });
+    expect(normal.cells[1]).toMatchObject({ label: "Vel2", value: "90% ", highlighted: true });
+    expect(normal.cells[4]).toBeNull();
 
     const alt = drumRepeatGrooveParameterPageModel({
       altMode: true,
@@ -494,10 +510,12 @@ describe("UI descriptor seams", () => {
       knobTouched: 3,
     });
 
-    expect(alt.steps[0]).toMatchObject({ active: true, gateOn: true, value: "-2% ", highlighted: false });
-    expect(alt.steps[1]).toMatchObject({ active: true, gateOn: false, value: " 0% ", highlighted: false });
-    expect(alt.steps[2]).toMatchObject({ active: true, gateOn: true, value: "+3% ", highlighted: false });
-    expect(alt.steps[3]).toMatchObject({ active: true, gateOn: false, value: "+4% ", highlighted: true });
+    expect(alt).toMatchObject({ valueMode: "nudge", valueLabel: "Nudge" });
+    expect(alt.slots[0]).toMatchObject({ label: "Nud1", active: true, gateState: "on", value: "-2% ", highlighted: false });
+    expect(alt.slots[1]).toMatchObject({ label: "Nud2", active: true, gateState: "off", value: " 0% ", highlighted: false });
+    expect(alt.slots[2]).toMatchObject({ label: "Nud3", active: true, gateState: "on", value: "+3% ", highlighted: false });
+    expect(alt.slots[3]).toMatchObject({ label: "Nud4", active: true, gateState: "off", value: "+4% ", highlighted: true });
+    expect(alt.cells[3]).toMatchObject({ label: "Nud4", value: "+4% ", highlighted: true });
   });
 
   test("track bank overview route preserves specialized renderer selection", () => {

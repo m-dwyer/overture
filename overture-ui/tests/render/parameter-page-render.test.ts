@@ -127,6 +127,11 @@ describe("Parameter Page render presentation", () => {
     const grooveCalls: DrawCall[] = [];
     renderDrumRepeatGrooveBankOverview(createDeps(grooveCalls));
     expect(grooveCalls).toContainEqual(["arrow", 98, false, true]);
+    expect(grooveCalls).toContainEqual(["fill", 4, 13, 24, 4, 1]);
+    expect(grooveCalls).toContainEqual(["fill", 34, 13, 24, 1, 1]);
+    expect(grooveCalls).toContainEqual(["fill", 34, 16, 24, 1, 1]);
+    expect(grooveCalls).toContainEqual(["fill", 34, 13, 1, 4, 1]);
+    expect(grooveCalls).toContainEqual(["fill", 57, 13, 1, 4, 1]);
     expect(printed(grooveCalls)).toEqual(expect.arrayContaining([
       "REPEAT GROOVE", "-2% ", " 0% ", "+3% ", "+4% ",
     ]));
