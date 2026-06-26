@@ -107,6 +107,12 @@ describe("Parameter Page render presentation", () => {
 
     const overviewCalls: DrawCall[] = [];
     renderAllLanesBankOverview(createDeps(overviewCalls));
+    expect(overviewCalls.slice(0, 4)).toEqual([
+      ["fill", 0, 0, 128, 9, 1],
+      ["print", 4, 1, "ALL LANES", 0],
+      ["print", 106, 1, "Tr1", 0],
+      ["arrow", 98, true, true],
+    ]);
     expect(overviewCalls).toContainEqual(["arrow", 98, true, true]);
     expect(printed(overviewCalls)).toEqual(expect.arrayContaining([
       "ALL LANES", "Tr1", "Res ", "1/8 ", "Qnt ", "75% ", "VelIn", "96  ",
