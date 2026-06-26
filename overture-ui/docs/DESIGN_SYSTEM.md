@@ -226,18 +226,17 @@ Near-term convergence path:
 7. Update docs and tests to call user-facing surfaces Pages, while preserving
    legacy `bank` identifiers where they name current code or DSP protocol.
 
-First implementation anchor: `renderGenericParameterPageOverview()` now builds a
+First implementation anchor: `renderBankParameterPageOverview()` now builds a
 preformatted Parameter Page cell model and delegates grid drawing/highlighting
-to `renderEncoderValueGrid()`. A thin legacy `renderGenericBankOverview()`
-alias remains while older callers migrate. Specialized Parameter Page overviews
-use explicit presentation models where they need sparse slots, so physical
-encoder positions stay stable when a page has empty cells.
+to `renderEncoderValueGrid()`. Specialized Parameter Page overviews use
+explicit presentation models where they need sparse slots, so physical encoder
+positions stay stable when a page has empty cells.
 
 The old `ui/render/ui_bank_render.mjs` compatibility adapter was removed after
 an import audit found no in-repo runtime callers. Parameter Page renderers now
-live at `ui/render/ui_parameter_page_render.mjs`; legacy function names such as
-`renderGenericBankOverview()` remain exported there where they are still useful
-for callers that have not migrated to Page-oriented names.
+live at `ui/render/ui_parameter_page_render.mjs`; the unused
+`renderGenericBankOverview()` alias was removed after an import audit found no
+in-repo callers.
 
 ## Open Decisions
 

@@ -292,7 +292,7 @@ export function renderTrackBankOverview(deps, bank) {
         renderDrumMidiDelayBankOverview(deps);
         break;
     default:
-        renderGenericParameterPageOverview(deps, bank);
+        renderBankParameterPageOverview(deps, bank);
     }
 }
 
@@ -300,7 +300,7 @@ export function renderTrackBankOverview(deps, bank) {
  * @param {ParameterPageRenderDeps} deps
  * @param {number} bank
  */
-export function renderGenericParameterPageOverview(deps, bank) {
+export function renderBankParameterPageOverview(deps, bank) {
     const knobs = BANKS[bank].knobs;
     const t = S.activeTrack;
     const ac = effectiveClip(t);
@@ -321,12 +321,4 @@ export function renderGenericParameterPageOverview(deps, bank) {
     renderHeadedGridOverview(deps, model, function() {
         (bank === 5 ? deps.drawBankHeadingInverted : deps.drawBankHeading)(BANKS[bank].name);
     });
-}
-
-/**
- * @param {ParameterPageRenderDeps} deps
- * @param {number} bank
- */
-export function renderGenericBankOverview(deps, bank) {
-    return renderGenericParameterPageOverview(deps, bank);
 }

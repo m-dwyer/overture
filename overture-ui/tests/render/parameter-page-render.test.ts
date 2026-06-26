@@ -7,8 +7,7 @@ import {
   renderDrumMidiDelayBankOverview,
   renderDrumNoteFxBankOverview,
   renderDrumRepeatGrooveBankOverview,
-  renderGenericBankOverview,
-  renderGenericParameterPageOverview,
+  renderBankParameterPageOverview,
   renderMelodicNoteFxBankOverview,
   renderMotionBankOverview,
   renderTrackBankOverview,
@@ -194,7 +193,7 @@ describe("Parameter Page render presentation", () => {
     S.altMode = true;
     S.knobTouched = 6;
     const clipCalls: DrawCall[] = [];
-    renderGenericParameterPageOverview(createDeps(clipCalls), 0);
+    renderBankParameterPageOverview(createDeps(clipCalls), 0);
 
     expect(clipCalls[0]).toEqual(["heading", "CLIP"]);
     expect(printed(clipCalls)).toEqual(expect.arrayContaining([
@@ -205,7 +204,7 @@ describe("Parameter Page render presentation", () => {
     S.altMode = false;
     S.knobTouched = 1;
     const arpCalls: DrawCall[] = [];
-    renderGenericParameterPageOverview(createDeps(arpCalls), 4);
+    renderBankParameterPageOverview(createDeps(arpCalls), 4);
     expect(printed(arpCalls)).toEqual(expect.arrayContaining([
       "SEQUENCE ARP", "Rate", "1/16t",
     ]));
