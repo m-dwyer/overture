@@ -27,6 +27,13 @@ export function createSchwungAdapter(): OvertureHostAdapter {
     publishState(state: CoreState) {
       (globalThis as GlobalHost).overtureUiState = state;
     },
+    execute(command) {
+      if (command.kind === "move-note-on") {
+        adapter.injectMoveNoteOn(command.track, command.note, command.velocity);
+      } else {
+        adapter.injectMoveNoteOff(command.track, command.note);
+      }
+    },
     clear() {
       call("clear_screen", []);
     },

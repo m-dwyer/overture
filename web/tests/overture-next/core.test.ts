@@ -1,0 +1,78 @@
+import { describe, expect, test } from "vitest";
+import { createOvertureCore } from "../../../overture-next/src/core/core";
+
+const NOTE_ON = 0x90;
+const CC = 0xb0;
+
+describe("Overture Next core", () => {
+  test("starts with a splash view and settles into the track view", () => {
+    const core = createOvertureCore();
+    core.init();
+
+    expect(core.getView().screen.kind).toBe("splash");
+    for (let i = 0; i < 48; i++) core.tick();
+
+    const view = core.getView();
+    expect(view.screen).toMatchObject({
+      kind: "track",
+      title: "OVERTURE NEXT",
+      activeTrack: 0,
+      playing: false,
+      selectedStep: 0,
+    });
+  });
+
+  test("dispatches transport, track selection, and step toggle as state changes", () => {
+    const core = createOvertureCore();
+    core.init();
+    for (let i = 0; i < 48; i++) core.tick();
+
+    expect(core.dispatchInput([CC, 85, 127])).toBe(true);
+    expect(core.state.playing).toBe(true);
+
+    expect(core.dispatchInput([CC, 49, 127])).toBe(true);
+    expect(core.dispatchInput([CC, 42, 127])).toBe(true);
+    expect(core.dispatchInput([CC, 49, 0])).toBe(true);
+    expect(core.state.activeTrack).toBe(5);
+
+    expect(core.state.pattern[1]).toBe(false);
+    expect(core.dispatchInput([NOTE_ON, 17, 110])).toBe(true);
+    expect(core.state.selectedStep).toBe(1);
+    expect(core.state.pattern[1]).toBe(true);
+  });
+
+  test("emits Move note commands when the playhead reaches an active step", () => {
+    const core = createOvertureCore();
+    core.init();
+    for (let i = 0; i < 48; i++) core.tick();
+
+    core.dispatchInput([CC, 85, 127]);
+    core.dispatchInput([NOTE_ON, 17, 110]);
+    core.drainHostCommands();
+
+    for (let i = 0; i < 12; i++) core.tick();
+
+    expect(core.state.playhead).toBe(1);
+    expect(core.drainHostCommands()).toEqual([
+      { kind: "move-note-on", track: 0, note: 61, velocity: 100 },
+      { kind: "move-note-off", track: 0, note: 61 },
+    ]);
+    expect(core.drainHostCommands()).toEqual([]);
+  });
+
+  test("returns LED view data without touching a host adapter", () => {
+    const core = createOvertureCore();
+    core.init();
+    for (let i = 0; i < 48; i++) core.tick();
+
+    const view = core.getView();
+    expect(view.leds.steps.slice(0, 5)).toEqual([
+      { index: 16, color: 120 },
+      { index: 17, color: 0 },
+      { index: 18, color: 0 },
+      { index: 19, color: 0 },
+      { index: 20, color: 48 },
+    ]);
+    expect(view.leds.buttons).toContainEqual({ cc: 43, color: 120 });
+  });
+});
