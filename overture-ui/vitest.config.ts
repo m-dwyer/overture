@@ -50,7 +50,7 @@ export default defineConfig({
       // mock deps. The composition root ui/ui.js is exercised in the behavior tier
       // (real ui.js + wasm), not here, so it's excluded from this tier's numbers.
       // all:true so modules with NO unit test still appear as 0% — that's the gap map.
-      include: ["ui/**/*.mjs"],
+      include: ["ui/**/*.mjs", "ui/**/*.ts"],
       exclude: ["ui/ui.js"],
       all: true,
       reporter: ["text", "json-summary", "json", "html"],

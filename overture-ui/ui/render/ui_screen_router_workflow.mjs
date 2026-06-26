@@ -4,7 +4,7 @@ import { parameterPageFeedbackPolicy } from '../core/ui_parameter_page_model.mjs
 /**
  * @typedef {Object<string, any>} ScreenRouterDeps
  * @property {() => any} renderSurface
- * @property {import('../context/ui_context_stack.mjs').UiContextStack=} uiContextStack
+ * @property {import('../context/ui_context_stack.ts').UiContextStack=} uiContextStack
  * @property {() => void} clear_screen
  * @property {(track: number, bank: number) => boolean} bankHasAltParams
  * @property {(deps: any) => void} renderParamPeek

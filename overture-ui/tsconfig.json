@@ -1,11 +1,14 @@
 {
   // Type-check-only config for the QuickJS UI Runtime. `tsc --noEmit` is a CI
-  // gate beside the real pipeline (esbuild bundles ui/*.mjs -> dist/overture/ui.js);
-  // it NEVER emits files and nothing here ships to the device.
+  // gate beside the real pipeline (esbuild bundles source modules into
+  // dist/overture/ui.js); it NEVER emits files and nothing here ships to the
+  // device.
   //
   // Rollout is by `include`, not by `@ts-nocheck`: only files listed below are
   // checked, so untyped modules never produce noise. Add a module to `include`
-  // when you type it (the boy-scout step). Goal state: `ui/**/*.mjs`.
+  // when you type it (the boy-scout step). Legacy modules may stay `.mjs` with
+  // checkJs; new greenfield typed modules may be `.ts` when esbuild bundles them
+  // and the QuickJS parse gate still passes.
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
@@ -13,6 +16,7 @@
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     // Start loose: implicit any is tolerated so partially-typed neighbours don't
@@ -33,8 +37,8 @@
     "ui/motion/ui_motion_model.mjs",
     "ui/components/ui_browser_model.mjs",
     "ui/components/ui_parameter_page.mjs",
-    "ui/context/ui_confirm_prompt_context.mjs",
-    "ui/context/ui_context_stack.mjs",
+    "ui/context/ui_confirm_prompt_context.ts",
+    "ui/context/ui_context_stack.ts",
     "ui/sound/ui_sound_page_model.mjs",
     "ui/sound/ui_sound_preset_scope.mjs",
     "ui/sound/ui_sound_preset_repository.mjs",

@@ -66,7 +66,7 @@ import {
 } from './components/ui_text_keyboard.mjs';
 import {
     createUiContextStack
-} from './context/ui_context_stack.mjs';
+} from './context/ui_context_stack.ts';
 
 import {
     MoveNoteSession, MoveUndo, MoveLoop, MoveCopy, MoveMainTouch, MoveRec,

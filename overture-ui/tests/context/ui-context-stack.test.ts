@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { createConfirmPrompt } from "@overture-ui/components/ui_confirm_prompt.mjs";
-import { createConfirmPromptContext } from "@overture-ui/context/ui_confirm_prompt_context.mjs";
-import { createUiContextStack } from "@overture-ui/context/ui_context_stack.mjs";
+import { createConfirmPromptContext } from "@overture-ui/context/ui_confirm_prompt_context.ts";
+import { createUiContextStack } from "@overture-ui/context/ui_context_stack.ts";
 
 describe("UI Context Stack", () => {
   test("top context owns render, jog, and Back until it closes", () => {

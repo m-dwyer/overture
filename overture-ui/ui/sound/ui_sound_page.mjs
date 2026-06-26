@@ -29,7 +29,7 @@ import {
 } from '../components/ui_confirm_prompt.mjs';
 import {
     createConfirmPromptContext
-} from '../context/ui_confirm_prompt_context.mjs';
+} from '../context/ui_confirm_prompt_context.ts';
 import {
     createBrowserDivider,
     createBrowserItem,

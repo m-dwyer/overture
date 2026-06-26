@@ -3,31 +3,25 @@ import {
     renderConfirmPrompt,
     rotateConfirmPrompt
 } from '../components/ui_confirm_prompt.mjs';
+import type { UiContext } from './ui_context_stack.ts';
 
-/**
- * @typedef {Object} ConfirmPromptContextOptions
- * @property {string=} id
- * @property {any} prompt
- * @property {(prompt: any) => void=} onConfirm
- * @property {(prompt: any) => void=} onCancel
- * @property {(prompt: any) => void=} onClose
- * @property {() => void=} onChange
- */
+export interface ConfirmPromptContextOptions {
+    id?: string;
+    prompt: any;
+    onConfirm?: (prompt: any) => void;
+    onCancel?: (prompt: any) => void;
+    onClose?: (prompt: any) => void;
+    onChange?: () => void;
+}
 
-/**
- * @param {ConfirmPromptContextOptions} opts
- * @returns {import('./ui_context_stack.mjs').UiContext}
- */
-export function createConfirmPromptContext(opts) {
-    opts = opts || { prompt: null };
+export function createConfirmPromptContext(opts: ConfirmPromptContextOptions = { prompt: null }): UiContext {
     const prompt = opts.prompt;
-    /** @type {import('./ui_context_stack.mjs').UiContext} */
-    const context = {
+    const context: UiContext = {
         id: opts.id || 'confirm-prompt',
-        render: function(surface) {
+        render: function(surface: any): boolean {
             return renderConfirmPrompt(surface, prompt);
         },
-        handleJog: function(event, stack) {
+        handleJog: function(event, stack): boolean {
             if (!event) return false;
             if (event.type === 'rotate') {
                 if (rotateConfirmPrompt(prompt, event.delta || 0)) {
@@ -47,7 +41,7 @@ export function createConfirmPromptContext(opts) {
             }
             return false;
         },
-        handleBack: function(stack) {
+        handleBack: function(stack): boolean {
             stack.pop(context);
             if (opts.onCancel) opts.onCancel(prompt);
             if (opts.onClose) opts.onClose(prompt);

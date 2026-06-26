@@ -18,7 +18,7 @@ import {
 } from "@overture-ui/sound/ui_sound_page.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_page_render.mjs";
 import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/sound/ui_sound_preset_repository.mjs";
-import { createUiContextStack } from "@overture-ui/context/ui_context_stack.mjs";
+import { createUiContextStack } from "@overture-ui/context/ui_context_stack.ts";
 
 function resetSoundPageState() {
   S.activeTrack = 0;
