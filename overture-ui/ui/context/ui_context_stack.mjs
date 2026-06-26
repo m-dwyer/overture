@@ -6,6 +6,15 @@
 
 /**
  * @typedef {Object} UiContext
+ * Context Object contract:
+ * - Represents one temporary blocking surface, such as a confirm prompt.
+ * - Gets first refusal only while it is on top of the stack.
+ * - Returns true only when it consumes render/input/exit handling.
+ * - Owns temporary UI priority, not domain state.
+ * - Leaves domain commit/cancel behavior in the feature module callbacks.
+ * - Is not a generic screen router for Track View, Session View, Sound Page,
+ *   co-run, or other base groovebox surfaces.
+ *
  * @property {string=} id
  * @property {(surface: any) => boolean | void=} render
  * @property {(event: UiContextJogEvent, stack: UiContextStack) => boolean | void=} handleJog

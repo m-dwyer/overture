@@ -77,10 +77,10 @@ The single bag of OLED drawing primitives (`print`, `pixelPrint`, `fill_rect`, `
 _Avoid_: Canvas, graphics context, render deps, draw adapter
 
 **UI Context Stack**:
-The UI Runtime stack for temporary blocking surfaces that own render, jog, and
-exit handling while active, then fall back to the legacy workflow ladders when
-empty. Used first for modal-style prompts where the feature module still owns
-the domain commit/cancel behavior.
+The UI Runtime stack for temporary blocking surfaces whose Context Object owns
+render, jog, and exit handling while active, then falls back to the existing
+ordered render and input handlers when empty. Used first for modal-style prompts
+where the feature module still owns the domain commit/cancel behavior.
 _Avoid_: Screen stack, route stack, modal registry
 
 **Patched Schwung Capability**:
@@ -102,9 +102,9 @@ _Avoid_: Native mode, passthrough
 - The **UI Sidecar** persists UI-only state and is reconciled with DSP state through **Track / Clip Sync** after state load or resume.
 - **Parameter Page** read/write behavior depends on track type, active clip, active drum lane, route, sound component, and coalescing-sensitive DSP command rules.
 - Every render module draws through the one **Render Surface**; the composition root assembles it once and passes it wherever a per-render deps bag was formerly built.
-- The **UI Context Stack** owns temporary blocking surfaces before the normal
-  render and input ladders; when it is empty, legacy **Track View**, **Session
-  View**, **Parameter Page**, and menu workflows behave unchanged.
+- The **UI Context Stack** owns temporary blocking surfaces before the existing
+  ordered render and input handlers; when it is empty, **Track View**,
+  **Session View**, **Parameter Page**, and menu workflows behave unchanged.
 - **Patched Schwung Capability** checks keep the same **Tool Module** working on both stock and patched Schwung hosts.
 
 ## Design System
