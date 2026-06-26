@@ -201,26 +201,18 @@ describe("UI descriptor seams", () => {
     });
   });
 
-  test("Param Peek describes drum NOTE FX controls from drum lane state", () => {
+  test("Param Peek keeps drum AUTO as the intentional drum fallback", () => {
     S.trackPadMode[0] = 1;
-    S.activeBank = 1;
+    S.activeBank = 6;
     S.knobTouched = 0;
-    S.bankParams[0][1][0] = 109;
-    S.bankParams[0][1][1] = -7;
 
     expect(paramPeekInfo()).toMatchObject({
-      header: "NOTE FX T1 Drum",
-      target: "Lane Octave",
-      value: "Value Note 48",
-      detail: "Lane 3, octave jumps",
+      header: "AUTO T1 Drum",
+      target: "Melodic AUTO only",
+      value: "Use DRUM/NOTE banks",
+      detail: "Drum track",
       route: "Route: Move Ch1",
-    });
-
-    S.knobTouched = 5;
-    expect(paramPeekInfo()).toMatchObject({
-      target: "Gate Time",
-      value: "Value 109%",
-      detail: "Lane 3",
+      status: "unavailable",
     });
   });
 

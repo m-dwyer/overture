@@ -245,6 +245,15 @@ describe("Screen router workflow", () => {
 
     calls = [];
     drawUIImpl(baseState({
+      activeBank: 1,
+      knobTouched: 0,
+      trackPadMode: [1, 0, 0, 0, 0, 0, 0, 0],
+    }) as any, deps(calls) as any);
+    expect(calls.map((call) => call[0])).not.toContain("renderParamPeek");
+    expect(calls.map((call) => call[0])).toContain("renderTrackBankOverview");
+
+    calls = [];
+    drawUIImpl(baseState({
       activeBank: 7,
       knobTouched: 0,
       allLanesConfirmed: false,
