@@ -9,9 +9,10 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-// The tool's ui.js imports by absolute on-device paths. Remap them to dev
-// sources so the emulator loads the REAL UI (with HMR) — no bundle_ui.py step.
-const TOOL_UI = resolve(here, "../overture-ui/ui");
+// The tool's ui.js imports by absolute on-device paths. Remap them to the
+// clean Overture Next scaffold so the emulator boots the replacement tool while
+// overture-ui remains untouched as the reference implementation.
+const TOOL_UI = resolve(here, "../overture-next/ui");
 // Behavior-tier wasm engine (gitignored build artifact from `mise run wasm`).
 const SEQ8_WASM = resolve(here, "../overture-ui/dist/wasm/seq8.mjs");
 
@@ -54,7 +55,7 @@ export default defineConfig({
     alias: {
       "seq8-wasm": SEQ8_WASM,
       "@": resolve(here, "src"),
-      "@overture-ui": TOOL_UI,
+      "@overture-next": TOOL_UI,
     },
   },
   server: {

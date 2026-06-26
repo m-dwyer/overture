@@ -1,0 +1,18 @@
+{
+  "id": "overture-next",
+  "name": "Overture Next",
+  "version": "0.0.0",
+  "api_version": 2,
+  "component_type": "tool",
+  "ui": "ui.js",
+  "tool_config": {
+    "interactive": true,
+    "skip_file_browser": true,
+    "overtake": true
+  },
+  "capabilities": {
+    "suspend_keeps_js": true,
+    "claims_master_knob": true,
+    "midi_out": true
+  }
+}
