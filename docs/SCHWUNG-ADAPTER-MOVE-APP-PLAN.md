@@ -138,6 +138,19 @@ Owns the QuickJS tool module surface:
 
 The shell should stay shallow and replaceable.
 
+## Architecture Ratchet
+
+`overture-next/.dependency-cruiser.cjs` encodes the current clean boundaries as
+error-level rules. Run `pnpm -C web next:verify` before committing Overture Next
+work; it typechecks the typed tool scaffold, runs dependency-cruiser against
+`overture-next/src` and `overture-next/ui`, and runs the Overture Next core
+tests.
+
+The first ratchet keeps `ui/ui.js` as the only runtime shell, prevents typed
+source from importing that shell, keeps core independent of host/render code,
+keeps render presentational, keeps host adapters at the Schwung boundary, and
+blocks accidental imports from the legacy `overture-ui` implementation.
+
 ## Runtime Strategy
 
 Start as a Schwung interactive tool:
