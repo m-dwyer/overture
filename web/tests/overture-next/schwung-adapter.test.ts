@@ -1,8 +1,25 @@
 import { describe, expect, test } from "vitest";
-import { createSchwungAdapter, moveCommandToPacket } from "../../../overture-next/src/host/schwung-adapter";
+import { createSchwungAdapter, moveCommandToPacket, moveMidiToInput } from "../../../overture-next/src/host/schwung-adapter";
 import { installSchwungRuntime } from "../../../overture-next/src/host/schwung-runtime";
 
 describe("Overture Next Schwung adapter", () => {
+  test("converts Move CC and note input to core domain input", () => {
+    expect(moveMidiToInput([0xb0, 85, 127], 16)).toEqual({ kind: "play" });
+    expect(moveMidiToInput([0xb0, 50, 127], 16)).toEqual({ kind: "menu" });
+    expect(moveMidiToInput([0xb0, 49, 127], 16)).toEqual({ kind: "shift", held: true });
+    expect(moveMidiToInput([0xb0, 49, 0], 16)).toEqual({ kind: "shift", held: false });
+    expect(moveMidiToInput([0xb0, 42, 127], 16)).toEqual({ kind: "track-row", row: 1 });
+    expect(moveMidiToInput([0x90, 17, 100], 16)).toEqual({ kind: "step", step: 1 });
+  });
+
+  test("ignores unhandled or released Move input before it reaches core", () => {
+    expect(moveMidiToInput([0xb0, 85, 0], 16)).toBeNull();
+    expect(moveMidiToInput([0x80, 17, 0], 16)).toBeNull();
+    expect(moveMidiToInput([0x90, 17, 0], 16)).toBeNull();
+    expect(moveMidiToInput([0x90, 40, 100], 16)).toBeNull();
+    expect(moveMidiToInput([0xe0, 0, 64], 16)).toBeNull();
+  });
+
   test("converts domain note commands to Move USB-MIDI packets", () => {
     expect(moveCommandToPacket({ kind: "move-note-on", track: 2, note: 64, velocity: 101 })).toEqual([
       0x29,
@@ -36,6 +53,31 @@ describe("Overture Next Schwung adapter", () => {
     expect(packets).toEqual([[0x29, 0x91, 60, 90]]);
     expect("injectMoveNoteOn" in adapter).toBe(false);
     expect("injectMoveNoteOff" in adapter).toBe(false);
+  });
+
+  test("maps domain LED targets to Move pad and button LEDs", () => {
+    const calls: unknown[][] = [];
+    const host = {
+      setLED(...args: unknown[]) {
+        calls.push(["setLED", ...args]);
+      },
+      setButtonLED(...args: unknown[]) {
+        calls.push(["setButtonLED", ...args]);
+      },
+    } as Record<string, unknown>;
+    const adapter = createSchwungAdapter(host);
+
+    adapter.leds.setStepLed(2, 48);
+    adapter.leds.setTrackRowLed(1, 120);
+    adapter.leds.setPlayLed(16);
+    adapter.leds.setMenuLed(44);
+
+    expect(calls).toEqual([
+      ["setLED", 18, 48],
+      ["setButtonLED", 42, 120, true],
+      ["setButtonLED", 85, 16, true],
+      ["setButtonLED", 50, 44, true],
+    ]);
   });
 
   test("keeps Schwung global entrypoint installation in host runtime code", () => {

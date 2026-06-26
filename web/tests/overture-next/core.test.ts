@@ -3,9 +3,6 @@ import { createOvertureCore } from "../../../overture-next/src/core/core";
 import { createDefaultPattern } from "../../../overture-next/src/core/pattern";
 import { createTracks } from "../../../overture-next/src/core/track";
 
-const NOTE_ON = 0x90;
-const CC = 0xb0;
-
 describe("Overture Next core", () => {
   test("starts with a splash view and settles into the track view", () => {
     const core = createOvertureCore();
@@ -29,16 +26,16 @@ describe("Overture Next core", () => {
     core.init();
     for (let i = 0; i < 48; i++) core.tick();
 
-    expect(core.dispatchInput([CC, 85, 127])).toBe(true);
+    expect(core.applyInput({ kind: "play" })).toBe(true);
     expect(core.state.transport.playing).toBe(true);
 
-    expect(core.dispatchInput([CC, 49, 127])).toBe(true);
-    expect(core.dispatchInput([CC, 42, 127])).toBe(true);
-    expect(core.dispatchInput([CC, 49, 0])).toBe(true);
+    expect(core.applyInput({ kind: "shift", held: true })).toBe(true);
+    expect(core.applyInput({ kind: "track-row", row: 1 })).toBe(true);
+    expect(core.applyInput({ kind: "shift", held: false })).toBe(true);
     expect(core.state.activeTrack).toBe(5);
 
     expect(core.state.tracks[5].pattern.steps[1].active).toBe(false);
-    expect(core.dispatchInput([NOTE_ON, 17, 110])).toBe(true);
+    expect(core.applyInput({ kind: "step", step: 1 })).toBe(true);
     expect(core.state.selectedStep).toBe(1);
     expect(core.state.tracks[5].pattern.steps[1].active).toBe(true);
   });
@@ -48,8 +45,8 @@ describe("Overture Next core", () => {
     core.init();
     for (let i = 0; i < 48; i++) core.tick();
 
-    core.dispatchInput([CC, 85, 127]);
-    core.dispatchInput([NOTE_ON, 17, 110]);
+    core.applyInput({ kind: "play" });
+    core.applyInput({ kind: "step", step: 1 });
     core.drainHostCommands();
 
     for (let i = 0; i < 12; i++) core.tick();
@@ -69,13 +66,13 @@ describe("Overture Next core", () => {
 
     const view = core.getView();
     expect(view.leds.steps.slice(0, 5)).toEqual([
-      { index: 16, color: 120 },
-      { index: 17, color: 0 },
-      { index: 18, color: 0 },
-      { index: 19, color: 0 },
-      { index: 20, color: 48 },
+      { step: 0, color: 120 },
+      { step: 1, color: 0 },
+      { step: 2, color: 0 },
+      { step: 3, color: 0 },
+      { step: 4, color: 48 },
     ]);
-    expect(view.leds.buttons).toContainEqual({ cc: 43, color: 120 });
+    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 0, color: 120 });
   });
 
   test("creates a default pattern with per-step note data", () => {
@@ -101,7 +98,7 @@ describe("Overture Next core", () => {
     core.init();
     for (let i = 0; i < 48; i++) core.tick();
 
-    core.dispatchInput([CC, 85, 127]);
+    core.applyInput({ kind: "play" });
     for (let i = 0; i < 12 * 16; i++) core.tick();
 
     expect(core.state.transport.playhead).toBe(0);
@@ -113,8 +110,8 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.tick();
 
     core.state.tracks[0].pattern.steps[1].note = 72;
-    core.dispatchInput([CC, 85, 127]);
-    core.dispatchInput([NOTE_ON, 17, 110]);
+    core.applyInput({ kind: "play" });
+    core.applyInput({ kind: "step", step: 1 });
     core.drainHostCommands();
 
     for (let i = 0; i < 12; i++) core.tick();

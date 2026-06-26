@@ -18,12 +18,10 @@ installSchwungRuntime({
     render();
   },
   onMidiMessageInternal(data) {
-    core.dispatchInput(data);
-    drainCommands();
+    dispatchMoveMidi(data);
   },
   onMidiMessageExternal(data) {
-    core.dispatchInput(data);
-    drainCommands();
+    dispatchMoveMidi(data);
   },
   onUnload() {
     adapter.commands.execute({ kind: 'move-note-off', track: core.state.tracks[core.state.activeTrack].route.channel, note: 60 });
@@ -35,6 +33,16 @@ installSchwungRuntime({
 
 function drainCommands() {
     for (const command of core.drainHostCommands()) adapter.commands.execute(command);
+}
+
+function dispatchMoveMidi(data) {
+    const input = adapter.input.parseMoveInput(data, activePatternLength());
+    if (input) core.applyInput(input);
+    drainCommands();
+}
+
+function activePatternLength() {
+    return core.state.tracks[core.state.activeTrack].pattern.length;
 }
 
 function render() {
