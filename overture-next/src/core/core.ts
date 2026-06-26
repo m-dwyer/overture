@@ -1,5 +1,4 @@
-import { renderSplashScreen } from "../render/ui_splash.mjs";
-import type { CoreState, OvertureCore, OvertureHostAdapter } from "./types";
+import type { CoreState, HostCommand, LedView, OvertureCore, OvertureView, ScreenView } from "./types";
 
 const NOTE_ON = 0x90;
 const NOTE_OFF = 0x80;
@@ -16,7 +15,7 @@ const CC_PLAY = 85;
 const TICKS_PER_STEP = 12;
 const BOOT_SPLASH_TICKS = 48;
 
-export function createOvertureCore(adapter: OvertureHostAdapter): OvertureCore {
+export function createOvertureCore(): OvertureCore {
   const state: CoreState = {
     bootSplashTicks: BOOT_SPLASH_TICKS,
     splashWasVisible: false,
@@ -36,6 +35,7 @@ export function createOvertureCore(adapter: OvertureHostAdapter): OvertureCore {
     lastInjectedStep: -1,
     touchedParam: null,
   };
+  const hostCommands: HostCommand[] = [];
 
   function init(): void {
     state.bootSplashTicks = BOOT_SPLASH_TICKS;
@@ -45,12 +45,18 @@ export function createOvertureCore(adapter: OvertureHostAdapter): OvertureCore {
     state.pendingSetLoad = false;
     state.pendingDspSync = 0;
     state.ledInitComplete = true;
-    adapter.publishState(state);
-    draw();
   }
 
   function tick(): void {
-    if (state.bootSplashTicks > 0) state.bootSplashTicks--;
+    if (state.bootSplashTicks > 0) {
+      if (!state.splashWasVisible) {
+        state.splashWasVisible = true;
+        state.splashFrameTick = 0;
+      } else {
+        state.splashFrameTick++;
+      }
+      state.bootSplashTicks--;
+    }
     if (state.playing) {
       state.tick++;
       if (state.tick % TICKS_PER_STEP === 0) {
@@ -58,11 +64,9 @@ export function createOvertureCore(adapter: OvertureHostAdapter): OvertureCore {
         if (state.pattern[state.playhead]) injectStep(state.playhead);
       }
     }
-    adapter.publishState(state);
-    draw();
   }
 
-  function handleMidi(data: readonly number[]): boolean {
+  function dispatchInput(data: readonly number[]): boolean {
     const status = (data[0] ?? 0) & 0xf0;
     const d1 = (data[1] ?? 0) | 0;
     const d2 = (data[2] ?? 0) | 0;
@@ -81,7 +85,7 @@ export function createOvertureCore(adapter: OvertureHostAdapter): OvertureCore {
     if (value === 0) return false;
     if (cc === CC_PLAY) {
       state.playing = !state.playing;
-      if (!state.playing) adapter.injectMoveNoteOff(state.activeTrack, 60);
+      if (!state.playing) hostCommands.push({ kind: "move-note-off", track: state.activeTrack, note: 60 });
       return true;
     }
     if (cc === CC_MENU) {
@@ -109,45 +113,62 @@ export function createOvertureCore(adapter: OvertureHostAdapter): OvertureCore {
   function injectStep(step: number): void {
     const note = 60 + (step % 8);
     state.lastInjectedStep = step;
-    adapter.injectMoveNoteOn(state.activeTrack, note, 100);
-    adapter.injectMoveNoteOff(state.activeTrack, note);
+    hostCommands.push(
+      { kind: "move-note-on", track: state.activeTrack, note, velocity: 100 },
+      { kind: "move-note-off", track: state.activeTrack, note },
+    );
   }
 
-  function draw(): void {
+  function getView(): OvertureView {
+    return {
+      screen: getScreenView(),
+      leds: getLedView(),
+    };
+  }
+
+  function getScreenView(): ScreenView {
     if (state.bootSplashTicks > 0) {
-      renderSplashScreen(state, adapter.splashSurface);
-      adapter.flush();
-      return;
+      return {
+        kind: "splash",
+        splashWasVisible: state.splashWasVisible,
+        splashFrameTick: state.splashFrameTick,
+      };
     }
     state.splashWasVisible = false;
-    adapter.clear();
-    adapter.print(0, 0, "OVERTURE NEXT", 1);
-    adapter.print(0, 10, state.playing ? "PLAY" : "STOP", 1);
-    adapter.print(42, 10, "T" + (state.activeTrack + 1), 1);
-    adapter.print(72, 10, state.sessionView ? "SESSION" : "TRACK", 1);
-    adapter.print(0, 22, "Clean core spike", 1);
-    for (let i = 0; i < STEP_COUNT; i++) {
-      const x = 2 + i * 7;
-      const h = state.pattern[i] ? 7 : 3;
-      const y = 54 - h;
-      adapter.rect(x, y, 5, h, i === state.playhead ? 1 : state.pattern[i] ? 1 : 0, state.pattern[i] || i === state.playhead);
-    }
-    adapter.print(0, 56, "Step " + (state.selectedStep + 1), 1);
-    adapter.flush();
-    drawLeds();
+    return {
+      kind: "track",
+      title: "OVERTURE NEXT",
+      mode: state.sessionView ? "session" : "track",
+      activeTrack: state.activeTrack,
+      playing: state.playing,
+      selectedStep: state.selectedStep,
+      steps: state.pattern.map((active, index) => ({
+        index,
+        active,
+        selected: index === state.selectedStep,
+        playhead: index === state.playhead,
+      })),
+    };
   }
 
-  function drawLeds(): void {
-    for (let i = 0; i < STEP_COUNT; i++) {
-      adapter.setLed(STEP_NOTE_FIRST + i, i === state.playhead ? 120 : state.pattern[i] ? 48 : 0);
-    }
-    for (let row = 0; row < ROW_CC.length; row++) {
-      const lowerTrack = state.activeTrack % 4;
-      adapter.setButtonLed(ROW_CC[row], row === lowerTrack ? 120 : 12);
-    }
-    adapter.setButtonLed(CC_PLAY, state.playing ? 16 : 4);
-    adapter.setButtonLed(CC_MENU, state.sessionView ? 44 : 8);
+  function getLedView(): LedView {
+    const lowerTrack = state.activeTrack % 4;
+    return {
+      steps: state.pattern.map((active, i) => ({
+        index: STEP_NOTE_FIRST + i,
+        color: i === state.playhead ? 120 : active ? 48 : 0,
+      })),
+      buttons: [
+        ...ROW_CC.map((cc, row) => ({ cc, color: row === lowerTrack ? 120 : 12 })),
+        { cc: CC_PLAY, color: state.playing ? 16 : 4 },
+        { cc: CC_MENU, color: state.sessionView ? 44 : 8 },
+      ],
+    };
   }
 
-  return { state, init, tick, handleMidi };
+  function drainHostCommands(): HostCommand[] {
+    return hostCommands.splice(0);
+  }
+
+  return { state, init, tick, dispatchInput, getView, drainHostCommands };
 }
