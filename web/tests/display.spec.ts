@@ -15,7 +15,6 @@ type DisplayPageGlobal = typeof globalThis & {
     activeBank: number;
     sessionView: boolean;
     allLanesConfirmed?: boolean;
-    stateLoading?: boolean;
   };
 };
 type Page = import("@playwright/test").Page;

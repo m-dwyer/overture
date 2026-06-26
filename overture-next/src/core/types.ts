@@ -4,10 +4,6 @@ import type { TransportState } from "./transport";
 import type { OvertureView } from "../view/types";
 
 export interface CoreState {
-  stateLoading: boolean;
-  pendingSetLoad: boolean;
-  pendingDspSync: number;
-  ledInitComplete: boolean;
   activeTrack: number;
   sessionView: boolean;
   shiftHeld: boolean;
@@ -15,7 +11,6 @@ export interface CoreState {
   transport: TransportState;
   tracks: TrackState[];
   lastInjectedStep: number;
-  touchedParam: null;
 }
 
 export type HostCommand =

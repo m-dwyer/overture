@@ -14,6 +14,7 @@ describe("Overture Next runtime", () => {
     runtime.init();
 
     expect(runtime.core.getView().screen.kind).toBe("track");
+    expect(runtime.isReady()).toBe(false);
     expect(runtime.isBootSplashVisible()).toBe(true);
     expect(frames[0]).not.toContain("print:OVERTURE NEXT");
     expect(frames[0]).toContain("clear");
@@ -21,6 +22,7 @@ describe("Overture Next runtime", () => {
     for (let i = 0; i < 48; i++) runtime.tick();
 
     expect(runtime.isBootSplashVisible()).toBe(false);
+    expect(runtime.isReady()).toBe(true);
     expect(frames.at(-1)).toContain("print:OVERTURE NEXT");
   });
 

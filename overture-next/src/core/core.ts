@@ -8,10 +8,6 @@ import type { LedView, OvertureView, ScreenView } from "../view/types";
 export function createOvertureCore(): OvertureCore {
   const tracks = createTracks();
   const state: CoreState = {
-    stateLoading: false,
-    pendingSetLoad: false,
-    pendingDspSync: 0,
-    ledInitComplete: true,
     activeTrack: 0,
     sessionView: false,
     shiftHeld: false,
@@ -19,16 +15,10 @@ export function createOvertureCore(): OvertureCore {
     transport: createTransport(),
     tracks,
     lastInjectedStep: -1,
-    touchedParam: null,
   };
   const hostCommands: HostCommand[] = [];
 
-  function init(): void {
-    state.stateLoading = false;
-    state.pendingSetLoad = false;
-    state.pendingDspSync = 0;
-    state.ledInitComplete = true;
-  }
+  function init(): void {}
 
   function tick(): void {
     const track = activeTrack();

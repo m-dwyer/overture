@@ -344,11 +344,7 @@ function scheduleInitialState(emu: Emulator, trackNumber: number | null, view: "
   const timer = window.setInterval(() => {
     attempts++;
     const state = readOvertureUiState();
-    const settled = state &&
-      !state.stateLoading &&
-      !state.pendingSetLoad &&
-      !!state.ledInitComplete &&
-      ((state.pendingDspSync ?? 0) | 0) === 0;
+    const settled = state && readOvertureRuntime()?.isReady();
     if (!settled && attempts < 40) return;
     if (state && trackNumber != null && ((state.activeTrack ?? 0) | 0) !== trackNumber - 1) {
       applyInitialTrack(emu, trackNumber, !!state.sessionView);
@@ -362,23 +358,19 @@ function scheduleInitialState(emu: Emulator, trackNumber: number | null, view: "
 
 function readOvertureUiState(): {
   activeTrack?: number;
-  ledInitComplete?: boolean;
-  pendingDspSync?: number;
-  pendingSetLoad?: boolean;
   sessionView?: boolean;
-  stateLoading?: boolean;
 } | null {
   const state = (globalThis as {
     overtureUiState?: {
       activeTrack?: number;
-      ledInitComplete?: boolean;
-      pendingDspSync?: number;
-      pendingSetLoad?: boolean;
       sessionView?: boolean;
-      stateLoading?: boolean;
     };
   }).overtureUiState;
   return state ?? null;
+}
+
+function readOvertureRuntime(): { isReady(): boolean } | null {
+  return (globalThis as { overtureRuntime?: { isReady(): boolean } }).overtureRuntime ?? null;
 }
 
 function SchwungDiagnosticsDrawer({
