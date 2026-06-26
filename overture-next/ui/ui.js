@@ -1,5 +1,5 @@
-import { createOvertureCore } from './core/overture_core.mjs';
-import { createSchwungAdapter } from './host/schwung_adapter.mjs';
+import { createOvertureCore } from '../src/core/core.ts';
+import { createSchwungAdapter } from '../src/host/schwung-adapter.ts';
 
 const adapter = createSchwungAdapter();
 const core = createOvertureCore(adapter);
