@@ -242,8 +242,6 @@ export function renderMelodicNoteFxBankOverview(deps) {
     const t     = S.activeTrack;
     const knobs = BANKS[1].knobs;
     const vals  = S.bankParams[t][1];
-    deps.drawBankHeading(BANKS[1].name);
-    deps.drawAltArrow(98, true, deps.altIndicatorActive(S.activeTrack, S.activeBank));
     const model = melodicNoteFxParameterPageGridModel({
         knobs: knobs,
         vals: vals,
@@ -251,7 +249,10 @@ export function renderMelodicNoteFxBankOverview(deps) {
         noteFXRandomMode: S.noteFXRandomMode[t] || 0,
         knobTouched: S.knobTouched
     });
-    renderEncoderValueGrid(deps, model.cells, model.grid);
+    renderHeadedGridOverview(deps, model, function() {
+        deps.drawBankHeading(BANKS[1].name);
+        deps.drawAltArrow(98, true, deps.altIndicatorActive(S.activeTrack, S.activeBank));
+    });
 }
 
 /**
