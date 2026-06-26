@@ -12,8 +12,8 @@ through a defined host API), so we run *our* code against a *mock* of that bound
 ## Real vs mocked
 | Layer | In the emulator |
 |---|---|
-| Tool **UI JS** (`ui/*.mjs`) | **REAL** — exactly what ships |
-| Tool **DSP** (`seq8.c`) | **REAL** at behavior-tier (emscripten → wasm); **mocked** (JS stub) at layout-tier |
+| Tool **UI JS** (`overture-next/ui/ui.js` + `overture-next/src`) | **REAL** — the current replacement scaffold |
+| Tool **DSP** | **mocked/stubbed for Overture Next**; legacy seq8-wasm remains available as reference harness material |
 | Schwung **modules** | **REAL** wasm (moveforge already compiles these) |
 | **Display** (OLED) | MOCK → draw 128×64 to an HTML canvas (`clear_screen`/`print`/`draw_rect`/…) |
 | **Pads/steps/knobs/jog/buttons** | MOCK → clickable Move shell → emits the right MIDI into `onMidiMessageInternal` |
@@ -28,8 +28,9 @@ fidelity for UX design.
 ## Fidelity ladder (start cheap)
 1. **Layout tier** — real UI JS + **JS-mock DSP** (just enough clip/step/playhead state). Enough to
    design modes, navigation, the motion lane, the co-run "zoom" gesture. *Start here.*
-2. **Behavior tier** — real UI JS + **real `seq8`-wasm**. This is the default test path for behavior
-   that touches sequencing, routing, automation, or persistence.
+2. **Behavior tier** — the old `seq8`-wasm harness is reference material to port
+   deliberately as Overture Next gains sequencing, routing, automation, and
+   persistence.
 
 ## Host-API shim list (the mock surface)
 Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Representative set:
@@ -60,8 +61,9 @@ confirm those items on device when they matter to the change under test.
 
 ## Build / run
 The emulator lives in `web/`, but Vite remaps the tool's on-device imports to
-the live sources in `overture-ui/ui/`. The behavior tier expects the real DSP build at
-`overture-ui/dist/wasm/seq8.mjs`.
+the live replacement tool entrypoint in `overture-next/ui/`. The old
+`overture-ui` dAVEBOx fork remains in the repo as a reference implementation and
+as a source of test-harness scenarios to port.
 
 Common loop:
 
@@ -71,21 +73,22 @@ mise run wasm
 pnpm -C web dev
 ```
 
-Then open the Vite URL, normally `http://localhost:5173/`. Edit `overture-ui/ui/*` or
-`web/src/*`; Vite reloads without bundling or installing on the device.
+Then open the Vite URL, normally `http://localhost:5173/`. Edit
+`overture-next/src/*`, `overture-next/ui/*`, or `web/src/*`; Vite reloads
+without bundling or installing on the device.
 
 Checks:
 
 ```sh
 pnpm -C web typecheck
-pnpm -C web test:node
+pnpm -C web verify
 pnpm -C web test:e2e
 ```
 
-Use `pnpm -C web dev` for UI/UX iteration, `pnpm -C web test:node` for the
-real `seq8` WASM behavior tests, and `pnpm -C web test:e2e` for browser smoke
-coverage. If `overture-ui/dist/wasm/seq8.mjs` is missing, behavior-tier tests and the
-real-DSP browser path fail early; rebuild it with `mise run wasm`.
+Use `pnpm -C web dev` for UI/UX iteration, `pnpm -C web verify` for the current
+Overture ratchet, and `pnpm -C web test:e2e` for browser smoke/input coverage.
+Use `mise run reference-test` or `pnpm -C web test:e2e:reference` when you
+intentionally want the old reference suites while porting scenarios forward.
 
 Only compile/install to the Move after the browser path proves the interaction
 or when the phase needs real engine sound, co-run timing, MIDI injection, or

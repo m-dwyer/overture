@@ -20,7 +20,7 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 - `docs/generated/` — local generated manuals and screenshots from the browser emulator. The directory is gitignored except for `.gitkeep`; regenerate outputs when you want to read or inspect them locally.
   - Beginner guide: `pnpm -C web manual:generate`
   - Reference manual: `pnpm -C web reference:generate`
-  - **Accuracy guard:** each figure declares an `expect` (the state/OLED text its caption claims). `pnpm -C web test:e2e` runs `tests/manual-assertions.spec.ts` (ungated), which drives every figure and fails if a behaviour change makes a screenshot or caption wrong. `pnpm -C web manual:check` regenerates both guides and runs the same assertions.
+  - **Accuracy guard:** each figure declares an `expect` (the state/OLED text its caption claims). `pnpm -C web manual:assert` drives every figure and fails if a behaviour change makes a screenshot or caption wrong. `pnpm -C web manual:check` regenerates both guides and runs the same assertions.
   - **Read locally:** each generator emits standalone `.md` and figure-embedded `.html` files under `docs/generated/`. Generate and open:
     - Beginner: `pnpm -C web manual:generate && open docs/generated/overture-beginner-guide.html`
     - Reference: `pnpm -C web reference:generate && open docs/generated/overture-reference.html`
