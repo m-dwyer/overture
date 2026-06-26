@@ -1,8 +1,9 @@
 # Overture Emulator — Host-API contract (derived from the real tool)
 
-The emulator runs the **real** dAVEBOx/Overture `ui.js` (and shared Schwung modules)
-against a browser mock of the Schwung `shadow_ui` host. This file pins the exact
-contract, extracted from `overture-ui/ui/*` and `schwung/src/shared/*`. Keep it in sync.
+The emulator now boots the **Overture Next** scaffold from `overture-next/ui`.
+The old dAVEBOx-derived `overture-ui` remains in the repo as a reference
+implementation while the replacement tool grows behind the same browser mock of
+the Schwung `shadow_ui` host.
 
 ## Entry points (host → tool)
 The tool registers these on `globalThis`; the emulator host loop calls them:
@@ -58,7 +59,7 @@ Call counts are from a static scan of `ui/*` (rough frequency → priority):
 ## Module resolution
 The tool's `ui.js` imports by absolute on-device paths. The emulator remaps (Vite plugin):
 - `/data/UserData/schwung/shared/*`            → `schwung/src/shared/*`  (7+ modules, transitive)
-- `/data/UserData/schwung/modules/tools/overture/*` → `overture-ui/ui/*`
+- `/data/UserData/schwung/modules/tools/overture/*` → `overture-next/ui/*`
 
 This loads the dev sources directly (HMR), so no `bundle_ui.py` step is needed for the emulator.
 
