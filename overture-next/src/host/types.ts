@@ -1,5 +1,5 @@
-import type { DisplayPort, HostCommandPort, LedPort, RuntimePort } from "../core/types";
 import type { CoreInput } from "../core/input";
+import type { DisplayPort, HostCommandPort, LedPort, RuntimePort } from "../ports/types";
 
 export type MoveMidiPacket = readonly [number, number, number, number];
 

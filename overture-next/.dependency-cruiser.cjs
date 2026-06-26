@@ -40,7 +40,8 @@ module.exports = {
     {
       name: "core-does-not-know-host-or-render",
       severity: "error",
-      comment: "Core owns domain state and decisions; it must not import host adapters, renderers, runtime orchestration, or UI shell code.",
+      comment:
+        "Core owns domain state and decisions. It may emit view models, but must not import host adapters, renderers, runtime orchestration, or UI shell code.",
       from: { path: "^src/core/" },
       to: { path: "^(src/(host|render|runtime)/|ui/)" },
     },
@@ -74,6 +75,20 @@ module.exports = {
       comment: "Runtime depends on host port types, not concrete Schwung adapters.",
       from: { path: "^src/runtime/" },
       to: { path: "^src/host/(?!types\\.ts$)" },
+    },
+    {
+      name: "view-types-stay-neutral",
+      severity: "error",
+      comment: "View model types are shared data contracts, not behavior or host/runtime integration.",
+      from: { path: "^src/view/" },
+      to: { path: "^(src/(core|host|ports|render|runtime)/|ui/)" },
+    },
+    {
+      name: "ports-stay-contracts",
+      severity: "error",
+      comment: "Port contracts may reference core types, but not core behavior, host adapters, renderers, runtime orchestration, or UI shell code.",
+      from: { path: "^src/ports/" },
+      to: { path: "^(src/core/(core|input|pattern|track|transport)\\.ts$|src/(host|render|runtime|view)/|ui/)" },
     },
     {
       name: "no-next-imports-legacy-ui",

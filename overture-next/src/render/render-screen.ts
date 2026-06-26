@@ -1,5 +1,5 @@
 import { renderSplashScreen } from "./ui_splash.mjs";
-import type { DisplayPort } from "../core/types";
+import type { DisplayPort } from "../ports/types";
 import type { RenderableScreenView } from "./types";
 
 export function renderScreen(view: RenderableScreenView, display: DisplayPort): void {
