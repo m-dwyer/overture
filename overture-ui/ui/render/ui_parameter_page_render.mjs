@@ -306,7 +306,6 @@ export function renderGenericParameterPageOverview(deps, bank) {
     const ac = effectiveClip(t);
     const vals  = S.bankParams[t][bank];
     const isDrum = S.trackPadMode[S.activeTrack] === PAD_MODE_DRUM;
-    (bank === 5 ? deps.drawBankHeadingInverted : deps.drawBankHeading)(BANKS[bank].name);
     const model = genericParameterPageGridModel({
         bank: bank,
         knobs: knobs,
@@ -319,7 +318,9 @@ export function renderGenericParameterPageOverview(deps, bank) {
         delayClockFb: S.delayClockFb[t],
         clipPlaybackAudioReverse: S.clipPlaybackAudioReverse[t][ac] | 0
     });
-    renderEncoderValueGrid(deps, model.cells, model.grid);
+    renderHeadedGridOverview(deps, model, function() {
+        (bank === 5 ? deps.drawBankHeadingInverted : deps.drawBankHeading)(BANKS[bank].name);
+    });
 }
 
 /**
