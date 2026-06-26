@@ -94,6 +94,19 @@ import {
 export function onCcJogImpl(S, deps, d1, d2) {
     if (S.shiftTrackLEDActive) { S.shiftTrackLEDActive = false; S.screenDirty = true; }
     const jogDeps = deps.createJogCcWorkflowDeps();
+    if (jogDeps.uiContextStack) {
+        if (d1 === 3 && d2 === 127 && jogDeps.uiContextStack.handleJog({ type: 'click' })) {
+            jogDeps.forceRedraw();
+            return;
+        }
+        if (d1 === jogDeps.moveMainKnob) {
+            const delta = jogDeps.decodeDelta(d2);
+            if (jogDeps.uiContextStack.handleJog({ type: 'rotate', delta: delta })) {
+                jogDeps.forceRedraw();
+                return;
+            }
+        }
+    }
     if (handleUiJogStepIntervalExit(S, jogDeps, d1, d2)) return;
     if (handleUiJogInheritPicker(S, jogDeps, d1, d2)) return;
     if (handleUiJogSnapshotPicker(S, jogDeps, d1, d2)) return;

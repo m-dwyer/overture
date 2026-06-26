@@ -383,7 +383,7 @@ test('ui.js immediately repushes pad map after Sound Edit browser selection', as
     const source = await readFile(new URL('../../ui/ui.js', import.meta.url), 'utf8');
     assert.match(
         source,
-        /applySchwungSoundBrowserSelection: function \(\) \{[\s\S]*const handled = applySchwungSoundBrowserSelection\(textKeyboard\(\)\);\s*computePadNoteMap\(\);[\s\S]*return handled;\s*\}/
+        /applySchwungSoundBrowserSelection: function \(\) \{[\s\S]*const handled = applySchwungSoundBrowserSelection\(textKeyboard\(\), uiContextStack\);\s*computePadNoteMap\(\);[\s\S]*return handled;\s*\}/
     );
 });
 

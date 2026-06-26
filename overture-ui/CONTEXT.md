@@ -76,6 +76,13 @@ _Avoid_: Parameter bank, knob bank
 The single bag of OLED drawing primitives (`print`, `pixelPrint`, `fill_rect`, `clear_screen`), shared chrome helpers (page headings, alt arrow, metro indicator, position bar), and render-time param queries (`altIndicatorActive`, `bankHasAltParams`, `midiNoteName`) that every render module draws through. Assembled once at the composition root and memoized; a render module reads only the subset it needs off the one surface. Replaced the former per-render deps factories and their identity adapters.
 _Avoid_: Canvas, graphics context, render deps, draw adapter
 
+**UI Context Stack**:
+The UI Runtime stack for temporary blocking surfaces that own render, jog, and
+exit handling while active, then fall back to the legacy workflow ladders when
+empty. Used first for modal-style prompts where the feature module still owns
+the domain commit/cancel behavior.
+_Avoid_: Screen stack, route stack, modal registry
+
 **Patched Schwung Capability**:
 A runtime-gated host feature available only when the patched Schwung host exposes the required function.
 _Avoid_: Feature flag, build flag
@@ -95,6 +102,9 @@ _Avoid_: Native mode, passthrough
 - The **UI Sidecar** persists UI-only state and is reconciled with DSP state through **Track / Clip Sync** after state load or resume.
 - **Parameter Page** read/write behavior depends on track type, active clip, active drum lane, route, sound component, and coalescing-sensitive DSP command rules.
 - Every render module draws through the one **Render Surface**; the composition root assembles it once and passes it wherever a per-render deps bag was formerly built.
+- The **UI Context Stack** owns temporary blocking surfaces before the normal
+  render and input ladders; when it is empty, legacy **Track View**, **Session
+  View**, **Parameter Page**, and menu workflows behave unchanged.
 - **Patched Schwung Capability** checks keep the same **Tool Module** working on both stock and patched Schwung hosts.
 
 ## Design System

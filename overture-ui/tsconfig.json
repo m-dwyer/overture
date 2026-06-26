@@ -33,6 +33,8 @@
     "ui/motion/ui_motion_model.mjs",
     "ui/components/ui_browser_model.mjs",
     "ui/components/ui_parameter_page.mjs",
+    "ui/context/ui_confirm_prompt_context.mjs",
+    "ui/context/ui_context_stack.mjs",
     "ui/sound/ui_sound_page_model.mjs",
     "ui/sound/ui_sound_preset_scope.mjs",
     "ui/sound/ui_sound_preset_repository.mjs",

@@ -28,6 +28,9 @@ import {
     rotateConfirmPrompt
 } from '../components/ui_confirm_prompt.mjs';
 import {
+    createConfirmPromptContext
+} from '../context/ui_confirm_prompt_context.mjs';
+import {
     createBrowserDivider,
     createBrowserItem,
     firstSelectableBrowserIndex,
@@ -357,6 +360,40 @@ function saveSchwungSoundPresetWithFeedback(page, name) {
     return result;
 }
 
+function openSchwungSoundOverwriteConfirm(page, entry, uiContextStack) {
+    const prompt = createConfirmPrompt({
+        title: 'Overwrite?',
+        message: entry.name || '',
+        cancelLabel: 'No',
+        confirmLabel: 'Yes',
+        defaultConfirm: false,
+        payload: entry
+    });
+    if (uiContextStack && typeof uiContextStack.push === 'function') {
+        page.overwriteConfirm = null;
+        uiContextStack.push(createConfirmPromptContext({
+            id: 'sound-preset-overwrite',
+            prompt: prompt,
+            onConfirm: function(p) {
+                saveSchwungSoundPresetWithFeedback(page, p.payload && p.payload.name ? p.payload.name : '');
+            },
+            onCancel: function() {
+                S.screenDirty = true;
+            },
+            onClose: function() {
+                page.overwriteConfirm = null;
+                S.screenDirty = true;
+            },
+            onChange: function() {
+                S.screenDirty = true;
+            }
+        }));
+    } else {
+        page.overwriteConfirm = prompt;
+    }
+    S.screenDirty = true;
+}
+
 function openSchwungSoundPresetNameEntry(textKeyboard, page, initialText) {
     return openTextKeyboard(textKeyboard, {
         title: 'Name',
@@ -388,7 +425,7 @@ export function beginSaveSchwungSoundPreset(textKeyboard) {
     return true;
 }
 
-export function applySchwungSoundBrowserSelection(textKeyboard) {
+export function applySchwungSoundBrowserSelection(textKeyboard, uiContextStack) {
     const page = S.schwungSoundPage;
     if (!page || !page.browser || page.slot < 0 || page.noList) return false;
     soundEditTraceState('browser-apply-before', page);
@@ -437,15 +474,7 @@ export function applySchwungSoundBrowserSelection(textKeyboard) {
             S.screenDirty = true;
             return true;
         }
-        page.overwriteConfirm = createConfirmPrompt({
-            title: 'Overwrite?',
-            message: entry.name || '',
-            cancelLabel: 'No',
-            confirmLabel: 'Yes',
-            defaultConfirm: false,
-            payload: entry
-        });
-        S.screenDirty = true;
+        openSchwungSoundOverwriteConfirm(page, entry, uiContextStack);
         return true;
     }
     const component = SCHWUNG_SOUND_COMPONENTS[clampComponentIndex(page.selectedIndex)];

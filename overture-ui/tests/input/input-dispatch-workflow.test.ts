@@ -73,6 +73,33 @@ describe("input dispatch workflow", () => {
     expect(S.screenDirty).toBe(true);
   });
 
+  test("jog dispatch lets the active UI context consume before legacy handlers", () => {
+    const c = calls();
+    const S: any = {
+      shiftTrackLEDActive: false,
+      screenDirty: false,
+    };
+
+    onCcJogImpl(S, {
+      createJogCcWorkflowDeps: () => ({
+        uiContextStack: {
+          handleJog: (event: unknown) => {
+            c.log.push(["contextJog", event]);
+            return true;
+          },
+        },
+        moveMainKnob: 14,
+        decodeDelta: () => 1,
+        forceRedraw: c.fn("redraw"),
+      }),
+    }, 14, 1);
+
+    expect(c.log).toEqual([
+      ["contextJog", { type: "rotate", delta: 1 }],
+      ["redraw"],
+    ]);
+  });
+
   test("pad press modal routing swallows tap-tempo pads before track-view dispatch", () => {
     const c = calls();
     const S: any = {

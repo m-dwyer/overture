@@ -64,6 +64,9 @@ import {
 import {
     createTextKeyboard
 } from './components/ui_text_keyboard.mjs';
+import {
+    createUiContextStack
+} from './context/ui_context_stack.mjs';
 
 import {
     MoveNoteSession, MoveUndo, MoveLoop, MoveCopy, MoveMainTouch, MoveRec,
@@ -769,6 +772,7 @@ const pendingDrumNoteOffs = Array.from({length: NUM_TRACKS}, () => []);  /* drum
 const recordingWorkflowState = createRecordingWorkflowState();
 const _drumRecNoteOns  = recordingWorkflowState.drumRecNoteOns;  /* { track, laneNote, vel } — queued drum recording note-ons */
 const _drumRecNoteOffs = recordingWorkflowState.drumRecNoteOffs;  /* { track, laneNote } — queued drum recording note-offs */
+const uiContextStack = createUiContextStack();
 
 
 /* ------------------------------------------------------------------ */
@@ -1641,6 +1645,7 @@ function drawUI() {
     }
     return drawUIImpl(S, {
         renderSurface,
+        uiContextStack,
         paintCoRunSideButtons,
         renderAutoRouteOverlay,
         renderSessionOverview,
@@ -2172,6 +2177,7 @@ function createSideButtonWorkflowDeps() {
 function createTransportCcWorkflowDeps() {
     return {
         ...createTransportCcHardwareAdapters(),
+        uiContextStack,
         banks: BANKS,
         clearAllMuteSolo,
         closeConvertConfirm,
@@ -2200,6 +2206,7 @@ function createTransportCcWorkflowDeps() {
 function createButtonCcWorkflowDeps() {
     return {
         ...createButtonCcHardwareAdapters(),
+        uiContextStack,
         clearAllLEDs,
         closeConvertConfirm,
         closeSchwungSoundBrowser,
@@ -2330,6 +2337,7 @@ function createKnobCcWorkflowDeps() {
 function createJogCcWorkflowDeps() {
     return {
         ...createJogCcHardwareAdapters(),
+        uiContextStack,
         padModeDrum: PAD_MODE_DRUM,
         numTracks: NUM_TRACKS,
         numClips: NUM_CLIPS,
@@ -2389,7 +2397,7 @@ function createJogCcWorkflowDeps() {
                 + ' cap=' + (S.captureHeld ? 1 : 0)
                 + ' sv=' + (S.sessionView ? 1 : 0)
                 + ' lastMuted=' + (S.lastPushedMuted ? 1 : 0));
-            const handled = applySchwungSoundBrowserSelection(textKeyboard());
+            const handled = applySchwungSoundBrowserSelection(textKeyboard(), uiContextStack);
             computePadNoteMap();
             OVERTURE_DEBUG_LOG && dlog('DEBUG', 'sound-edit wrapper apply-browser after padmap handled=' + (handled ? 1 : 0)
                 + ' copy=' + (S.copyHeld ? 1 : 0)

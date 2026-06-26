@@ -152,6 +152,20 @@ describe("Screen router workflow", () => {
     }
   });
 
+  test("active UI context owns render before legacy modal flags", () => {
+    drawUIImpl(baseState({ confirmBake: true }) as any, {
+      ...deps(calls),
+      uiContextStack: {
+        renderActive: (surface: unknown) => {
+          calls.push(["renderContext", surface]);
+          return true;
+        },
+      },
+    } as any);
+
+    expect(calls.map((call) => call[0])).toEqual(["factory", "renderContext"]);
+  });
+
   test("boot splash masks auto-route, but a post-boot re-trigger shows the overlay", () => {
     // While booting, the splash is the single loading surface even when the
     // new-set routing macro is running underneath.

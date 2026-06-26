@@ -4,6 +4,7 @@ import { parameterPageFeedbackPolicy } from '../core/ui_parameter_page_model.mjs
 /**
  * @typedef {Object<string, any>} ScreenRouterDeps
  * @property {() => any} renderSurface
+ * @property {import('../context/ui_context_stack.mjs').UiContextStack=} uiContextStack
  * @property {() => void} clear_screen
  * @property {(track: number, bank: number) => boolean} bankHasAltParams
  * @property {(deps: any) => void} renderParamPeek
@@ -56,6 +57,7 @@ export function drawUIImpl(S, deps) {
     }
     S._altPrevBank  = S.activeBank;
     S._altPrevTrack = S.activeTrack;
+    if (deps.uiContextStack && deps.uiContextStack.renderActive(deps.renderSurface())) return;
     if (S.sessionOverlayHeld) { deps.renderSessionOverview(deps.renderSurface()); return; }
     if (S.pendingInheritPicker) { deps.drawInheritPicker(); return; }
     if (S.snapshotPicker) { deps.drawSnapshotPicker(); return; }

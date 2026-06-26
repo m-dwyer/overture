@@ -189,6 +189,20 @@ describe("Button CC workflow - Sound Edit Menu", () => {
     expect(c.log).toEqual([["closeSoundBrowser"], ["redraw"]]);
   });
 
+  test("Menu lets the active UI context consume before closing Sound Edit browser", () => {
+    const c = calls();
+    const S = state({ schwungSoundPage: { browser: true } });
+    expect(handleUiMenuCoRunExitButton(S, deps(c, {
+      uiContextStack: {
+        handleBack: () => {
+          c.log.push(["contextBack"]);
+          return true;
+        },
+      },
+    }), MENU, 127)).toBe(true);
+    expect(c.log).toEqual([["contextBack"], ["redraw"]]);
+  });
+
   test("Menu closes Sound Edit page when no browser is open", () => {
     const c = calls();
     const S = state({ schwungSoundPage: { browser: false } });

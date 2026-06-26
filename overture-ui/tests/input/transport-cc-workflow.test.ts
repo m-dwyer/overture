@@ -700,6 +700,23 @@ describe("Transport CC workflow - Back button", () => {
     expect(c.log).toEqual([["closeTapTempo"], ["redraw"]]);
   });
 
+  test("Back lets the active UI context consume before legacy overlays", () => {
+    const c = calls();
+    const S = state({ tapTempoOpen: true });
+
+    handleUiBackButton(S, deps(c, {
+      uiContextStack: {
+        handleBack: () => {
+          c.log.push(["contextBack"]);
+          return true;
+        },
+      },
+    }), 51, 127);
+
+    expect(S.tapTempoOpen).toBe(true);
+    expect(c.log).toEqual([["contextBack"], ["redraw"]]);
+  });
+
   test("Back cancels the bake confirm", () => {
     const c = calls();
     const S = state({ confirmBake: true, confirmBakeWrapPhase: true });

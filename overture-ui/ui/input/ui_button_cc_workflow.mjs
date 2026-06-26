@@ -138,6 +138,11 @@ export function handleUiCaptureButton(S, deps, d1, d2) {
 export function handleUiMenuCoRunExitButton(S, deps, d1, d2) {
     if (d1 !== deps.moveMenu || d2 !== 127) return false;
 
+    if (deps.uiContextStack && deps.uiContextStack.handleBack()) {
+        deps.forceRedraw();
+        return true;
+    }
+
     if (S.schwungSoundPage) {
         if (S.schwungSoundPage.browser && deps.closeSchwungSoundBrowser) {
             deps.closeSchwungSoundBrowser();

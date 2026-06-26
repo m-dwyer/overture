@@ -9,7 +9,9 @@ export function handleUiBackButton(S, deps, d1, d2) {
     /* Back: close the topmost open dialog/menu layer; otherwise (with Shift)
      * suspend + hide the module. Schwung Sound and co-run surfaces use Menu as
      * their supported exit because physical Back belongs to the host path. */
-    if (S.tapTempoOpen) {
+    if (deps.uiContextStack && deps.uiContextStack.handleBack()) {
+        deps.forceRedraw();
+    } else if (S.tapTempoOpen) {
         deps.closeTapTempo();
         deps.forceRedraw();
     } else if (S.confirmBake) {

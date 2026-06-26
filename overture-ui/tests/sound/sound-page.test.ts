@@ -18,6 +18,7 @@ import {
 } from "@overture-ui/sound/ui_sound_page.mjs";
 import { renderSchwungSoundPage } from "@overture-ui/render/ui_sound_page_render.mjs";
 import { loadSchwungSoundPreset, saveSchwungSoundPreset } from "@overture-ui/sound/ui_sound_preset_repository.mjs";
+import { createUiContextStack } from "@overture-ui/context/ui_context_stack.mjs";
 
 function resetSoundPageState() {
   S.activeTrack = 0;
@@ -517,6 +518,57 @@ describe("Sound Page", () => {
       title: "Name",
       defaultText: "Preset 1",
     });
+  });
+
+  test("Schwung Sound overwrite confirm can be owned by the UI context stack", () => {
+    const files = new Map<string, string>();
+    files.set("/data/UserData/overture/sound_presets/manifest.json", JSON.stringify({
+      v: 1,
+      presets: [
+        {
+          id: "dust",
+          name: "Dust Pad",
+          ts: 20,
+          scope: "synth/dustline",
+          componentPrefix: "synth",
+          moduleId: "dustline",
+          file: "/data/UserData/overture/sound_presets/dust.json",
+        },
+      ],
+    }));
+    files.set("/data/UserData/overture/sound_presets/dust.json", JSON.stringify({
+      id: "dust",
+      name: "Dust Pad",
+      moduleIds: ["dustline"],
+      params: { old: "1" },
+    }));
+    Reflect.set(globalThis, "host_ensure_dir", () => true);
+    Reflect.set(globalThis, "host_read_file", (path: string) => files.get(path) ?? null);
+    Reflect.set(globalThis, "host_write_file", (path: string, data: string) => {
+      files.set(path, data);
+      return true;
+    });
+    Reflect.set(globalThis, "host_pad_block", () => true);
+    Reflect.set(globalThis, "shadow_get_param", (_slot: number, key: string) => ({
+      synth_module: "dustline",
+      "synth:chain_params": JSON.stringify([{ key: "macro", name: "Macro" }]),
+      "synth:macro": "0.5",
+    } as Record<string, string>)[key] ?? "");
+
+    requestEditSoundForTrack(4, { hasCoRun: true, hasMoveInject: true });
+    expect(beginSaveSchwungSoundPreset()).toBe(true);
+    const stack = createUiContextStack();
+    expect(applySchwungSoundBrowserSelection(undefined, stack)).toBe(true);
+
+    expect(S.schwungSoundPage?.overwriteConfirm).toBeNull();
+    expect(stack.size()).toBe(1);
+    expect(stack.handleJog({ type: "rotate", delta: 1 })).toBe(true);
+    expect(stack.handleJog({ type: "click" })).toBe(true);
+    expect(stack.size()).toBe(0);
+
+    const overwritten = JSON.parse(files.get("/data/UserData/overture/sound_presets/dust.json")!);
+    expect(overwritten).toMatchObject({ name: "Dust Pad", params: { macro: "0.5" } });
+    expect(S.schwungSoundPage?.statusFlash).toMatchObject({ text: "SAVED" });
   });
 
   test("Schwung Sound page renders selected module detail and cached chain params", () => {
