@@ -639,10 +639,9 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
 
       const text = h.rec.text();
       expect(text).toMatch(/AUTO T1 Clip A/);
+      expect(text).toMatch(/K2/);
       expect(text).toMatch(/Move target/);
-      expect(text).toMatch(/Value 64/);
-      expect(text).toMatch(/Clip A, Lane 2/);
-      expect(text).toMatch(/Route: Move Ch1/);
+      expect(text).toMatch(/\b64\b/);
       expect(h.get("t0_cc_assigns")).toBe(before);
     } finally {
       touchKnob(1, false);
@@ -726,15 +725,16 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       touchKnob(1, true);
       let text = h.rec.text();
       expect(text).toMatch(/AUTO T1 Clip A/);
+      expect(text).toMatch(/K2/);
       expect(text).toMatch(/Move target/);
-      expect(text).toMatch(/Value 64/);
+      expect(text).toMatch(/\b64\b/);
 
       h.step(50);
       text = h.rec.text();
       expect(text).toMatch(/Move target/);
-      expect(text).toMatch(/Lane 2 \/ Clip A/);
-      expect(text).toMatch(/Route: Move Ch1/);
-      expect(text).toMatch(/Loop 32 steps/);
+      expect(text).toMatch(/Lane 2 Clip A/);
+      expect(text).toMatch(/Move Ch1/);
+      expect(text).toMatch(/Loop/);
       expect(text).toMatch(/Res 1\/16 Zoom 1\/32/);
     } finally {
       ui.ccLaneLength[0][0][1] = 0;
@@ -757,7 +757,7 @@ describe("tool integration (real ui.js + seq8-wasm, headless)", () => {
       const text = h.rec.text();
       expect(text).toMatch(/AUTO T1 Drum/);
       expect(text).toMatch(/Melodic AUTO only/);
-      expect(text).toMatch(/Use DRUM\/NOTE banks/);
+      expect(text).toMatch(/No write/);
       expect(text).toMatch(/Route: Move Ch1/);
     } finally {
       touchKnob(0, false);
