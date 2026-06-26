@@ -2,7 +2,8 @@ import type { CoreInput } from "./input";
 import { getPatternStep, togglePatternStep } from "./pattern";
 import { createTracks, getTrack, selectTrackFromRow } from "./track";
 import { advanceTransport, createTransport, toggleTransport } from "./transport";
-import type { CoreState, HostCommand, LedView, OvertureCore, OvertureView, ScreenView } from "./types";
+import type { CoreState, HostCommand, OvertureCore } from "./types";
+import type { LedView, OvertureView, ScreenView } from "../view/types";
 
 export function createOvertureCore(): OvertureCore {
   const tracks = createTracks();

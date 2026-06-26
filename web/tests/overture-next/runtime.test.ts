@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
-import type { DisplayPort, HostCommand, LedPort, RuntimePort } from "../../../overture-next/src/core/types";
+import type { HostCommand } from "../../../overture-next/src/core/types";
 import type { InputPort, MidiPort, OvertureHostAdapter } from "../../../overture-next/src/host/types";
+import type { DisplayPort, LedPort, RuntimePort } from "../../../overture-next/src/ports/types";
 import { createOvertureRuntime } from "../../../overture-next/src/runtime/overture-runtime";
 
 describe("Overture Next runtime", () => {

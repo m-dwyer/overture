@@ -1,4 +1,5 @@
-import type { LedPort, LedView } from "../core/types";
+import type { LedPort } from "../ports/types";
+import type { LedView } from "../view/types";
 
 export function renderLeds(view: LedView, leds: LedPort): void {
   for (const step of view.steps) {
