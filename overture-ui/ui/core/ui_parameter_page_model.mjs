@@ -105,6 +105,7 @@ import { col4, fmtArpRate, fmtBool, fmtGateMod, fmtLen, fmtPct, fmtPlayDir, fmtR
  * @typedef {Object} DrumNoteFxParameterPageModel
  * @property {DrumNoteFxNoteBlockModel} noteBlock
  * @property {import('../types').ParameterPageCellSlot[]} cells
+ * @property {import('../types').ParameterPageGridOptions} grid
  */
 
 /**
@@ -226,7 +227,8 @@ export function drumNoteFxParameterPageModel(input) {
             noteText: input.noteName + ' ' + input.noteNumber,
             highlighted: input.knobTouched === 0 || input.knobTouched === 1
         },
-        cells: drumNoteFxParameterPageCells(input)
+        cells: drumNoteFxParameterPageCells(input),
+        grid: GENERIC_PARAMETER_PAGE_GRID_OPTIONS
     };
 }
 
@@ -428,7 +430,7 @@ export function drumMidiDelayParameterPageCells(input) {
  * @returns {import('../types').ParameterPageCellSlot[]}
  */
 export function drumNoteFxParameterPageCells(input) {
-    return labelValueParameterPageCells({
+    const cells = labelValueParameterPageCells({
         labels: [null, null, 'Vel', 'Qnt', 'Len>', '>Gate', null, null],
         values: [
             null,
@@ -443,6 +445,8 @@ export function drumNoteFxParameterPageCells(input) {
         wideLabels: true,
         knobTouched: input.knobTouched
     });
+    if (cells[5]) cells[5].highlightW = 30;
+    return cells;
 }
 
 /**
@@ -460,11 +464,13 @@ export function melodicNoteFxParameterPageCells(input) {
             continue;
         }
         const nfxAlt = input.altMode && k === 7;
-        cells.push({
+        const cell = {
             label: k === 5 ? '>Gate' : col4(nfxAlt ? 'Algo' : knobs[k].abbrev),
             value: col4(nfxAlt ? RND_ALG_NAMES[input.noteFXRandomMode || 0] : knobs[k].fmt(vals[k])),
             highlighted: input.knobTouched === k
-        });
+        };
+        if (k === 5) cell.highlightW = 30;
+        cells.push(cell);
     }
     return cells;
 }

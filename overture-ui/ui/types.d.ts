@@ -561,6 +561,8 @@ export interface ParameterPageCell {
   label: string;
   value: string;
   highlighted: boolean;
+  highlightW?: number;
+  highlightH?: number;
 }
 
 /** Null keeps a physical encoder slot empty while preserving grid position. */

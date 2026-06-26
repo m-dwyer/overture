@@ -125,17 +125,7 @@ export function renderDrumNoteFxBankOverview(deps) {
         deps.print(LX + Math.floor((LW - noteBlock.noteText.length * 6) / 2), LY + 13, noteBlock.noteText, lc);
     }
     {
-        for (let k = 2; k < 6; k++) {
-            const cell = model.cells[k];
-            if (!cell) continue;
-            const colX = 4 + (k % 4) * 30;
-            const rowY = k < 4 ? 12 : 36;
-            const hi   = cell.highlighted;
-            const cellW = (k === 5) ? 30 : 24;
-            if (hi) deps.fill_rect(colX, rowY, cellW, 24, 1);
-            deps.print(colX, rowY,      cell.label, hi ? 0 : 1);
-            deps.print(colX, rowY + 12, cell.value, hi ? 0 : 1);
-        }
+        renderEncoderValueGrid(deps, model.cells, model.grid);
     }
 }
 
@@ -248,18 +238,7 @@ export function renderMelodicNoteFxBankOverview(deps) {
         noteFXRandomMode: S.noteFXRandomMode[t] || 0,
         knobTouched: S.knobTouched
     });
-    for (let k = 0; k < 8; k++) {
-        const cell = model.cells[k];
-        if (!cell) continue;
-        const colX = 4 + (k % 4) * 30;
-        const rowY = k < 4 ? 12 : 36;
-        const hi   = cell.highlighted;
-        const widen = (k === 5);
-        const cellW = widen ? 30 : 24;
-        if (hi) deps.fill_rect(colX, rowY, cellW, 24, 1);
-        deps.print(colX, rowY,      cell.label, hi ? 0 : 1);
-        deps.print(colX, rowY + 12, cell.value, hi ? 0 : 1);
-    }
+    renderEncoderValueGrid(deps, model.cells, model.grid);
 }
 
 /**
