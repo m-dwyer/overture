@@ -1,21 +1,13 @@
+import { CC_MENU, CC_PLAY, ROW_CC, STEP_NOTE_FIRST, parseMoveInput, type CoreInput } from "./input";
+import { getPatternStep, togglePatternStep } from "./pattern";
+import { createTracks, getTrack, selectTrackFromRow } from "./track";
+import { advanceTransport, createTransport, toggleTransport } from "./transport";
 import type { CoreState, HostCommand, LedView, OvertureCore, OvertureView, ScreenView } from "./types";
 
-const NOTE_ON = 0x90;
-const NOTE_OFF = 0x80;
-const CC = 0xb0;
-
-const STEP_NOTE_FIRST = 16;
-const STEP_COUNT = 16;
-const ROW_CC = [43, 42, 41, 40] as const;
-
-const CC_SHIFT = 49;
-const CC_MENU = 50;
-const CC_PLAY = 85;
-
-const TICKS_PER_STEP = 12;
 const BOOT_SPLASH_TICKS = 48;
 
 export function createOvertureCore(): OvertureCore {
+  const tracks = createTracks();
   const state: CoreState = {
     bootSplashTicks: BOOT_SPLASH_TICKS,
     splashWasVisible: false,
@@ -27,11 +19,9 @@ export function createOvertureCore(): OvertureCore {
     activeTrack: 0,
     sessionView: false,
     shiftHeld: false,
-    playing: false,
-    tick: 0,
-    playhead: 0,
     selectedStep: 0,
-    pattern: Array.from({ length: STEP_COUNT }, (_, i) => i % 4 === 0),
+    transport: createTransport(),
+    tracks,
     lastInjectedStep: -1,
     touchedParam: null,
   };
@@ -57,65 +47,53 @@ export function createOvertureCore(): OvertureCore {
       }
       state.bootSplashTicks--;
     }
-    if (state.playing) {
-      state.tick++;
-      if (state.tick % TICKS_PER_STEP === 0) {
-        state.playhead = (state.playhead + 1) % STEP_COUNT;
-        if (state.pattern[state.playhead]) injectStep(state.playhead);
-      }
+    const track = activeTrack();
+    const nextStep = advanceTransport(state.transport, track.pattern.length);
+    if (nextStep !== null) {
+      const step = getPatternStep(track.pattern, nextStep);
+      if (step?.active) injectStep(nextStep);
     }
   }
 
   function dispatchInput(data: readonly number[]): boolean {
-    const status = (data[0] ?? 0) & 0xf0;
-    const d1 = (data[1] ?? 0) | 0;
-    const d2 = (data[2] ?? 0) | 0;
-    if (status === CC) return handleCc(d1, d2);
-    if ((status === NOTE_ON && d2 > 0) || status === NOTE_OFF || (status === NOTE_ON && d2 === 0)) {
-      return handleNote(status, d1, d2);
-    }
-    return false;
+    const input = parseMoveInput(data, activeTrack().pattern.length);
+    return input ? applyInput(input) : false;
   }
 
-  function handleCc(cc: number, value: number): boolean {
-    if (cc === CC_SHIFT) {
-      state.shiftHeld = value > 0;
+  function applyInput(input: CoreInput): boolean {
+    if (input.kind === "shift") {
+      state.shiftHeld = input.held;
       return true;
     }
-    if (value === 0) return false;
-    if (cc === CC_PLAY) {
-      state.playing = !state.playing;
-      if (!state.playing) hostCommands.push({ kind: "move-note-off", track: state.activeTrack, note: 60 });
+    if (input.kind === "play") {
+      const playing = toggleTransport(state.transport);
+      if (!playing) hostCommands.push({ kind: "move-note-off", track: activeTrack().route.channel, note: 60 });
       return true;
     }
-    if (cc === CC_MENU) {
+    if (input.kind === "menu") {
       state.sessionView = !state.sessionView;
       return true;
     }
-    const row = ROW_CC.indexOf(cc as (typeof ROW_CC)[number]);
-    if (row >= 0) {
-      state.activeTrack = row + (state.shiftHeld ? 4 : 0);
+    if (input.kind === "track-row") {
+      state.activeTrack = selectTrackFromRow(input.row, state.shiftHeld);
       return true;
     }
-    return false;
-  }
-
-  function handleNote(status: number, note: number, velocity: number): boolean {
-    if (status === NOTE_ON && velocity > 0 && note >= STEP_NOTE_FIRST && note < STEP_NOTE_FIRST + STEP_COUNT) {
-      const step = note - STEP_NOTE_FIRST;
-      state.selectedStep = step;
-      state.pattern[step] = !state.pattern[step];
+    if (input.kind === "step") {
+      state.selectedStep = input.step;
+      togglePatternStep(activeTrack().pattern, input.step);
       return true;
     }
     return false;
   }
 
   function injectStep(step: number): void {
-    const note = 60 + (step % 8);
+    const patternStep = getPatternStep(activeTrack().pattern, step);
+    if (!patternStep) return;
     state.lastInjectedStep = step;
+    const track = activeTrack();
     hostCommands.push(
-      { kind: "move-note-on", track: state.activeTrack, note, velocity: 100 },
-      { kind: "move-note-off", track: state.activeTrack, note },
+      { kind: "move-note-on", track: track.route.channel, note: patternStep.note, velocity: patternStep.velocity },
+      { kind: "move-note-off", track: track.route.channel, note: patternStep.note },
     );
   }
 
@@ -140,13 +118,13 @@ export function createOvertureCore(): OvertureCore {
       title: "OVERTURE NEXT",
       mode: state.sessionView ? "session" : "track",
       activeTrack: state.activeTrack,
-      playing: state.playing,
+      playing: state.transport.playing,
       selectedStep: state.selectedStep,
-      steps: state.pattern.map((active, index) => ({
+      steps: activeTrack().pattern.steps.map((step, index) => ({
         index,
-        active,
+        active: step.active,
         selected: index === state.selectedStep,
-        playhead: index === state.playhead,
+        playhead: index === state.transport.playhead,
       })),
     };
   }
@@ -154,21 +132,25 @@ export function createOvertureCore(): OvertureCore {
   function getLedView(): LedView {
     const lowerTrack = state.activeTrack % 4;
     return {
-      steps: state.pattern.map((active, i) => ({
+      steps: activeTrack().pattern.steps.map((step, i) => ({
         index: STEP_NOTE_FIRST + i,
-        color: i === state.playhead ? 120 : active ? 48 : 0,
+        color: i === state.transport.playhead ? 120 : step.active ? 48 : 0,
       })),
       buttons: [
         ...ROW_CC.map((cc, row) => ({ cc, color: row === lowerTrack ? 120 : 12 })),
-        { cc: CC_PLAY, color: state.playing ? 16 : 4 },
+        { cc: CC_PLAY, color: state.transport.playing ? 16 : 4 },
         { cc: CC_MENU, color: state.sessionView ? 44 : 8 },
       ],
     };
+  }
+
+  function activeTrack() {
+    return getTrack(state.tracks, state.activeTrack);
   }
 
   function drainHostCommands(): HostCommand[] {
     return hostCommands.splice(0);
   }
 
-  return { state, init, tick, dispatchInput, getView, drainHostCommands };
+  return { state, init, tick, dispatchInput, applyInput, getView, drainHostCommands };
 }

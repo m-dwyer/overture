@@ -31,7 +31,7 @@ globalThis.onMidiMessageExternal = function (data) {
 };
 
 globalThis.onUnload = function () {
-    adapter.injectMoveNoteOff(core.state.activeTrack, 60);
+    adapter.injectMoveNoteOff(core.state.tracks[core.state.activeTrack].route.channel, 60);
 };
 
 function drainCommands() {
