@@ -70,22 +70,29 @@ export type HostCommand =
   | { kind: "move-note-off"; track: number; note: number };
 
 export interface SplashSurface {
-  clear_screen(): void;
-  fill_rect(x: number, y: number, width: number, height: number, color: number): void;
+  clear(): void;
+  fillRect(x: number, y: number, width: number, height: number, color: number): void;
 }
 
-export interface OvertureHostAdapter {
-  splashSurface: SplashSurface;
+export interface RuntimePort {
   publishState(state: CoreState): void;
-  execute(command: HostCommand): void;
+}
+
+export interface DisplayPort {
+  splashSurface: SplashSurface;
   clear(): void;
   print(x: number, y: number, text: string, color: number): void;
   rect(x: number, y: number, width: number, height: number, color: number, fill: boolean): void;
   flush(): void;
+}
+
+export interface LedPort {
   setLed(index: number, color: number): void;
   setButtonLed(cc: number, color: number): void;
-  injectMoveNoteOn(track: number, note: number, velocity: number): void;
-  injectMoveNoteOff(track: number, note: number): void;
+}
+
+export interface HostCommandPort {
+  execute(command: HostCommand): void;
 }
 
 export interface OvertureCore {
