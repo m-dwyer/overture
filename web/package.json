@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "next:typecheck": "tsc -p ../overture-next/tsconfig.json",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:node": "vitest run",
