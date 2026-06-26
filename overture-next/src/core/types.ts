@@ -1,3 +1,7 @@
+import type { CoreInput } from "./input";
+import type { TrackState } from "./track";
+import type { TransportState } from "./transport";
+
 export interface CoreState {
   bootSplashTicks: number;
   splashWasVisible: boolean;
@@ -9,11 +13,9 @@ export interface CoreState {
   activeTrack: number;
   sessionView: boolean;
   shiftHeld: boolean;
-  playing: boolean;
-  tick: number;
-  playhead: number;
   selectedStep: number;
-  pattern: boolean[];
+  transport: TransportState;
+  tracks: TrackState[];
   lastInjectedStep: number;
   touchedParam: null;
 }
@@ -91,6 +93,7 @@ export interface OvertureCore {
   init(): void;
   tick(): void;
   dispatchInput(data: readonly number[]): boolean;
+  applyInput(input: CoreInput): boolean;
   getView(): OvertureView;
   drainHostCommands(): HostCommand[];
 }
