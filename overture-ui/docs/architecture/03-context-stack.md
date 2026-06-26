@@ -21,38 +21,33 @@ A context is a runtime object that declares what it owns.
 ```ts
 interface UiContext {
   id: string;
-  kind: 'base' | 'overlay' | 'modal' | 'corun';
-  priority: number;
-  inputCapture: InputCapturePolicy;
-  screenCapture: ScreenCapturePolicy;
-  ledCapture: LedCapturePolicy;
-  onEvent(event: NormalizedInputEvent, env: ContextEnv): ContextResult;
-  renderScreen?(model: RenderModel): ScreenFrame;
-  renderLeds?(model: RenderModel): PartialLedFrame;
+  kind: 'modal' | 'overlay';
+  handleEvent?(event: NormalizedInputEvent, env: ContextEnv): ContextResult;
+  render?(surface: RenderSurface, env: ContextEnv): ContextResult;
   onBack?(env: ContextEnv): ContextResult;
   onEnter?(env: ContextEnv): void;
   onExit?(env: ContextEnv): void;
 }
 ```
 
-The important part is not the exact TypeScript shape. The important part is that capture, rendering, Back behavior, and lifecycle are declared in one place.
+This is the first useful contract, not the final one. The important part is
+that temporary ownership, rendering, Back behavior, and lifecycle are declared
+in one place. Input capture, LED capture, base contexts, and co-run ownership
+should be added only after simple modal contexts have removed real legacy code.
 
 ## Stack Semantics
 
-The stack should contain:
+The first stack should contain only temporary contexts:
 
-- one base context for normal Session View or Track View behavior
 - zero or more overlays
 - zero or one blocking modal at the top
-- special co-run contexts that can explicitly delegate hardware ownership
 
 Event routing:
 
-1. Normalize raw hardware input.
-2. Offer the event to the top context.
-3. If the top context declines and its capture policy allows bubbling, continue downward.
-4. If no context handles it, route to the base workflow.
-5. Commands and state changes are returned as results, not performed implicitly when possible.
+1. Offer Back/render/simple normalized events to the top context.
+2. If no context handles it, route to the existing legacy path.
+3. Keep legacy priority ladders as fallback until a migrated context deletes a
+   real slice of them.
 
 Back behavior:
 
@@ -64,13 +59,10 @@ Back behavior:
 
 ### Base Contexts
 
-Base contexts own normal surfaces:
-
-- Session View
-- Track View
-- Performance View if it becomes a durable mode
-
-They should be long-lived and may delegate to concept workflows such as Pad Surface, Parameter Page, and Loop Gesture.
+Do not model Track View, Session View, or Performance View as base contexts in
+the first migration wave. They are performance-sensitive surfaces with many
+DSP, LED, and pad semantics. Keep them as legacy fallback until modal contexts
+prove the ownership pattern.
 
 ### Overlay Contexts
 
@@ -112,7 +104,8 @@ Co-run contexts are special because another UI may own parts of the hardware. Th
 - whether OLED drawing is skipped
 - modifier cleanup on enter/exit
 
-Co-run should become a context capability rather than a cross-cutting global check.
+Co-run may become a context capability later. It is explicitly not an early
+context migration target.
 
 ## Critique of Template Context Stack
 
@@ -129,10 +122,14 @@ Overture should borrow the stack idea, not the implementation.
 
 ## Migration Path
 
-1. Introduce a context stack runtime next to existing flags.
-2. Wrap one simple modal, such as confirm prompt or text keyboard, while still syncing to existing `S` fields if needed.
-3. Route Back through the stack before the legacy Back ladder.
-4. Route OLED rendering through context screen capture before the legacy router.
-5. Route normalized input through the stack before legacy handlers.
-6. Convert picker and confirmation surfaces one by one.
-7. Model co-run as an explicit context after modal migration proves stable.
+1. Introduce a tiny context stack runtime next to existing flags.
+2. Wrap one simple confirm/modal surface while still syncing existing `S` fields
+   if needed.
+3. Route Back through the stack before the legacy Back ladder only when a
+   context is active.
+4. Route OLED rendering through the top context before the legacy screen router
+   only when a context is active.
+5. Convert picker and confirmation surfaces one by one.
+6. Add richer capture policies only after two or more contexts need them.
+7. Consider co-run only after modal contexts and LED adapter boundaries are
+   stable.

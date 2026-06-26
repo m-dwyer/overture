@@ -45,19 +45,20 @@ The main conclusion: Overture already has many useful seams. The migration shoul
 - Parameter Page CC automation editing.
 - Full command execution for musical edits before the DSP operation queue exists.
 - Broad ScreenFrame or LedFrame conversion.
-- Plugin-style feature registry.
+- Plugin-style feature registry; reject for now.
 - Global `S` reshaping without moving concrete ownership.
 
 ### Low-Risk Extraction Opportunities
 
 - Normalized event constructors and optional `onNormalizedEvent` callback in MIDI routing.
-- Context stack runtime with no production behavior.
+- Context stack runtime with one immediate modal consumer.
 - Confirm prompt context wrapper.
-- Clip command descriptors without execution.
+- Clip command descriptors only when the same slice executes or immediately
+  deletes duplicated edit policy.
 - DSP operation queue in compatibility mode.
 - ScreenFrame adapter for confirm prompt only.
 - LED cache adapter shell that preserves existing exports.
-- Readback scheduler runtime before production use.
+- Readback scheduler only when a migrated command/readback path consumes it.
 
 ## Seam Catalog
 
@@ -93,10 +94,11 @@ High for behavior changes, low for additive adapter wiring.
 
 ### Candidate Migration Opportunities
 
-- Instantiate a context stack in `ui.js` without routing behavior.
+- Instantiate a context stack in `ui.js` with one immediate modal routing
+  consumer.
 - Add a command bus and DSP operation queue as memoized runtime objects.
 - Pass normalized-event callbacks through dependency bags.
-- Keep `ui.js` explicit as composition root; do not hide it behind a plugin registry yet.
+- Keep `ui.js` explicit as composition root; do not hide it behind a plugin registry.
 
 ## 2. Global State Singleton
 
@@ -608,7 +610,7 @@ High if timing changes.
 
 ### Candidate Migration Opportunities
 
-- Add scheduler runtime with no production users.
+- Add scheduler runtime only with one migrated production readback consumer.
 - Convert pending steps reread after one command uses descriptor metadata.
 - Convert drum lane resync through `scheduleDrumLaneResync`.
 - Keep old flags as compatibility aliases during transition.
@@ -1366,15 +1368,16 @@ Low.
 - Defer co-run context migration until context stack and LED adapter exist.
 - Defer Parameter Page behavior migration until command/readback policy is established.
 - Defer broad ScreenFrame and LedFrame conversion.
-- Defer plugin registry until there are several stable registered capabilities.
+- Reject plugin registry until a concrete feature proves explicit composition is insufficient.
 - Defer broad `S` restructuring until fields can move into real owners.
 
 ## Low-Risk Starting Points
 
 1. Add normalized input event constructors and optional MIDI observer callback.
-2. Add context stack runtime without production behavior.
+2. Add context stack runtime with one simple modal consumer.
 3. Wrap confirm prompt as the first context.
-4. Add clip command descriptors without execution.
+4. Add clip command descriptors only when they execute or delete duplicated
+   legacy edit policy in the same slice.
 5. Add DSP operation queue in compatibility mode.
 6. Add readback scheduler runtime without production use.
 7. Add `ScreenFrame` support for confirm prompt only.

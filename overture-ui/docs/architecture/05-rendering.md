@@ -1,6 +1,8 @@
 # Rendering
 
-Rendering should become a two-stage process: produce desired frames from state, then flush frame diffs to Move hardware.
+Rendering should move toward clearer presentation models and adapter-owned host
+writes where that removes real test or ownership pain. Overture should not
+convert every renderer to retained frames as a blanket migration.
 
 ## Current Rendering Critique
 
@@ -27,11 +29,14 @@ interface RenderModel {
 }
 ```
 
-This model should be built in one place. Render modules should not inspect unrelated mutable state or host globals.
+This model should be built in one place only when a surface needs it. Existing
+render modules may continue to draw through the Render Surface while Page,
+modal, and component renderers converge on smaller presentation models.
 
 ## Screen Frames
 
-A screen renderer returns a frame description for the 128x64 OLED.
+Screen frames are an optional tool for surfaces where host-call tests are too
+noisy or ownership needs to be explicit.
 
 Frames can be immediate drawing commands rather than a full retained scene graph, but they should be testable data before host flush.
 
@@ -57,7 +62,9 @@ The host screen adapter translates these ops to `print`, `fill_rect`, `clear_scr
 
 ## LED Frames
 
-LED renderers return desired LED state, not host writes.
+LED frames are also optional. The first LED priority is to isolate cache,
+palette, forced resend, initialization, and co-run reclaim behavior behind an
+adapter boundary.
 
 ```ts
 interface LedFrame {
@@ -120,11 +127,10 @@ Overture should implement frames as hardware-specific render contracts, not gene
 
 ## Migration Path
 
-1. Add test-only frame builders around one existing renderer.
-2. Convert a simple modal renderer to return `ScreenFrame`.
-3. Convert one LED region, such as transport or side buttons, to return a partial `LedFrame`.
-4. Move LED caches and palette logic behind a render adapter interface.
-5. Route context-owned screens through frame rendering.
-6. Gradually replace direct host drawing in render modules.
-7. Keep the existing host drawing primitives until most renderers are frame-based.
-
+1. Keep Render Surface as the main host drawing boundary.
+2. Strengthen Parameter Page and modal presentation models before adding frames.
+3. Add a `ScreenFrame` only for a simple context-owned modal if it simplifies
+   tests or deletes noisy host spies.
+4. Move LED caches and palette logic behind an adapter interface before
+   considering `LedFrame`.
+5. Do not do blanket ScreenFrame or LedFrame conversion.

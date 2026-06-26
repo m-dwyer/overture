@@ -54,7 +54,7 @@ Architecture must optimize for:
 - Testability: normalized input, command results, state transitions, DSP writes, readback scheduling, and render frames must be assertable without the device.
 - Maintainability: each concept should own its invariants and expose a narrow interface.
 - Consistent user experience: modal priority, Back behavior, LED meaning, and screen ownership must be predictable.
-- Long-term extensibility: new views, commands, routes, plugins, and hardware mappings should not require edits across unrelated workflows.
+- Long-term extensibility: new views, commands, routes, and hardware mappings should not require edits across unrelated concepts.
 
 ## Rules of Thumb
 

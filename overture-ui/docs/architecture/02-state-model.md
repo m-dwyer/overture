@@ -85,18 +85,14 @@ Render state belongs to render adapters, not feature workflows. Workflows should
 
 ## Store Shape
 
-The long-term store should be split into named roots:
+The long-term state shape should follow ownership, but Overture should not add
+empty roots just to look organized. A root such as `S.runtime.recording` or
+`S.context.activeModal` is useful only when a concept immediately owns fields
+and narrows old access.
 
-```ts
-interface OvertureState {
-  app: AppState;
-  dsp: DspMirrorState;
-  sidecar: SidecarState;
-  runtime: RuntimeState;
-}
-```
-
-This does not require an immediate TypeScript conversion. The first useful step is to create JSDoc typedefs or `.d.ts` contracts for these roots, then gradually move fields from `S` into nested objects.
+Do not introduce broad shells such as `S.app`, `S.dsp`, `S.runtime`, or
+`S.sidecar` until the same change moves real fields or the next tightly-scoped
+change does. Ownership migration matters more than object nesting.
 
 ## Mutation Policy
 
@@ -137,9 +133,10 @@ DSP mirror state should not be persisted in the sidecar unless it is intentional
 
 ## Migration Path
 
-1. Add nested state roots inside `S` while preserving existing top-level aliases where necessary.
-2. Move runtime-only fields for one concept at a time, starting with Recording Workflow and Pad Surface.
-3. Move modal/picker state into context objects.
-4. Restrict DSP mirror mutation to sync modules and command mirror effects.
-5. Introduce sidecar schema validation before changing persistence format.
-
+1. Identify a concrete owner before moving any field.
+2. Move runtime-only fields for one concept at a time, starting with Recording
+   Workflow / Runtime or Pad Surface when related code is touched.
+3. Move modal and picker state into context objects as those surfaces migrate.
+4. Restrict DSP mirror mutation to sync modules, semantic operations, and
+   command mirror effects where those boundaries already exist.
+5. Add sidecar schema validation only when a persistence change needs it.
