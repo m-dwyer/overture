@@ -8,14 +8,22 @@ export interface StepView {
 export interface TrackScreenView {
   kind: "track";
   title: string;
-  mode: "track" | "session";
   selectedTrackIndex: number;
   playing: boolean;
   selectedStep: number;
   steps: StepView[];
 }
 
-export type ScreenView = TrackScreenView;
+export interface SessionScreenView {
+  kind: "session";
+  title: string;
+  selectedTrackIndex: number;
+  selectedSceneIndex: number;
+  selectedClipId: string | null;
+  playing: boolean;
+}
+
+export type ScreenView = TrackScreenView | SessionScreenView;
 
 export interface StepLedView {
   step: number;

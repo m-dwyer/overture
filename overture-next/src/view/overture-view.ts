@@ -9,10 +9,20 @@ export function createOvertureView(snapshot: CoreSnapshot): OvertureView {
 }
 
 export function createScreenView(snapshot: CoreSnapshot): ScreenView {
+  if (snapshot.sessionView) {
+    return {
+      kind: "session",
+      title: "OVERTURE NEXT",
+      selectedTrackIndex: snapshot.selectedTrackIndex,
+      selectedSceneIndex: snapshot.selectedClipCell.sceneIndex,
+      selectedClipId: snapshot.selectedClipId,
+      playing: snapshot.playing,
+    };
+  }
+
   return {
     kind: "track",
     title: "OVERTURE NEXT",
-    mode: snapshot.sessionView ? "session" : "track",
     selectedTrackIndex: snapshot.selectedTrackIndex,
     playing: snapshot.playing,
     selectedStep: snapshot.selectedStep,

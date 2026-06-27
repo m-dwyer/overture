@@ -1,0 +1,49 @@
+import { describe, expect, test } from "vitest";
+import { renderScreen } from "../../../overture-next/src/render/render-screen";
+import type { DisplayPort } from "../../../overture-next/src/ports/types";
+import type { ScreenView } from "../../../overture-next/src/view/types";
+
+describe("Overture Next screen rendering", () => {
+  test("renders Session View as selected Clip Cell state instead of a step strip", () => {
+    const calls: string[] = [];
+    const display = createDisplayRecorder(calls);
+    const view: ScreenView = {
+      kind: "session",
+      title: "OVERTURE NEXT",
+      selectedTrackIndex: 3,
+      selectedSceneIndex: 7,
+      selectedClipId: null,
+      playing: false,
+    };
+
+    renderScreen(view, display);
+
+    expect(calls).toContain("print:SESSION");
+    expect(calls).toContain("print:Clip Cell");
+    expect(calls).toContain("print:Scene 8");
+    expect(calls).toContain("print:Empty Cell");
+    expect(calls).not.toContain("print:Step 1");
+    expect(calls).not.toContain("rect");
+  });
+});
+
+function createDisplayRecorder(calls: string[]): DisplayPort {
+  return {
+    splashSurface: {
+      clear() {},
+      fillRect() {},
+    },
+    clear() {
+      calls.push("clear");
+    },
+    print(_x, _y, text) {
+      calls.push("print:" + text);
+    },
+    rect() {
+      calls.push("rect");
+    },
+    flush() {
+      calls.push("flush");
+    },
+  };
+}
