@@ -25,6 +25,7 @@ Only the controls Overture changes. Everything else is unchanged — see [`refer
 | **Hold a side button** | — | **reveal that track's 16 clips on the steps** → tap to select |
 | **Side-button LEDs** (Track View) | clip status of the active track | **track identity** (active solid, others dim) |
 | **Copy / Cut / Delete clip** (Track View) | Copy/Delete + side button | **moved to Session view** (Copy/Delete + clip pad) |
+| Clip pads (Session View) | launch/focus clips | occupied pads **launch and select**; empty pads **stop that track and select the empty cell** |
 | Side buttons (Session View) | scene launchers | scene launchers *(unchanged)* |
 | Shift + jog, Shift + bottom-pad | switch tracks | switch tracks *(retained as fallbacks)* |
 | **Jog** (while holding a step) | silently cycled parameter banks (a bug) | **adjusts that step's length**; never changes banks |

@@ -25,13 +25,13 @@ describe("Overture Next control-to-intent pipeline", () => {
     ).toBeNull();
   });
 
-  test("interprets Session View pads as clip-cell selection without leaking pad indexes", () => {
+  test("interprets Session View pads as Clip Cell launch without leaking pad indexes", () => {
     const intent = interpretControl(
       { kind: "pad", padIndex: 26 },
       { shiftHeld: false, controlMode: "session", visibleTrackBank: 1 },
     );
 
-    expect(intent).toEqual({ kind: "select-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 2 } });
+    expect(intent).toEqual({ kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 2 } });
     expect(intent).not.toHaveProperty("padIndex");
   });
 
@@ -50,7 +50,23 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(hostCommands).toEqual([]);
   });
 
-  test("applies transport toggle and emits note-off when stopping", () => {
+  test("applies Clip Cell launch as playback state and explicit UI selection", () => {
+    const core = createOvertureCore();
+    const hostCommands: HostCommand[] = [];
+    const clipCount = Object.keys(core.state.project.clips).length;
+
+    expect(
+      applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, core.state, hostCommands),
+    ).toBe(true);
+
+    expect(core.state.control.selectedTrackIndex).toBe(2);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 2, sceneIndex: 0 });
+    expect(core.state.playback.tracks[2].playingClipId).toBe("clip-3");
+    expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
+    expect(hostCommands).toEqual([]);
+  });
+
+  test("applies transport toggle without selected-track note-off when no clips are playing", () => {
     const core = createOvertureCore();
     const hostCommands: HostCommand[] = [];
 
@@ -60,7 +76,23 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(applyIntent({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
     expect(core.state.transport.playing).toBe(false);
-    expect(hostCommands).toEqual([{ kind: "track-note-off", trackIndex: 0, note: 60 }]);
+    expect(hostCommands).toEqual([]);
+  });
+
+  test("stopping transport emits note-off for playing clips, not the selected Clip Cell", () => {
+    const core = createOvertureCore();
+    const hostCommands: HostCommand[] = [];
+
+    expect(
+      applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, core.state, hostCommands),
+    ).toBe(true);
+    expect(
+      applyIntent({ kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 0 } }, core.state, hostCommands),
+    ).toBe(true);
+    expect(applyIntent({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
+    expect(applyIntent({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
+
+    expect(hostCommands).toEqual([{ kind: "track-note-off", trackIndex: 2, note: 60 }]);
   });
 
   test("applies track selection while preserving the selected scene", () => {

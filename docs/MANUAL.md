@@ -208,8 +208,8 @@ The 8×16 clip grid. 8 rows visible at a time; jog scrolls to all 16.
 
 | Control | Action |
 |---|---|
-| Tap clip pad | Launch/queue that clip |
-| Tap empty clip pad | Focus it for recording |
+| Tap clip pad | Launch that clip on its Track and select its Clip Cell for editing |
+| Tap empty clip pad | Stop that Track and select the Empty Clip Cell |
 | Shift + clip pad | Launch and jump to Track View |
 | Scene launcher (side) or steps 1–16 | Launch all clips in that row |
 | Shift + scene launcher | Launch row at next bar boundary (ignores Launch Quant setting) |
@@ -218,7 +218,8 @@ The 8×16 clip grid. 8 rows visible at a time; jog scrolls to all 16.
 | Loop (tap) | Lock Performance Mode |
 | Loop (hold) | Temporary Performance Mode |
 
-Empty cells in a scene row don't affect their track — that track keeps playing whatever it had.
+Current individual Empty Clip Cell launch stops that Track. Scene Launch empty-cell
+behavior is separate and defined by the scene-launch controls.
 
 Mute/solo controls work the same in both views (see §12).
 

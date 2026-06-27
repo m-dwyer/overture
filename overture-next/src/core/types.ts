@@ -1,10 +1,12 @@
 import type { ControlInput, ControlMode, ControlState } from "./controls/types";
+import type { PlaybackState } from "./playback";
 import type { OvertureProject } from "./project";
 import type { TransportState } from "./transport";
 
 export interface CoreState {
   control: ControlState;
   transport: TransportState;
+  playback: PlaybackState;
   project: OvertureProject;
   lastInjectedStep: number;
 }
