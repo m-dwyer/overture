@@ -11,6 +11,8 @@ const BOOT_SPLASH_TICKS = 48;
 export interface OvertureRuntime {
   readonly core: OvertureCore;
   init(): void;
+  tickPlayback(): void;
+  render(): void;
   tick(): void;
   onMidiMessage(data: readonly number[]): void;
   onUnload(): void;
@@ -33,10 +35,14 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   }
 
   function tick(): void {
+    tickPlayback();
+    render();
+  }
+
+  function tickPlayback(): void {
     advanceSplash();
     core.tick();
     drainCommands();
-    render();
   }
 
   function onMidiMessage(data: readonly number[]): void {
@@ -89,5 +95,5 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
     for (const command of core.drainHostCommands()) adapter.commands.execute(command);
   }
 
-  return { core, init, tick, onMidiMessage, onUnload, isReady, isBootSplashVisible };
+  return { core, init, tickPlayback, render, tick, onMidiMessage, onUnload, isReady, isBootSplashVisible };
 }

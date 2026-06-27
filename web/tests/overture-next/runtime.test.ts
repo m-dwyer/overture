@@ -62,6 +62,39 @@ describe("Overture Next runtime", () => {
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
     ]);
   });
+
+  test("can advance playback and drain commands without rendering", () => {
+    const frames: string[][] = [];
+    const frame: string[] = [];
+    const commands: HostCommand[] = [];
+    const adapter = createRuntimeTestAdapter(frames, frame, commands);
+    const runtime = createOvertureRuntime(adapter);
+    runtime.init();
+    const renderedFrameCount = frames.length;
+
+    runtime.core.applyInput({ kind: "menu" });
+    runtime.core.applyInput({ kind: "pad", padIndex: 24 });
+    runtime.core.applyInput({ kind: "menu" });
+    runtime.core.applyInput({ kind: "play" });
+
+    for (let i = 0; i < 48; i++) runtime.tickPlayback();
+
+    expect(frames).toHaveLength(renderedFrameCount);
+    expect(commands).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 64,
+        velocity: 100,
+      },
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 64 },
+    ]);
+
+    runtime.render();
+
+    expect(frames).toHaveLength(renderedFrameCount + 1);
+  });
 });
 
 function createRuntimeTestAdapter(
