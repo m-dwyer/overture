@@ -1,0 +1,3 @@
+# Core Snapshots and View Models
+
+Overture core will expose domain snapshots while view modules derive semantic view models and render modules map those view models to OLED and LED presentation. The current spike allows core to build simple views, but the Project/Scene/Clip refactor should stop adding final screen or LED construction to core so musical decisions, UI derivation, and presentation mapping can be tested separately. Core owns domain state and commands; view owns selected-cell, grid, route-warning, and playback-status projections; render owns coordinates, raw LED colors, and display drawing.

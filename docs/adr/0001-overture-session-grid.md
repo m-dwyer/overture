@@ -1,0 +1,3 @@
+# Overture Session Grid
+
+Overture mirrors Move's Session grid shape while owning its own musical objects: one Overture Project exists within one Move Set context; the Project has eight global Tracks, eight initial Overture Scenes as columns, and structural Clip Cells at each Track and Scene intersection. Tracks own route identity across scenes, Clip Cells may contain Overture Clips, and each Overture Clip owns exactly one Sequence. This keeps Overture aligned with Move's rows-as-tracks and columns-as-scenes performance model without treating native Move Clips or Move Scenes as Overture-owned objects.
