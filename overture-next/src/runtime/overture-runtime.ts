@@ -49,6 +49,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
     const snapshot = core.getSnapshot();
     adapter.commands.execute({
       kind: "track-note-off",
+      route: snapshot.selectedTrackRoute,
       trackIndex: snapshot.selectedTrackIndex,
       note: 60,
     });

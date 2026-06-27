@@ -118,7 +118,9 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
 
-    expect(hostCommands).toEqual([{ kind: "track-note-off", trackIndex: 2, note: 60 }]);
+    expect(hostCommands).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60 },
+    ]);
   });
 
   test("returns emitted host commands as a Domain Intent transaction", () => {
@@ -132,7 +134,9 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({
       applied: true,
-      hostCommands: [{ kind: "track-note-off", trackIndex: 2, note: 60 }],
+      hostCommands: [
+        { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60 },
+      ],
     });
   });
 

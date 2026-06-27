@@ -2,7 +2,7 @@ import type { HostCommand } from "./host-commands";
 import type { ClipId, OvertureClip, OvertureProject, ClipCellCoordinate } from "./project";
 import { getClipCell } from "./project";
 import { getSequenceStep } from "./sequence";
-import { TRACK_COUNT } from "./track";
+import { TRACK_COUNT, getTrack } from "./track";
 import type { TransportState } from "./transport";
 
 export interface TrackPlaybackState {
@@ -55,14 +55,16 @@ export function injectPlaybackStep(project: OvertureProject, playback: PlaybackS
     if (!clip) continue;
     const sequenceStep = getSequenceStep(clip.sequence, step % clip.sequence.length);
     if (!sequenceStep?.active) continue;
+    const route = getTrack(project.tracks, trackPlayback.trackIndex).route;
     hostCommands.push(
       {
         kind: "track-note-on",
+        route,
         trackIndex: trackPlayback.trackIndex,
         note: sequenceStep.note,
         velocity: sequenceStep.velocity,
       },
-      { kind: "track-note-off", trackIndex: trackPlayback.trackIndex, note: sequenceStep.note },
+      { kind: "track-note-off", route, trackIndex: trackPlayback.trackIndex, note: sequenceStep.note },
     );
   }
   return hostCommands;
@@ -79,7 +81,12 @@ export function stopPlayingClips(
     if (!clip) continue;
     const step = getSequenceStep(clip.sequence, transport.playhead % clip.sequence.length);
     if (step?.active) {
-      hostCommands.push({ kind: "track-note-off", trackIndex: trackPlayback.trackIndex, note: step.note });
+      hostCommands.push({
+        kind: "track-note-off",
+        route: getTrack(project.tracks, trackPlayback.trackIndex).route,
+        trackIndex: trackPlayback.trackIndex,
+        note: step.note,
+      });
     }
   }
   return hostCommands;

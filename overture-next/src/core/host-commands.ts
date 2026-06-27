@@ -1,3 +1,10 @@
+import type { TrackRoute } from "./track";
+
+interface TrackHostCommand {
+  route: TrackRoute;
+  trackIndex: number;
+}
+
 export type HostCommand =
-  | { kind: "track-note-on"; trackIndex: number; note: number; velocity: number }
-  | { kind: "track-note-off"; trackIndex: number; note: number };
+  | (TrackHostCommand & { kind: "track-note-on"; note: number; velocity: number })
+  | (TrackHostCommand & { kind: "track-note-off"; note: number });

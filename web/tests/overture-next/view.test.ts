@@ -6,6 +6,7 @@ describe("Overture Next view projection", () => {
   test("derives Track View screen and LED views from a core snapshot", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 5,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
       visibleTrackBank: 1,
       controlMode: "track",
       shiftHeld: false,
@@ -50,6 +51,7 @@ describe("Overture Next view projection", () => {
   test("derives a Session View screen and pad LEDs from selected Clip Cell state", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 3,
+      selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
       visibleTrackBank: 0,
       controlMode: "session",
       shiftHeld: false,
@@ -85,6 +87,7 @@ describe("Overture Next view projection", () => {
   test("derives Surface Hints for track rows while Shift is held", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 1,
+      selectedTrackRoute: { kind: "move", moveTrackTarget: 1 },
       visibleTrackBank: 0,
       controlMode: "track",
       shiftHeld: true,
