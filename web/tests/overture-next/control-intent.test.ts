@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { selectClipCell as selectControlClipCell } from "../../../overture-next/src/core/controls/control-state";
 import { interpretControl } from "../../../overture-next/src/core/controls/interpret-control";
 import { applyIntent } from "../../../overture-next/src/core/intents/apply-intent";
 import { createOvertureCore } from "../../../overture-next/src/core/core";
@@ -129,7 +130,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     const core = createOvertureCore();
     const hostCommands: HostCommand[] = [];
 
-    core.state.control.selectedClipCell = { trackIndex: 0, sceneIndex: 7 };
+    selectControlClipCell(core.state.control, { trackIndex: 0, sceneIndex: 7 });
 
     expect(applyIntentAndCollect({ kind: "select-track", trackIndex: 5 }, core.state, hostCommands)).toBe(true);
 

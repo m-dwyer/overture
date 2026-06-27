@@ -36,7 +36,7 @@ Expected outcome:
 
 ## Phase 2: Control State Focus Invariants
 
-Status: next
+Status: complete
 
 Deepen Control State so selection and focus changes are expressed as operations
 instead of direct field mutation.
@@ -51,7 +51,7 @@ Expected outcome:
 
 ## Phase 3: Hardware Input Interpretation
 
-Status: planned
+Status: next
 
 Deepen the Hardware Input interpretation module so modifiers and view-local
 behavior are owned in one place.
