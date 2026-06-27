@@ -35,7 +35,7 @@ describe("Overture Next runtime", () => {
 
     runtime.onMidiMessage([0xb0, 85, 127]);
 
-    expect(runtime.core.state.transport.playing).toBe(true);
+    expect(runtime.core.getSnapshot().playing).toBe(true);
   });
 });
 
