@@ -1,10 +1,12 @@
 import {
   AudioWorkletChainEngine,
+  DEFAULT_BROWSER_MASTER_GAIN,
   type AudioEngineConfig,
   type ChainAudioEngine,
   type ChainSlotSpec,
   type MidiOutEvent,
 } from "./audio-engine.js";
+import { HOST_VOLUME, MIDI_DATA_MASK, RELATIVE_ENCODER } from "../lib/move-controls.js";
 import {
   type LoadedSchwungModule,
   type SchwungCatalog,
@@ -35,6 +37,7 @@ export interface BrowserSchwungDiagnosticEvent {
 
 export interface BrowserSchwungDiagnostics {
   errors: Array<{ message: string; slotId: string }>;
+  hostVolume: number;
   midi: Array<{ d1: number; d2: number; direction: string; slot: number; status: number }>;
   params: Array<{ key: string; slot: number; value: string }>;
   slots: Array<{
@@ -50,6 +53,9 @@ export interface BrowserSchwungDiagnostics {
 
 export interface BrowserSchwungHost {
   diagnostics(): BrowserSchwungDiagnostics;
+  handleHostVolumeCc(value: number): boolean;
+  hostGetVolume(): number;
+  hostSetVolume(volume: number): void;
   hostListModules(): Array<Record<string, unknown>>;
   primeAudioEngine(): void;
   resetAudioEngine(): void;
@@ -96,6 +102,7 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
   #audioEngine: ChainAudioEngine | null;
   #catalog: SchwungCatalog;
   #errors: BrowserSchwungDiagnostics["errors"] = [];
+  #hostVolume: number = HOST_VOLUME.Default;
   #log: (message: string) => void;
   #midi: BrowserSchwungDiagnostics["midi"] = [];
   #modules = new Map<string, LoadedSchwungModule>();
@@ -124,6 +131,7 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
   diagnostics(): BrowserSchwungDiagnostics {
     return {
       errors: this.#errors.slice(-8),
+      hostVolume: this.#hostVolume,
       midi: this.#midi.slice(-16),
       params: this.#params.slice(-16),
       slots: this.#slots.map((slot) => ({
@@ -136,6 +144,28 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
       })),
       worklet: { ...this.#worklet },
     };
+  }
+
+  handleHostVolumeCc(value: number): boolean {
+    const delta = relativeVolumeDelta(value);
+    if (delta !== 0) this.hostSetVolume(this.#hostVolume + delta);
+    return true;
+  }
+
+  hostGetVolume(): number {
+    return this.#hostVolume;
+  }
+
+  hostSetVolume(volume: number): void {
+    const next = clampHostVolume(volume);
+    if (next === this.#hostVolume) {
+      this.#log(`host volume: ${next}`);
+      return;
+    }
+    this.#hostVolume = next;
+    this.#audioEngine?.setMasterVolume(hostVolumeToBrowserGain(next));
+    this.#log(`host volume: ${next}`);
+    this.#emit();
   }
 
   hostListModules(): Array<Record<string, unknown>> {
@@ -275,6 +305,7 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
     try {
       await this.#audioEngine.enableChain(specs, this.#audioConfig());
       this.#audioBooted = true;
+      this.#audioEngine.setMasterVolume(hostVolumeToBrowserGain(this.#hostVolume));
       for (const slot of this.#slots) this.#seedSlot(slot);
     } catch (error) {
       this.#recordError("chain", String((error as Error).message ?? error));
@@ -456,6 +487,31 @@ function parseComponentParamKey(key: string): { component: ComponentKey; param: 
   const component = key.slice(0, idx);
   if (component !== "midi_fx1" && component !== "synth" && component !== "fx1" && component !== "fx2") return null;
   return { component, param: key.slice(idx + 1) };
+}
+
+function clampHostVolume(volume: number): number {
+  const numeric = Number.isFinite(volume) ? Math.round(volume) : HOST_VOLUME.Default;
+  return Math.max(HOST_VOLUME.Min, Math.min(HOST_VOLUME.Max, numeric));
+}
+
+function hostVolumeToBrowserGain(volume: number): number {
+  return (clampHostVolume(volume) / HOST_VOLUME.Max) * DEFAULT_BROWSER_MASTER_GAIN;
+}
+
+function relativeVolumeDelta(value: number): number {
+  const midiValue = value & MIDI_DATA_MASK;
+  if (midiValue >= RELATIVE_ENCODER.ClockwiseMin && midiValue <= RELATIVE_ENCODER.ClockwiseMax) {
+    if (midiValue > RELATIVE_ENCODER.AccelerationFastThreshold) return RELATIVE_ENCODER.FastStep;
+    if (midiValue > RELATIVE_ENCODER.AccelerationMediumThreshold) return RELATIVE_ENCODER.MediumStep;
+    return RELATIVE_ENCODER.SlowStep;
+  }
+  if (midiValue >= RELATIVE_ENCODER.CounterClockwiseMin && midiValue <= RELATIVE_ENCODER.CounterClockwiseMax) {
+    const speed = RELATIVE_ENCODER.CounterClockwiseMax + RELATIVE_ENCODER.SlowStep - midiValue;
+    if (speed > RELATIVE_ENCODER.AccelerationFastThreshold) return -RELATIVE_ENCODER.FastStep;
+    if (speed > RELATIVE_ENCODER.AccelerationMediumThreshold) return -RELATIVE_ENCODER.MediumStep;
+    return -RELATIVE_ENCODER.SlowStep;
+  }
+  return 0;
 }
 
 function parseSlotId(id: string): { component: ComponentKey; slot: number } | null {

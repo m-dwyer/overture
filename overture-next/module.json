@@ -12,7 +12,6 @@
   },
   "capabilities": {
     "suspend_keeps_js": true,
-    "claims_master_knob": true,
     "midi_out": true
   }
 }
