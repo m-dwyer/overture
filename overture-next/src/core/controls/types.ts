@@ -19,9 +19,3 @@ export interface ControlState {
     sceneIndex: number;
   };
 }
-
-export interface ControlInterpretContext {
-  shiftHeld: boolean;
-  controlMode: ControlMode;
-  visibleTrackBank: number;
-}
