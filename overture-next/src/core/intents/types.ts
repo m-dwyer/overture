@@ -6,4 +6,5 @@ export type DomainIntent =
   | { kind: "toggle-control-mode" }
   | { kind: "select-track"; trackIndex: number }
   | { kind: "toggle-step"; stepIndex: number }
-  | { kind: "select-clip-cell"; coordinate: ClipCellCoordinate };
+  | { kind: "select-clip-cell"; coordinate: ClipCellCoordinate }
+  | { kind: "launch-clip-cell"; coordinate: ClipCellCoordinate };

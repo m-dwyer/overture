@@ -1,9 +1,9 @@
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
+import { createPlaybackState, getPlayingClip } from "./playback";
 import { createDefaultProject, getClipCell, getSequenceForCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
-import { getTrack } from "./track";
 import { advanceTransport, createTransport } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
 
@@ -19,6 +19,7 @@ export function createOvertureCore(): OvertureCore {
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
     },
     transport: createTransport(),
+    playback: createPlaybackState(),
     project,
     lastInjectedStep: -1,
   };
@@ -27,11 +28,9 @@ export function createOvertureCore(): OvertureCore {
   function init(): void {}
 
   function tick(): void {
-    const sequence = selectedSequence();
-    const nextStep = advanceTransport(state.transport, sequence?.length ?? DEFAULT_STEP_COUNT);
+    const nextStep = advanceTransport(state.transport, DEFAULT_STEP_COUNT);
     if (nextStep !== null) {
-      const step = sequence ? getSequenceStep(sequence, nextStep) : null;
-      if (step?.active) injectStep(nextStep);
+      injectPlaybackStep(nextStep);
     }
   }
 
@@ -45,16 +44,23 @@ export function createOvertureCore(): OvertureCore {
     return applyIntent(intent, state, hostCommands);
   }
 
-  function injectStep(step: number): void {
-    const sequence = selectedSequence();
-    const sequenceStep = sequence ? getSequenceStep(sequence, step) : null;
-    if (!sequenceStep) return;
+  function injectPlaybackStep(step: number): void {
     state.lastInjectedStep = step;
-    const track = selectedTrack();
-    hostCommands.push(
-      { kind: "track-note-on", trackIndex: track.index, note: sequenceStep.note, velocity: sequenceStep.velocity },
-      { kind: "track-note-off", trackIndex: track.index, note: sequenceStep.note },
-    );
+    for (const trackPlayback of state.playback.tracks) {
+      const clip = getPlayingClip(state.project, trackPlayback);
+      if (!clip) continue;
+      const sequenceStep = getSequenceStep(clip.sequence, step % clip.sequence.length);
+      if (!sequenceStep?.active) continue;
+      hostCommands.push(
+        {
+          kind: "track-note-on",
+          trackIndex: trackPlayback.trackIndex,
+          note: sequenceStep.note,
+          velocity: sequenceStep.velocity,
+        },
+        { kind: "track-note-off", trackIndex: trackPlayback.trackIndex, note: sequenceStep.note },
+      );
+    }
   }
 
   function getSnapshot(): CoreSnapshot {
@@ -71,10 +77,6 @@ export function createOvertureCore(): OvertureCore {
       clipCells: state.project.clipCells.map((cell) => ({ ...cell })),
       steps: getSnapshotSteps(),
     };
-  }
-
-  function selectedTrack() {
-    return getTrack(state.project.tracks, state.control.selectedTrackIndex);
   }
 
   function selectedSequence() {

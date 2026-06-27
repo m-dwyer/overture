@@ -14,7 +14,7 @@ export function interpretControl(input: ControlInput, context: ControlInterpretC
   if (input.kind === "pad") {
     if (context.controlMode !== "session") return null;
     return {
-      kind: "select-clip-cell",
+      kind: "launch-clip-cell",
       coordinate: clipCellCoordinateForSessionPad(context.visibleTrackBank, input.padIndex),
     };
   }
