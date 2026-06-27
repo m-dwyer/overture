@@ -46,8 +46,10 @@ test("startup query selects track and note view after init settles", async ({ pa
   await page.goto("/?track=5&view=note");
   await waitReady(page);
   await page.waitForFunction(() => {
-    const state = (globalThis as { overtureUiState?: { activeTrack?: number; sessionView?: boolean } }).overtureUiState;
-    return state?.activeTrack === 4 && state.sessionView === false;
+    const state = (globalThis as {
+      overtureUiState?: { selectedTrackIndex?: number; activeTrack?: number; sessionView?: boolean };
+    }).overtureUiState;
+    return (state?.selectedTrackIndex ?? state?.activeTrack) === 4 && state?.sessionView === false;
   });
 });
 

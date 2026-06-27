@@ -69,7 +69,7 @@ export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHos
   const adapter: OvertureHostAdapter = {
     runtime: {
       publishState(state: CoreState) {
-        host.overtureUiState = state;
+        host.overtureUiState = { ...state, activeTrack: state.selectedTrackIndex };
       },
     },
     display: {

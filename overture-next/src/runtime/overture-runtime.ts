@@ -40,7 +40,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   }
 
   function onMidiMessage(data: readonly number[]): void {
-    const input = adapter.input.parseMoveInput(data, activePatternLength());
+    const input = adapter.input.parseMoveInput(data, core.getSelectedSequenceLength());
     if (input) applyInput(input);
     drainCommands();
   }
@@ -48,7 +48,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   function onUnload(): void {
     adapter.commands.execute({
       kind: "track-note-off",
-      trackIndex: core.state.activeTrack,
+      trackIndex: core.state.selectedTrackIndex,
       note: 60,
     });
   }
@@ -93,10 +93,6 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
 
   function drainCommands(): void {
     for (const command of core.drainHostCommands()) adapter.commands.execute(command);
-  }
-
-  function activePatternLength(): number {
-    return core.state.tracks[core.state.activeTrack].pattern.length;
   }
 
   return { core, init, tick, onMidiMessage, onUnload, isReady, isBootSplashVisible };
