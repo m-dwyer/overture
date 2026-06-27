@@ -1,10 +1,9 @@
 # Overture — root task surface. Run everything from the repo root (no cd):
-#   mise run dev | site-dev | verify | test | wasm | dsp | smoke | build | setup
+#   mise run dev | site-dev | verify | test | tool-build | build | setup
 #
-# The orchestration is polyglot: the web emulator is TS/Vite (pnpm), while the
-# `tool` submodule builds via Docker (aarch64 gcc for dsp.so, emscripten for wasm)
-# and Python. Tasks here are thin wrappers; the forks keep their own scripts so
-# they stay close to upstream (no node/workspace wiring leaks into the submodules).
+# The orchestration is polyglot: the web emulator is TS/Vite (pnpm), and the
+# active Overture tool package lives under overture-next/. Tasks here are thin
+# wrappers around those local scripts.
 
 [tools]
 node = "lts"
@@ -16,10 +15,9 @@ node = "lts"
 _.file = ".env"
 
 [tasks.setup]
-description = "Install workspace deps + reference tool UI bundler deps"
+description = "Install workspace deps"
 run = """
 pnpm install
-pnpm -C overture-ui install
 """
 
 [tasks.dev]
@@ -46,12 +44,14 @@ run = "pnpm verify"
 
 [tasks.web-build]
 description = "Production build of the web emulator"
-depends = ["wasm"]   # web bundle imports overture-ui/dist/wasm/seq8.mjs
 run = "pnpm -C web build"
+
+[tasks.tool-build]
+description = "Build the active Overture Schwung tool package"
+run = "pnpm -C overture-next build"
 
 [tasks.emulator-dist]
 description = "Prepare the static web emulator bundle served by the Astro site at /emulator/"
-depends = ["wasm"]
 sources = [
   "web/index.html",
   "web/package.json",
@@ -65,27 +65,13 @@ sources = [
   "web/src/**/*",
   "overture-next/src/**/*",
   "overture-next/ui/**/*",
-  "overture-ui/dist/wasm/seq8.mjs",
-  "overture-ui/dist/wasm/seq8.wasm",
 ]
 outputs = ["web/dist/index.html"]
 run = "pnpm -C web build"
 
-[tasks.utest]
-description = "Tool UI-module unit tests — ui/*.mjs with mock deps, no WASM (vitest, in overture-ui/)"
-run = "pnpm -C overture-ui test"
-
-[tasks.itest]
-description = "Integration tests — real ui.js + seq8-wasm + emulator in Node (vitest, in web/)"
-depends = ["wasm"]   # loads overture-ui/dist/wasm/seq8.mjs; build it first (incremental)
-run = "pnpm -C web test:node"
-
 [tasks.cover]
-description = "Code-coverage (vitest v8) for both headless tiers → overture-ui/coverage + web/coverage"
-run = """
-pnpm -C overture-ui test:coverage
-pnpm -C web test:coverage
-"""
+description = "Code-coverage (vitest v8) for the web harness"
+run = "pnpm -C web test:coverage"
 
 [tasks.gap-map]
 description = "Regenerate the coverage gap-map table from both vitest reports (run `cover` first)"
@@ -119,26 +105,6 @@ run = "pnpm -C web manual:check"
 description = "Current Overture tests: replacement ratchet + emulator E2E"
 depends = ["verify", "screenshot"]
 
-[tasks.reference-test]
-description = "Reference dAVEBOx-fork tests: legacy overture-ui unit suite + seq8-wasm web integration"
-depends = ["utest", "itest"]
-
-[tasks.dsp]
-description = "Cross-compile the tool's device dsp.so (aarch64, GLIBC<=2.35) via Docker"
-run = "overture-ui/scripts/build.sh"
-
-[tasks.wasm]
-description = "Build the tool's seq8 -> wasm target via emscripten Docker"
-# Incremental: skip the (slow) emscripten build when the artifact is already
-# up-to-date vs the DSP sources, so depending tasks (web-build, itest) stay fast.
-sources = ["overture-ui/dsp/**/*.c", "overture-ui/dsp/**/*.h", "overture-ui/scripts/build-wasm.sh"]
-outputs = ["overture-ui/dist/wasm/seq8.mjs", "overture-ui/dist/wasm/seq8.wasm"]
-run = "overture-ui/scripts/build-wasm.sh"
-
-[tasks.smoke]
-description = "Run the seq8 wasm round-trip smoke test"
-run = "node overture-ui/scripts/seq8-wasm-smoke.mjs"
-
 [tasks.restart]
 description = "Restart Move + Schwung stack on $MOVE_HOST"
 run = '''
@@ -149,24 +115,16 @@ ssh "$USER@$HOST" 'sh /data/UserData/schwung/restart-move.sh'
 '''
 
 [tasks.build]
-description = "Build everything: device dsp.so + wasm + web"
-depends = ["dsp", "wasm", "web-build"]
+description = "Build active tool package + web emulator"
+depends = ["tool-build", "web-build"]
 
 [tasks.install]
 description = "Deploy the full stack to the Move (delegates to ./install.sh)"
 run = "./install.sh"
 
 [tasks.deploy]
-description = "Build + deploy the Overture tool module via Schwung's install-module path ($MOVE_HOST)"
-depends = ["dsp"]
-run = '''
-set -euo pipefail
-SCHWUNG_INSTALL="${SCHWUNG_INSTALL_SCRIPT:-schwung/scripts/install.sh}"
-TARBALL="overture-ui/dist/overture-module.tar.gz"
-[ -f "$SCHWUNG_INSTALL" ] || { echo "Missing Schwung installer: $SCHWUNG_INSTALL"; exit 1; }
-[ -f "$TARBALL" ] || { echo "Missing module tarball: $TARBALL"; exit 1; }
-bash "$SCHWUNG_INSTALL" install-module "$TARBALL" "--host=${MOVE_HOST:-move.local}"
-'''
+description = "Build + deploy the active Overture tool package via Schwung install-module ($MOVE_HOST)"
+run = "pnpm -C overture-next deploy"
 
 [tasks.schwung-build]
 description = "Build pinned upstream Schwung (Docker aarch64)"

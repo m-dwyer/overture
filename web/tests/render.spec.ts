@@ -65,8 +65,7 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
   await page.locator("#oled").screenshot({ path: "shot-oled.png" });
 
   await expect(page.locator("#status")).toHaveText("running");
-  // The real seq8 engine must load (not silently fall back to the mock).
-  expect(await page.locator("#log").textContent()).toContain("behavior tier");
+  expect(await page.locator("#log").textContent()).toContain("dsp: mock");
   // The tool must drive LEDs (via move_midi_internal_send) — at least some lit.
   const litLeds = await page.evaluate(() => {
     const o = (globalThis as PageGlobal).OVT;

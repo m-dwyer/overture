@@ -11,9 +11,10 @@ trip should be this 5-minute pass — not a full re-test.
 hardware I/O (LED/OLED/palette/MIDI), or the export packager. Pure host-side JS
 logic with green `mise run verify` does **not** need this.
 
-**Deploy reminder.** JS changes need a full reboot, not just Back/Shift+Back
-(`init()` re-runs in the same runtime). See `AGENTS.md` →
-Session workflow. Check `seq8-pad-drop.log` and `seq8-jserr.log` first thing.
+**Deploy reminder.** Use `mise run deploy` to build and install the active tool
+package. JS changes need a full reboot, not just Back/Shift+Back (`init()`
+re-runs in the same runtime). See `AGENTS.md` → Session workflow. Check
+`seq8-pad-drop.log` and `seq8-jserr.log` first thing.
 
 ---
 

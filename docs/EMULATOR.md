@@ -13,7 +13,7 @@ through a defined host API), so we run *our* code against a *mock* of that bound
 | Layer | In the emulator |
 |---|---|
 | Tool **UI JS** (`overture-next/ui/ui.js` + `overture-next/src`) | **REAL** — the current replacement scaffold |
-| Tool **DSP** | **mocked/stubbed for Overture Next**; legacy seq8-wasm remains available as reference harness material |
+| Tool **DSP** | **mocked/stubbed**; the active tool has no DSP/WASM build yet |
 | Schwung **modules** | **REAL** wasm (moveforge already compiles these) |
 | **Display** (OLED) | MOCK → draw 128×64 to an HTML canvas (`clear_screen`/`print`/`draw_rect`/…) |
 | **Pads/steps/knobs/jog/buttons** | MOCK → clickable Move shell → emits the right MIDI into `onMidiMessageInternal` |
@@ -28,9 +28,8 @@ fidelity for UX design.
 ## Fidelity ladder (start cheap)
 1. **Layout tier** — real UI JS + **JS-mock DSP** (just enough clip/step/playhead state). Enough to
    design modes, navigation, the motion lane, the co-run "zoom" gesture. *Start here.*
-2. **Behavior tier** — the old `seq8`-wasm harness is reference material to port
-   deliberately as Overture Next gains sequencing, routing, automation, and
-   persistence.
+2. **Behavior tier** — add this deliberately when Overture owns a current
+   DSP/WASM target.
 
 ## Host-API shim list (the mock surface)
 Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Representative set:
@@ -42,9 +41,9 @@ Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Rep
   `shadow_send_midi_to_dsp` → stub/log/local synth.
 - **co-run:** `shadow_corun_begin/end/state` (+ the gated `typeof` checks) → stub editor view.
 
-> Replicate the *gotchas* that shape UX where cheap: input coalescing, `get_param`-null-from-onMidi,
-> the LED per-tick budget (see `overture-ui/docs/SCHWUNG_DAVEBOX_LIMITATIONS.md`). They affect interaction
-> design, so the mock should behave like the host, not idealised.
+> Replicate the *gotchas* that shape UX where cheap: input coalescing,
+> `get_param`-null-from-onMidi, and the LED per-tick budget. They affect
+> interaction design, so the mock should behave like the host, not idealised.
 
 ## Reuse from moveforge (don't absorb it)
 moveforge's emulator already provides — copy/adapt these (your repo, free), keep moveforge independent:
@@ -61,17 +60,24 @@ confirm those items on device when they matter to the change under test.
 
 ## Build / run
 The emulator lives in `web/`, but Vite remaps the tool's on-device imports to
-the live replacement tool entrypoint in `overture-next/ui/`. The old
-`overture-ui` dAVEBOx fork remains in the repo as a reference implementation and
-as a source of test-harness scenarios to port.
+the live replacement tool entrypoint in `overture-next/ui/`.
 
 Common loop:
 
 ```sh
 # From the overture repo root.
-mise run wasm
 pnpm -C web dev
 ```
+
+Packaged builds keep the two active targets explicit:
+
+```sh
+mise run tool-build  # build the active Schwung tool package from overture-next/
+mise run build       # tool package + web emulator
+```
+
+The native Move package is built from `overture-next/` and does not currently
+produce a `dsp.so` or WASM artifact.
 
 Then open the Vite URL, normally `http://localhost:5173/`. Edit
 `overture-next/src/*`, `overture-next/ui/*`, or `web/src/*`; Vite reloads
@@ -87,8 +93,6 @@ pnpm -C web test:e2e
 
 Use `pnpm -C web dev` for UI/UX iteration, `pnpm verify` for the current
 Overture ratchet, and `pnpm -C web test:e2e` for browser smoke/input coverage.
-Use `mise run reference-test` or `pnpm -C web test:e2e:reference` when you
-intentionally want the old reference suites while porting scenarios forward.
 
 Only compile/install to the Move after the browser path proves the interaction
 or when the phase needs real engine sound, co-run timing, MIDI injection, or

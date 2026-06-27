@@ -5,12 +5,15 @@
   "type": "module",
   "description": "Active Overture Schwung tool source.",
   "scripts": {
+    "build": "scripts/build.sh",
+    "deploy": "scripts/deploy.sh",
     "typecheck": "tsc -p tsconfig.json",
     "depcruise": "depcruise -c .dependency-cruiser.cjs src ui",
     "verify": "pnpm typecheck && pnpm depcruise"
   },
   "devDependencies": {
     "dependency-cruiser": "17.4.3",
+    "esbuild": "0.21.5",
     "typescript": "^5.6.0"
   }
 }
