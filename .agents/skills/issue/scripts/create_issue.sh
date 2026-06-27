@@ -17,6 +17,7 @@
 #   --project, -p <number>  Project board to add to (default: Overture Roadmap).
 #   --no-project            Do not add the issue to any project board.
 #   --status, -s <name>     Board Status to set (default: Backlog).
+#   --priority <name>       Board Priority to set, e.g. "P1 High".
 #   --dry-run               Print the gh command instead of creating the issue.
 #
 # Labels are the source of truth for type; the project Type field is a mirror.
@@ -35,11 +36,12 @@ MILESTONE=""
 CREATE_MILESTONE=0
 PROJECT="$DEFAULT_PROJECT"
 STATUS="Backlog"
+PRIORITY=""
 DRY_RUN=0
 EXTRA_LABELS=()
 ASSIGNEES=()
 
-usage() { sed -n '2,23p' "$0" >&2; }
+usage() { sed -n '2,24p' "$0" >&2; }
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -56,6 +58,7 @@ while [ $# -gt 0 ]; do
         --project|-p)    [ $# -ge 2 ] || die "--project requires a value"; PROJECT="$2"; shift 2 ;;
         --no-project)    PROJECT=""; shift ;;
         --status|-s)     [ $# -ge 2 ] || die "--status requires a value"; STATUS="$2"; shift 2 ;;
+        --priority)      [ $# -ge 2 ] || die "--priority requires a value"; PRIORITY="$2"; shift 2 ;;
         --dry-run)       DRY_RUN=1; shift ;;
         --help|-h)       usage; exit 0 ;;
         *)               die "unknown option '$1'" ;;
@@ -109,7 +112,9 @@ fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
     printf 'gh'; printf ' %q' "${ARGS[@]}"; printf '\n'
-    [ -n "$PROJECT" ] && echo "[dry-run] would add to project $PROJECT, set Type = $TYPE, Status = $STATUS"
+    if [ -n "$PROJECT" ]; then
+        echo "[dry-run] would add to project $PROJECT, set Type = $TYPE, Status = $STATUS${PRIORITY:+, Priority = $PRIORITY}"
+    fi
     exit 0
 fi
 
@@ -143,4 +148,5 @@ if [ -n "$PROJECT" ]; then
     echo "added to project $PROJECT:"
     set_select_field "Type" "$TYPE"
     [ -n "$STATUS" ] && set_select_field "Status" "$STATUS"
+    [ -n "$PRIORITY" ] && set_select_field "Priority" "$PRIORITY"
 fi
