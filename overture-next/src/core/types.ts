@@ -1,7 +1,6 @@
 import type { CoreInput } from "./input";
 import type { OvertureProject } from "./project";
 import type { TransportState } from "./transport";
-import type { OvertureView } from "../view/types";
 
 export interface CoreState {
   selectedTrackIndex: number;
@@ -14,6 +13,29 @@ export interface CoreState {
   lastInjectedStep: number;
 }
 
+export interface CoreSnapshotStep {
+  index: number;
+  active: boolean;
+  note: number | null;
+  velocity: number | null;
+  selected: boolean;
+  playhead: boolean;
+}
+
+export interface CoreSnapshot {
+  selectedTrackIndex: number;
+  visibleTrackBank: number;
+  sessionView: boolean;
+  selectedStep: number;
+  playing: boolean;
+  selectedClipId: string | null;
+  selectedClipCell: {
+    trackIndex: number;
+    sceneIndex: number;
+  };
+  steps: CoreSnapshotStep[];
+}
+
 export type HostCommand =
   | { kind: "track-note-on"; trackIndex: number; note: number; velocity: number }
   | { kind: "track-note-off"; trackIndex: number; note: number };
@@ -23,7 +45,7 @@ export interface OvertureCore {
   init(): void;
   tick(): void;
   applyInput(input: CoreInput): boolean;
-  getView(): OvertureView;
+  getSnapshot(): CoreSnapshot;
   getSelectedSequenceLength(): number;
   drainHostCommands(): HostCommand[];
 }

@@ -77,11 +77,12 @@ module.exports = {
       to: { path: "^src/host/(?!types\\.ts$)" },
     },
     {
-      name: "view-types-stay-neutral",
+      name: "view-stays-on-snapshot-contracts",
       severity: "error",
-      comment: "View model types are shared data contracts, not behavior or host/runtime integration.",
+      comment:
+        "View derives semantic models from core snapshot contracts, not core behavior or host/runtime/render integration.",
       from: { path: "^src/view/" },
-      to: { path: "^(src/(core|host|ports|render|runtime)/|ui/)" },
+      to: { path: "^(src/(core/(?!types\\.ts$)|host|ports|render|runtime)/|ui/)" },
     },
     {
       name: "ports-stay-contracts",

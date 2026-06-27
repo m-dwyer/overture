@@ -5,6 +5,7 @@ import type { OvertureHostAdapter } from "../host/types";
 import { renderLeds } from "../render/render-leds";
 import { renderScreen } from "../render/render-screen";
 import type { SplashScreenView } from "../render/types";
+import { createOvertureView } from "../view/overture-view";
 
 const BOOT_SPLASH_TICKS = 48;
 
@@ -78,7 +79,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
 
   function render(): void {
     adapter.runtime.publishState(core.state);
-    const view = core.getView();
+    const view = createOvertureView(core.getSnapshot());
     renderScreen(splashTicks > 0 ? getSplashView() : view.screen, adapter.display);
     renderLeds(view.leds, adapter.leds);
   }
