@@ -74,6 +74,12 @@ project/transport/control state, and emits domain commands such as
 `track-note-on` and `track-note-off`; the host adapter converts those commands
 to Move MIDI packets.
 
+State owners should be the only modules that mutate their state shape:
+`transport.ts` mutates `TransportState`; `playback/` mutates `PlaybackState`;
+`control-state.ts` mutates `ControlState`; and `project/` mutates
+`OvertureProject`. Cross-state workflows belong in orchestration code that calls
+the owning modules' public verbs.
+
 ## Boy Scout Rule
 
 Leave touched code more aligned with the target architecture than you found it.
@@ -97,6 +103,8 @@ For a module with a sanctioned public entry point, add concise TSDoc to exported
 domain verbs or boundary contracts when the signature alone does not capture
 important semantics, invariants, side effects, or failure cases. Do not document
 internal helpers just because they are exported across files inside `internal/`.
+When a module needs state from another owner, pass a narrow read-only contract
+instead of the mutable state object whenever practical.
 
 ## Dependency Ratchet
 

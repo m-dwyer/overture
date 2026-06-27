@@ -120,6 +120,14 @@ module.exports = {
       to: { path: "^src/core/playback/internal/" },
     },
     {
+      name: "playback-does-not-own-transport",
+      severity: "error",
+      comment:
+        "Transport owns TransportState mutation; playback consumes read-only timing data and must not import transport behavior.",
+      from: { path: "^src/core/playback/" },
+      to: { path: "^src/core/transport\\.ts$" },
+    },
+    {
       name: "project-internals-stay-private",
       severity: "error",
       comment:
