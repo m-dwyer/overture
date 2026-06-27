@@ -78,7 +78,9 @@ State owners should be the only modules that mutate their state shape:
 `transport.ts` mutates `TransportState`; `playback/` mutates `PlaybackState`;
 `control-state.ts` mutates `ControlState`; and `project/` mutates
 `OvertureProject`. Cross-state workflows belong in orchestration code that calls
-the owning modules' public verbs.
+the owning modules' public verbs. `overture-next` enforces adopted ownership
+boundaries with dependency-cruiser import rules and the local ESLint
+`overture/state-ownership` rule.
 
 ## Boy Scout Rule
 

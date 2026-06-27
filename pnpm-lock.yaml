@@ -10,15 +10,24 @@ importers:
 
   overture-next:
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.39.4
+        version: 9.39.4
       dependency-cruiser:
         specifier: 17.4.3
         version: 17.4.3
       esbuild:
         specifier: 0.21.5
         version: 0.21.5
+      eslint:
+        specifier: ^9.39.4
+        version: 9.39.4(jiti@1.21.7)
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.62.0
+        version: 8.62.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
 
   site:
     dependencies:
