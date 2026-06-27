@@ -68,6 +68,7 @@ function createRuntimeTestAdapter(frames: string[][], frame: string[]): Overture
   };
   const leds: LedPort = {
     setStepLed() {},
+    setPadLed() {},
     setTrackRowLed() {},
     setPlayLed() {},
     setMenuLed() {},

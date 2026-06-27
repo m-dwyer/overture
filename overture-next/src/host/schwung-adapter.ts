@@ -100,6 +100,9 @@ export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHos
       setStepLed(step, color) {
         call("setLED", [STEP_NOTE_FIRST + step, color]);
       },
+      setPadLed(padIndex, color) {
+        call("setLED", [PAD_NOTE_FIRST + padIndex, color]);
+      },
       setTrackRowLed(row, color) {
         const cc = ROW_CC[row];
         if (cc !== undefined) call("setButtonLED", [cc, color, true]);

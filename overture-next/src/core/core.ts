@@ -87,6 +87,7 @@ export function createOvertureCore(): OvertureCore {
       playing: state.transport.playing,
       selectedClipId: selectedCell.clipId,
       selectedClipCell: { ...selectedClipCell },
+      clipCells: state.project.clipCells.map((cell) => ({ ...cell })),
       steps: getSnapshotSteps(),
     };
   }

@@ -196,6 +196,15 @@ LED meaning should be defined once and reused:
 Prefer fewer unmistakable states over many subtle colors or blink patterns.
 Avoid writing the same LED from multiple paths in one tick.
 
+Current Overture Session View central-pad LEDs:
+
+- selected Clip Cell: bright highlight;
+- occupied Clip Cell: medium content indication;
+- empty Clip Cell: dim orientation indication.
+
+The top visual pad row represents the top visible Track row in the current
+Track Bank. Scene columns remain stable from left to right.
+
 ## Implementation Direction
 
 Current code still uses `bank` heavily. Do not churn names mechanically. Migrate
