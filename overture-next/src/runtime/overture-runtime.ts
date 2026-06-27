@@ -1,4 +1,4 @@
-import type { CoreInput } from "../core/input";
+import type { ControlInput } from "../core/controls/types";
 import { createOvertureCore } from "../core/core";
 import type { OvertureCore } from "../core/types";
 import type { OvertureHostAdapter } from "../host/types";
@@ -62,7 +62,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
     return !isBootSplashVisible();
   }
 
-  function applyInput(input: CoreInput): void {
+  function applyInput(input: ControlInput): void {
     core.applyInput(input);
   }
 

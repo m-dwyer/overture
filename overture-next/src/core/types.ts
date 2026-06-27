@@ -1,4 +1,4 @@
-import type { CoreInput } from "./input";
+import type { ControlInput } from "./controls/types";
 import type { OvertureProject } from "./project";
 import type { TransportState } from "./transport";
 
@@ -51,7 +51,7 @@ export interface OvertureCore {
   readonly state: CoreState;
   init(): void;
   tick(): void;
-  applyInput(input: CoreInput): boolean;
+  applyInput(input: ControlInput): boolean;
   getSnapshot(): CoreSnapshot;
   getSelectedSequenceLength(): number;
   drainHostCommands(): HostCommand[];

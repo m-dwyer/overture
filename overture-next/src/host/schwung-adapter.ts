@@ -1,4 +1,4 @@
-import type { CoreInput } from "../core/input";
+import type { ControlInput } from "../core/controls/types";
 import type { CoreState, HostCommand } from "../core/types";
 import type { MoveMidiPacket, OvertureHostAdapter } from "./types";
 
@@ -33,7 +33,7 @@ function moveChannelForTrack(trackIndex: number): number {
   return trackIndex & 0x0f;
 }
 
-export function moveMidiToInput(data: readonly number[], stepCount: number): CoreInput | null {
+export function moveMidiToInput(data: readonly number[], stepCount: number): ControlInput | null {
   const status = (data[0] ?? 0) & 0xf0;
   const d1 = (data[1] ?? 0) | 0;
   const d2 = (data[2] ?? 0) | 0;
@@ -45,7 +45,7 @@ export function moveMidiToInput(data: readonly number[], stepCount: number): Cor
   return null;
 }
 
-function parseMoveCc(cc: number, value: number): CoreInput | null {
+function parseMoveCc(cc: number, value: number): ControlInput | null {
   if (cc === CC_SHIFT) return { kind: "shift", held: value > 0 };
   if (value === 0) return null;
   if (cc === CC_PLAY) return { kind: "play" };
@@ -55,7 +55,7 @@ function parseMoveCc(cc: number, value: number): CoreInput | null {
   return null;
 }
 
-function parseMoveNote(status: number, note: number, velocity: number, stepCount: number): CoreInput | null {
+function parseMoveNote(status: number, note: number, velocity: number, stepCount: number): ControlInput | null {
   if (status !== NOTE_ON || velocity <= 0) return null;
   if (note >= PAD_NOTE_FIRST && note < PAD_NOTE_FIRST + PAD_COUNT) return { kind: "pad", padIndex: note - PAD_NOTE_FIRST };
   if (note < STEP_NOTE_FIRST || note >= STEP_NOTE_FIRST + stepCount) return null;

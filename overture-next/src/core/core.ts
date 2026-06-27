@@ -1,11 +1,11 @@
-import type { CoreInput } from "./input";
-import { createDefaultProject, getClipCell, getSelectedSequence, selectClipCell } from "./project";
-import { DEFAULT_STEP_COUNT, getSequenceStep, toggleSequenceStep } from "./sequence";
-import { getTrack, selectTrackFromRow, TRACK_BANK_SIZE, trackBankForTrack } from "./track";
-import { advanceTransport, createTransport, toggleTransport } from "./transport";
+import { interpretControl } from "./controls/interpret-control";
+import type { ControlInput } from "./controls/types";
+import { applyIntent } from "./intents/apply-intent";
+import { createDefaultProject, getClipCell, getSelectedSequence } from "./project";
+import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
+import { getTrack } from "./track";
+import { advanceTransport, createTransport } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
-
-const SESSION_SCENE_COLUMNS = 8;
 
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
@@ -32,36 +32,14 @@ export function createOvertureCore(): OvertureCore {
     }
   }
 
-  function applyInput(input: CoreInput): boolean {
-    if (input.kind === "shift") {
-      state.shiftHeld = input.held;
-      return true;
-    }
-    if (input.kind === "play") {
-      const playing = toggleTransport(state.transport);
-      if (!playing) hostCommands.push({ kind: "track-note-off", trackIndex: state.selectedTrackIndex, note: 60 });
-      return true;
-    }
-    if (input.kind === "menu") {
-      state.sessionView = !state.sessionView;
-      return true;
-    }
-    if (input.kind === "track-row") {
-      selectTrack(selectTrackFromRow(input.row, state.shiftHeld ? 1 : 0));
-      return true;
-    }
-    if (input.kind === "step") {
-      state.selectedStep = input.step;
-      const sequence = getSelectedSequence(state.project);
-      if (sequence) toggleSequenceStep(sequence, input.step);
-      return true;
-    }
-    if (input.kind === "pad") {
-      if (!state.sessionView) return false;
-      selectClipCellFromPad(input.padIndex);
-      return true;
-    }
-    return false;
+  function applyInput(input: ControlInput): boolean {
+    const intent = interpretControl(input, {
+      shiftHeld: state.shiftHeld,
+      sessionView: state.sessionView,
+      visibleTrackBank: state.visibleTrackBank,
+    });
+    if (!intent) return false;
+    return applyIntent(intent, state, hostCommands);
   }
 
   function injectStep(step: number): void {
@@ -90,25 +68,6 @@ export function createOvertureCore(): OvertureCore {
       clipCells: state.project.clipCells.map((cell) => ({ ...cell })),
       steps: getSnapshotSteps(),
     };
-  }
-
-  function selectTrack(trackIndex: number): void {
-    const sceneIndex = state.project.selectedClipCell.sceneIndex;
-    getTrack(state.project.tracks, trackIndex);
-    state.selectedTrackIndex = trackIndex;
-    state.visibleTrackBank = trackBankForTrack(trackIndex);
-    selectClipCell(state.project, { trackIndex, sceneIndex });
-  }
-
-  function selectClipCellFromPad(padIndex: number): void {
-    const padRowFromBottom = Math.floor(padIndex / SESSION_SCENE_COLUMNS);
-    const row = TRACK_BANK_SIZE - 1 - padRowFromBottom;
-    const sceneIndex = padIndex % SESSION_SCENE_COLUMNS;
-    const trackIndex = selectTrackFromRow(row, state.visibleTrackBank);
-    getTrack(state.project.tracks, trackIndex);
-    selectClipCell(state.project, { trackIndex, sceneIndex });
-    state.selectedTrackIndex = trackIndex;
-    state.visibleTrackBank = trackBankForTrack(trackIndex);
   }
 
   function selectedTrack() {
