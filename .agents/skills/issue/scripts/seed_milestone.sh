@@ -13,11 +13,13 @@
 #   },
 #   "project": "5",
 #   "status": "Backlog",
+#   "priority": "P2 Medium",
 #   "issues": [
 #     {
 #       "type": "architecture",
 #       "title": "refactor: route host commands by track route",
 #       "body_file": "01-route-aware-host-commands.md",
+#       "priority": "P1 High",
 #       "labels": ["emulator"],
 #       "assignees": ["@me"]
 #     }
@@ -76,6 +78,7 @@ MILESTONE_DESC="$(optional_string '.milestone.description')"
 MILESTONE_DUE="$(optional_string '.milestone.due')"
 DEFAULT_PROJECT="$(optional_string '.project')"
 DEFAULT_STATUS="$(optional_string '.status')"
+DEFAULT_PRIORITY="$(optional_string '.priority')"
 
 MILESTONE_CMD=("$SCRIPT_DIR/create_milestone.sh" --title "$MILESTONE_TITLE")
 [ -n "$MILESTONE_DESC" ] && MILESTONE_CMD+=(--description "$MILESTONE_DESC")
@@ -93,6 +96,7 @@ for ((i = 0; i < ISSUE_COUNT; i++)); do
     BODY_FILE="$(optional_string ".issues[$i].body_file")"
     PROJECT="$(optional_string ".issues[$i].project")"
     STATUS="$(optional_string ".issues[$i].status")"
+    PRIORITY="$(optional_string ".issues[$i].priority")"
     NO_PROJECT="$(jq -r ".issues[$i].no_project // false" "$MANIFEST_PATH")"
 
     ISSUE_CMD=("$SCRIPT_DIR/create_issue.sh" --type "$TYPE" --title "$TITLE" --milestone "$MILESTONE_TITLE")
@@ -117,8 +121,10 @@ for ((i = 0; i < ISSUE_COUNT; i++)); do
     else
         [ -n "$PROJECT" ] || PROJECT="$DEFAULT_PROJECT"
         [ -n "$STATUS" ] || STATUS="$DEFAULT_STATUS"
+        [ -n "$PRIORITY" ] || PRIORITY="$DEFAULT_PRIORITY"
         [ -n "$PROJECT" ] && ISSUE_CMD+=(--project "$PROJECT")
         [ -n "$STATUS" ] && ISSUE_CMD+=(--status "$STATUS")
+        [ -n "$PRIORITY" ] && ISSUE_CMD+=(--priority "$PRIORITY")
     fi
 
     [ "$DRY_RUN" -eq 1 ] && ISSUE_CMD+=(--dry-run)

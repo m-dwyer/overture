@@ -34,11 +34,14 @@ docs chore`), a Conventional Commit `--title`, and an optional milestone.
   then rerun without `--dry-run` after checking the planned commands.
 
 Both take `--dry-run`. See each script's `--help` for the rest (`--body-file`,
-`--label`, `--status`, `--no-project`, `--create-milestone`).
+`--label`, `--status`, `--priority`, `--no-project`, `--create-milestone`).
 
 For batch seeding, write short issue bodies to temp files and reference them
-from the manifest with `body_file`. Keep the final response to links and the
-open issue list; do not paste issue bodies unless asked.
+from the manifest with `body_file`. Add per-issue `priority` only when it helps
+the user sort the milestone; prefer `P1 High` for the first issues to work,
+`P2 Medium` for normal milestone work, and `P3 Low` for closeout or follow-up
+capture. Keep the final response to links and the open issue list; do not paste
+issue bodies unless asked.
 
 **Start work** on an issue with a GitHub-linked branch (no naming convention; the
 link is real data):
