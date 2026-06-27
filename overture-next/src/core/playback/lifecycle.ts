@@ -12,6 +12,12 @@ export interface PlaybackAdvance {
   hostCommands: HostCommand[];
 }
 
+/**
+ * Starts transport playback and emits note commands for the current playhead.
+ *
+ * If no track is currently playing a clip, playback starts from the selected
+ * clip cell when that cell contains a clip.
+ */
 export function startTransportPlayback(
   project: OvertureProject,
   playback: PlaybackState,
@@ -23,6 +29,10 @@ export function startTransportPlayback(
   return injectPlaybackStep(project, playback, transport.playhead, transport.tick);
 }
 
+/**
+ * Stops transport playback, clears all playing clips, and emits any note-off
+ * commands needed to silence the currently active playback state.
+ */
 export function stopTransportPlayback(
   project: OvertureProject,
   playback: PlaybackState,
@@ -32,6 +42,12 @@ export function stopTransportPlayback(
   return stopAllPlayingClips(project, playback, transport);
 }
 
+/**
+ * Advances transport timing by one runtime tick.
+ *
+ * Due note-offs are emitted every tick. Step note injection happens only when
+ * the transport advances to a new sequencer step.
+ */
 export function advancePlayback(
   project: OvertureProject,
   playback: PlaybackState,
@@ -45,6 +61,13 @@ export function advancePlayback(
   return { injectedStep: nextStep, hostCommands };
 }
 
+/**
+ * Launches the clip cell on its track.
+ *
+ * Launching an occupied cell makes that clip the track's playing clip. Launching
+ * an empty cell stops and clears the track's current playing clip, returning any
+ * note-off commands required for the interrupted playback state.
+ */
 export function launchClipCellPlayback(
   project: OvertureProject,
   playback: PlaybackState,
