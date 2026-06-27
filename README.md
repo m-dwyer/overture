@@ -10,32 +10,16 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 
 > **Status:** early build. The browser emulator runs the real tool UI, a mock
 > Overture DSP surface, and browser Schwung-chain audio from pinned Moveforge
-> WASM modules. The first
-> Overture-native changes (track navigation, clip reveal, auto-routing, Route Check,
-> Edit Sound, Param Peek, sound presets, and per-step length) are implemented. The tool
-> is a fork of [dAVEBOx](https://github.com/legsmechanical/schwung-davebox); shipped
-> behaviour belongs in the manual/generated reference, while new plans should start from
-> fresh issues or design notes rather than stale phase roadmaps.
+> WASM modules. The active implementation lives under `overture-next/`; older
+> plans and inherited manuals have been removed from the active docs set.
 
 ## Docs
-- `docs/generated/` — local generated manuals and screenshots from the browser emulator. The directory is gitignored except for `.gitkeep`; regenerate outputs when you want to read or inspect them locally.
-  - Beginner guide: `pnpm -C web manual:generate`
-  - Reference manual: `pnpm -C web reference:generate`
-  - **Accuracy guard:** each figure declares an `expect` (the state/OLED text its caption claims). `pnpm -C web manual:assert` drives every figure and fails if a behaviour change makes a screenshot or caption wrong. `pnpm -C web manual:check` regenerates both guides and runs the same assertions.
-  - **Read locally:** each generator emits standalone `.md` and figure-embedded `.html` files under `docs/generated/`. Generate and open:
-    - Beginner: `pnpm -C web manual:generate && open docs/generated/overture-beginner-guide.html`
-    - Reference: `pnpm -C web reference:generate && open docs/generated/overture-reference.html`
-- `docs/reference/DAVEBOX-MANUAL.md` — the upstream dAVEBOx manual, vendored verbatim as our diff baseline (not a dependency of the manuals above).
-- `docs/QUICK-START.md` — first-run setup for the hybrid route model, Schwung slots, track selection, clip reveal, and sound editing.
-- `docs/MANUAL.md` — the full Overture tool manual.
-- `docs/OVERTURE-DAVEBOX-DIFFERENCES.md` — the precise per-change delta from upstream dAVEBOx.
-- `docs/PHILOSOPHY.md` — what Overture is, what it isn't, the principles behind it.
-- `docs/ARCHITECTURE.md` — the runtime stack, the monorepo + fork strategy, moveforge, how to modify it.
-- `docs/OVERTURE-NEXT-ARCHITECTURE-DEEPENING.md` — phased plan for deepening the active `overture-next/` control, intent, playback, and snapshot seams.
-- `docs/SCHWUNG-ADAPTER-MOVE-APP-PLAN.md` — planning spike for a clean Overture core based on `move-app` behind a narrow Schwung adapter.
-- `docs/EMULATOR.md` — the browser UX-dev harness (real UI + mocked host/hardware); the first build target.
+- `AGENTS.md` — canonical source-tree and workflow contract for agents.
+- `docs/ARCHITECTURE.md` — current active architecture summary.
+- `docs/EMULATOR.md` — browser emulator and Moveforge module WASM workflow.
+- `docs/DEVICE-SMOKE.md` — minimal on-device checks for changes the emulator cannot prove.
+- `docs/adr/` — retained architecture decision history.
 - `site/src/pages/try.astro` — public "try Overture" route embedding the browser emulator from `web/dist`.
-- `docs/ABLETON-ENGINE-ACCESS.md` — the empirical findings on what's reachable in Move's real engines (the foundation).
 
 ## Credits / licence
 Built on **Schwung** (© Charles Vestal, MIT) and **dAVEBOx** (© Josh Gaines, MIT). Overture

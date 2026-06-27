@@ -1,13 +1,13 @@
 # Overture — Emulator (UX dev harness)
 
-A browser harness that runs Overture's **real UI** (and, later, real DSP) against a **mock of the
-Schwung host + Move hardware**, so UX iterates in seconds instead of build→deploy→device. Lives in
-`overture/web/`. It is the first design loop for Overture-native UX work.
+A browser harness that runs Overture's **real UI** against a **mock of the
+Schwung host + Move hardware**. It lives in `web/` and is the first design loop
+for Overture work.
 
 ## Why this, not the real stack
-The real stack can't run locally: **MoveOriginal is a closed aarch64 binary bound to the SPI
-hardware** — no port, no emulation. But dAVEBOx/Overture is cleanly split (DSP in C, UI in JS, talking
-through a defined host API), so we run *our* code against a *mock* of that boundary.
+MoveOriginal is a closed aarch64 binary bound to hardware. The emulator runs the
+active Overture UI and core against browser implementations of the display, LED,
+MIDI, file, and Schwung-chain host surfaces.
 
 ## Real vs mocked
 | Layer | In the emulator |
@@ -18,7 +18,7 @@ through a defined host API), so we run *our* code against a *mock* of that bound
 | **Display** (OLED) | MOCK → draw 128×64 to an HTML canvas (`clear_screen`/`print`/`draw_rect`/…) |
 | **Pads/steps/knobs/jog/buttons** | MOCK → clickable Move shell → emits the right MIDI into `onMidiMessageInternal` |
 | **LEDs** | MOCK → render pad/step colors from `setLED` |
-| `get_param`/`set_param` | MOCK → route to the DSP instance (wasm or stub) |
+| `get_param`/`set_param` | MOCK -> route to the Overture mock DSP surface |
 | **Move's Ableton engines / MIDI inject** | MOCK/stub (placeholder + local synth or silence) |
 | **co-run** (Move device UI / Schwung chain editor) | MOCK → a stub "editor" view; design the *transition*, not the native editor |
 
@@ -26,8 +26,8 @@ through a defined host API), so we run *our* code against a *mock* of that bound
 fidelity for UX design.
 
 ## Fidelity ladder (start cheap)
-1. **Layout tier** — real UI JS + **JS-mock DSP** (just enough clip/step/playhead state). Enough to
-   design modes, navigation, the motion lane, the co-run "zoom" gesture. *Start here.*
+1. **Layout tier** — real UI JS + **JS-mock DSP**. Enough to design modes,
+   navigation, routing, and sequencing flow. Start here.
 2. **Behavior tier** — add this deliberately when Overture owns a current
    DSP/WASM target.
 
@@ -36,7 +36,7 @@ Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Rep
 - **Lifecycle:** `init`, `tick` (~94 Hz), `onMidiMessageInternal`, `onMidiMessageExternal`.
 - **Display:** `clear_screen`, `print`, `draw_rect`, `fill_rect`, `host_flush_display` → canvas.
 - **LEDs:** `setLED`, `setButtonLED`, `clearAllLEDs` → pad/step grid render (mind the per-tick budget).
-- **Params:** `host_module_get_param`, `host_module_set_param` → DSP routing.
+- **Params:** `host_module_get_param`, `host_module_set_param` -> mock DSP routing.
 - **MIDI:** `move_midi_inject_to_move([type,status,d1,d2])`, `host_module_send_midi`,
   `shadow_send_midi_to_dsp` → stub/log/local synth.
 - **co-run:** `shadow_corun_begin/end/state` (+ the gated `typeof` checks) → stub editor view.
@@ -58,17 +58,10 @@ That task initializes the submodule and builds the WASM modules required by the
 browser Schwung chain. `mise run dev`, `mise run web-build`, and
 `mise run build` depend on it.
 
-Moveforge's emulator also provides useful reference material to copy/adapt:
-- the **Move hardware shell** (track/mode buttons, 8 encoders, wheel, transport, 16 steps, 32 pads),
-- the **OLED canvas**,
-- the **wasm-DSP loader** + AudioWorklet path (for module audition),
-- the **pad-layout engine** (chromatic / in-key / fourths), input/event plumbing.
-moveforge's emulator is *module-focused*; Overture's hosts the **tool** + renders the **real OLED UI**.
-
 ## What it can't validate (device-only — don't over-trust)
-Real Ableton-engine sound, the motion effect on real engines, device timing/coalescing/jitter, inject
-latency, latency parity, co-run's real behavior, and the exact LED budget. Use the emulator first;
-confirm those items on device when they matter to the change under test.
+Real Move-engine sound, device timing/coalescing/jitter, physical MIDI injection
+latency, co-run's real behavior, and the exact LED budget. Use the emulator
+first; confirm these on device when they matter to the change under test.
 
 ## Build / run
 The emulator lives in `web/`, but Vite remaps the tool's on-device imports to
@@ -99,13 +92,12 @@ without bundling or installing on the device.
 Checks:
 
 ```sh
-pnpm typecheck
 pnpm verify
 pnpm -C web test:e2e
 ```
 
-Use `pnpm -C web dev` for UI/UX iteration, `pnpm verify` for the current
-Overture ratchet, and `pnpm -C web test:e2e` for browser smoke/input coverage.
+Use `mise run dev` for UI iteration, `pnpm verify` for the current Overture
+ratchet, and `pnpm -C web test:e2e` for browser smoke/input coverage.
 
 Only compile/install to the Move after the browser path proves the interaction
 or when the phase needs real engine sound, co-run timing, MIDI injection, or
