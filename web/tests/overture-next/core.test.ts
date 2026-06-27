@@ -79,6 +79,21 @@ describe("Overture Next core", () => {
     expect(clip?.sequence.steps[1].active).toBe(true);
   });
 
+  test("uses shift as the upper track bank modifier for side buttons", () => {
+    const core = createOvertureCore();
+    core.init();
+
+    core.applyInput({ kind: "shift", held: true });
+    core.applyInput({ kind: "track-row", row: 0 });
+    expect(core.state.selectedTrackIndex).toBe(4);
+
+    core.applyInput({ kind: "shift", held: false });
+    core.applyInput({ kind: "track-row", row: 0 });
+
+    expect(core.state.selectedTrackIndex).toBe(0);
+    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
+  });
+
   test("emits Move note commands when the playhead reaches an active step", () => {
     const core = createOvertureCore();
     core.init();
