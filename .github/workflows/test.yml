@@ -44,7 +44,7 @@ jobs:
 
           CHANGED="$(git diff --name-only "$BASE" "$GITHUB_SHA")"
           echo "$CHANGED"
-          if echo "$CHANGED" | grep -Eq '^(\.github/workflows/test\.yml$|web/|overture-next/|mise\.toml$)'; then
+          if echo "$CHANGED" | grep -Eq '^(\.github/workflows/test\.yml$|web/|overture-next/|mise\.toml$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -63,17 +63,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: |
-            web/pnpm-lock.yaml
+            pnpm-lock.yaml
 
-      - name: Install web dependencies
+      - name: Install workspace dependencies
         if: steps.changes.outputs.run == 'true'
-        run: pnpm install --frozen-lockfile
-        working-directory: web
+        run: pnpm --filter @overture/tool --filter overture-web install --frozen-lockfile
 
       - name: Verify Overture Next
         if: steps.changes.outputs.run == 'true'
         run: pnpm verify
-        working-directory: web
 
       - name: Skip Fast Test
         if: steps.changes.outputs.run != 'true'

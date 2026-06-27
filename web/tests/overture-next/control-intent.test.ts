@@ -5,7 +5,7 @@ import {
   selectTrack,
   setShiftHeld,
   toggleControlMode,
-} from "../../../overture-next/src/core/controls/control-state";
+} from "../../../overture-next/src/core/control-state";
 import { interpretControl } from "../../../overture-next/src/core/controls/interpret-control";
 import { applyIntent } from "../../../overture-next/src/core/intents/apply-intent";
 import { createPlaybackState } from "../../../overture-next/src/core/playback";

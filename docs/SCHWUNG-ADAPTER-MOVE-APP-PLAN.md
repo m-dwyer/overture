@@ -141,10 +141,10 @@ The shell should stay shallow and replaceable.
 ## Architecture Ratchet
 
 `overture-next/.dependency-cruiser.cjs` encodes the current clean boundaries as
-error-level rules. Run `pnpm -C web verify` or `mise run verify` before
-committing current Overture work; it typechecks the typed tool scaffold, runs
+error-level rules. Run `pnpm verify` or `mise run verify` before committing
+current Overture work; it typechecks the active tool package, runs
 dependency-cruiser against `overture-next/src` and `overture-next/ui`, and runs
-the Overture core tests.
+the focused Overture tests through the web harness.
 
 The first ratchet keeps `ui/ui.js` as the only runtime shell, prevents typed
 source from importing that shell, keeps core independent of host/render code,

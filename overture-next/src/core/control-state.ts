@@ -1,6 +1,6 @@
-import type { ClipCellCoordinate } from "../project";
-import { trackBankForTrack } from "../track";
-import type { ControlMode, ControlState } from "./types";
+import type { ClipCellCoordinate } from "./project";
+import { trackBankForTrack } from "./track";
+import type { ControlMode, ControlState } from "./controls/types";
 
 export function createInitialControlState(): ControlState {
   return {

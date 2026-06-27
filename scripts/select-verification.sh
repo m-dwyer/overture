@@ -84,8 +84,8 @@ fi
 
 for path in "${CHANGED[@]:-}"; do
     case "$path" in
-        overture-next/*|web/*|mise.toml|.github/workflows/test.yml)
-            add_command "pnpm -C web verify"
+        overture-next/*|web/*|mise.toml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|.github/workflows/test.yml)
+            add_command "pnpm verify"
             ;;
     esac
 
@@ -96,7 +96,7 @@ for path in "${CHANGED[@]:-}"; do
     esac
 
     case "$path" in
-        site/*)
+        site/*|pnpm-lock.yaml|pnpm-workspace.yaml|.github/workflows/pages.yml)
             add_command "pnpm -C site build"
             ;;
     esac
@@ -116,7 +116,7 @@ for path in "${CHANGED[@]:-}"; do
     esac
 
     case "$path" in
-        AGENTS.md|CONTEXT.md|README.md|docs/*|.github/pull_request_template.md|.agents/*|scripts/*|site/*|web/*|overture-next/*|mise.toml|pnpm-lock.yaml|package.json|.github/workflows/*)
+        .gitignore|AGENTS.md|CONTEXT.md|README.md|docs/*|.github/pull_request_template.md|.agents/*|scripts/*|site/*|web/*|overture-next/*|mise.toml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|.github/workflows/*)
             ;;
         *)
             UNKNOWN+=("$path")
