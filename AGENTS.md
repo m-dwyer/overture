@@ -76,26 +76,22 @@ to Move MIDI packets.
 
 ## Boy Scout Rule
 
-Leave touched code more aligned with the target architecture.
+Leave touched code more aligned with the target architecture than you found it.
+This is about *incidental* cleanup to code you are already editing — the
+[Active Architecture](#active-architecture) layer model and
+[Dependency Ratchet](#dependency-ratchet) constraints apply to every change
+regardless. When you touch an Overture module:
 
-When you change or extend Overture modules:
+- **Encapsulation** - expose domain verbs before helper mutations. Put private
+  helpers under an `internal/` folder, guarded by a dependency-cruiser rule.
+- **Types** - move a contract you touch into its owning layer.
+- **Language** - rename legacy naming where you touch it; do not carry it into
+  new code or public copy.
+- **Ratchets** - when a change makes an aspirational boundary real, tighten
+  `overture-next/.dependency-cruiser.cjs` to lock it in.
 
-- **Types** - keep contracts in the narrowest layer that owns them. Domain state
-  and commands live in `core`; shared view data in `view`; host/runtime boundary
-  contracts in `ports`; concrete Schwung/Move details in `host`.
-- **Coupling** - do not widen imports across layers. Prefer moving a concept
-  toward its owning layer over adding convenience imports.
-- **Encapsulation** - expose domain verbs from a module before exporting helper
-  mutations. When a module needs private helpers, put them under an `internal/`
-  folder and add or preserve a dependency-cruiser rule that prevents imports
-  from outside the owning module.
-- **Tests** - extend focused tests under `web/tests/overture-next/` to pin
-  changed behavior. Keep emulator-facing tests deterministic by advancing ticks
-  rather than sleeping.
-- **Language** - use Overture domain terms. Do not import legacy naming into new
-  code or public copy.
-- **Ratchets** - preserve or strengthen `overture-next/.dependency-cruiser.cjs`
-  when architecture boundaries become true.
+If a cleanup grows beyond the code you are touching, split it into its own
+`refactor:` commit rather than expanding the current diff.
 
 ## Dependency Ratchet
 
