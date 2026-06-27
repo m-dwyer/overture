@@ -1,6 +1,9 @@
+import type { HostCommand } from "./host-commands";
 import type { ClipId, OvertureClip, OvertureProject, ClipCellCoordinate } from "./project";
 import { getClipCell } from "./project";
+import { getSequenceStep } from "./sequence";
 import { TRACK_COUNT } from "./track";
+import type { TransportState } from "./transport";
 
 export interface TrackPlaybackState {
   trackIndex: number;
@@ -43,4 +46,41 @@ export function launchClipCell(
 export function getPlayingClip(project: OvertureProject, track: TrackPlaybackState): OvertureClip | null {
   if (!track.playingClipId) return null;
   return project.clips[track.playingClipId] ?? null;
+}
+
+export function injectPlaybackStep(project: OvertureProject, playback: PlaybackState, step: number): HostCommand[] {
+  const hostCommands: HostCommand[] = [];
+  for (const trackPlayback of playback.tracks) {
+    const clip = getPlayingClip(project, trackPlayback);
+    if (!clip) continue;
+    const sequenceStep = getSequenceStep(clip.sequence, step % clip.sequence.length);
+    if (!sequenceStep?.active) continue;
+    hostCommands.push(
+      {
+        kind: "track-note-on",
+        trackIndex: trackPlayback.trackIndex,
+        note: sequenceStep.note,
+        velocity: sequenceStep.velocity,
+      },
+      { kind: "track-note-off", trackIndex: trackPlayback.trackIndex, note: sequenceStep.note },
+    );
+  }
+  return hostCommands;
+}
+
+export function stopPlayingClips(
+  project: OvertureProject,
+  playback: PlaybackState,
+  transport: TransportState,
+): HostCommand[] {
+  const hostCommands: HostCommand[] = [];
+  for (const trackPlayback of playback.tracks) {
+    const clip = getPlayingClip(project, trackPlayback);
+    if (!clip) continue;
+    const step = getSequenceStep(clip.sequence, transport.playhead % clip.sequence.length);
+    if (step?.active) {
+      hostCommands.push({ kind: "track-note-off", trackIndex: trackPlayback.trackIndex, note: step.note });
+    }
+  }
+  return hostCommands;
 }

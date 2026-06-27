@@ -1,4 +1,4 @@
-import type { HostCommand } from "../types";
+import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinate } from "../project";
 
 export type DomainIntent =
