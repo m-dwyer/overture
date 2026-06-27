@@ -9,7 +9,10 @@ Closes #
 
 ## Verification
 
--
+- [ ] `pnpm -C web verify`
+- [ ] `mise run test`
+- [ ] Emulator / hardware (if applicable)
+- [ ] Not run / not applicable:
 
 ## User-visible changes
 
