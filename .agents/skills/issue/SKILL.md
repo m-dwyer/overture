@@ -19,6 +19,13 @@ docs chore`), a Conventional Commit `--title`, and an optional milestone.
 Both take `--dry-run`. See each script's `--help` for the rest (`--body-file`,
 `--label`, `--status`, `--no-project`, `--create-milestone`).
 
-After creation, work the issue on a `<type>/<number>-<slug>` branch; the `pr`
-skill injects `Closes #<number>` so a squash-merge closes the issue and advances
-the milestone.
+**Start work** on an issue with a GitHub-linked branch (no naming convention; the
+link is real data):
+
+```sh
+gh issue develop <number> --checkout
+```
+
+Then commit with Conventional Commit subjects. When preparing the PR, pass the
+same number to the `pr` skill (`prepare_pr.sh --issue <number>`) so the body gets
+`Closes #<number>`, and a squash-merge closes the issue and advances the milestone.

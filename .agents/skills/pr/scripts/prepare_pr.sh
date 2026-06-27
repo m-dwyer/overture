@@ -5,8 +5,8 @@
 #   scripts/prepare_pr.sh [--base main] [--title "docs: update workflow"] [--issue 42] [--output .pr-body.md]
 #   gh pr create --base main --title "docs: update workflow" --body-file .pr-body.md
 #
-# The issue number is auto-detected from the branch name (e.g. feat/42-slug).
-# Pass --issue to override, or --issue 0 to omit the closing keyword.
+# Pass --issue <n> to add a `Closes #<n>` keyword that auto-closes the linked
+# issue on merge. Omit it (or pass --issue 0) for no closing keyword.
 
 set -euo pipefail
 
@@ -88,12 +88,9 @@ if [ -z "$PR_TITLE" ]; then
 fi
 COMMIT_COUNT="$(git rev-list --count "$MERGE_BASE"..HEAD)"
 
-# Auto-detect the issue number from a <type>/<number>-<slug> branch when not given.
-if [ -z "$ISSUE_NUMBER" ]; then
-    ISSUE_NUMBER="$(printf '%s' "$BRANCH_NAME" | sed -nE 's#^[^/]+/0*([1-9][0-9]*)[-_].*#\1#p')"
-fi
+# --issue <n> adds a `Closes #<n>` keyword so merging closes the linked issue.
 if [ "$ISSUE_NUMBER" = "0" ] || [ -z "$ISSUE_NUMBER" ]; then
-    RELATED_ISSUE="<!-- No issue detected from the branch. Add \`Closes #<n>\` to auto-close on merge. -->
+    RELATED_ISSUE="<!-- Add \`Closes #<n>\` to auto-close an issue on merge. -->
 Closes #"
 else
     RELATED_ISSUE="Closes #$ISSUE_NUMBER"
