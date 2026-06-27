@@ -16,11 +16,12 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    const view = core.getView();
-    expect(view.screen).toMatchObject({
-      kind: "track",
-      title: "OVERTURE NEXT",
+    const snapshot = core.getSnapshot();
+    expect(snapshot).toMatchObject({
       selectedTrackIndex: 0,
+      visibleTrackBank: 0,
+      selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
+      selectedClipId: "clip-1",
       playing: false,
       selectedStep: 0,
     });
@@ -96,19 +97,19 @@ describe("Overture Next core", () => {
     expect(core.drainHostCommands()).toEqual([]);
   });
 
-  test("returns LED view data without touching a host adapter", () => {
+  test("returns a core snapshot without touching a host adapter", () => {
     const core = createOvertureCore();
     core.init();
 
-    const view = core.getView();
-    expect(view.leds.steps.slice(0, 5)).toEqual([
-      { step: 0, color: 120 },
-      { step: 1, color: 0 },
-      { step: 2, color: 0 },
-      { step: 3, color: 0 },
-      { step: 4, color: 48 },
+    const snapshot = core.getSnapshot();
+    expect(snapshot.steps.slice(0, 5)).toEqual([
+      { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
+      { index: 1, active: false, note: 61, velocity: 100, selected: false, playhead: false },
+      { index: 2, active: false, note: 62, velocity: 100, selected: false, playhead: false },
+      { index: 3, active: false, note: 63, velocity: 100, selected: false, playhead: false },
+      { index: 4, active: true, note: 64, velocity: 100, selected: false, playhead: false },
     ]);
-    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 0, color: 120 });
+    expect(snapshot.selectedTrackIndex).toBe(0);
   });
 
   test("creates a default sequence with per-step note data", () => {

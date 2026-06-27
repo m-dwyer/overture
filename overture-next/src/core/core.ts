@@ -1,10 +1,9 @@
 import type { CoreInput } from "./input";
-import { createDefaultProject, getSelectedSequence, selectClipCell } from "./project";
+import { createDefaultProject, getClipCell, getSelectedSequence, selectClipCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep, toggleSequenceStep } from "./sequence";
 import { getTrack, selectTrackFromRow, trackBankForTrack } from "./track";
 import { advanceTransport, createTransport, toggleTransport } from "./transport";
-import type { CoreState, HostCommand, OvertureCore } from "./types";
-import type { LedView, OvertureView, ScreenView } from "../view/types";
+import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
 
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
@@ -70,37 +69,18 @@ export function createOvertureCore(): OvertureCore {
     );
   }
 
-  function getView(): OvertureView {
+  function getSnapshot(): CoreSnapshot {
+    const selectedClipCell = state.project.selectedClipCell;
+    const selectedCell = getClipCell(state.project, selectedClipCell);
     return {
-      screen: getScreenView(),
-      leds: getLedView(),
-    };
-  }
-
-  function getScreenView(): ScreenView {
-    return {
-      kind: "track",
-      title: "OVERTURE NEXT",
-      mode: state.sessionView ? "session" : "track",
       selectedTrackIndex: state.selectedTrackIndex,
-      playing: state.transport.playing,
+      visibleTrackBank: state.visibleTrackBank,
+      sessionView: state.sessionView,
       selectedStep: state.selectedStep,
-      steps: getStepViews(),
-    };
-  }
-
-  function getLedView(): LedView {
-    const lowerTrack = state.selectedTrackIndex % 4;
-    return {
-      steps: getStepViews().map((step) => ({
-        step: step.index,
-        color: step.playhead ? 120 : step.active ? 48 : 0,
-      })),
-      buttons: [
-        ...[0, 1, 2, 3].map((row) => ({ kind: "track-row" as const, row, color: row === lowerTrack ? 120 : 12 })),
-        { kind: "play", color: state.transport.playing ? 16 : 4 },
-        { kind: "menu", color: state.sessionView ? 44 : 8 },
-      ],
+      playing: state.transport.playing,
+      selectedClipId: selectedCell.clipId,
+      selectedClipCell: { ...selectedClipCell },
+      steps: getSnapshotSteps(),
     };
   }
 
@@ -121,13 +101,15 @@ export function createOvertureCore(): OvertureCore {
     return sequence?.length ?? DEFAULT_STEP_COUNT;
   }
 
-  function getStepViews() {
+  function getSnapshotSteps() {
     const sequence = getSelectedSequence(state.project);
     return Array.from({ length: getSelectedSequenceLength() }, (_, index) => {
       const step = sequence ? getSequenceStep(sequence, index) : null;
       return {
         index,
         active: step?.active ?? false,
+        note: step?.note ?? null,
+        velocity: step?.velocity ?? null,
         selected: index === state.selectedStep,
         playhead: index === state.transport.playhead,
       };
@@ -138,5 +120,5 @@ export function createOvertureCore(): OvertureCore {
     return hostCommands.splice(0);
   }
 
-  return { state, init, tick, applyInput, getView, getSelectedSequenceLength, drainHostCommands };
+  return { state, init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands };
 }

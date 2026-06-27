@@ -13,7 +13,7 @@ describe("Overture Next runtime", () => {
 
     runtime.init();
 
-    expect(runtime.core.getView().screen.kind).toBe("track");
+    expect(runtime.core.getSnapshot().selectedTrackIndex).toBe(0);
     expect(runtime.isReady()).toBe(false);
     expect(runtime.isBootSplashVisible()).toBe(true);
     expect(frames[0]).not.toContain("print:OVERTURE NEXT");
