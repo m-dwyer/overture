@@ -7,6 +7,8 @@ const NOTE_OFF = 0x80;
 const CC = 0xb0;
 
 const STEP_NOTE_FIRST = 16;
+const PAD_NOTE_FIRST = 68;
+const PAD_COUNT = 32;
 const ROW_CC = [43, 42, 41, 40] as const;
 
 const CC_SHIFT = 49;
@@ -55,6 +57,7 @@ function parseMoveCc(cc: number, value: number): CoreInput | null {
 
 function parseMoveNote(status: number, note: number, velocity: number, stepCount: number): CoreInput | null {
   if (status !== NOTE_ON || velocity <= 0) return null;
+  if (note >= PAD_NOTE_FIRST && note < PAD_NOTE_FIRST + PAD_COUNT) return { kind: "pad", padIndex: note - PAD_NOTE_FIRST };
   if (note < STEP_NOTE_FIRST || note >= STEP_NOTE_FIRST + stepCount) return null;
   return { kind: "step", step: note - STEP_NOTE_FIRST };
 }

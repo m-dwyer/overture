@@ -94,6 +94,49 @@ describe("Overture Next core", () => {
     expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
   });
 
+  test("selects clip cells from Session View pads without creating clips", () => {
+    const core = createOvertureCore();
+    core.init();
+    const clipCount = Object.keys(core.state.project.clips).length;
+
+    core.applyInput({ kind: "menu" });
+    expect(core.state.sessionView).toBe(true);
+
+    expect(core.applyInput({ kind: "pad", padIndex: 7 })).toBe(true);
+
+    expect(core.state.selectedTrackIndex).toBe(3);
+    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
+    expect(core.getSnapshot().selectedClipId).toBeNull();
+    expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
+  });
+
+  test("Session View pads use the visible track bank rows and stable scene columns", () => {
+    const core = createOvertureCore();
+    core.init();
+
+    core.applyInput({ kind: "shift", held: true });
+    core.applyInput({ kind: "track-row", row: 0 });
+    core.applyInput({ kind: "shift", held: false });
+    core.applyInput({ kind: "menu" });
+
+    expect(core.state.visibleTrackBank).toBe(1);
+    expect(core.applyInput({ kind: "pad", padIndex: 26 })).toBe(true);
+
+    expect(core.state.selectedTrackIndex).toBe(4);
+    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 4, sceneIndex: 2 });
+    expect(core.state.visibleTrackBank).toBe(1);
+  });
+
+  test("ignores central pad presses in Track View for now", () => {
+    const core = createOvertureCore();
+    core.init();
+    const selectedBefore = core.state.project.selectedClipCell;
+
+    expect(core.applyInput({ kind: "pad", padIndex: 7 })).toBe(false);
+
+    expect(core.state.project.selectedClipCell).toEqual(selectedBefore);
+  });
+
   test("emits Move note commands when the playhead reaches an active step", () => {
     const core = createOvertureCore();
     core.init();
