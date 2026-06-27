@@ -51,7 +51,8 @@ Layer responsibilities:
   runtime readiness, boot splash policy, MIDI dispatch, command draining, and
   render calls.
 - `overture-next/src/core/` owns groovebox domain state and decisions: tracks,
-  transport, patterns, domain inputs, and domain host commands.
+  transport, patterns, control interpretation, domain intents, and domain host
+  commands.
 - `overture-next/src/host/` owns Schwung/Move translation. Raw `globalThis`,
   Schwung host function names, Move MIDI bytes, Move CC/note numbers, and
   track-to-Move-channel mapping belong here.
@@ -61,9 +62,10 @@ Layer responsibilities:
 - `overture-next/src/render/` is presentational. It renders view models through
   display/LED ports and must not own domain or host policy.
 
-Core emits domain commands such as `track-note-on` and `track-note-off`; the
-host adapter converts those commands to Move MIDI packets. Core accepts typed
-domain input; the host adapter converts raw Move MIDI input to that domain input.
+The host adapter converts raw Move MIDI input into typed control input. Core
+interprets control input into domain intents, applies those intents to state,
+and emits domain commands such as `track-note-on` and `track-note-off`; the host
+adapter converts those commands to Move MIDI packets.
 
 ## Boy Scout Rule
 

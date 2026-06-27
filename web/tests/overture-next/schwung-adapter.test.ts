@@ -3,7 +3,7 @@ import { createSchwungAdapter, moveCommandToPacket, moveMidiToInput } from "../.
 import { installSchwungRuntime } from "../../../overture-next/src/host/schwung-runtime";
 
 describe("Overture Next Schwung adapter", () => {
-  test("converts Move CC and note input to core domain input", () => {
+  test("converts Move CC and note input to control input", () => {
     expect(moveMidiToInput([0xb0, 85, 127], 16)).toEqual({ kind: "play" });
     expect(moveMidiToInput([0xb0, 50, 127], 16)).toEqual({ kind: "menu" });
     expect(moveMidiToInput([0xb0, 49, 127], 16)).toEqual({ kind: "shift", held: true });
