@@ -5,11 +5,10 @@ import {
   setShiftHeld,
   toggleControlMode,
 } from "../control-state";
-import { injectPlaybackStep, launchClipCell, stopPlayingClip, stopPlayingClips } from "../playback";
+import { launchClipCellPlayback, startTransportPlayback, stopTransportPlayback } from "../playback";
 import { getClipCell, getSequenceForCell } from "../project";
 import { toggleSequenceStep } from "../sequence";
 import { getTrack } from "../track";
-import { toggleTransport } from "../transport";
 import type { CoreState, HostCommand } from "../types";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
@@ -20,10 +19,11 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return applied();
   }
   if (intent.kind === "toggle-transport") {
-    const playing = toggleTransport(state.transport);
-    if (!playing) return applied(stopPlayingClips(state.project, state.playback, state.transport));
-    startSelectedClipIfPlaybackIdle(state);
-    return applied(injectPlaybackStep(state.project, state.playback, state.transport.playhead, state.transport.tick));
+    return applied(
+      state.transport.playing
+        ? stopTransportPlayback(state.project, state.playback, state.transport)
+        : startTransportPlayback(state.project, state.playback, state.transport, state.control.selectedClipCell),
+    );
   }
   if (intent.kind === "toggle-control-mode") {
     toggleControlMode(control);
@@ -66,24 +66,13 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
   }
   if (intent.kind === "launch-clip-cell") {
     selectValidatedClipCell(state, intent.coordinate);
-    const cell = getClipCell(state.project, intent.coordinate);
-    const hostCommands = cell.clipId
-      ? []
-      : stopPlayingClip(state.project, state.playback, state.transport, intent.coordinate.trackIndex);
-    launchClipCell(state.project, state.playback, intent.coordinate);
-    return applied(hostCommands);
+    return applied(launchClipCellPlayback(state.project, state.playback, state.transport, intent.coordinate));
   }
   return { applied: false, hostCommands: [] };
 }
 
 function applied(hostCommands: HostCommand[] = []): DomainIntentTransaction {
   return { applied: true, hostCommands };
-}
-
-function startSelectedClipIfPlaybackIdle(state: CoreState): void {
-  if (state.playback.tracks.some((track) => track.playingClipId)) return;
-  const cell = getClipCell(state.project, state.control.selectedClipCell);
-  if (cell.clipId) launchClipCell(state.project, state.playback, state.control.selectedClipCell);
 }
 
 function selectValidatedClipCell(state: CoreState, coordinate: { trackIndex: number; sceneIndex: number }): void {

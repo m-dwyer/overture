@@ -112,6 +112,14 @@ module.exports = {
       to: { path: "^src/core/controls/" },
     },
     {
+      name: "playback-internals-stay-private",
+      severity: "error",
+      comment:
+        "Playback exposes lifecycle verbs through src/core/playback; low-level Playing Clip, Queued Clip, and note-off helpers stay module-private.",
+      from: { pathNot: "^src/core/playback/" },
+      to: { path: "^src/core/playback/internal/" },
+    },
+    {
       name: "view-stays-on-snapshot-contracts",
       severity: "error",
       comment:
