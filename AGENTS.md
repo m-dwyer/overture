@@ -118,7 +118,7 @@ pnpm -C overture-next verify  # active tool typecheck + dependency ratchet
 pnpm -C web verify        # web harness typecheck + focused Overture tests
 mise run test             # current ratchet + emulator E2E
 pnpm -C site build        # public site check/build
-mise run dev              # browser emulator
+mise run web-dev          # browser emulator
 ```
 
 The emulator maps the on-device Schwung UI path to `overture-next/ui/`, so

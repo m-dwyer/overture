@@ -1,15 +1,17 @@
-# Overture — root task surface. Run everything from the repo root (no cd):
-#   mise run dev | site-dev | verify | test | tool-build | moveforge-wasm | build | setup
+# Overture — root task surface. Run everything from the repo root:
+#   mise run web-dev | site-dev | verify | test | tool-build | moveforge-wasm | build | deploy | setup
 #
 # The orchestration is polyglot: the web emulator is TS/Vite (pnpm), and the
 # active Overture tool package lives under overture-next/. Tasks here are thin
-# wrappers around those local scripts.
+# wrappers around package-local scripts. Concrete task names are scoped by
+# surface (`tool-*`, `web-*`, `site-*`, `device-*`); `build`, `test`, and
+# `deploy` are intentional root-level lifecycle aliases.
 
 [tools]
 node = "lts"
 
 # Per-developer overrides live in a gitignored .env (e.g. MOVE_HOST=move-em.local).
-# The tool's install.sh falls back to move.local when MOVE_HOST is unset, so other
+# Deploy/restart tasks fall back to move.local when MOVE_HOST is unset, so other
 # devs need no .env. See .env.example.
 [env]
 _.file = ".env"
@@ -20,7 +22,7 @@ run = """
 pnpm install
 """
 
-[tasks.dev]
+[tasks.web-dev]
 description = "Serve the Overture emulator (real tool UI + mock host)"
 depends = ["moveforge-wasm"]
 run = "pnpm -C web dev"
@@ -48,9 +50,45 @@ description = "Production build of the web emulator"
 depends = ["moveforge-wasm"]
 run = "pnpm -C web build"
 
+[tasks.web-e2e]
+description = "Current emulator Playwright smoke/input tests"
+run = "pnpm -C web test:e2e"
+
+[tasks.web-e2e-reference]
+description = "Reference Playwright suite from the dAVEBOx-fork era; port scenarios into current tests deliberately"
+run = "pnpm -C web test:e2e:reference"
+
+[tasks.web-e2e-report]
+description = "Open the last Playwright HTML report"
+run = "pnpm -C web exec playwright show-report"
+
+[tasks.web-e2e-update]
+description = "Re-baseline OLED goldens (--update-snapshots) after a deliberate render change"
+run = "pnpm -C web exec playwright test --update-snapshots"
+
+[tasks.web-coverage]
+description = "Code-coverage (vitest v8) for the web harness"
+run = "pnpm -C web test:coverage"
+
+[tasks.web-coverage-gap]
+description = "Regenerate the coverage gap-map table from both vitest reports (run `web-coverage` first)"
+run = "python3 scripts/coverage_gapmap.py"
+
+[tasks.web-manual-assert]
+description = "Guard: drive every documented manual figure and assert its caption still holds (no regen)"
+run = "pnpm -C web manual:assert"
+
+[tasks.web-manual-check]
+description = "Regenerate both manuals and fail if the committed markdown is stale"
+run = "pnpm -C web manual:check"
+
 [tasks.tool-build]
 description = "Build the active Overture Schwung tool package"
 run = "pnpm -C overture-next build"
+
+[tasks.tool-deploy]
+description = "Build + deploy the active Overture tool package via Schwung install-module ($MOVE_HOST)"
+run = "pnpm -C overture-next run deploy"
 
 [tasks.moveforge-init]
 description = "Initialize the pinned Moveforge submodule"
@@ -87,43 +125,11 @@ sources = [
 outputs = ["web/dist/index.html"]
 run = "pnpm -C web build"
 
-[tasks.cover]
-description = "Code-coverage (vitest v8) for the web harness"
-run = "pnpm -C web test:coverage"
-
-[tasks.gap-map]
-description = "Regenerate the coverage gap-map table from both vitest reports (run `cover` first)"
-run = "python3 scripts/coverage_gapmap.py"
-
-[tasks.screenshot]
-description = "Current emulator Playwright smoke/input tests"
-run = "pnpm -C web test:e2e"
-
-[tasks.reference-screenshot]
-description = "Reference Playwright suite from the dAVEBOx-fork era; port scenarios into current tests deliberately"
-run = "pnpm -C web test:e2e:reference"
-
-[tasks.screenshot-report]
-description = "Open the last Playwright HTML report — side-by-side expected/actual/diff slider for visual-snapshot failures"
-run = "pnpm -C web exec playwright show-report"
-
-[tasks.screenshot-update]
-description = "Re-baseline OLED goldens (--update-snapshots). Use after a deliberate render change; eyeball the report first to confirm content is unchanged."
-run = "pnpm -C web exec playwright test --update-snapshots"
-
-[tasks.manual-assert]
-description = "Guard: drive every documented manual figure and assert its caption still holds (no regen)"
-run = "pnpm -C web manual:assert"
-
-[tasks.manual-check]
-description = "Regenerate both manuals and fail if the committed markdown is stale"
-run = "pnpm -C web manual:check"
-
 [tasks.test]
 description = "Current Overture tests: replacement ratchet + emulator E2E"
-depends = ["verify", "screenshot"]
+depends = ["verify", "web-e2e"]
 
-[tasks.restart]
+[tasks.device-restart]
 description = "Restart Move + Schwung stack on $MOVE_HOST"
 run = '''
 set -euo pipefail
@@ -136,13 +142,9 @@ ssh "$USER@$HOST" 'sh /data/UserData/schwung/restart-move.sh'
 description = "Build active tool package + web emulator"
 depends = ["tool-build", "web-build"]
 
-[tasks.install]
-description = "Deploy the full stack to the Move (delegates to ./install.sh)"
-run = "./install.sh"
-
 [tasks.deploy]
-description = "Build + deploy the active Overture tool package via Schwung install-module ($MOVE_HOST)"
-run = "pnpm -C overture-next deploy"
+description = "Alias for tool-deploy"
+depends = ["tool-deploy"]
 
 [tasks.schwung-build]
 description = "Build pinned upstream Schwung (Docker aarch64)"

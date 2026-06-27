@@ -37,7 +37,9 @@ Root tasks are intentionally thin:
 - `mise run moveforge-wasm` initializes `moveforge/` and builds browser WASM module assets.
 - `mise run web-build` builds the browser emulator.
 - `mise run build` runs the active tool package and emulator build path.
-- `mise run deploy` builds and installs the active Overture tool package through Schwung's installer.
+- `mise run tool-deploy` builds and deploys the active Overture tool package through Schwung's installer.
+- `mise run deploy` is a lifecycle alias for `tool-deploy`.
+- `mise run device-restart` restarts the Move/Schwung stack after deployment.
 
 The Moveforge submodule is pinned for reproducible emulator builds. Advance it
 explicitly with `mise run moveforge-update` and review the submodule pointer.
