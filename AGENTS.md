@@ -93,6 +93,11 @@ regardless. When you touch an Overture module:
 If a cleanup grows beyond the code you are touching, split it into its own
 `refactor:` commit rather than expanding the current diff.
 
+For a module with a sanctioned public entry point, add concise TSDoc to exported
+domain verbs or boundary contracts when the signature alone does not capture
+important semantics, invariants, side effects, or failure cases. Do not document
+internal helpers just because they are exported across files inside `internal/`.
+
 ## Dependency Ratchet
 
 `pnpm verify` runs the active Overture package checks and focused web harness
