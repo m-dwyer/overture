@@ -11,7 +11,7 @@ import { createCanvasDisplaySink, OLED_READABLE_SCALE } from "@/host/canvas-disp
 import { createShellLedSink } from "@/host/shell-led-sink";
 import { installKeyboardInput } from "@/host/keyboard-input";
 import { installOvt, pickDsp, startTickLoop } from "@/host/emulator-runtime";
-import { CC, NAV, NOTE_OFF, NOTE_ON, ROW_CC, type Send } from "@/lib/move-controls";
+import { CC, NAV, NOTE_OFF, NOTE_ON, PAD_COUNT, PAD_NOTE0, ROW_CC, type Send } from "@/lib/move-controls";
 import { type BrowserSchwungDiagnostics, type BrowserSchwungHost, createBrowserSchwungChain } from "@/schwung/browser-chain";
 import { createManualSchwungChain } from "@/schwung/manual-catalog";
 import { OledScreen } from "./OledScreen";
@@ -61,19 +61,12 @@ export function App() {
   const buttonLedsMap = useRef(new Map<number, number>()).current;
 
   // Stable handle to the emulator for the shell's button clicks (emu boots async).
-  const send = useCallback<Send>((s, d1, d2) => emuRef.current?.sendInternal(s, d1, d2), []);
+  const send = useCallback<Send>((s, d1, d2) => {
+    if (shouldPrimeSchwungAudio(s, d1, d2)) schwungRef.current?.primeAudioEngine();
+    emuRef.current?.sendInternal(s, d1, d2);
+  }, []);
 
   useEffect(() => installKeyboardInput(send), [send]);
-
-  useEffect(() => {
-    const primeAudio = (): void => schwungRef.current?.primeAudioEngine();
-    window.addEventListener("pointerdown", primeAudio, { capture: true });
-    window.addEventListener("keydown", primeAudio, { capture: true });
-    return () => {
-      window.removeEventListener("pointerdown", primeAudio, { capture: true });
-      window.removeEventListener("keydown", primeAudio, { capture: true });
-    };
-  }, []);
 
   // The shell hands up its imperative LED controller once its refs are populated.
   const onReady = useCallback(
@@ -304,6 +297,13 @@ export function App() {
       </div>
     </TooltipProvider>
   );
+}
+
+function shouldPrimeSchwungAudio(status: number, d1: number, d2: number): boolean {
+  const message = status & 0xf0;
+  if (message === CC) return d1 === NAV.Play && d2 > 0;
+  if (message !== NOTE_ON || d2 <= 0) return false;
+  return d1 >= PAD_NOTE0 && d1 < PAD_NOTE0 + PAD_COUNT;
 }
 
 function parseInitialTrack(value: string | null): number | null {

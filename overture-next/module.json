@@ -1,6 +1,6 @@
 {
-  "id": "overture-next",
-  "name": "Overture Next",
+  "id": "overture",
+  "name": "Overture",
   "version": "0.0.0",
   "api_version": 2,
   "component_type": "tool",

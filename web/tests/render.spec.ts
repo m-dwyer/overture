@@ -65,8 +65,7 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
   await page.locator("#oled").screenshot({ path: "shot-oled.png" });
 
   await expect(page.locator("#status")).toHaveText("running");
-  // The real seq8 engine must load (not silently fall back to the mock).
-  expect(await page.locator("#log").textContent()).toContain("behavior tier");
+  expect(await page.locator("#log").textContent()).toContain("dsp: mock");
   // The tool must drive LEDs (via move_midi_internal_send) — at least some lit.
   const litLeds = await page.evaluate(() => {
     const o = (globalThis as PageGlobal).OVT;
@@ -177,18 +176,18 @@ test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
     slot: SCHWUNG_SLOT_0,
     status: SCHWUNG_TRACK_5_NOTE_ON,
   });
-  expect(initialMidi).toContainEqual({
+
+  await mi(NOTE_ON, STEP_CC0 + TOGGLED_STEP_INDEX, MIDI_PRESS);
+  await advanceTicks(page, TICKS_TO_NEXT_STEP);
+
+  const editedMidi = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
+  expect(editedMidi).toContainEqual({
     d1: DEFAULT_STEP_4_NOTE,
     d2: MIDI_RELEASE,
     direction: SCHWUNG_MIDI_DIRECTION,
     slot: SCHWUNG_SLOT_0,
     status: SCHWUNG_TRACK_5_NOTE_OFF,
   });
-
-  await mi(NOTE_ON, STEP_CC0 + TOGGLED_STEP_INDEX, MIDI_PRESS);
-  await advanceTicks(page, TICKS_TO_NEXT_STEP);
-
-  const editedMidi = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
   expect(editedMidi).toContainEqual({
     d1: TOGGLED_STEP_NOTE,
     d2: DEFAULT_STEP_VELOCITY,
@@ -196,7 +195,9 @@ test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
     slot: SCHWUNG_SLOT_0,
     status: SCHWUNG_TRACK_5_NOTE_ON,
   });
-  expect(editedMidi).toContainEqual({
+  await advanceTicks(page, TICKS_TO_NEXT_STEP);
+  const editedMidiAfterGate = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
+  expect(editedMidiAfterGate).toContainEqual({
     d1: TOGGLED_STEP_NOTE,
     d2: MIDI_RELEASE,
     direction: SCHWUNG_MIDI_DIRECTION,

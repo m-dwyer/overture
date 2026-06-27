@@ -4,7 +4,7 @@ export type ControlInput =
   | { kind: "menu" }
   | { kind: "track-row"; row: number }
   | { kind: "step"; step: number }
-  | { kind: "pad"; padIndex: number };
+  | { kind: "pad"; held: boolean; padIndex: number; velocity: number };
 
 export type ControlMode = "track" | "session";
 

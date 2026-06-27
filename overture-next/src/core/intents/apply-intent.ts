@@ -5,7 +5,7 @@ import {
   setShiftHeld,
   toggleControlMode,
 } from "../control-state";
-import { launchClipCell, stopPlayingClip, stopPlayingClips } from "../playback";
+import { injectPlaybackStep, launchClipCell, stopPlayingClip, stopPlayingClips } from "../playback";
 import { getClipCell, getSequenceForCell } from "../project";
 import { toggleSequenceStep } from "../sequence";
 import { getTrack } from "../track";
@@ -21,7 +21,9 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
   }
   if (intent.kind === "toggle-transport") {
     const playing = toggleTransport(state.transport);
-    return applied(playing ? [] : stopPlayingClips(state.project, state.playback, state.transport));
+    if (!playing) return applied(stopPlayingClips(state.project, state.playback, state.transport));
+    startSelectedClipIfPlaybackIdle(state);
+    return applied(injectPlaybackStep(state.project, state.playback, state.transport.playhead, state.transport.tick));
   }
   if (intent.kind === "toggle-control-mode") {
     toggleControlMode(control);
@@ -39,6 +41,24 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     const sequence = getSequenceForCell(state.project, control.selectedClipCell);
     if (sequence) toggleSequenceStep(sequence, intent.stepIndex);
     return applied();
+  }
+  if (intent.kind === "audition-note") {
+    const route = getTrack(state.project.tracks, intent.trackIndex).route;
+    const hostCommand = intent.held
+      ? {
+          kind: "track-note-on" as const,
+          route,
+          trackIndex: intent.trackIndex,
+          note: intent.note,
+          velocity: intent.velocity,
+        }
+      : {
+          kind: "track-note-off" as const,
+          route,
+          trackIndex: intent.trackIndex,
+          note: intent.note,
+        };
+    return applied([hostCommand]);
   }
   if (intent.kind === "select-clip-cell") {
     selectValidatedClipCell(state, intent.coordinate);
@@ -58,6 +78,12 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
 
 function applied(hostCommands: HostCommand[] = []): DomainIntentTransaction {
   return { applied: true, hostCommands };
+}
+
+function startSelectedClipIfPlaybackIdle(state: CoreState): void {
+  if (state.playback.tracks.some((track) => track.playingClipId)) return;
+  const cell = getClipCell(state.project, state.control.selectedClipCell);
+  if (cell.clipId) launchClipCell(state.project, state.playback, state.control.selectedClipCell);
 }
 
 function selectValidatedClipCell(state: CoreState, coordinate: { trackIndex: number; sceneIndex: number }): void {

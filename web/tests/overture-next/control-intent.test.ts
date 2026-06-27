@@ -30,8 +30,21 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
   });
 
-  test("ignores Track View central pads before domain state changes", () => {
-    expect(interpretControl({ kind: "pad", padIndex: 7 }, createInitialControlState())).toBeNull();
+  test("interprets Track View central pads as selected-track note audition", () => {
+    expect(interpretControl(padPress(7, 101), createInitialControlState())).toEqual({
+      kind: "audition-note",
+      held: true,
+      note: 67,
+      trackIndex: 0,
+      velocity: 101,
+    });
+    expect(interpretControl(padRelease(7), createInitialControlState())).toEqual({
+      kind: "audition-note",
+      held: false,
+      note: 67,
+      trackIndex: 0,
+      velocity: 0,
+    });
   });
 
   test("interprets Session View pads as Clip Cell launch without leaking pad indexes", () => {
@@ -39,7 +52,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     selectTrack(control, 4);
     toggleControlMode(control);
 
-    const intent = interpretControl({ kind: "pad", padIndex: 26 }, control);
+    const intent = interpretControl(padPress(26), control);
 
     expect(intent).toEqual({ kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 2 } });
     expect(intent).not.toHaveProperty("padIndex");
@@ -84,12 +97,27 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(hostCommands).toEqual([]);
   });
 
-  test("applies transport toggle without selected-track note-off when no clips are playing", () => {
+  test("starting transport launches the selected clip when present", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
     expect(state.transport.playing).toBe(true);
+    expect(state.playback.tracks[0].playingClipId).toBe("clip-1");
+    expect(hostCommands).toEqual([
+      { kind: "track-note-on", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60, velocity: 100 },
+    ]);
+  });
+
+  test("applies transport toggle without selected-track note-off when no clips are playing", () => {
+    const state = createTestCoreState();
+    const hostCommands: HostCommand[] = [];
+
+    selectControlClipCell(state.control, { trackIndex: 0, sceneIndex: 7 });
+
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+    expect(state.transport.playing).toBe(true);
+    expect(state.playback.tracks[0].playingClipId).toBeNull();
     expect(hostCommands).toEqual([]);
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
@@ -116,6 +144,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       ),
     ).toBe(true);
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+    hostCommands.length = 0;
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
 
     expect(hostCommands).toEqual([
@@ -135,6 +164,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       ),
     ).toBe(true);
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+    hostCommands.length = 0;
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
 
     expect(hostCommands).toEqual([
@@ -175,7 +205,12 @@ describe("Overture Next control-to-intent pipeline", () => {
       applied: true,
       hostCommands: [],
     });
-    expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({ applied: true, hostCommands: [] });
+    expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({
+      applied: true,
+      hostCommands: [
+        { kind: "track-note-on", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60, velocity: 100 },
+      ],
+    });
 
     expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({
       applied: true,
@@ -247,6 +282,14 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(hostCommands).toEqual([]);
   });
 });
+
+function padPress(padIndex: number, velocity = 100) {
+  return { kind: "pad" as const, held: true, padIndex, velocity };
+}
+
+function padRelease(padIndex: number) {
+  return { kind: "pad" as const, held: false, padIndex, velocity: 0 };
+}
 
 function createTestCoreState(): CoreState {
   return {

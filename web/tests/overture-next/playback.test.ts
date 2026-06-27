@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   createPlaybackState,
+  drainDueNoteOffs,
   injectPlaybackStep,
   launchClipCell,
   stopPlayingClip,
@@ -16,7 +17,7 @@ describe("Overture Next playback", () => {
 
     launchClipCell(project, playback, { trackIndex: 2, sceneIndex: 0 });
 
-    expect(injectPlaybackStep(project, playback, 0)).toEqual([
+    expect(injectPlaybackStep(project, playback, 0, 12)).toEqual([
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 2 },
@@ -24,6 +25,9 @@ describe("Overture Next playback", () => {
         note: 60,
         velocity: 100,
       },
+    ]);
+    expect(drainDueNoteOffs(playback, 23)).toEqual([]);
+    expect(drainDueNoteOffs(playback, 24)).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60 },
     ]);
   });

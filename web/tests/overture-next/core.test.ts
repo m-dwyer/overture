@@ -103,7 +103,7 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "menu" });
     expect(core.getSnapshot().controlMode).toBe("session");
 
-    expect(core.applyInput({ kind: "pad", padIndex: 0 })).toBe(true);
+    expect(core.applyInput(padPress(0))).toBe(true);
 
     expect(core.getSnapshot()).toMatchObject({
       selectedTrackIndex: 3,
@@ -123,7 +123,7 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "menu" });
 
     expect(core.getSnapshot().visibleTrackBank).toBe(1);
-    expect(core.applyInput({ kind: "pad", padIndex: 26 })).toBe(true);
+    expect(core.applyInput(padPress(26))).toBe(true);
 
     expect(core.getSnapshot()).toMatchObject({
       selectedTrackIndex: 4,
@@ -133,12 +133,25 @@ describe("Overture Next core", () => {
     });
   });
 
-  test("ignores central pad presses in Track View for now", () => {
+  test("auditions central pad presses in Track View", () => {
     const core = createOvertureCore();
     core.init();
     const selectedBefore = core.getSnapshot().selectedClipCell;
 
-    expect(core.applyInput({ kind: "pad", padIndex: 7 })).toBe(false);
+    expect(core.applyInput(padPress(7, 101))).toBe(true);
+    expect(core.drainHostCommands()).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 67,
+        velocity: 101,
+      },
+    ]);
+    expect(core.applyInput(padRelease(7))).toBe(true);
+    expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 67 },
+    ]);
 
     expect(core.getSnapshot().selectedClipCell).toEqual(selectedBefore);
   });
@@ -148,7 +161,7 @@ describe("Overture Next core", () => {
     core.init();
 
     core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "pad", padIndex: 24 });
+    core.applyInput(padPress(24));
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "play" });
     core.applyInput({ kind: "step", step: 1 });
@@ -158,6 +171,7 @@ describe("Overture Next core", () => {
 
     expect(getSnapshotPlayhead(core.getSnapshot())).toBe(1);
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -165,6 +179,9 @@ describe("Overture Next core", () => {
         note: 61,
         velocity: 100,
       },
+    ]);
+    for (let i = 0; i < 12; i++) core.tick();
+    expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 61 },
     ]);
     expect(core.drainHostCommands()).toEqual([]);
@@ -175,7 +192,7 @@ describe("Overture Next core", () => {
     core.init();
 
     core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "pad", padIndex: 16 });
+    core.applyInput(padPress(16));
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "track-row", row: 0 });
     expect(core.getSnapshot().selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
@@ -185,6 +202,7 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 1 },
@@ -192,6 +210,9 @@ describe("Overture Next core", () => {
         note: 64,
         velocity: 100,
       },
+    ]);
+    for (let i = 0; i < 12; i++) core.tick();
+    expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 64 },
     ]);
   });
@@ -201,7 +222,7 @@ describe("Overture Next core", () => {
     core.init();
 
     core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "pad", padIndex: 16 });
+    core.applyInput(padPress(16));
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "track-row", row: 0 });
     core.applyInput({ kind: "step", step: 1 });
@@ -226,13 +247,13 @@ describe("Overture Next core", () => {
     const clipCount = countSnapshotClips(core.getSnapshot());
 
     core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "pad", padIndex: 0 });
+    core.applyInput(padPress(0));
     expect(core.getSnapshot()).toMatchObject({
       selectedClipCell: { trackIndex: 3, sceneIndex: 0 },
       selectedClipId: "clip-4",
     });
 
-    core.applyInput({ kind: "pad", padIndex: 7 });
+    core.applyInput(padPress(7));
 
     expect(core.getSnapshot()).toMatchObject({
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
@@ -315,7 +336,7 @@ describe("Overture Next core", () => {
     core.init();
 
     core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "pad", padIndex: 24 });
+    core.applyInput(padPress(24));
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "play" });
     core.drainHostCommands();
@@ -323,6 +344,7 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -330,6 +352,9 @@ describe("Overture Next core", () => {
         note: 64,
         velocity: 100,
       },
+    ]);
+    for (let i = 0; i < 12; i++) core.tick();
+    expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 64 },
     ]);
   });
@@ -342,7 +367,7 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "track-row", row: 0 });
     core.applyInput({ kind: "shift", held: false });
     core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "pad", padIndex: 24 });
+    core.applyInput(padPress(24));
     core.applyInput({ kind: "menu" });
 
     expect(core.getSnapshot()).toMatchObject({
@@ -357,6 +382,7 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "schwung", schwungChainIndex: 0 },
@@ -364,14 +390,12 @@ describe("Overture Next core", () => {
         note: 64,
         velocity: 100,
       },
-      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
     ]);
-
     core.applyInput({ kind: "step", step: 5 });
     core.drainHostCommands();
     for (let i = 0; i < 12; i++) core.tick();
-
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
       {
         kind: "track-note-on",
         route: { kind: "schwung", schwungChainIndex: 0 },
@@ -379,13 +403,63 @@ describe("Overture Next core", () => {
         note: 65,
         velocity: 100,
       },
+    ]);
+    for (let i = 0; i < 12; i++) core.tick();
+    expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 65 },
+    ]);
+  });
+
+  test("starts selected Track 5 clip when transport starts from Track View", () => {
+    const core = createOvertureCore();
+    core.init();
+
+    core.applyInput({ kind: "shift", held: true });
+    core.applyInput({ kind: "track-row", row: 0 });
+    core.applyInput({ kind: "shift", held: false });
+
+    expect(core.getSnapshot()).toMatchObject({
+      controlMode: "track",
+      selectedTrackIndex: 4,
+      selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
+      selectedClipId: "clip-5",
+    });
+
+    core.applyInput({ kind: "play" });
+    expect(core.drainHostCommands()).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 60,
+        velocity: 100,
+      },
+    ]);
+    for (let i = 0; i < 48; i++) core.tick();
+
+    expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
+      {
+        kind: "track-note-on",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 64,
+        velocity: 100,
+      },
     ]);
   });
 });
 
 function countSnapshotClips(snapshot: CoreSnapshot): number {
   return snapshot.clipCells.filter((cell) => cell.clipId !== null).length;
+}
+
+function padPress(padIndex: number, velocity = 100) {
+  return { kind: "pad" as const, held: true, padIndex, velocity };
+}
+
+function padRelease(padIndex: number) {
+  return { kind: "pad" as const, held: false, padIndex, velocity: 0 };
 }
 
 function getSnapshotPlayhead(snapshot: CoreSnapshot): number | undefined {

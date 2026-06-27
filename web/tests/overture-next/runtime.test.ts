@@ -50,7 +50,7 @@ describe("Overture Next runtime", () => {
     runtime.core.applyInput({ kind: "track-row", row: 0 });
     runtime.core.applyInput({ kind: "shift", held: false });
     runtime.core.applyInput({ kind: "menu" });
-    runtime.core.applyInput({ kind: "pad", padIndex: 24 });
+    runtime.core.applyInput(padPress(24));
     runtime.core.applyInput({ kind: "menu" });
     runtime.core.applyInput({ kind: "play" });
     for (let i = 0; i < 48; i++) runtime.tick();
@@ -73,7 +73,7 @@ describe("Overture Next runtime", () => {
     const renderedFrameCount = frames.length;
 
     runtime.core.applyInput({ kind: "menu" });
-    runtime.core.applyInput({ kind: "pad", padIndex: 24 });
+    runtime.core.applyInput(padPress(24));
     runtime.core.applyInput({ kind: "menu" });
     runtime.core.applyInput({ kind: "play" });
 
@@ -81,6 +81,32 @@ describe("Overture Next runtime", () => {
 
     expect(frames).toHaveLength(renderedFrameCount);
     expect(commands).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+        velocity: 100,
+      },
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 64,
+        velocity: 100,
+      },
+    ]);
+    for (let i = 0; i < 12; i++) runtime.tickPlayback();
+    expect(commands).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+        velocity: 100,
+      },
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -150,4 +176,8 @@ function createRuntimeTestAdapter(
     },
   };
   return { runtime, display, leds, input, midi, commands };
+}
+
+function padPress(padIndex: number) {
+  return { kind: "pad" as const, held: true, padIndex, velocity: 100 };
 }

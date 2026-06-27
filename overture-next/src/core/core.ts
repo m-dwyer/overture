@@ -2,7 +2,7 @@ import { createInitialControlState } from "./control-state";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
-import { createPlaybackState, injectPlaybackStep, stopPlayingClips } from "./playback";
+import { createPlaybackState, drainDueNoteOffs, injectPlaybackStep, stopPlayingClips } from "./playback";
 import { createDefaultProject, getClipCell, getSequenceForCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
 import { advanceTransport, createTransport } from "./transport";
@@ -24,9 +24,10 @@ export function createOvertureCore(): OvertureCore {
 
   function tick(): void {
     const nextStep = advanceTransport(state.transport, DEFAULT_STEP_COUNT);
+    hostCommands.push(...drainDueNoteOffs(state.playback, state.transport.tick));
     if (nextStep !== null) {
       state.lastInjectedStep = nextStep;
-      hostCommands.push(...injectPlaybackStep(state.project, state.playback, nextStep));
+      hostCommands.push(...injectPlaybackStep(state.project, state.playback, nextStep, state.transport.tick));
     }
   }
 

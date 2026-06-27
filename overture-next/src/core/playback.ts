@@ -11,12 +11,21 @@ export interface TrackPlaybackState {
   queuedClipId: ClipId | null;
 }
 
+export interface ScheduledNoteOff {
+  dueTick: number;
+  note: number;
+  route: HostCommand["route"];
+  trackIndex: number;
+}
+
 export interface PlaybackState {
+  pendingNoteOffs: ScheduledNoteOff[];
   tracks: TrackPlaybackState[];
 }
 
 export function createPlaybackState(trackCount = TRACK_COUNT): PlaybackState {
   return {
+    pendingNoteOffs: [],
     tracks: Array.from({ length: trackCount }, (_, trackIndex) => ({
       trackIndex,
       playingClipId: null,
@@ -50,7 +59,7 @@ export function stopPlayingClip(
   trackIndex: number,
 ): HostCommand[] {
   const trackPlayback = getTrackPlayback(playback, trackIndex);
-  const hostCommands = stopTrackPlayback(project, trackPlayback, transport);
+  const hostCommands = stopTrackPlayback(project, playback, trackPlayback, transport);
   trackPlayback.playingClipId = null;
   trackPlayback.queuedClipId = null;
   return hostCommands;
@@ -61,7 +70,7 @@ export function getPlayingClip(project: OvertureProject, track: TrackPlaybackSta
   return project.clips[track.playingClipId] ?? null;
 }
 
-export function injectPlaybackStep(project: OvertureProject, playback: PlaybackState, step: number): HostCommand[] {
+export function injectPlaybackStep(project: OvertureProject, playback: PlaybackState, step: number, tick: number): HostCommand[] {
   const hostCommands: HostCommand[] = [];
   for (const trackPlayback of playback.tracks) {
     const clip = getPlayingClip(project, trackPlayback);
@@ -69,18 +78,32 @@ export function injectPlaybackStep(project: OvertureProject, playback: PlaybackS
     const sequenceStep = getSequenceStep(clip.sequence, step % clip.sequence.length);
     if (!sequenceStep?.active) continue;
     const route = getTrack(project.tracks, trackPlayback.trackIndex).route;
-    hostCommands.push(
-      {
-        kind: "track-note-on",
-        route,
-        trackIndex: trackPlayback.trackIndex,
-        note: sequenceStep.note,
-        velocity: sequenceStep.velocity,
-      },
-      { kind: "track-note-off", route, trackIndex: trackPlayback.trackIndex, note: sequenceStep.note },
-    );
+    hostCommands.push({
+      kind: "track-note-on",
+      route,
+      trackIndex: trackPlayback.trackIndex,
+      note: sequenceStep.note,
+      velocity: sequenceStep.velocity,
+    });
+    playback.pendingNoteOffs.push({
+      dueTick: tick + Math.max(1, sequenceStep.gateTicks),
+      route,
+      trackIndex: trackPlayback.trackIndex,
+      note: sequenceStep.note,
+    });
   }
   return hostCommands;
+}
+
+export function drainDueNoteOffs(playback: PlaybackState, tick: number): HostCommand[] {
+  const due: ScheduledNoteOff[] = [];
+  const pending: ScheduledNoteOff[] = [];
+  for (const noteOff of playback.pendingNoteOffs) {
+    if (noteOff.dueTick <= tick) due.push(noteOff);
+    else pending.push(noteOff);
+  }
+  playback.pendingNoteOffs = pending;
+  return due.map(({ route, trackIndex, note }) => ({ kind: "track-note-off", route, trackIndex, note }));
 }
 
 export function stopPlayingClips(
@@ -90,16 +113,19 @@ export function stopPlayingClips(
 ): HostCommand[] {
   const hostCommands: HostCommand[] = [];
   for (const trackPlayback of playback.tracks) {
-    hostCommands.push(...stopTrackPlayback(project, trackPlayback, transport));
+    hostCommands.push(...stopTrackPlayback(project, playback, trackPlayback, transport));
   }
   return hostCommands;
 }
 
 function stopTrackPlayback(
   project: OvertureProject,
+  playback: PlaybackState,
   trackPlayback: TrackPlaybackState,
   transport: TransportState,
 ): HostCommand[] {
+  const pending = drainPendingNoteOffsForTrack(playback, trackPlayback.trackIndex);
+  if (pending.length > 0) return pending;
   const clip = getPlayingClip(project, trackPlayback);
   if (!clip) return [];
   const step = getSequenceStep(clip.sequence, transport.playhead % clip.sequence.length);
@@ -112,4 +138,20 @@ function stopTrackPlayback(
       note: step.note,
     },
   ];
+}
+
+function drainPendingNoteOffsForTrack(playback: PlaybackState, trackIndex: number): HostCommand[] {
+  const drained: ScheduledNoteOff[] = [];
+  const kept: ScheduledNoteOff[] = [];
+  for (const noteOff of playback.pendingNoteOffs) {
+    if (noteOff.trackIndex === trackIndex) drained.push(noteOff);
+    else kept.push(noteOff);
+  }
+  playback.pendingNoteOffs = kept;
+  return drained.map(({ route, trackIndex: drainedTrackIndex, note }) => ({
+    kind: "track-note-off",
+    route,
+    trackIndex: drainedTrackIndex,
+    note,
+  }));
 }

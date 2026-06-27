@@ -3,7 +3,6 @@
 // test surface live together, away from the React view. App orchestrates the async
 // boot (it owns the refs + lifecycle) and calls these.
 import { createMockDsp } from "../mock-dsp";
-import { createWasmDsp } from "../wasm-dsp";
 import type { Dsp } from "../dsp";
 import type { Emulator } from "./emulator";
 import type { BrowserSchwungHost } from "@/schwung/browser-chain";
@@ -14,21 +13,12 @@ const BLOCK_MS = (1000 * 128) / 44100; // one audio block of real time (~2.9 ms)
 // so a synchronously-driven tick matches a wall-clock one.
 const BLOCKS_PER_TICK = Math.round(1000 / TICK_HZ / BLOCK_MS);
 
-/** Behavior tier: the real seq8-wasm engine, or the JS mock when `?mock` is set or
- *  wasm fails to load. */
+/** Current Overture emulator DSP surface. The active tool has no DSP/WASM build
+ * yet, so the emulator uses the JS mock. */
 export async function pickDsp(log: (msg: string) => void, schwung?: BrowserSchwungHost): Promise<Dsp> {
-  if (new URLSearchParams(location.search).has("mock")) return createMockDsp();
-  try {
-    const dsp = await createWasmDsp((tag, b0, b1, b2, b3) => {
-      schwung?.routeDspMidi(tag, b0, b1, b2, b3);
-      log(`dsp→midi [${tag}] ${b0} ${b1} ${b2} ${b3}`);
-    });
-    log("dsp: seq8-wasm (behavior tier)");
-    return dsp;
-  } catch (e) {
-    log("seq8-wasm load failed — using mock: " + ((e as Error)?.message || e));
-    return createMockDsp();
-  }
+  void schwung;
+  log("dsp: mock");
+  return createMockDsp();
 }
 
 /** Start the device loop: each iteration renders the audio blocks for the real

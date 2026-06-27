@@ -19,8 +19,10 @@ describe("Overture Next Schwung adapter", () => {
     expect(moveMidiToInput([0xb0, 49, 0], 16)).toEqual({ kind: "shift", held: false });
     expect(moveMidiToInput([0xb0, 42, 127], 16)).toEqual({ kind: "track-row", row: 1 });
     expect(moveMidiToInput([0x90, 17, 100], 16)).toEqual({ kind: "step", step: 1 });
-    expect(moveMidiToInput([0x90, 68, 110], 16)).toEqual({ kind: "pad", padIndex: 0 });
-    expect(moveMidiToInput([0x90, 99, 110], 16)).toEqual({ kind: "pad", padIndex: 31 });
+    expect(moveMidiToInput([0x90, 68, 110], 16)).toEqual({ kind: "pad", held: true, padIndex: 0, velocity: 110 });
+    expect(moveMidiToInput([0x90, 99, 110], 16)).toEqual({ kind: "pad", held: true, padIndex: 31, velocity: 110 });
+    expect(moveMidiToInput([0x80, 68, 0], 16)).toEqual({ kind: "pad", held: false, padIndex: 0, velocity: 0 });
+    expect(moveMidiToInput([0x90, 68, 0], 16)).toEqual({ kind: "pad", held: false, padIndex: 0, velocity: 0 });
   });
 
   test("ignores unhandled or released Move input before it reaches core", () => {
