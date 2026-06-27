@@ -94,15 +94,21 @@ Expected outcome:
 
 ## Phase 6: Snapshot-Only External Core Interface
 
-Status: next
+Status: complete
 
 Stop leaking mutable Core State through runtime and host seams.
 
 Expected outcome:
 
 - Runtime and host adapters consume snapshots or explicit debug projections.
-- Raw mutable Core State remains an implementation detail of core.
+- Raw mutable Core State does not cross the runtime/host seams.
 - Future undo/redo state can change shape without breaking host/runtime code.
+
+Follow-up:
+
+- `OvertureCore.state` remains available to focused core tests. Retire that
+  test-facing surface after fixture builders or core editing operations cover
+  direct project setup needs.
 
 ## Test Direction
 
