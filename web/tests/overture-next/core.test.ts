@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { createOvertureCore } from "../../../overture-next/src/core/core";
+import type { CoreSnapshot } from "../../../overture-next/src/core/types";
 import {
   CLIP_CELL_COUNT,
   SCENE_COUNT,
@@ -24,7 +25,6 @@ describe("Overture Next core", () => {
       playing: false,
       selectedStep: 0,
     });
-    expect(core.state.playback.tracks.every((track) => track.playingClipId === null)).toBe(true);
   });
 
   test("creates a default project with structural tracks, scenes, and clip cells", () => {
@@ -62,20 +62,20 @@ describe("Overture Next core", () => {
     core.init();
 
     expect(core.applyInput({ kind: "play" })).toBe(true);
-    expect(core.state.transport.playing).toBe(true);
+    expect(core.getSnapshot().playing).toBe(true);
 
     expect(core.applyInput({ kind: "shift", held: true })).toBe(true);
     expect(core.applyInput({ kind: "track-row", row: 1 })).toBe(true);
     expect(core.applyInput({ kind: "shift", held: false })).toBe(true);
-    expect(core.state.control.selectedTrackIndex).toBe(5);
-    expect(core.state.control.visibleTrackBank).toBe(1);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 5, sceneIndex: 0 });
+    expect(core.getSnapshot()).toMatchObject({
+      selectedTrackIndex: 5,
+      visibleTrackBank: 1,
+      selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+    });
 
-    const clip = getClipForCell(core.state.project, core.state.control.selectedClipCell);
-    expect(clip?.sequence.steps[1].active).toBe(false);
+    expect(core.getSnapshot().steps[1].active).toBe(false);
     expect(core.applyInput({ kind: "step", step: 1 })).toBe(true);
-    expect(core.state.control.selectedStep).toBe(1);
-    expect(clip?.sequence.steps[1].active).toBe(true);
+    expect(core.getSnapshot().steps[1]).toMatchObject({ selected: true, active: true });
   });
 
   test("uses shift as the upper track bank modifier for side buttons", () => {
@@ -84,30 +84,33 @@ describe("Overture Next core", () => {
 
     core.applyInput({ kind: "shift", held: true });
     core.applyInput({ kind: "track-row", row: 0 });
-    expect(core.state.control.selectedTrackIndex).toBe(4);
+    expect(core.getSnapshot().selectedTrackIndex).toBe(4);
 
     core.applyInput({ kind: "shift", held: false });
     core.applyInput({ kind: "track-row", row: 0 });
 
-    expect(core.state.control.selectedTrackIndex).toBe(0);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
+    expect(core.getSnapshot()).toMatchObject({
+      selectedTrackIndex: 0,
+      selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
+    });
   });
 
   test("launches Clip Cells from Session View pads without creating clips", () => {
     const core = createOvertureCore();
     core.init();
-    const clipCount = Object.keys(core.state.project.clips).length;
+    const clipCount = countSnapshotClips(core.getSnapshot());
 
     core.applyInput({ kind: "menu" });
-    expect(core.state.control.controlMode).toBe("session");
+    expect(core.getSnapshot().controlMode).toBe("session");
 
     expect(core.applyInput({ kind: "pad", padIndex: 0 })).toBe(true);
 
-    expect(core.state.control.selectedTrackIndex).toBe(3);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 0 });
-    expect(core.getSnapshot().selectedClipId).toBe("clip-4");
-    expect(core.state.playback.tracks[3].playingClipId).toBe("clip-4");
-    expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
+    expect(core.getSnapshot()).toMatchObject({
+      selectedTrackIndex: 3,
+      selectedClipCell: { trackIndex: 3, sceneIndex: 0 },
+      selectedClipId: "clip-4",
+    });
+    expect(countSnapshotClips(core.getSnapshot())).toBe(clipCount);
   });
 
   test("Session View pads use the visible track bank rows and stable scene columns", () => {
@@ -119,23 +122,25 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "shift", held: false });
     core.applyInput({ kind: "menu" });
 
-    expect(core.state.control.visibleTrackBank).toBe(1);
+    expect(core.getSnapshot().visibleTrackBank).toBe(1);
     expect(core.applyInput({ kind: "pad", padIndex: 26 })).toBe(true);
 
-    expect(core.state.control.selectedTrackIndex).toBe(4);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 4, sceneIndex: 2 });
-    expect(core.state.control.visibleTrackBank).toBe(1);
-    expect(core.state.playback.tracks[4].playingClipId).toBeNull();
+    expect(core.getSnapshot()).toMatchObject({
+      selectedTrackIndex: 4,
+      selectedClipCell: { trackIndex: 4, sceneIndex: 2 },
+      visibleTrackBank: 1,
+      selectedClipId: null,
+    });
   });
 
   test("ignores central pad presses in Track View for now", () => {
     const core = createOvertureCore();
     core.init();
-    const selectedBefore = core.state.control.selectedClipCell;
+    const selectedBefore = core.getSnapshot().selectedClipCell;
 
     expect(core.applyInput({ kind: "pad", padIndex: 7 })).toBe(false);
 
-    expect(core.state.control.selectedClipCell).toEqual(selectedBefore);
+    expect(core.getSnapshot().selectedClipCell).toEqual(selectedBefore);
   });
 
   test("emits Move note commands when the playhead reaches an active step", () => {
@@ -151,7 +156,7 @@ describe("Overture Next core", () => {
 
     for (let i = 0; i < 12; i++) core.tick();
 
-    expect(core.state.transport.playhead).toBe(1);
+    expect(getSnapshotPlayhead(core.getSnapshot())).toBe(1);
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-on", trackIndex: 0, note: 61, velocity: 100 },
       { kind: "track-note-off", trackIndex: 0, note: 61 },
@@ -163,26 +168,19 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    const playingClipId = getClipCell(core.state.project, { trackIndex: 1, sceneIndex: 0 }).clipId;
-    if (!playingClipId) throw new Error("Expected default clip");
-    const playingClip = core.state.project.clips[playingClipId];
-    playingClip.sequence.steps[1].active = true;
-    playingClip.sequence.steps[1].note = 74;
-
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "pad", padIndex: 16 });
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "track-row", row: 0 });
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
-    expect(core.state.playback.tracks[1].playingClipId).toBe(playingClipId);
+    expect(core.getSnapshot().selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
 
     core.applyInput({ kind: "play" });
     core.drainHostCommands();
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-on", trackIndex: 1, note: 74, velocity: 100 },
-      { kind: "track-note-off", trackIndex: 1, note: 74 },
+      { kind: "track-note-on", trackIndex: 1, note: 64, velocity: 100 },
+      { kind: "track-note-off", trackIndex: 1, note: 64 },
     ]);
   });
 
@@ -190,39 +188,50 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    const playingClipId = getClipCell(core.state.project, { trackIndex: 1, sceneIndex: 0 }).clipId;
-    const selectedClip = getClipForCell(core.state.project, { trackIndex: 0, sceneIndex: 0 });
-    if (!playingClipId || !selectedClip) throw new Error("Expected default clips");
-    const playingClip = core.state.project.clips[playingClipId];
-
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "pad", padIndex: 16 });
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "track-row", row: 0 });
     core.applyInput({ kind: "step", step: 1 });
 
-    expect(core.state.control.controlMode).toBe("track");
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
-    expect(core.state.playback.tracks[1].playingClipId).toBe(playingClipId);
-    expect(selectedClip.sequence.steps[1].active).toBe(true);
-    expect(playingClip.sequence.steps[1].active).toBe(false);
+    expect(core.getSnapshot()).toMatchObject({
+      controlMode: "track",
+      selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
+    });
+    expect(core.getSnapshot().steps[1].active).toBe(true);
+
+    core.applyInput({ kind: "track-row", row: 1 });
+
+    expect(core.getSnapshot()).toMatchObject({
+      selectedClipCell: { trackIndex: 1, sceneIndex: 0 },
+    });
+    expect(core.getSnapshot().steps[1].active).toBe(false);
   });
 
   test("launching an Empty Clip Cell stops that Track without creating a clip", () => {
     const core = createOvertureCore();
     core.init();
-    const clipCount = Object.keys(core.state.project.clips).length;
+    const clipCount = countSnapshotClips(core.getSnapshot());
 
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "pad", padIndex: 0 });
-    expect(core.state.playback.tracks[3].playingClipId).toBe("clip-4");
+    expect(core.getSnapshot()).toMatchObject({
+      selectedClipCell: { trackIndex: 3, sceneIndex: 0 },
+      selectedClipId: "clip-4",
+    });
 
     core.applyInput({ kind: "pad", padIndex: 7 });
 
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
-    expect(core.state.playback.tracks[3].playingClipId).toBeNull();
-    expect(getClipCell(core.state.project, { trackIndex: 3, sceneIndex: 7 }).clipId).toBeNull();
-    expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
+    expect(core.getSnapshot()).toMatchObject({
+      selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      selectedClipId: null,
+    });
+    expect(countSnapshotClips(core.getSnapshot())).toBe(clipCount);
+
+    core.applyInput({ kind: "play" });
+    core.drainHostCommands();
+    for (let i = 0; i < 48; i++) core.tick();
+    expect(core.drainHostCommands()).toEqual([]);
   });
 
   test("returns a core snapshot without touching a host adapter", () => {
@@ -286,28 +295,32 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "play" });
     for (let i = 0; i < 12 * 16; i++) core.tick();
 
-    expect(core.state.transport.playhead).toBe(0);
+    expect(getSnapshotPlayhead(core.getSnapshot())).toBe(0);
   });
 
   test("uses the playing clip sequence note when emitting Move commands", () => {
     const core = createOvertureCore();
     core.init();
 
-    const clip = getClipForCell(core.state.project, core.state.control.selectedClipCell);
-    if (!clip) throw new Error("Expected selected clip");
-    clip.sequence.steps[1].note = 72;
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "pad", padIndex: 24 });
     core.applyInput({ kind: "menu" });
     core.applyInput({ kind: "play" });
-    core.applyInput({ kind: "step", step: 1 });
     core.drainHostCommands();
 
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-on", trackIndex: 0, note: 72, velocity: 100 },
-      { kind: "track-note-off", trackIndex: 0, note: 72 },
+      { kind: "track-note-on", trackIndex: 0, note: 64, velocity: 100 },
+      { kind: "track-note-off", trackIndex: 0, note: 64 },
     ]);
   });
 });
+
+function countSnapshotClips(snapshot: CoreSnapshot): number {
+  return snapshot.clipCells.filter((cell) => cell.clipId !== null).length;
+}
+
+function getSnapshotPlayhead(snapshot: CoreSnapshot): number | undefined {
+  return snapshot.steps.find((step) => step.playhead)?.index;
+}

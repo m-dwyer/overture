@@ -8,9 +8,10 @@ import {
 } from "../../../overture-next/src/core/controls/control-state";
 import { interpretControl } from "../../../overture-next/src/core/controls/interpret-control";
 import { applyIntent } from "../../../overture-next/src/core/intents/apply-intent";
-import { createOvertureCore } from "../../../overture-next/src/core/core";
-import { getClipCell, getClipForCell } from "../../../overture-next/src/core/project";
-import type { HostCommand } from "../../../overture-next/src/core/types";
+import { createPlaybackState } from "../../../overture-next/src/core/playback";
+import { createDefaultProject, getClipCell, getClipForCell } from "../../../overture-next/src/core/project";
+import { createTransport } from "../../../overture-next/src/core/transport";
+import type { CoreState, HostCommand } from "../../../overture-next/src/core/types";
 
 describe("Overture Next control-to-intent pipeline", () => {
   test("interprets track rows against the current shift modifier", () => {
@@ -45,157 +46,168 @@ describe("Overture Next control-to-intent pipeline", () => {
   });
 
   test("applies clip-cell selection without creating clips", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
-    const clipCount = Object.keys(core.state.project.clips).length;
+    const clipCount = Object.keys(state.project.clips).length;
 
     expect(
       applyIntentAndCollect(
         { kind: "select-clip-cell", coordinate: { trackIndex: 3, sceneIndex: 7 } },
-        core.state,
+        state,
         hostCommands,
       ),
     ).toBe(true);
 
-    expect(core.state.control.selectedTrackIndex).toBe(3);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
-    expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
+    expect(state.control.selectedTrackIndex).toBe(3);
+    expect(state.control.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
+    expect(Object.keys(state.project.clips)).toHaveLength(clipCount);
     expect(hostCommands).toEqual([]);
   });
 
   test("applies Clip Cell launch as playback state and explicit UI selection", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
-    const clipCount = Object.keys(core.state.project.clips).length;
+    const clipCount = Object.keys(state.project.clips).length;
 
     expect(
       applyIntentAndCollect(
         { kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } },
-        core.state,
+        state,
         hostCommands,
       ),
     ).toBe(true);
 
-    expect(core.state.control.selectedTrackIndex).toBe(2);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 2, sceneIndex: 0 });
-    expect(core.state.playback.tracks[2].playingClipId).toBe("clip-3");
-    expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
+    expect(state.control.selectedTrackIndex).toBe(2);
+    expect(state.control.selectedClipCell).toEqual({ trackIndex: 2, sceneIndex: 0 });
+    expect(state.playback.tracks[2].playingClipId).toBe("clip-3");
+    expect(Object.keys(state.project.clips)).toHaveLength(clipCount);
     expect(hostCommands).toEqual([]);
   });
 
   test("applies transport toggle without selected-track note-off when no clips are playing", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
-    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
-    expect(core.state.transport.playing).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+    expect(state.transport.playing).toBe(true);
     expect(hostCommands).toEqual([]);
 
-    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
-    expect(core.state.transport.playing).toBe(false);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+    expect(state.transport.playing).toBe(false);
     expect(hostCommands).toEqual([]);
   });
 
   test("stopping transport emits note-off for playing clips, not the selected Clip Cell", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
     expect(
       applyIntentAndCollect(
         { kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } },
-        core.state,
+        state,
         hostCommands,
       ),
     ).toBe(true);
     expect(
       applyIntentAndCollect(
         { kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 0 } },
-        core.state,
+        state,
         hostCommands,
       ),
     ).toBe(true);
-    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
-    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
 
     expect(hostCommands).toEqual([{ kind: "track-note-off", trackIndex: 2, note: 60 }]);
   });
 
   test("returns emitted host commands as a Domain Intent transaction", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
 
-    expect(applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, core.state)).toEqual(
-      { applied: true, hostCommands: [] },
-    );
-    expect(applyIntent({ kind: "toggle-transport" }, core.state)).toEqual({ applied: true, hostCommands: [] });
+    expect(applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, state)).toEqual({
+      applied: true,
+      hostCommands: [],
+    });
+    expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({ applied: true, hostCommands: [] });
 
-    expect(applyIntent({ kind: "toggle-transport" }, core.state)).toEqual({
+    expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({
       applied: true,
       hostCommands: [{ kind: "track-note-off", trackIndex: 2, note: 60 }],
     });
   });
 
   test("applies track selection while preserving the selected scene", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
-    selectControlClipCell(core.state.control, { trackIndex: 0, sceneIndex: 7 });
+    selectControlClipCell(state.control, { trackIndex: 0, sceneIndex: 7 });
 
-    expect(applyIntentAndCollect({ kind: "select-track", trackIndex: 5 }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "select-track", trackIndex: 5 }, state, hostCommands)).toBe(true);
 
-    expect(core.state.control.selectedTrackIndex).toBe(5);
-    expect(core.state.control.visibleTrackBank).toBe(1);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 5, sceneIndex: 7 });
+    expect(state.control.selectedTrackIndex).toBe(5);
+    expect(state.control.visibleTrackBank).toBe(1);
+    expect(state.control.selectedClipCell).toEqual({ trackIndex: 5, sceneIndex: 7 });
     expect(hostCommands).toEqual([]);
   });
 
   test("applies step toggles only to the selected clip sequence", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
-    const selectedClip = getClipForCell(core.state.project, core.state.control.selectedClipCell);
-    const otherClipId = getClipCell(core.state.project, { trackIndex: 1, sceneIndex: 0 }).clipId;
+    const selectedClip = getClipForCell(state.project, state.control.selectedClipCell);
+    const otherClipId = getClipCell(state.project, { trackIndex: 1, sceneIndex: 0 }).clipId;
     if (!selectedClip || !otherClipId) throw new Error("Expected default clips");
-    const otherClip = core.state.project.clips[otherClipId];
+    const otherClip = state.project.clips[otherClipId];
 
     expect(selectedClip.sequence.steps[1].active).toBe(false);
     expect(otherClip.sequence.steps[1].active).toBe(false);
 
-    expect(applyIntentAndCollect({ kind: "toggle-step", stepIndex: 1 }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-step", stepIndex: 1 }, state, hostCommands)).toBe(true);
 
-    expect(core.state.control.selectedStep).toBe(1);
+    expect(state.control.selectedStep).toBe(1);
     expect(selectedClip.sequence.steps[1].active).toBe(true);
     expect(otherClip.sequence.steps[1].active).toBe(false);
     expect(hostCommands).toEqual([]);
   });
 
   test("applies shift state without changing selection or host commands", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
-    expect(applyIntentAndCollect({ kind: "set-shift-held", held: true }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "set-shift-held", held: true }, state, hostCommands)).toBe(true);
 
-    expect(core.state.control.shiftHeld).toBe(true);
-    expect(core.state.control.selectedTrackIndex).toBe(0);
-    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
+    expect(state.control.shiftHeld).toBe(true);
+    expect(state.control.selectedTrackIndex).toBe(0);
+    expect(state.control.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
     expect(hostCommands).toEqual([]);
   });
 
   test("lets domain guards reject invalid track and clip-cell coordinates", () => {
-    const core = createOvertureCore();
+    const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
-    expect(() => applyIntentAndCollect({ kind: "select-track", trackIndex: 99 }, core.state, hostCommands)).toThrow(
+    expect(() => applyIntentAndCollect({ kind: "select-track", trackIndex: 99 }, state, hostCommands)).toThrow(
       "Missing track 99",
     );
     expect(() =>
       applyIntentAndCollect(
         { kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 99 } },
-        core.state,
+        state,
         hostCommands,
       ),
     ).toThrow("Missing clip cell 0:99");
     expect(hostCommands).toEqual([]);
   });
 });
+
+function createTestCoreState(): CoreState {
+  return {
+    control: createInitialControlState(),
+    transport: createTransport(),
+    playback: createPlaybackState(),
+    project: createDefaultProject(),
+    lastInjectedStep: -1,
+  };
+}
 
 function applyIntentAndCollect(
   intent: Parameters<typeof applyIntent>[0],
