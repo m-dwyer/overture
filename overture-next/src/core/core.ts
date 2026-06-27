@@ -1,9 +1,11 @@
 import type { CoreInput } from "./input";
 import { createDefaultProject, getClipCell, getSelectedSequence, selectClipCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep, toggleSequenceStep } from "./sequence";
-import { getTrack, selectTrackFromRow, trackBankForTrack } from "./track";
+import { getTrack, selectTrackFromRow, TRACK_BANK_SIZE, trackBankForTrack } from "./track";
 import { advanceTransport, createTransport, toggleTransport } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
+
+const SESSION_SCENE_COLUMNS = 8;
 
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
@@ -54,6 +56,11 @@ export function createOvertureCore(): OvertureCore {
       if (sequence) toggleSequenceStep(sequence, input.step);
       return true;
     }
+    if (input.kind === "pad") {
+      if (!state.sessionView) return false;
+      selectClipCellFromPad(input.padIndex);
+      return true;
+    }
     return false;
   }
 
@@ -90,6 +97,17 @@ export function createOvertureCore(): OvertureCore {
     state.selectedTrackIndex = trackIndex;
     state.visibleTrackBank = trackBankForTrack(trackIndex);
     selectClipCell(state.project, { trackIndex, sceneIndex });
+  }
+
+  function selectClipCellFromPad(padIndex: number): void {
+    const padRowFromBottom = Math.floor(padIndex / SESSION_SCENE_COLUMNS);
+    const row = TRACK_BANK_SIZE - 1 - padRowFromBottom;
+    const sceneIndex = padIndex % SESSION_SCENE_COLUMNS;
+    const trackIndex = selectTrackFromRow(row, state.visibleTrackBank);
+    getTrack(state.project.tracks, trackIndex);
+    selectClipCell(state.project, { trackIndex, sceneIndex });
+    state.selectedTrackIndex = trackIndex;
+    state.visibleTrackBank = trackBankForTrack(trackIndex);
   }
 
   function selectedTrack() {
