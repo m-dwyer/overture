@@ -59,8 +59,11 @@ function parseMoveCc(cc: number, value: number): ControlInput | null {
 }
 
 function parseMoveNote(status: number, note: number, velocity: number, stepCount: number): ControlInput | null {
+  if (note >= PAD_NOTE0 && note < PAD_NOTE0 + PAD_COUNT) {
+    const held = status === NOTE_ON && velocity > 0;
+    return { kind: "pad", held, padIndex: note - PAD_NOTE0, velocity: held ? velocity : 0 };
+  }
   if (status !== NOTE_ON || velocity <= 0) return null;
-  if (note >= PAD_NOTE0 && note < PAD_NOTE0 + PAD_COUNT) return { kind: "pad", padIndex: note - PAD_NOTE0 };
   if (note < STEP_CC0 || note >= STEP_CC0 + stepCount) return null;
   return { kind: "step", step: note - STEP_CC0 };
 }

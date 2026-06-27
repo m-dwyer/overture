@@ -40,6 +40,24 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     if (sequence) toggleSequenceStep(sequence, intent.stepIndex);
     return applied();
   }
+  if (intent.kind === "audition-note") {
+    const route = getTrack(state.project.tracks, intent.trackIndex).route;
+    const hostCommand = intent.held
+      ? {
+          kind: "track-note-on" as const,
+          route,
+          trackIndex: intent.trackIndex,
+          note: intent.note,
+          velocity: intent.velocity,
+        }
+      : {
+          kind: "track-note-off" as const,
+          route,
+          trackIndex: intent.trackIndex,
+          note: intent.note,
+        };
+    return applied([hostCommand]);
+  }
   if (intent.kind === "select-clip-cell") {
     selectValidatedClipCell(state, intent.coordinate);
     return applied();

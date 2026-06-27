@@ -30,8 +30,21 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
   });
 
-  test("ignores Track View central pads before domain state changes", () => {
-    expect(interpretControl({ kind: "pad", padIndex: 7 }, createInitialControlState())).toBeNull();
+  test("interprets Track View central pads as selected-track note audition", () => {
+    expect(interpretControl(padPress(7, 101), createInitialControlState())).toEqual({
+      kind: "audition-note",
+      held: true,
+      note: 67,
+      trackIndex: 0,
+      velocity: 101,
+    });
+    expect(interpretControl(padRelease(7), createInitialControlState())).toEqual({
+      kind: "audition-note",
+      held: false,
+      note: 67,
+      trackIndex: 0,
+      velocity: 0,
+    });
   });
 
   test("interprets Session View pads as Clip Cell launch without leaking pad indexes", () => {
@@ -39,7 +52,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     selectTrack(control, 4);
     toggleControlMode(control);
 
-    const intent = interpretControl({ kind: "pad", padIndex: 26 }, control);
+    const intent = interpretControl(padPress(26), control);
 
     expect(intent).toEqual({ kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 2 } });
     expect(intent).not.toHaveProperty("padIndex");
@@ -247,6 +260,14 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(hostCommands).toEqual([]);
   });
 });
+
+function padPress(padIndex: number, velocity = 100) {
+  return { kind: "pad" as const, held: true, padIndex, velocity };
+}
+
+function padRelease(padIndex: number) {
+  return { kind: "pad" as const, held: false, padIndex, velocity: 0 };
+}
 
 function createTestCoreState(): CoreState {
   return {
