@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import type { CoreSnapshot } from "../../../overture-next/src/core/types";
 import { createSchwungAdapter, moveCommandToPacket, moveMidiToInput } from "../../../overture-next/src/host/schwung-adapter";
 import { installSchwungRuntime } from "../../../overture-next/src/host/schwung-runtime";
 
@@ -82,6 +83,36 @@ describe("Overture Next Schwung adapter", () => {
       ["setButtonLED", 85, 16, true],
       ["setButtonLED", 50, 44, true],
     ]);
+  });
+
+  test("publishes snapshot-derived debug state without raw core internals", () => {
+    const host = {} as Record<string, unknown>;
+    const adapter = createSchwungAdapter(host);
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 3,
+      visibleTrackBank: 0,
+      controlMode: "session",
+      shiftHeld: false,
+      selectedStep: 0,
+      playing: false,
+      selectedClipId: null,
+      selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      clipCells: [{ trackIndex: 3, sceneIndex: 7, clipId: null }],
+      steps: [
+        { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
+      ],
+    };
+
+    adapter.runtime.publishState(snapshot);
+
+    expect(host.overtureUiState).toMatchObject({
+      selectedTrackIndex: 3,
+      selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      sessionView: true,
+      activeTrack: 3,
+    });
+    expect(host.overtureUiState).not.toHaveProperty("control");
+    expect(host.overtureUiState).not.toHaveProperty("project");
   });
 
   test("keeps Schwung global entrypoint installation in host runtime code", () => {

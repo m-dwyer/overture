@@ -1,5 +1,6 @@
 import type { ControlInput } from "../core/controls/types";
-import type { CoreState, HostCommand } from "../core/types";
+import type { HostCommand } from "../core/host-commands";
+import type { CoreSnapshot } from "../core/types";
 import type { MoveMidiPacket, OvertureHostAdapter } from "./types";
 
 const NOTE_ON = 0x90;
@@ -71,12 +72,11 @@ export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHos
 
   const adapter: OvertureHostAdapter = {
     runtime: {
-      publishState(state: CoreState) {
+      publishState(snapshot: CoreSnapshot) {
         host.overtureUiState = {
-          ...state,
-          ...state.control,
-          sessionView: state.control.controlMode === "session",
-          activeTrack: state.control.selectedTrackIndex,
+          ...snapshot,
+          sessionView: snapshot.controlMode === "session",
+          activeTrack: snapshot.selectedTrackIndex,
         };
       },
     },

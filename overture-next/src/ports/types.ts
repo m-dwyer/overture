@@ -1,4 +1,5 @@
-import type { CoreState, HostCommand } from "../core/types";
+import type { HostCommand } from "../core/host-commands";
+import type { CoreSnapshot } from "../core/types";
 
 export interface SplashSurface {
   clear(): void;
@@ -6,7 +7,7 @@ export interface SplashSurface {
 }
 
 export interface RuntimePort {
-  publishState(state: CoreState): void;
+  publishState(snapshot: CoreSnapshot): void;
 }
 
 export interface DisplayPort {

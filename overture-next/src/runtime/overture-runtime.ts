@@ -46,9 +46,10 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   }
 
   function onUnload(): void {
+    const snapshot = core.getSnapshot();
     adapter.commands.execute({
       kind: "track-note-off",
-      trackIndex: core.state.control.selectedTrackIndex,
+      trackIndex: snapshot.selectedTrackIndex,
       note: 60,
     });
   }
@@ -73,8 +74,9 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   }
 
   function render(): void {
-    adapter.runtime.publishState(core.state);
-    const view = createOvertureView(core.getSnapshot());
+    const snapshot = core.getSnapshot();
+    adapter.runtime.publishState(snapshot);
+    const view = createOvertureView(snapshot);
     renderScreen(splashTicks > 0 ? getSplashView() : view.screen, adapter.display);
     renderLeds(view.leds, adapter.leds);
   }
