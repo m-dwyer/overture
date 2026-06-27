@@ -38,6 +38,13 @@ module.exports = {
       to: { path: "^ui/" },
     },
     {
+      name: "session-grid-stays-neutral",
+      severity: "error",
+      comment: "Shared Session grid geometry is pure coordinate math and must not depend on application layers.",
+      from: { path: "^src/session-grid\\.ts$" },
+      to: { path: "^(src/(core|host|ports|render|runtime|view)/|ui/)" },
+    },
+    {
       name: "core-does-not-know-host-or-render",
       severity: "error",
       comment:
@@ -49,9 +56,16 @@ module.exports = {
       name: "host-stays-at-boundary",
       severity: "error",
       comment:
-        "Host adapters translate commands and surfaces only. They may use core/types, but not core behavior or renderers.",
+        "Host adapters translate commands and surfaces only. They may use core boundary types, but not core behavior or renderers.",
       from: { path: "^src/host/" },
-      to: { path: "^(src/core/(core|input|pattern|track|transport)\\.ts$|src/(render|runtime)/|ui/)" },
+      to: { path: "^(src/core/(core|pattern|track|transport)\\.ts$|src/(render|runtime)/|ui/)" },
+    },
+    {
+      name: "host-does-not-interpret-controls",
+      severity: "error",
+      comment: "Host adapters parse Move input into control input but do not interpret controls or apply domain intents.",
+      from: { path: "^src/host/" },
+      to: { path: "^src/core/(controls/(?!types\\.ts$)|intents/)" },
     },
     {
       name: "render-stays-presentational",
@@ -59,7 +73,7 @@ module.exports = {
       comment:
         "Renderers consume view types and surfaces. They must not import host adapters or core behavior modules.",
       from: { path: "^src/render/" },
-      to: { path: "^(src/(host|runtime)/|src/core/(core|input|pattern|track|transport)\\.ts$|ui/)" },
+      to: { path: "^(src/(host|runtime)/|src/core/(core|pattern|track|transport)\\.ts$|ui/)" },
     },
     {
       name: "runtime-owns-orchestration",
@@ -77,6 +91,27 @@ module.exports = {
       to: { path: "^src/host/(?!types\\.ts$)" },
     },
     {
+      name: "runtime-does-not-interpret-controls",
+      severity: "error",
+      comment: "Runtime passes parsed input to core; core owns control interpretation and intent application.",
+      from: { path: "^src/runtime/" },
+      to: { path: "^src/core/(controls/|intents/)" },
+    },
+    {
+      name: "core-controls-only-emit-intent-types",
+      severity: "error",
+      comment: "Control interpretation may emit domain intent types but must not apply domain intents.",
+      from: { path: "^src/core/controls/" },
+      to: { path: "^src/core/intents/(?!types\\.ts$)" },
+    },
+    {
+      name: "core-intents-do-not-know-controls",
+      severity: "error",
+      comment: "Domain intent application owns domain mutations and must not depend back on control-shaped input.",
+      from: { path: "^src/core/intents/" },
+      to: { path: "^src/core/controls/" },
+    },
+    {
       name: "view-stays-on-snapshot-contracts",
       severity: "error",
       comment:
@@ -85,11 +120,18 @@ module.exports = {
       to: { path: "^(src/(core/(?!types\\.ts$)|host|ports|render|runtime)/|ui/)" },
     },
     {
+      name: "view-does-not-use-input-pipeline",
+      severity: "error",
+      comment: "View derives display models only; it must not participate in control interpretation or intent application.",
+      from: { path: "^src/view/" },
+      to: { path: "^src/core/(controls/|intents/)" },
+    },
+    {
       name: "ports-stay-contracts",
       severity: "error",
       comment: "Port contracts may reference core types, but not core behavior, host adapters, renderers, runtime orchestration, or UI shell code.",
       from: { path: "^src/ports/" },
-      to: { path: "^(src/core/(core|input|pattern|track|transport)\\.ts$|src/(host|render|runtime|view)/|ui/)" },
+      to: { path: "^(src/core/(core|pattern|track|transport)\\.ts$|src/(host|render|runtime|view)/|ui/)" },
     },
     {
       name: "no-next-imports-legacy-ui",

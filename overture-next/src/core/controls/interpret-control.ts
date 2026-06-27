@@ -1,9 +1,7 @@
-import type { ClipCellCoordinate } from "../project";
-import { TRACK_BANK_SIZE, selectTrackFromRow } from "../track";
+import { clipCellCoordinateForSessionPad } from "../../session-grid";
+import { selectTrackFromRow } from "../track";
 import type { DomainIntent } from "../intents/types";
 import type { ControlInput, ControlInterpretContext } from "./types";
-
-const SESSION_SCENE_COLUMNS = 8;
 
 export function interpretControl(input: ControlInput, context: ControlInterpretContext): DomainIntent | null {
   if (input.kind === "shift") return { kind: "set-shift-held", held: input.held };
@@ -15,16 +13,10 @@ export function interpretControl(input: ControlInput, context: ControlInterpretC
   if (input.kind === "step") return { kind: "toggle-step", stepIndex: input.step };
   if (input.kind === "pad") {
     if (!context.sessionView) return null;
-    return { kind: "select-clip-cell", coordinate: clipCellCoordinateForPad(context.visibleTrackBank, input.padIndex) };
+    return {
+      kind: "select-clip-cell",
+      coordinate: clipCellCoordinateForSessionPad(context.visibleTrackBank, input.padIndex),
+    };
   }
   return null;
-}
-
-function clipCellCoordinateForPad(visibleTrackBank: number, padIndex: number): ClipCellCoordinate {
-  const padRowFromBottom = Math.floor(padIndex / SESSION_SCENE_COLUMNS);
-  const row = TRACK_BANK_SIZE - 1 - padRowFromBottom;
-  return {
-    trackIndex: row + visibleTrackBank * TRACK_BANK_SIZE,
-    sceneIndex: padIndex % SESSION_SCENE_COLUMNS,
-  };
 }

@@ -1,5 +1,7 @@
+import { SESSION_TRACK_ROWS } from "../session-grid";
+
 export const TRACK_COUNT = 8;
-export const TRACK_BANK_SIZE = 4;
+export const TRACK_BANK_SIZE = SESSION_TRACK_ROWS;
 
 export type TrackRoute =
   | { kind: "move"; moveTrackTarget: number }

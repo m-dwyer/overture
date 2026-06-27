@@ -1,9 +1,6 @@
 import type { CoreSnapshot } from "../core/types";
+import { SESSION_PAD_COUNT, clipCellCoordinateForSessionPad } from "../session-grid";
 import type { LedView, OvertureView, ScreenView } from "./types";
-
-const TRACK_BANK_SIZE = 4;
-const SESSION_SCENE_COLUMNS = 8;
-const SESSION_PAD_COUNT = TRACK_BANK_SIZE * SESSION_SCENE_COLUMNS;
 
 export function createOvertureView(snapshot: CoreSnapshot): OvertureView {
   return {
@@ -59,7 +56,7 @@ function createClipCellPadLedView(snapshot: CoreSnapshot): LedView["clipCellPads
   return Array.from({ length: SESSION_PAD_COUNT }, (_, padIndex) => {
     if (!snapshot.sessionView) return { padIndex, state: "off" };
 
-    const coordinate = clipCellCoordinateForPad(snapshot.visibleTrackBank, padIndex);
+    const coordinate = clipCellCoordinateForSessionPad(snapshot.visibleTrackBank, padIndex);
     const clipCell = snapshot.clipCells.find(
       (cell) => cell.trackIndex === coordinate.trackIndex && cell.sceneIndex === coordinate.sceneIndex,
     );
@@ -71,13 +68,4 @@ function createClipCellPadLedView(snapshot: CoreSnapshot): LedView["clipCellPads
       state: selected ? "selected" : clipCell?.clipId ? "occupied" : "empty",
     };
   });
-}
-
-function clipCellCoordinateForPad(visibleTrackBank: number, padIndex: number): { trackIndex: number; sceneIndex: number } {
-  const padRowFromBottom = Math.floor(padIndex / SESSION_SCENE_COLUMNS);
-  const row = TRACK_BANK_SIZE - 1 - padRowFromBottom;
-  return {
-    trackIndex: row + visibleTrackBank * TRACK_BANK_SIZE,
-    sceneIndex: padIndex % SESSION_SCENE_COLUMNS,
-  };
 }
