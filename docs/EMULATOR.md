@@ -14,7 +14,7 @@ through a defined host API), so we run *our* code against a *mock* of that bound
 |---|---|
 | Tool **UI JS** (`overture-next/ui/ui.js` + `overture-next/src`) | **REAL** — the current replacement scaffold |
 | Tool **DSP** | **mocked/stubbed**; the active tool has no DSP/WASM build yet |
-| Schwung **modules** | **REAL** wasm (moveforge already compiles these) |
+| Schwung **modules** | **REAL** WASM from the pinned Moveforge submodule |
 | **Display** (OLED) | MOCK → draw 128×64 to an HTML canvas (`clear_screen`/`print`/`draw_rect`/…) |
 | **Pads/steps/knobs/jog/buttons** | MOCK → clickable Move shell → emits the right MIDI into `onMidiMessageInternal` |
 | **LEDs** | MOCK → render pad/step colors from `setLED` |
@@ -45,8 +45,20 @@ Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Rep
 > `get_param`-null-from-onMidi, and the LED per-tick budget. They affect
 > interaction design, so the mock should behave like the host, not idealised.
 
-## Reuse from moveforge (don't absorb it)
-moveforge's emulator already provides — copy/adapt these (your repo, free), keep moveforge independent:
+## Moveforge Module Assets
+Overture pins Moveforge as a submodule under `moveforge/`. The emulator serves
+module metadata from `moveforge/src/modules/` and browser module WASM from
+`moveforge/web/wasm/`.
+
+```sh
+mise run moveforge-wasm
+```
+
+That task initializes the submodule and builds the WASM modules required by the
+browser Schwung chain. `mise run dev`, `mise run web-build`, and
+`mise run build` depend on it.
+
+Moveforge's emulator also provides useful reference material to copy/adapt:
 - the **Move hardware shell** (track/mode buttons, 8 encoders, wheel, transport, 16 steps, 32 pads),
 - the **OLED canvas**,
 - the **wasm-DSP loader** + AudioWorklet path (for module audition),
@@ -66,18 +78,19 @@ Common loop:
 
 ```sh
 # From the overture repo root.
-pnpm -C web dev
+mise run dev
 ```
 
 Packaged builds keep the two active targets explicit:
 
 ```sh
 mise run tool-build  # build the active Schwung tool package from overture-next/
-mise run build       # tool package + web emulator
+mise run build       # tool package + Moveforge module WASM + web emulator
 ```
 
 The native Move package is built from `overture-next/` and does not currently
-produce a `dsp.so` or WASM artifact.
+produce a `dsp.so` or Overture-owned WASM artifact. Moveforge module WASM is a
+separate emulator dependency.
 
 Then open the Vite URL, normally `http://localhost:5173/`. Edit
 `overture-next/src/*`, `overture-next/ui/*`, or `web/src/*`; Vite reloads

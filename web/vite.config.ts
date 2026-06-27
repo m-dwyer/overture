@@ -19,7 +19,7 @@ const SCHWUNG_SHARED =
   process.env.SCHWUNG_SRC ||
   [resolve(here, "../schwung/src/shared"), resolve(here, "../../schwung/src/shared")].find(existsSync) ||
   resolve(here, "../../schwung/src/shared");
-const MOVEFORGE_ROOT = process.env.MOVEFORGE_ROOT || resolve(here, "../../../moveforge");
+const MOVEFORGE_ROOT = process.env.MOVEFORGE_ROOT || resolve(here, "../moveforge");
 
 const ON_DEVICE_SHARED = "/data/UserData/schwung/shared/";
 const ON_DEVICE_OVERTURE = "/data/UserData/schwung/modules/tools/overture/";

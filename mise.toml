@@ -1,5 +1,5 @@
 # Overture — root task surface. Run everything from the repo root (no cd):
-#   mise run dev | site-dev | verify | test | tool-build | build | setup
+#   mise run dev | site-dev | verify | test | tool-build | moveforge-wasm | build | setup
 #
 # The orchestration is polyglot: the web emulator is TS/Vite (pnpm), and the
 # active Overture tool package lives under overture-next/. Tasks here are thin
@@ -22,6 +22,7 @@ pnpm install
 
 [tasks.dev]
 description = "Serve the Overture emulator (real tool UI + mock host)"
+depends = ["moveforge-wasm"]
 run = "pnpm -C web dev"
 
 [tasks.site-dev]
@@ -44,14 +45,29 @@ run = "pnpm verify"
 
 [tasks.web-build]
 description = "Production build of the web emulator"
+depends = ["moveforge-wasm"]
 run = "pnpm -C web build"
 
 [tasks.tool-build]
 description = "Build the active Overture Schwung tool package"
 run = "pnpm -C overture-next build"
 
+[tasks.moveforge-init]
+description = "Initialize the pinned Moveforge submodule"
+run = "git submodule update --init --recursive moveforge"
+
+[tasks.moveforge-update]
+description = "Advance the Moveforge submodule to the latest main commit"
+run = "git submodule update --remote --merge moveforge"
+
+[tasks.moveforge-wasm]
+description = "Build Moveforge browser WASM modules for the emulator"
+depends = ["moveforge-init"]
+run = "cd moveforge && mise run wasm"
+
 [tasks.emulator-dist]
 description = "Prepare the static web emulator bundle served by the Astro site at /emulator/"
+depends = ["moveforge-wasm"]
 sources = [
   "web/index.html",
   "web/package.json",
@@ -65,6 +81,8 @@ sources = [
   "web/src/**/*",
   "overture-next/src/**/*",
   "overture-next/ui/**/*",
+  "moveforge/src/modules/**/*",
+  "moveforge/web/wasm/*.wasm",
 ]
 outputs = ["web/dist/index.html"]
 run = "pnpm -C web build"

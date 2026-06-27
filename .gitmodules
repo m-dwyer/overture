@@ -1,3 +1,7 @@
 [submodule "schwung"]
 	path = schwung
 	url = https://github.com/charlesvestal/schwung.git
+[submodule "moveforge"]
+	path = moveforge
+	url = git@github.com:m-dwyer/moveforge.git
+	branch = main

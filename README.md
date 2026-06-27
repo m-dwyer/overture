@@ -8,8 +8,9 @@ Install Overture → it runs on top of Move → you get an 8-track (4 Ableton + 
 sequencer with a co-run editing mode for the Ableton sounds and the full Schwung module
 ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) engine.
 
-> **Status:** early build. The browser emulator runs the real tool UI, real seq8 WASM,
-> and browser Schwung-chain audio from Moveforge-built modules. The first
+> **Status:** early build. The browser emulator runs the real tool UI, a mock
+> Overture DSP surface, and browser Schwung-chain audio from pinned Moveforge
+> WASM modules. The first
 > Overture-native changes (track navigation, clip reveal, auto-routing, Route Check,
 > Edit Sound, Param Peek, sound presets, and per-step length) are implemented. The tool
 > is a fork of [dAVEBOx](https://github.com/legsmechanical/schwung-davebox); shipped
