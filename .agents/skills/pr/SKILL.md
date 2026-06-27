@@ -1,12 +1,21 @@
 ---
 name: pr
-description: Prepare a pull request for the current branch. Use when the user explicitly asks to prepare, draft, or create a PR for current branch changes.
+description: Create a pull request for the current branch. Use when the user explicitly asks to prepare, draft, or create a PR for current branch changes.
 ---
 
-Run `.agents/skills/pr/scripts/prepare_pr.sh --base main`, then read `.pr-body.md`.
+**Default — deterministic, no body authoring.** Run:
 
-Fill only the judgment sections: `Summary`, `Verification`, `User-visible changes`, and `Follow-up / risk`.
+```sh
+.agents/skills/pr/scripts/create_pr.sh --base main
+```
 
-Use committed branch changes as the source of truth. Do not paste full diffs into the response unless the user asks.
+It builds the PR title and body from the branch's commits (so write good commit
+messages, not PR prose), pushes the branch if needed, and opens the PR. Flags:
+`--issue <n>` appends `Closes #<n>`, `--title` overrides, `--draft`, `--dry-run`.
+Do not hand-write a body for routine PRs — the commits are the source of truth.
 
-If the user explicitly asked to create the PR, run the generated `gh pr create ...` command after updating `.pr-body.md`. Otherwise, show the command.
+**Rich — only when a PR needs narrative the commits don't carry** (big refactor,
+risky migration). Run `create_pr.sh --rich --base main`, which writes
+`.pr-body.md` from `.github/pull_request_template.md`. Fill only the judgment
+sections (`Summary`, `Verification`, `User-visible changes`, `Follow-up / risk`),
+then `gh pr create --body-file .pr-body.md`.
