@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@typescript-eslint/rule-tester": "^8.62.0",
     "dependency-cruiser": "17.4.3",
     "esbuild": "0.21.5",
     "eslint": "^9.39.4",
