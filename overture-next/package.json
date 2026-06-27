@@ -7,11 +7,12 @@
   "scripts": {
     "build": "scripts/build.sh",
     "deploy": "scripts/deploy.sh",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "test": "vitest run",
     "test:lint-rules": "node scripts/test-state-ownership-rule.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "depcruise": "depcruise -c .dependency-cruiser.cjs src ui",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:lint-rules && pnpm depcruise"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:lint-rules && pnpm test && pnpm depcruise"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -19,6 +20,7 @@
     "esbuild": "0.21.5",
     "eslint": "^9.39.4",
     "typescript": "^5.6.0",
-    "typescript-eslint": "^8.62.0"
+    "typescript-eslint": "^8.62.0",
+    "vitest": "^2.1.9"
   }
 }

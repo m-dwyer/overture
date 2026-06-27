@@ -45,4 +45,31 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ["tests/**/*.ts"],
+    languageOptions: {
+      parser: tseslint.parser,
+    },
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["../src/**/internal/*"],
+              message: "Tests should exercise module contracts through public entry points, not internal helpers.",
+            },
+            {
+              group: ["../src/core/playback/*"],
+              message: "Import Playback through ../src/core/playback.",
+            },
+            {
+              group: ["../src/core/project/*"],
+              message: "Import Project through ../src/core/project.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );
