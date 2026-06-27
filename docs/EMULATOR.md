@@ -80,12 +80,12 @@ without bundling or installing on the device.
 Checks:
 
 ```sh
-pnpm -C web typecheck
-pnpm -C web verify
+pnpm typecheck
+pnpm verify
 pnpm -C web test:e2e
 ```
 
-Use `pnpm -C web dev` for UI/UX iteration, `pnpm -C web verify` for the current
+Use `pnpm -C web dev` for UI/UX iteration, `pnpm verify` for the current
 Overture ratchet, and `pnpm -C web test:e2e` for browser smoke/input coverage.
 Use `mise run reference-test` or `pnpm -C web test:e2e:reference` when you
 intentionally want the old reference suites while porting scenarios forward.

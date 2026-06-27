@@ -6,7 +6,7 @@ import {
   selectTrack,
   setShiftHeld,
   toggleControlMode,
-} from "../../../overture-next/src/core/controls/control-state";
+} from "../../../overture-next/src/core/control-state";
 
 describe("Overture Next Control State", () => {
   test("starts in Track View on the first Track and Clip Cell", () => {

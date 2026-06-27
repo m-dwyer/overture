@@ -1,0 +1,16 @@
+{
+  "name": "@overture/tool",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Active Overture Schwung tool source.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "depcruise": "depcruise -c .dependency-cruiser.cjs src ui",
+    "verify": "pnpm typecheck && pnpm depcruise"
+  },
+  "devDependencies": {
+    "dependency-cruiser": "17.4.3",
+    "typescript": "^5.6.0"
+  }
+}

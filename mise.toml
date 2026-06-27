@@ -16,9 +16,9 @@ node = "lts"
 _.file = ".env"
 
 [tasks.setup]
-description = "Install host deps: web emulator + tool UI bundler (esbuild)"
+description = "Install workspace deps + reference tool UI bundler deps"
 run = """
-pnpm -C web install
+pnpm install
 pnpm -C overture-ui install
 """
 
@@ -37,12 +37,12 @@ depends = ["emulator-dist"]
 run = "pnpm -C site build"
 
 [tasks.typecheck]
-description = "Type-check the web harness and current Overture tool scaffold"
-run = "pnpm -C web typecheck"
+description = "Type-check the active Overture tool package and web harness"
+run = "pnpm typecheck"
 
 [tasks.verify]
-description = "Current Overture ratchet: typecheck + dependency-cruiser + replacement core tests"
-run = "pnpm -C web verify"
+description = "Current Overture ratchet: active tool package checks + web focused tests"
+run = "pnpm verify"
 
 [tasks.web-build]
 description = "Production build of the web emulator"
@@ -55,6 +55,8 @@ depends = ["wasm"]
 sources = [
   "web/index.html",
   "web/package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
   "web/postcss.config.js",
   "web/tailwind.config.ts",
   "web/tsconfig.json",

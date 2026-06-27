@@ -1,0 +1,10 @@
+{
+  "name": "overture",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "typecheck": "pnpm -C overture-next typecheck && pnpm -C web typecheck",
+    "verify": "pnpm -C overture-next verify && pnpm -C web verify"
+  }
+}

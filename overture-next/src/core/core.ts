@@ -1,4 +1,4 @@
-import { createInitialControlState } from "./controls/control-state";
+import { createInitialControlState } from "./control-state";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";

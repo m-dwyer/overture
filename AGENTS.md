@@ -95,7 +95,7 @@ When you change or extend Overture modules:
 
 ## Dependency Ratchet
 
-`pnpm -C web verify` runs typecheck, dependency-cruiser, and focused Overture
+`pnpm verify` runs the active Overture package checks and focused web harness
 tests. The dependency-cruiser rules are the architecture ratchet:
 
 - core does not import host, render, runtime, or UI shell code.
@@ -113,7 +113,9 @@ Common commands from the repo root:
 
 ```sh
 scripts/select-verification.sh --base main  # choose relevant checks for this change
-pnpm -C web verify        # current Overture ratchet
+pnpm verify               # current Overture ratchet
+pnpm -C overture-next verify  # active tool typecheck + dependency ratchet
+pnpm -C web verify        # web harness typecheck + focused Overture tests
 mise run test             # current ratchet + emulator E2E
 pnpm -C site build        # public site check/build
 mise run dev              # browser emulator

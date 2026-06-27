@@ -7,14 +7,22 @@ on:
       - ".github/workflows/pages.yml"
       - "site/**"
       - "web/**"
+      - "overture-next/**"
       - "overture-ui/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - "mise.toml"
   pull_request:
     paths:
       - ".github/workflows/pages.yml"
       - "site/**"
       - "web/**"
+      - "overture-next/**"
       - "overture-ui/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
       - "mise.toml"
   workflow_dispatch:
     inputs:
@@ -65,8 +73,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: |
-            site/pnpm-lock.yaml
-            web/pnpm-lock.yaml
+            pnpm-lock.yaml
             overture-ui/pnpm-lock.yaml
             moveforge/pnpm-lock.yaml
 
@@ -84,13 +91,8 @@ jobs:
           path: overture-ui/dist/wasm
           key: seq8-wasm-${{ runner.os }}-${{ env.EMSDK_IMAGE }}-${{ hashFiles('overture-ui/scripts/build-wasm.sh', 'overture-ui/dsp/**/*.c', 'overture-ui/dsp/**/*.h') }}
 
-      - name: Install site dependencies
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: site
-
-      - name: Install web dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: web
 
       - name: Install Moveforge dependencies
         if: steps.moveforge-wasm-cache.outputs.cache-hit != 'true'
@@ -123,14 +125,12 @@ jobs:
         working-directory: overture-ui
 
       - name: Build emulator
-        run: pnpm build
-        working-directory: web
+        run: pnpm -C web build
         env:
           MOVEFORGE_ROOT: ${{ github.workspace }}/moveforge
 
       - name: Build site
-        run: pnpm build
-        working-directory: site
+        run: pnpm -C site build
         env:
           ASTRO_TELEMETRY_DISABLED: "1"
           GITHUB_PAGES: "true"

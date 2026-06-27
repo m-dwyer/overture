@@ -1,6 +1,7 @@
 # build artifacts
 build/
 dist/
+node_modules/
 *.so
 .DS_Store
 

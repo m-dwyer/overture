@@ -4,7 +4,7 @@ import {
   selectTrack,
   setShiftHeld,
   toggleControlMode,
-} from "../controls/control-state";
+} from "../control-state";
 import { launchClipCell, stopPlayingClips } from "../playback";
 import { getClipCell, getSequenceForCell } from "../project";
 import { toggleSequenceStep } from "../sequence";
