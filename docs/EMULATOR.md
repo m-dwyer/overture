@@ -55,7 +55,7 @@ mise run moveforge-wasm
 ```
 
 That task initializes the submodule and builds the WASM modules required by the
-browser Schwung chain. `mise run dev`, `mise run web-build`, and
+browser Schwung chain. `mise run web-dev`, `mise run web-build`, and
 `mise run build` depend on it.
 
 ## What it can't validate (device-only — don't over-trust)
@@ -71,13 +71,14 @@ Common loop:
 
 ```sh
 # From the overture repo root.
-mise run dev
+mise run web-dev
 ```
 
 Packaged builds keep the two active targets explicit:
 
 ```sh
 mise run tool-build  # build the active Schwung tool package from overture-next/
+mise run tool-deploy # deploy the active tool package to an existing Schwung Move
 mise run build       # tool package + Moveforge module WASM + web emulator
 ```
 
@@ -93,11 +94,11 @@ Checks:
 
 ```sh
 pnpm verify
-pnpm -C web test:e2e
+mise run web-e2e
 ```
 
-Use `mise run dev` for UI iteration, `pnpm verify` for the current Overture
-ratchet, and `pnpm -C web test:e2e` for browser smoke/input coverage.
+Use `mise run web-dev` for UI iteration, `pnpm verify` for the current Overture
+ratchet, and `mise run web-e2e` for browser smoke/input coverage.
 
 Only compile/install to the Move after the browser path proves the interaction
 or when the phase needs real engine sound, co-run timing, MIDI injection, or

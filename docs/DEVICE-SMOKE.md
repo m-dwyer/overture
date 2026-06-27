@@ -6,8 +6,8 @@ OLED/LED hardware, or real audio routing.
 
 ## Before Launch
 
-- Build and install with `mise run deploy`.
-- Fully restart the tool/device runtime after JS bundle changes.
+- Build and deploy the active tool with `mise run tool-deploy`.
+- Fully restart the tool/device runtime after JS bundle changes with `mise run device-restart`.
 - Check Schwung/device logs for new JavaScript or host errors.
 
 ## Smoke Pass
