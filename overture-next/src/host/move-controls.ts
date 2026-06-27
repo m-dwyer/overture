@@ -6,6 +6,8 @@ export type Send = (status: number, d1: number, d2: number) => void;
 export const NOTE_ON = 0x90;
 export const NOTE_OFF = 0x80;
 export const CC = 0xb0;
+export const MIDI_STATUS_TYPE_MASK = 0xf0;
+export const MIDI_DATA_MASK = 0x7f;
 
 export const NAV = {
   Shift: 49,
@@ -41,3 +43,21 @@ export const MASTER_TOUCH = 8;
 export const JOG_TOUCH = 9;
 
 export const SCHWUNG_SLOT_CHANNEL_FIRST = 4;
+
+export const RELATIVE_ENCODER = {
+  ClockwiseMin: 1,
+  ClockwiseMax: 63,
+  CounterClockwiseMin: 65,
+  CounterClockwiseMax: MIDI_DATA_MASK,
+  AccelerationFastThreshold: 10,
+  AccelerationMediumThreshold: 3,
+  FastStep: 5,
+  MediumStep: 2,
+  SlowStep: 1,
+} as const;
+
+export const HOST_VOLUME = {
+  Min: 0,
+  Max: 100,
+  Default: 100,
+} as const;

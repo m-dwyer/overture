@@ -2,12 +2,14 @@ import { test, expect } from "@playwright/test";
 import { waitReady } from "./wait";
 import {
   CC,
+  HOST_VOLUME,
   JOG_TOUCH,
   KNOB_CC0,
   KNOB_TOUCH0,
   MASTER_TOUCH,
   NAV,
   NOTE_ON,
+  RELATIVE_ENCODER,
   VOLUME_CC,
 } from "../../overture-next/src/host/move-controls";
 
@@ -21,6 +23,12 @@ const RELATIVE_TURN_UP = 1;
 // gestures + Shift LED hints on. This is the regression net for the I/O boundary.
 
 type MidiCaptureGlobal = typeof globalThis & {
+  OVT?: {
+    schwung?: {
+      diagnostics(): { hostVolume: number };
+      hostSetVolume(volume: number): void;
+    };
+  };
   __midi: number[][];
   onMidiMessageInternal?: (data: number[]) => unknown;
 };
@@ -69,12 +77,27 @@ test("encoder: capacitive touch note on press/release + relative CC on drag", as
 
 test("volume knob: CC 79 + master touch (note 8)", async ({ page }) => {
   const { x, y } = await center(page, "Volume");
+  const testVolume = HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep;
+  await page.evaluate((volume) => {
+    const g = globalThis as MidiCaptureGlobal;
+    g.OVT?.schwung?.hostSetVolume(volume);
+  }, testVolume);
+  const initialVolume = await page.evaluate(() => {
+    const g = globalThis as MidiCaptureGlobal;
+    return g.OVT?.schwung?.diagnostics().hostVolume;
+  });
+  expect(initialVolume).toBe(testVolume);
+
   await page.mouse.move(x, y);
   await page.mouse.down();
   expect(await drain(page)).toContainEqual([NOTE_ON, MASTER_TOUCH, MIDI_PRESS]);
   for (let i = 1; i <= 20; i++) await page.mouse.move(x, y - i);
   const turn = await drain(page);
-  expect(turn.filter((m) => m[0] === CC && m[1] === VOLUME_CC && m[2] === RELATIVE_TURN_UP).length).toBeGreaterThan(0);
+  expect(turn.filter((m) => m[0] === CC && m[1] === VOLUME_CC && m[2] === RELATIVE_TURN_UP)).toEqual([]);
+  expect(await page.evaluate(() => {
+    const g = globalThis as MidiCaptureGlobal;
+    return g.OVT?.schwung?.diagnostics().hostVolume;
+  })).toBeGreaterThan(initialVolume ?? HOST_VOLUME.Default);
   await page.mouse.up();
   expect(await drain(page)).toContainEqual([NOTE_ON, MASTER_TOUCH, MIDI_RELEASE]);
 });

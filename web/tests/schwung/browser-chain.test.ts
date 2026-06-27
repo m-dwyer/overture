@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { BrowserSchwungChain, normalizeHostModuleList } from "../../src/schwung/browser-chain.js";
 import { createManualSchwungChain } from "../../src/schwung/manual-catalog.js";
-import type { AudioEngineConfig, ChainAudioEngine, ChainSlotSpec, WorkletMessage } from "../../src/schwung/audio-engine.js";
+import { DEFAULT_BROWSER_MASTER_GAIN, type AudioEngineConfig, type ChainAudioEngine, type ChainSlotSpec, type WorkletMessage } from "../../src/schwung/audio-engine.js";
+import { HOST_VOLUME, RELATIVE_ENCODER } from "../../src/lib/move-controls.js";
 import type { SchwungCatalog } from "../../src/schwung/module-metadata.js";
 
 class FakeEngine implements ChainAudioEngine {
@@ -11,6 +12,7 @@ class FakeEngine implements ChainAudioEngine {
   maxActive = 0;
   resumes = 0;
   specs: ChainSlotSpec[] = [];
+  volumes: number[] = [];
 
   async enableChain(slots: ChainSlotSpec[], config: AudioEngineConfig): Promise<void> {
     this.active++;
@@ -38,7 +40,9 @@ class FakeEngine implements ChainAudioEngine {
     this.messages.push({ message, slotId });
   }
 
-  setMasterVolume(): void {}
+  setMasterVolume(volume: number): void {
+    this.volumes.push(volume);
+  }
 }
 
 describe("BrowserSchwungChain", () => {
@@ -131,6 +135,42 @@ describe("BrowserSchwungChain", () => {
     chain.primeAudioEngine();
 
     expect(engine.resumes).toBe(1);
+  });
+
+  test("applies host volume to browser master gain", async () => {
+    const engine = new FakeEngine();
+    const chain = new BrowserSchwungChain(makeCatalog(), { audioEngine: engine });
+
+    expect(chain.hostGetVolume()).toBe(HOST_VOLUME.Default);
+
+    chain.hostSetVolume(HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep);
+    expect(chain.hostGetVolume()).toBe(HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep);
+    expect(engine.volumes.at(-1)).toBeCloseTo(DEFAULT_BROWSER_MASTER_GAIN / RELATIVE_ENCODER.MediumStep);
+
+    chain.hostSetVolume(HOST_VOLUME.Max + RELATIVE_ENCODER.FastStep);
+    expect(chain.hostGetVolume()).toBe(HOST_VOLUME.Max);
+    expect(engine.volumes.at(-1)).toBeCloseTo(DEFAULT_BROWSER_MASTER_GAIN);
+
+    chain.hostSetVolume(HOST_VOLUME.Min - RELATIVE_ENCODER.FastStep);
+    expect(chain.hostGetVolume()).toBe(HOST_VOLUME.Min);
+    expect(engine.volumes.at(-1)).toBeCloseTo(HOST_VOLUME.Min);
+  });
+
+  test("uses Schwung's relative encoder acceleration for host volume CC", () => {
+    const chain = new BrowserSchwungChain(makeCatalog(), { audioEngine: null });
+
+    chain.hostSetVolume(HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep);
+    expect(chain.handleHostVolumeCc(RELATIVE_ENCODER.ClockwiseMin)).toBe(true);
+    expect(chain.hostGetVolume()).toBe((HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep) + RELATIVE_ENCODER.SlowStep);
+
+    chain.handleHostVolumeCc(RELATIVE_ENCODER.AccelerationMediumThreshold + RELATIVE_ENCODER.SlowStep);
+    expect(chain.hostGetVolume()).toBe((HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep) + RELATIVE_ENCODER.SlowStep + RELATIVE_ENCODER.MediumStep);
+
+    chain.handleHostVolumeCc(RELATIVE_ENCODER.AccelerationFastThreshold + RELATIVE_ENCODER.SlowStep);
+    expect(chain.hostGetVolume()).toBe((HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep) + RELATIVE_ENCODER.SlowStep + RELATIVE_ENCODER.MediumStep + RELATIVE_ENCODER.FastStep);
+
+    chain.handleHostVolumeCc(RELATIVE_ENCODER.CounterClockwiseMax);
+    expect(chain.hostGetVolume()).toBe((HOST_VOLUME.Max / RELATIVE_ENCODER.MediumStep) + RELATIVE_ENCODER.MediumStep + RELATIVE_ENCODER.FastStep);
   });
 });
 

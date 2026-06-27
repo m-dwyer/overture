@@ -18,6 +18,8 @@ export interface MidiOutEvent {
   status: number;
 }
 
+export const DEFAULT_BROWSER_MASTER_GAIN = 0.55;
+
 export interface AudioEngineConfig {
   onError(slotId: string, message: string): void;
   onMidiOut(event: MidiOutEvent): void;
@@ -119,7 +121,7 @@ export class AudioWorkletChainEngine implements ChainAudioEngine {
     this.#audio = audio;
     this.#processorName = config.processorName;
     this.#masterGain = audio.createGain();
-    this.#masterGain.gain.value = 0.55;
+    this.#masterGain.gain.value = DEFAULT_BROWSER_MASTER_GAIN;
     this.#masterGain.connect(audio.destination);
     this.#scheduleSink = audio.createGain();
     this.#scheduleSink.gain.value = 0;

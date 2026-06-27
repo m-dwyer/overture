@@ -11,7 +11,7 @@ import { createCanvasDisplaySink, OLED_READABLE_SCALE } from "@/host/canvas-disp
 import { createShellLedSink } from "@/host/shell-led-sink";
 import { installKeyboardInput } from "@/host/keyboard-input";
 import { installOvt, pickDsp, startTickLoop } from "@/host/emulator-runtime";
-import { CC, NAV, NOTE_OFF, NOTE_ON, PAD_COUNT, PAD_NOTE0, ROW_CC, type Send } from "@/lib/move-controls";
+import { CC, HOST_VOLUME, NAV, NOTE_OFF, NOTE_ON, PAD_COUNT, PAD_NOTE0, ROW_CC, type Send } from "@/lib/move-controls";
 import { type BrowserSchwungDiagnostics, type BrowserSchwungHost, createBrowserSchwungChain } from "@/schwung/browser-chain";
 import { createManualSchwungChain } from "@/schwung/manual-catalog";
 import { OledScreen } from "./OledScreen";
@@ -386,7 +386,7 @@ function SchwungDiagnosticsDrawer({
   diagnostics: BrowserSchwungDiagnostics | null;
   onReset(): void;
 }) {
-  const diag = diagnostics ?? { errors: [], midi: [], params: [], slots: [], worklet: {} };
+  const diag = diagnostics ?? { errors: [], hostVolume: HOST_VOLUME.Default, midi: [], params: [], slots: [], worklet: {} };
   return (
     <aside className="w-[min(92vw,440px)] rounded border border-line bg-black/70 p-3 text-left text-[11px] text-muted">
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -403,6 +403,7 @@ function SchwungDiagnosticsDrawer({
         `${slot.name} ch${slot.channel}: ${slot.midiFx || "--"} > ${slot.synth || "--"} > ${slot.fx1 || "--"} > ${slot.fx2 || "--"}`
       )} />
       <DiagBlock title="Worklet" rows={Object.entries(diag.worklet).map(([slot, state]) => `${slot}: ${state}`)} />
+      <DiagBlock title="Host" rows={[`volume=${diag.hostVolume}`]} />
       <DiagBlock title="Params" rows={diag.params.map((item) => `S${item.slot + 1} ${item.key}=${item.value}`)} />
       <DiagBlock title="MIDI" rows={diag.midi.map((item) =>
         `S${item.slot + 1} ${item.direction} ${item.status.toString(16)} ${item.d1} ${item.d2}`

@@ -3,6 +3,7 @@
 // drive surface (init/tick/renderBlocks/sendInternal). No DOM — the browser shell
 // and the test harness are just different bindings of the same core.
 import type { Dsp } from "../dsp.js";
+import { CC, MIDI_STATUS_TYPE_MASK, VOLUME_CC } from "../lib/move-controls.js";
 import { type DisplaySink, type LedSink, type MidiSink, type FileStore, memFiles } from "./sinks.js";
 import { BrowserSchwungChain, type BrowserSchwungHost, createBrowserSchwungChain } from "../schwung/browser-chain.js";
 
@@ -151,8 +152,14 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     log("shadow_set_param " + JSON.stringify([slot | 0, key, String(val ?? ""), ok]));
     return ok;
   };
+  const host_get_volume = (): number => schwung.hostGetVolume();
+  const host_set_volume = (volume: number): void => schwung.hostSetVolume(Number(volume));
   const host_list_modules = (): Array<Record<string, unknown>> => schwung.hostListModules();
   const shadow_get_ui_flags = (): Record<string, unknown> => ({});
+  const handleHostInternalMidi = (status: number, d1: number, d2: number): boolean => {
+    if ((status & MIDI_STATUS_TYPE_MASK) !== CC || d1 !== VOLUME_CC) return false;
+    return schwung.handleHostVolumeCc(d2);
+  };
 
   Object.assign(globalThis, {
     clear_screen, fill_rect, draw_rect, set_pixel, print, text_width, host_flush_display,
@@ -161,7 +168,8 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
     host_write_file, host_read_file, host_file_exists, host_ensure_dir, host_remove_dir,
     move_midi_inject_to_move, shadow_send_midi_to_dsp,
     shadow_corun_begin, shadow_corun_end, shadow_corun_state, shadow_get_slots,
-    shadow_get_param, shadow_set_param, host_list_modules, shadow_get_ui_flags,
+    shadow_get_param, shadow_set_param, host_get_volume, host_set_volume,
+    host_list_modules, shadow_get_ui_flags,
   });
 
   // Load the REAL tool UI. The literal lets Vite's remap plugin (and vitest)
@@ -181,7 +189,10 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
       if (strict) flushSetParams();
     },
     renderBlocks(n: number) { for (let i = 0; i < n; i++) dsp.render(); },
-    sendInternal(status, d1, d2) { globalThis.onMidiMessageInternal?.([status, d1, d2]); },
+    sendInternal(status, d1, d2) {
+      if (handleHostInternalMidi(status, d1, d2)) return;
+      globalThis.onMidiMessageInternal?.([status, d1, d2]);
+    },
     sendExternal(status, d1, d2) { globalThis.onMidiMessageExternal?.([status, d1, d2]); },
     dsp,
   };
