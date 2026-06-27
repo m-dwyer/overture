@@ -51,7 +51,7 @@ Expected outcome:
 
 ## Phase 3: Hardware Input Interpretation
 
-Status: next
+Status: complete
 
 Deepen the Hardware Input interpretation module so modifiers and view-local
 behavior are owned in one place.
@@ -66,7 +66,7 @@ Expected outcome:
 
 ## Phase 4: Surface Hints
 
-Status: planned
+Status: next
 
 Name and model the visual hints shown while modifiers are held.
 

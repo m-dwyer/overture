@@ -29,11 +29,7 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function applyInput(input: ControlInput): boolean {
-    const intent = interpretControl(input, {
-      shiftHeld: state.control.shiftHeld,
-      controlMode: state.control.controlMode,
-      visibleTrackBank: state.control.visibleTrackBank,
-    });
+    const intent = interpretControl(input, state.control);
     if (!intent) return false;
     const transaction = applyIntent(intent, state);
     if (transaction.applied) hostCommands.push(...transaction.hostCommands);

@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { selectClipCell as selectControlClipCell } from "../../../overture-next/src/core/controls/control-state";
+import {
+  createInitialControlState,
+  selectClipCell as selectControlClipCell,
+  selectTrack,
+  setShiftHeld,
+  toggleControlMode,
+} from "../../../overture-next/src/core/controls/control-state";
 import { interpretControl } from "../../../overture-next/src/core/controls/interpret-control";
 import { applyIntent } from "../../../overture-next/src/core/intents/apply-intent";
 import { createOvertureCore } from "../../../overture-next/src/core/core";
@@ -8,29 +14,31 @@ import type { HostCommand } from "../../../overture-next/src/core/types";
 
 describe("Overture Next control-to-intent pipeline", () => {
   test("interprets track rows against the current shift modifier", () => {
-    expect(
-      interpretControl(
-        { kind: "track-row", row: 1 },
-        { shiftHeld: false, controlMode: "track", visibleTrackBank: 0 },
-      ),
-    ).toEqual({ kind: "select-track", trackIndex: 1 });
+    const lowerBankControl = createInitialControlState();
+    const upperBankControl = createInitialControlState();
+    setShiftHeld(upperBankControl, true);
 
-    expect(
-      interpretControl({ kind: "track-row", row: 1 }, { shiftHeld: true, controlMode: "track", visibleTrackBank: 0 }),
-    ).toEqual({ kind: "select-track", trackIndex: 5 });
+    expect(interpretControl({ kind: "track-row", row: 1 }, lowerBankControl)).toEqual({
+      kind: "select-track",
+      trackIndex: 1,
+    });
+
+    expect(interpretControl({ kind: "track-row", row: 1 }, upperBankControl)).toEqual({
+      kind: "select-track",
+      trackIndex: 5,
+    });
   });
 
   test("ignores Track View central pads before domain state changes", () => {
-    expect(
-      interpretControl({ kind: "pad", padIndex: 7 }, { shiftHeld: false, controlMode: "track", visibleTrackBank: 0 }),
-    ).toBeNull();
+    expect(interpretControl({ kind: "pad", padIndex: 7 }, createInitialControlState())).toBeNull();
   });
 
   test("interprets Session View pads as Clip Cell launch without leaking pad indexes", () => {
-    const intent = interpretControl(
-      { kind: "pad", padIndex: 26 },
-      { shiftHeld: false, controlMode: "session", visibleTrackBank: 1 },
-    );
+    const control = createInitialControlState();
+    selectTrack(control, 4);
+    toggleControlMode(control);
+
+    const intent = interpretControl({ kind: "pad", padIndex: 26 }, control);
 
     expect(intent).toEqual({ kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 2 } });
     expect(intent).not.toHaveProperty("padIndex");
