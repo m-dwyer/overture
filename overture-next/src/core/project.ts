@@ -36,7 +36,6 @@ export interface OvertureProject {
   scenes: SceneState[];
   clipCells: ClipCell[];
   clips: Record<ClipId, OvertureClip>;
-  selectedClipCell: ClipCellCoordinate;
   nextClipNumber: number;
 }
 
@@ -46,7 +45,6 @@ export function createDefaultProject(): OvertureProject {
     scenes: createScenes(),
     clipCells: createClipCells(),
     clips: {},
-    selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
     nextClipNumber: 1,
   };
 
@@ -92,11 +90,6 @@ export function createOvertureClip(id: ClipId, coordinate: ClipCellCoordinate): 
   };
 }
 
-export function selectClipCell(project: OvertureProject, coordinate: ClipCellCoordinate): void {
-  getClipCell(project, coordinate);
-  project.selectedClipCell = { ...coordinate };
-}
-
 export function getClipCell(project: OvertureProject, coordinate: ClipCellCoordinate): ClipCell {
   const cell = project.clipCells.find(
     (candidate) => candidate.trackIndex === coordinate.trackIndex && candidate.sceneIndex === coordinate.sceneIndex,
@@ -105,14 +98,14 @@ export function getClipCell(project: OvertureProject, coordinate: ClipCellCoordi
   return cell;
 }
 
-export function getSelectedClip(project: OvertureProject): OvertureClip | null {
-  const cell = getClipCell(project, project.selectedClipCell);
+export function getClipForCell(project: OvertureProject, coordinate: ClipCellCoordinate): OvertureClip | null {
+  const cell = getClipCell(project, coordinate);
   if (!cell.clipId) return null;
   return project.clips[cell.clipId] ?? null;
 }
 
-export function getSelectedSequence(project: OvertureProject): Sequence | null {
-  return getSelectedClip(project)?.sequence ?? null;
+export function getSequenceForCell(project: OvertureProject, coordinate: ClipCellCoordinate): Sequence | null {
+  return getClipForCell(project, coordinate)?.sequence ?? null;
 }
 
 export function visibleTrackRowsForBank(bankIndex: number): TrackIndex[] {

@@ -10,7 +10,7 @@ export function createOvertureView(snapshot: CoreSnapshot): OvertureView {
 }
 
 export function createScreenView(snapshot: CoreSnapshot): ScreenView {
-  if (snapshot.sessionView) {
+  if (snapshot.controlMode === "session") {
     return {
       kind: "session",
       title: "OVERTURE NEXT",
@@ -47,14 +47,14 @@ export function createLedView(snapshot: CoreSnapshot): LedView {
     buttons: [
       ...[0, 1, 2, 3].map((row) => ({ kind: "track-row" as const, row, color: row === lowerTrack ? 120 : 12 })),
       { kind: "play", color: snapshot.playing ? 16 : 4 },
-      { kind: "menu", color: snapshot.sessionView ? 44 : 8 },
+      { kind: "menu", color: snapshot.controlMode === "session" ? 44 : 8 },
     ],
   };
 }
 
 function createClipCellPadLedView(snapshot: CoreSnapshot): LedView["clipCellPads"] {
   return Array.from({ length: SESSION_PAD_COUNT }, (_, padIndex) => {
-    if (!snapshot.sessionView) return { padIndex, state: "off" };
+    if (snapshot.controlMode !== "session") return { padIndex, state: "off" };
 
     const coordinate = clipCellCoordinateForSessionPad(snapshot.visibleTrackBank, padIndex);
     const clipCell = snapshot.clipCells.find(

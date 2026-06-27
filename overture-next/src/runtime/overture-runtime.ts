@@ -48,7 +48,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   function onUnload(): void {
     adapter.commands.execute({
       kind: "track-note-off",
-      trackIndex: core.state.selectedTrackIndex,
+      trackIndex: core.state.control.selectedTrackIndex,
       note: 60,
     });
   }

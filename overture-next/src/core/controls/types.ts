@@ -6,8 +6,22 @@ export type ControlInput =
   | { kind: "step"; step: number }
   | { kind: "pad"; padIndex: number };
 
+export type ControlMode = "track" | "session";
+
+export interface ControlState {
+  selectedTrackIndex: number;
+  visibleTrackBank: number;
+  controlMode: ControlMode;
+  shiftHeld: boolean;
+  selectedStep: number;
+  selectedClipCell: {
+    trackIndex: number;
+    sceneIndex: number;
+  };
+}
+
 export interface ControlInterpretContext {
   shiftHeld: boolean;
-  sessionView: boolean;
+  controlMode: ControlMode;
   visibleTrackBank: number;
 }

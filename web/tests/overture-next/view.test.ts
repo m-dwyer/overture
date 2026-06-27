@@ -7,7 +7,7 @@ describe("Overture Next view projection", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 5,
       visibleTrackBank: 1,
-      sessionView: false,
+      controlMode: "track",
       selectedStep: 1,
       playing: true,
       selectedClipId: "clip-6",
@@ -50,7 +50,7 @@ describe("Overture Next view projection", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 3,
       visibleTrackBank: 0,
-      sessionView: true,
+      controlMode: "session",
       selectedStep: 0,
       playing: false,
       selectedClipId: null,

@@ -5,8 +5,7 @@ import {
   SCENE_COUNT,
   createDefaultProject,
   getClipCell,
-  getSelectedClip,
-  selectClipCell,
+  getClipForCell,
 } from "../../../overture-next/src/core/project";
 import { createDefaultSequence } from "../../../overture-next/src/core/sequence";
 import { TRACK_COUNT, createTracks } from "../../../overture-next/src/core/track";
@@ -38,7 +37,6 @@ describe("Overture Next core", () => {
       sceneIndex: 7,
       clipId: null,
     });
-    expect(project.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
   });
 
   test("applies the default route template to structural tracks", () => {
@@ -68,14 +66,14 @@ describe("Overture Next core", () => {
     expect(core.applyInput({ kind: "shift", held: true })).toBe(true);
     expect(core.applyInput({ kind: "track-row", row: 1 })).toBe(true);
     expect(core.applyInput({ kind: "shift", held: false })).toBe(true);
-    expect(core.state.selectedTrackIndex).toBe(5);
-    expect(core.state.visibleTrackBank).toBe(1);
-    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 5, sceneIndex: 0 });
+    expect(core.state.control.selectedTrackIndex).toBe(5);
+    expect(core.state.control.visibleTrackBank).toBe(1);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 5, sceneIndex: 0 });
 
-    const clip = getSelectedClip(core.state.project);
+    const clip = getClipForCell(core.state.project, core.state.control.selectedClipCell);
     expect(clip?.sequence.steps[1].active).toBe(false);
     expect(core.applyInput({ kind: "step", step: 1 })).toBe(true);
-    expect(core.state.selectedStep).toBe(1);
+    expect(core.state.control.selectedStep).toBe(1);
     expect(clip?.sequence.steps[1].active).toBe(true);
   });
 
@@ -85,13 +83,13 @@ describe("Overture Next core", () => {
 
     core.applyInput({ kind: "shift", held: true });
     core.applyInput({ kind: "track-row", row: 0 });
-    expect(core.state.selectedTrackIndex).toBe(4);
+    expect(core.state.control.selectedTrackIndex).toBe(4);
 
     core.applyInput({ kind: "shift", held: false });
     core.applyInput({ kind: "track-row", row: 0 });
 
-    expect(core.state.selectedTrackIndex).toBe(0);
-    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
+    expect(core.state.control.selectedTrackIndex).toBe(0);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
   });
 
   test("selects clip cells from Session View pads without creating clips", () => {
@@ -100,12 +98,12 @@ describe("Overture Next core", () => {
     const clipCount = Object.keys(core.state.project.clips).length;
 
     core.applyInput({ kind: "menu" });
-    expect(core.state.sessionView).toBe(true);
+    expect(core.state.control.controlMode).toBe("session");
 
     expect(core.applyInput({ kind: "pad", padIndex: 7 })).toBe(true);
 
-    expect(core.state.selectedTrackIndex).toBe(3);
-    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
+    expect(core.state.control.selectedTrackIndex).toBe(3);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
     expect(core.getSnapshot().selectedClipId).toBeNull();
     expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
   });
@@ -119,22 +117,22 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "shift", held: false });
     core.applyInput({ kind: "menu" });
 
-    expect(core.state.visibleTrackBank).toBe(1);
+    expect(core.state.control.visibleTrackBank).toBe(1);
     expect(core.applyInput({ kind: "pad", padIndex: 26 })).toBe(true);
 
-    expect(core.state.selectedTrackIndex).toBe(4);
-    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 4, sceneIndex: 2 });
-    expect(core.state.visibleTrackBank).toBe(1);
+    expect(core.state.control.selectedTrackIndex).toBe(4);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 4, sceneIndex: 2 });
+    expect(core.state.control.visibleTrackBank).toBe(1);
   });
 
   test("ignores central pad presses in Track View for now", () => {
     const core = createOvertureCore();
     core.init();
-    const selectedBefore = core.state.project.selectedClipCell;
+    const selectedBefore = core.state.control.selectedClipCell;
 
     expect(core.applyInput({ kind: "pad", padIndex: 7 })).toBe(false);
 
-    expect(core.state.project.selectedClipCell).toEqual(selectedBefore);
+    expect(core.state.control.selectedClipCell).toEqual(selectedBefore);
   });
 
   test("emits Move note commands when the playhead reaches an active step", () => {
@@ -204,9 +202,7 @@ describe("Overture Next core", () => {
     const project = createDefaultProject();
     const clipCount = Object.keys(project.clips).length;
 
-    selectClipCell(project, { trackIndex: 0, sceneIndex: 7 });
-
-    expect(getSelectedClip(project)).toBeNull();
+    expect(getClipForCell(project, { trackIndex: 0, sceneIndex: 7 })).toBeNull();
     expect(Object.keys(project.clips)).toHaveLength(clipCount);
     expect(getClipCell(project, { trackIndex: 0, sceneIndex: 7 }).clipId).toBeNull();
   });
@@ -225,7 +221,7 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    const clip = getSelectedClip(core.state.project);
+    const clip = getClipForCell(core.state.project, core.state.control.selectedClipCell);
     if (!clip) throw new Error("Expected selected clip");
     clip.sequence.steps[1].note = 72;
     core.applyInput({ kind: "play" });
