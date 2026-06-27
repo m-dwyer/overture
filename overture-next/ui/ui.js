@@ -24,5 +24,4 @@ installSchwungRuntime({
 }, {
   overtureNext: runtime.core,
   overtureRuntime: runtime,
-  overtureUiState: { ...runtime.core.state, activeTrack: runtime.core.state.selectedTrackIndex },
 });

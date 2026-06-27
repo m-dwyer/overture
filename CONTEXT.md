@@ -32,6 +32,10 @@ _Avoid_: Note View, Move Note Mode
 The Overture view where visible Track rows and Scene columns form Clip Cells for selection and launch.
 _Avoid_: Move Session Mode
 
+**Control State**:
+Transient Overture control-surface context such as the current control mode, Track Selection, Selected Clip Cell, selected Step, visible Track Bank, and held modifiers.
+_Avoid_: Project state, Sequence data, render state
+
 **Hardware Input**:
 A Move control event after raw MIDI parsing but before Overture context interpretation.
 _Avoid_: Domain Intent, raw MIDI

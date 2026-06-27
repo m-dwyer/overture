@@ -52,9 +52,10 @@ Layer responsibilities:
   render calls.
 - `overture-next/src/session-grid.ts` owns neutral Session grid geometry shared
   by control interpretation and view-model derivation.
-- `overture-next/src/core/` owns groovebox domain state and decisions: tracks,
-  transport, patterns, control interpretation, domain intents, and domain host
-  commands.
+- `overture-next/src/core/` owns groovebox domain state and decisions: project
+  data, transport, control-surface state, control interpretation, domain
+  intents, and domain host commands. Keep transient control focus and mode in
+  explicit Control State, not in Overture Project data.
 - `overture-next/src/host/` owns Schwung/Move translation. Raw `globalThis`,
   Schwung host function names, Move MIDI bytes, Move CC/note numbers, and
   track-to-Move-channel mapping belong here.
@@ -65,9 +66,10 @@ Layer responsibilities:
   display/LED ports and must not own domain or host policy.
 
 The host adapter converts raw Move MIDI input into typed control input. Core
-interprets control input into domain intents, applies those intents to state,
-and emits domain commands such as `track-note-on` and `track-note-off`; the host
-adapter converts those commands to Move MIDI packets.
+interprets control input against Control State, applies resulting intents to
+project/transport/control state, and emits domain commands such as
+`track-note-on` and `track-note-off`; the host adapter converts those commands
+to Move MIDI packets.
 
 ## Boy Scout Rule
 

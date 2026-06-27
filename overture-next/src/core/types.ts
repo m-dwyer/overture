@@ -1,13 +1,9 @@
-import type { ControlInput } from "./controls/types";
+import type { ControlInput, ControlMode, ControlState } from "./controls/types";
 import type { OvertureProject } from "./project";
 import type { TransportState } from "./transport";
 
 export interface CoreState {
-  selectedTrackIndex: number;
-  visibleTrackBank: number;
-  sessionView: boolean;
-  shiftHeld: boolean;
-  selectedStep: number;
+  control: ControlState;
   transport: TransportState;
   project: OvertureProject;
   lastInjectedStep: number;
@@ -31,7 +27,7 @@ export interface CoreSnapshotClipCell {
 export interface CoreSnapshot {
   selectedTrackIndex: number;
   visibleTrackBank: number;
-  sessionView: boolean;
+  controlMode: ControlMode;
   selectedStep: number;
   playing: boolean;
   selectedClipId: string | null;

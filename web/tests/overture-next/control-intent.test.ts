@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { interpretControl } from "../../../overture-next/src/core/controls/interpret-control";
 import { applyIntent } from "../../../overture-next/src/core/intents/apply-intent";
 import { createOvertureCore } from "../../../overture-next/src/core/core";
-import { getClipCell, getSelectedClip, selectClipCell } from "../../../overture-next/src/core/project";
+import { getClipCell, getClipForCell } from "../../../overture-next/src/core/project";
 import type { HostCommand } from "../../../overture-next/src/core/types";
 
 describe("Overture Next control-to-intent pipeline", () => {
@@ -10,25 +10,25 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       interpretControl(
         { kind: "track-row", row: 1 },
-        { shiftHeld: false, sessionView: false, visibleTrackBank: 0 },
+        { shiftHeld: false, controlMode: "track", visibleTrackBank: 0 },
       ),
     ).toEqual({ kind: "select-track", trackIndex: 1 });
 
     expect(
-      interpretControl({ kind: "track-row", row: 1 }, { shiftHeld: true, sessionView: false, visibleTrackBank: 0 }),
+      interpretControl({ kind: "track-row", row: 1 }, { shiftHeld: true, controlMode: "track", visibleTrackBank: 0 }),
     ).toEqual({ kind: "select-track", trackIndex: 5 });
   });
 
   test("ignores Track View central pads before domain state changes", () => {
     expect(
-      interpretControl({ kind: "pad", padIndex: 7 }, { shiftHeld: false, sessionView: false, visibleTrackBank: 0 }),
+      interpretControl({ kind: "pad", padIndex: 7 }, { shiftHeld: false, controlMode: "track", visibleTrackBank: 0 }),
     ).toBeNull();
   });
 
   test("interprets Session View pads as clip-cell selection without leaking pad indexes", () => {
     const intent = interpretControl(
       { kind: "pad", padIndex: 26 },
-      { shiftHeld: false, sessionView: true, visibleTrackBank: 1 },
+      { shiftHeld: false, controlMode: "session", visibleTrackBank: 1 },
     );
 
     expect(intent).toEqual({ kind: "select-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 2 } });
@@ -44,8 +44,8 @@ describe("Overture Next control-to-intent pipeline", () => {
       applyIntent({ kind: "select-clip-cell", coordinate: { trackIndex: 3, sceneIndex: 7 } }, core.state, hostCommands),
     ).toBe(true);
 
-    expect(core.state.selectedTrackIndex).toBe(3);
-    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
+    expect(core.state.control.selectedTrackIndex).toBe(3);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 3, sceneIndex: 7 });
     expect(Object.keys(core.state.project.clips)).toHaveLength(clipCount);
     expect(hostCommands).toEqual([]);
   });
@@ -67,20 +67,20 @@ describe("Overture Next control-to-intent pipeline", () => {
     const core = createOvertureCore();
     const hostCommands: HostCommand[] = [];
 
-    selectClipCell(core.state.project, { trackIndex: 0, sceneIndex: 7 });
+    core.state.control.selectedClipCell = { trackIndex: 0, sceneIndex: 7 };
 
     expect(applyIntent({ kind: "select-track", trackIndex: 5 }, core.state, hostCommands)).toBe(true);
 
-    expect(core.state.selectedTrackIndex).toBe(5);
-    expect(core.state.visibleTrackBank).toBe(1);
-    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 5, sceneIndex: 7 });
+    expect(core.state.control.selectedTrackIndex).toBe(5);
+    expect(core.state.control.visibleTrackBank).toBe(1);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 5, sceneIndex: 7 });
     expect(hostCommands).toEqual([]);
   });
 
   test("applies step toggles only to the selected clip sequence", () => {
     const core = createOvertureCore();
     const hostCommands: HostCommand[] = [];
-    const selectedClip = getSelectedClip(core.state.project);
+    const selectedClip = getClipForCell(core.state.project, core.state.control.selectedClipCell);
     const otherClipId = getClipCell(core.state.project, { trackIndex: 1, sceneIndex: 0 }).clipId;
     if (!selectedClip || !otherClipId) throw new Error("Expected default clips");
     const otherClip = core.state.project.clips[otherClipId];
@@ -90,7 +90,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(applyIntent({ kind: "toggle-step", stepIndex: 1 }, core.state, hostCommands)).toBe(true);
 
-    expect(core.state.selectedStep).toBe(1);
+    expect(core.state.control.selectedStep).toBe(1);
     expect(selectedClip.sequence.steps[1].active).toBe(true);
     expect(otherClip.sequence.steps[1].active).toBe(false);
     expect(hostCommands).toEqual([]);
@@ -102,9 +102,9 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(applyIntent({ kind: "set-shift-held", held: true }, core.state, hostCommands)).toBe(true);
 
-    expect(core.state.shiftHeld).toBe(true);
-    expect(core.state.selectedTrackIndex).toBe(0);
-    expect(core.state.project.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
+    expect(core.state.control.shiftHeld).toBe(true);
+    expect(core.state.control.selectedTrackIndex).toBe(0);
+    expect(core.state.control.selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
     expect(hostCommands).toEqual([]);
   });
 
