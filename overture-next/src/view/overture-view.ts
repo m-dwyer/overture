@@ -37,7 +37,6 @@ export function createScreenView(snapshot: CoreSnapshot): ScreenView {
 }
 
 export function createLedView(snapshot: CoreSnapshot): LedView {
-  const lowerTrack = snapshot.selectedTrackIndex % 4;
   return {
     steps: snapshot.steps.map((step) => ({
       step: step.index,
@@ -45,11 +44,16 @@ export function createLedView(snapshot: CoreSnapshot): LedView {
     })),
     clipCellPads: createClipCellPadLedView(snapshot),
     buttons: [
-      ...[0, 1, 2, 3].map((row) => ({ kind: "track-row" as const, row, color: row === lowerTrack ? 120 : 12 })),
+      ...[0, 1, 2, 3].map((row) => ({ kind: "track-row" as const, row, state: trackRowLedState(snapshot, row) })),
       { kind: "play", color: snapshot.playing ? 16 : 4 },
       { kind: "menu", color: snapshot.controlMode === "session" ? 44 : 8 },
     ],
   };
+}
+
+function trackRowLedState(snapshot: CoreSnapshot, row: number): "selected" | "hinted" | "available" {
+  if (row === snapshot.selectedTrackIndex % 4) return "selected";
+  return snapshot.shiftHeld ? "hinted" : "available";
 }
 
 function createClipCellPadLedView(snapshot: CoreSnapshot): LedView["clipCellPads"] {

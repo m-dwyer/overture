@@ -15,12 +15,24 @@ describe("Overture Next LED rendering", () => {
         { padIndex: 8, state: "empty" },
         { padIndex: 0, state: "off" },
       ],
-      buttons: [],
+      buttons: [
+        { kind: "track-row", row: 0, state: "selected" },
+        { kind: "track-row", row: 1, state: "hinted" },
+        { kind: "track-row", row: 2, state: "available" },
+      ],
     };
 
     renderLeds(view, leds);
 
-    expect(calls).toEqual(["pad:7:120", "pad:24:48", "pad:8:4", "pad:0:0"]);
+    expect(calls).toEqual([
+      "pad:7:120",
+      "pad:24:48",
+      "pad:8:4",
+      "pad:0:0",
+      "track-row:0:120",
+      "track-row:1:44",
+      "track-row:2:12",
+    ]);
   });
 });
 

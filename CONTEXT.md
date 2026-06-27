@@ -44,6 +44,12 @@ _Avoid_: Domain Intent, raw MIDI
 An Overture intent interpreted from Hardware Input in the current Overture context.
 _Avoid_: Hardware Input, Host Command, raw MIDI
 
+**Surface Hint**:
+A visual preview on the control surface that shows possible Domain Intents for
+the current view, selection, and held modifiers before the complete Hardware
+Input combination is made.
+_Avoid_: Render state, Host Command
+
 **Host Command**:
 An outbound instruction from Overture core for the host adapter to execute.
 _Avoid_: Domain Intent, Hardware Input
@@ -269,6 +275,8 @@ _Avoid_: Immediate launch when transport is running
 - **Overture Session View** shows the current **Track Bank** as rows, **Overture Scenes** as columns, and **Clip Cells** as pad positions.
 - **Track Bank** changes which **Tracks** are visible as rows; **Overture Scene** columns remain stable.
 - **Hardware Input** is interpreted into **Domain Intent** using the current Overture context.
+- Held modifiers and view-local context may produce **Surface Hints** before a
+  complete **Hardware Input** combination becomes a **Domain Intent**.
 - Track buttons perform **Track Selection** within the current **Track Bank**.
 - Pads perform **Clip Cell** selection in **Overture Session View**.
 - Selecting a **Clip Cell** also updates **Track Selection** to that cell's **Track**.
@@ -350,6 +358,9 @@ _Avoid_: Immediate launch when transport is running
 
 > **Dev:** "Does a pad press always mean the same thing?"
 > **Domain expert:** "No. A pad press is **Hardware Input**. Overture interprets it into **Domain Intent** based on the current view and selection."
+
+> **Dev:** "When Shift is held, are the lit pads or buttons commands?"
+> **Domain expert:** "No. They are **Surface Hints** for possible **Domain Intents** until the performer completes a Hardware Input combination."
 
 > **Dev:** "How many scenes should the first Overture model support?"
 > **Domain expert:** "Start with eight **Overture Scenes** to match the visible columns. Add **Scene Pages** later if needed."

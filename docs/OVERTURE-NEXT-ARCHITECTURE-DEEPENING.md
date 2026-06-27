@@ -66,7 +66,7 @@ Expected outcome:
 
 ## Phase 4: Surface Hints
 
-Status: next
+Status: complete
 
 Name and model the visual hints shown while modifiers are held.
 
@@ -79,7 +79,7 @@ Expected outcome:
 
 ## Phase 5: Playback Scheduling
 
-Status: planned
+Status: next
 
 Deepen playback so it owns Playing Clip, Queued Clip, Launch Boundary, note
 emission, and stop policy.

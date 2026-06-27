@@ -36,7 +36,7 @@ export interface ClipCellPadLedView {
 }
 
 export type ButtonLedView =
-  | { kind: "track-row"; row: number; color: number }
+  | { kind: "track-row"; row: number; state: "selected" | "hinted" | "available" }
   | { kind: "play"; color: number }
   | { kind: "menu"; color: number };
 
