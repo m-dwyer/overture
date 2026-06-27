@@ -2,17 +2,21 @@
 # Prepare a deterministic pull request body for gh pr create.
 #
 # Usage:
-#   scripts/prepare_pr.sh [--base main] [--title "docs: update workflow"] [--output .pr-body.md]
+#   scripts/prepare_pr.sh [--base main] [--title "docs: update workflow"] [--issue 42] [--output .pr-body.md]
 #   gh pr create --base main --title "docs: update workflow" --body-file .pr-body.md
+#
+# The issue number is auto-detected from the branch name (e.g. feat/42-slug).
+# Pass --issue to override, or --issue 0 to omit the closing keyword.
 
 set -euo pipefail
 
 BASE_REF="main"
 OUT_FILE="${PR_BODY_FILE:-.pr-body.md}"
 PR_TITLE=""
+ISSUE_NUMBER=""
 
 usage() {
-    sed -n '2,7p' "$0" >&2
+    sed -n '2,9p' "$0" >&2
 }
 
 while [ $# -gt 0 ]; do
@@ -31,6 +35,14 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             PR_TITLE="$2"
+            shift 2
+            ;;
+        --issue|-i)
+            if [ $# -lt 2 ]; then
+                echo "error: --issue requires a value" >&2
+                exit 1
+            fi
+            ISSUE_NUMBER="$2"
             shift 2
             ;;
         --output|-o)
@@ -76,6 +88,17 @@ if [ -z "$PR_TITLE" ]; then
 fi
 COMMIT_COUNT="$(git rev-list --count "$MERGE_BASE"..HEAD)"
 
+# Auto-detect the issue number from a <type>/<number>-<slug> branch when not given.
+if [ -z "$ISSUE_NUMBER" ]; then
+    ISSUE_NUMBER="$(printf '%s' "$BRANCH_NAME" | sed -nE 's#^[^/]+/0*([1-9][0-9]*)[-_].*#\1#p')"
+fi
+if [ "$ISSUE_NUMBER" = "0" ] || [ -z "$ISSUE_NUMBER" ]; then
+    RELATED_ISSUE="<!-- No issue detected from the branch. Add \`Closes #<n>\` to auto-close on merge. -->
+Closes #"
+else
+    RELATED_ISSUE="Closes #$ISSUE_NUMBER"
+fi
+
 if [ "$COMMIT_COUNT" -gt 0 ]; then
     COMMITS="$(git log --no-merges --format='- %s' "$MERGE_BASE"..HEAD)"
 else
@@ -113,6 +136,10 @@ cat > "$OUT_FILE" <<EOF
 ## Summary
 
 -
+
+## Related issue
+
+$RELATED_ISSUE
 
 ## Verification
 
