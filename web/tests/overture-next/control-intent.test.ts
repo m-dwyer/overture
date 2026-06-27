@@ -123,6 +123,51 @@ describe("Overture Next control-to-intent pipeline", () => {
     ]);
   });
 
+  test("stopping transport emits note-off for Schwung-routed playing clips", () => {
+    const state = createTestCoreState();
+    const hostCommands: HostCommand[] = [];
+
+    expect(
+      applyIntentAndCollect(
+        { kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 0 } },
+        state,
+        hostCommands,
+      ),
+    ).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+
+    expect(hostCommands).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
+    ]);
+  });
+
+  test("launching an empty Schwung Clip Cell stops that Track via its route", () => {
+    const state = createTestCoreState();
+    const hostCommands: HostCommand[] = [];
+    state.transport.playhead = 4;
+
+    expect(
+      applyIntentAndCollect(
+        { kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 0 } },
+        state,
+        hostCommands,
+      ),
+    ).toBe(true);
+    expect(
+      applyIntentAndCollect(
+        { kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 7 } },
+        state,
+        hostCommands,
+      ),
+    ).toBe(true);
+
+    expect(state.playback.tracks[4].playingClipId).toBeNull();
+    expect(hostCommands).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
+    ]);
+  });
+
   test("returns emitted host commands as a Domain Intent transaction", () => {
     const state = createTestCoreState();
 

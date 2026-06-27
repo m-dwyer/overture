@@ -37,9 +37,38 @@ describe("Overture Next runtime", () => {
 
     expect(runtime.core.getSnapshot().playing).toBe(true);
   });
+
+  test("unload emits route-safe note-off commands for active Schwung playback", () => {
+    const frames: string[][] = [];
+    const frame: string[] = [];
+    const commandLog: HostCommand[] = [];
+    const adapter = createRuntimeTestAdapter(frames, frame, commandLog);
+    const runtime = createOvertureRuntime(adapter);
+    runtime.init();
+
+    runtime.core.applyInput({ kind: "shift", held: true });
+    runtime.core.applyInput({ kind: "track-row", row: 0 });
+    runtime.core.applyInput({ kind: "shift", held: false });
+    runtime.core.applyInput({ kind: "menu" });
+    runtime.core.applyInput({ kind: "pad", padIndex: 24 });
+    runtime.core.applyInput({ kind: "menu" });
+    runtime.core.applyInput({ kind: "play" });
+    for (let i = 0; i < 48; i++) runtime.tick();
+    commandLog.length = 0;
+
+    runtime.onUnload();
+
+    expect(commandLog).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
+    ]);
+  });
 });
 
-function createRuntimeTestAdapter(frames: string[][], frame: string[]): OvertureHostAdapter {
+function createRuntimeTestAdapter(
+  frames: string[][],
+  frame: string[],
+  commandLog: HostCommand[] = [],
+): OvertureHostAdapter {
   const runtime: RuntimePort = {
     publishState() {},
   };
@@ -83,7 +112,9 @@ function createRuntimeTestAdapter(frames: string[][], frame: string[]): Overture
     sendSchwungMessage() {},
   };
   const commands = {
-    execute(_command: HostCommand) {},
+    execute(command: HostCommand) {
+      commandLog.push(command);
+    },
   };
   return { runtime, display, leds, input, midi, commands };
 }

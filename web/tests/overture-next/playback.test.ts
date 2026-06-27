@@ -3,6 +3,7 @@ import {
   createPlaybackState,
   injectPlaybackStep,
   launchClipCell,
+  stopPlayingClip,
   stopPlayingClips,
 } from "../../../overture-next/src/core/playback";
 import { createDefaultProject } from "../../../overture-next/src/core/project";
@@ -38,5 +39,19 @@ describe("Overture Next playback", () => {
     expect(stopPlayingClips(project, playback, transport)).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 64 },
     ]);
+  });
+
+  test("stops one Schwung-routed playing clip and clears that track", () => {
+    const project = createDefaultProject();
+    const playback = createPlaybackState();
+    const transport = createTransport();
+
+    launchClipCell(project, playback, { trackIndex: 4, sceneIndex: 0 });
+    transport.playhead = 4;
+
+    expect(stopPlayingClip(project, playback, transport, 4)).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
+    ]);
+    expect(playback.tracks[4].playingClipId).toBeNull();
   });
 });
