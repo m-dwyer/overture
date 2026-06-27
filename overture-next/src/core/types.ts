@@ -22,6 +22,12 @@ export interface CoreSnapshotStep {
   playhead: boolean;
 }
 
+export interface CoreSnapshotClipCell {
+  trackIndex: number;
+  sceneIndex: number;
+  clipId: string | null;
+}
+
 export interface CoreSnapshot {
   selectedTrackIndex: number;
   visibleTrackBank: number;
@@ -33,6 +39,7 @@ export interface CoreSnapshot {
     trackIndex: number;
     sceneIndex: number;
   };
+  clipCells: CoreSnapshotClipCell[];
   steps: CoreSnapshotStep[];
 }
 

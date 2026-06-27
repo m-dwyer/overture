@@ -19,6 +19,7 @@ export interface DisplayPort {
 
 export interface LedPort {
   setStepLed(step: number, color: number): void;
+  setPadLed(padIndex: number, color: number): void;
   setTrackRowLed(row: number, color: number): void;
   setPlayLed(color: number): void;
   setMenuLed(color: number): void;

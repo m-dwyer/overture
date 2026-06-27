@@ -30,6 +30,11 @@ export interface StepLedView {
   color: number;
 }
 
+export interface ClipCellPadLedView {
+  padIndex: number;
+  state: "selected" | "occupied" | "empty" | "off";
+}
+
 export type ButtonLedView =
   | { kind: "track-row"; row: number; color: number }
   | { kind: "play"; color: number }
@@ -37,6 +42,7 @@ export type ButtonLedView =
 
 export interface LedView {
   steps: StepLedView[];
+  clipCellPads: ClipCellPadLedView[];
   buttons: ButtonLedView[];
 }
 

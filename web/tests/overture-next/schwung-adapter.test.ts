@@ -70,12 +70,14 @@ describe("Overture Next Schwung adapter", () => {
     const adapter = createSchwungAdapter(host);
 
     adapter.leds.setStepLed(2, 48);
+    adapter.leds.setPadLed(3, 120);
     adapter.leds.setTrackRowLed(1, 120);
     adapter.leds.setPlayLed(16);
     adapter.leds.setMenuLed(44);
 
     expect(calls).toEqual([
       ["setLED", 18, 48],
+      ["setLED", 71, 120],
       ["setButtonLED", 42, 120, true],
       ["setButtonLED", 85, 16, true],
       ["setButtonLED", 50, 44, true],

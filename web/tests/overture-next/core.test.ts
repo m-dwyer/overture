@@ -168,6 +168,12 @@ describe("Overture Next core", () => {
       { index: 4, active: true, note: 64, velocity: 100, selected: false, playhead: false },
     ]);
     expect(snapshot.selectedTrackIndex).toBe(0);
+    expect(snapshot.clipCells.find((cell) => cell.trackIndex === 0 && cell.sceneIndex === 0)).toMatchObject({
+      clipId: "clip-1",
+    });
+    expect(snapshot.clipCells.find((cell) => cell.trackIndex === 0 && cell.sceneIndex === 7)).toMatchObject({
+      clipId: null,
+    });
   });
 
   test("creates a default sequence with per-step note data", () => {

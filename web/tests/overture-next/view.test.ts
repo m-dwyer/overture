@@ -12,6 +12,7 @@ describe("Overture Next view projection", () => {
       playing: true,
       selectedClipId: "clip-6",
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
         { index: 0, active: true, note: 60, velocity: 100, selected: false, playhead: false },
         { index: 1, active: false, note: 61, velocity: 100, selected: true, playhead: true },
@@ -41,9 +42,11 @@ describe("Overture Next view projection", () => {
     ]);
     expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 1, color: 120 });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", color: 8 });
+    expect(view.leds.clipCellPads).toHaveLength(32);
+    expect(view.leds.clipCellPads.every((pad) => pad.state === "off")).toBe(true);
   });
 
-  test("derives a Session View screen from selected Clip Cell state", () => {
+  test("derives a Session View screen and pad LEDs from selected Clip Cell state", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 3,
       visibleTrackBank: 0,
@@ -52,6 +55,10 @@ describe("Overture Next view projection", () => {
       playing: false,
       selectedClipId: null,
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      clipCells: [
+        { trackIndex: 0, sceneIndex: 0, clipId: "clip-1" },
+        { trackIndex: 3, sceneIndex: 7, clipId: null },
+      ],
       steps: [
         { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
       ],
@@ -67,6 +74,9 @@ describe("Overture Next view projection", () => {
       selectedClipId: null,
       playing: false,
     });
+    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 24, state: "occupied" });
+    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 7, state: "selected" });
+    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 8, state: "empty" });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", color: 44 });
   });
 });
