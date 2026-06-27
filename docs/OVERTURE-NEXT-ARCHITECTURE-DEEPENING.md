@@ -79,7 +79,7 @@ Expected outcome:
 
 ## Phase 5: Playback Scheduling
 
-Status: next
+Status: complete
 
 Deepen playback so it owns Playing Clip, Queued Clip, Launch Boundary, note
 emission, and stop policy.
@@ -94,7 +94,7 @@ Expected outcome:
 
 ## Phase 6: Snapshot-Only External Core Interface
 
-Status: planned
+Status: next
 
 Stop leaking mutable Core State through runtime and host seams.
 

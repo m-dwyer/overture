@@ -2,7 +2,7 @@ import { createInitialControlState } from "./controls/control-state";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
-import { createPlaybackState, getPlayingClip } from "./playback";
+import { createPlaybackState, injectPlaybackStep } from "./playback";
 import { createDefaultProject, getClipCell, getSequenceForCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
 import { advanceTransport, createTransport } from "./transport";
@@ -24,7 +24,8 @@ export function createOvertureCore(): OvertureCore {
   function tick(): void {
     const nextStep = advanceTransport(state.transport, DEFAULT_STEP_COUNT);
     if (nextStep !== null) {
-      injectPlaybackStep(nextStep);
+      state.lastInjectedStep = nextStep;
+      hostCommands.push(...injectPlaybackStep(state.project, state.playback, nextStep));
     }
   }
 
@@ -34,25 +35,6 @@ export function createOvertureCore(): OvertureCore {
     const transaction = applyIntent(intent, state);
     if (transaction.applied) hostCommands.push(...transaction.hostCommands);
     return transaction.applied;
-  }
-
-  function injectPlaybackStep(step: number): void {
-    state.lastInjectedStep = step;
-    for (const trackPlayback of state.playback.tracks) {
-      const clip = getPlayingClip(state.project, trackPlayback);
-      if (!clip) continue;
-      const sequenceStep = getSequenceStep(clip.sequence, step % clip.sequence.length);
-      if (!sequenceStep?.active) continue;
-      hostCommands.push(
-        {
-          kind: "track-note-on",
-          trackIndex: trackPlayback.trackIndex,
-          note: sequenceStep.note,
-          velocity: sequenceStep.velocity,
-        },
-        { kind: "track-note-off", trackIndex: trackPlayback.trackIndex, note: sequenceStep.note },
-      );
-    }
   }
 
   function getSnapshot(): CoreSnapshot {

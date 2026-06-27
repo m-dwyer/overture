@@ -5,9 +5,9 @@ import {
   setShiftHeld,
   toggleControlMode,
 } from "../controls/control-state";
-import { getPlayingClip, launchClipCell } from "../playback";
+import { launchClipCell, stopPlayingClips } from "../playback";
 import { getClipCell, getSequenceForCell } from "../project";
-import { getSequenceStep, toggleSequenceStep } from "../sequence";
+import { toggleSequenceStep } from "../sequence";
 import { getTrack } from "../track";
 import { toggleTransport } from "../transport";
 import type { CoreState, HostCommand } from "../types";
@@ -21,7 +21,7 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
   }
   if (intent.kind === "toggle-transport") {
     const playing = toggleTransport(state.transport);
-    return applied(playing ? [] : stopPlayingClips(state));
+    return applied(playing ? [] : stopPlayingClips(state.project, state.playback, state.transport));
   }
   if (intent.kind === "toggle-control-mode") {
     toggleControlMode(control);
@@ -60,17 +60,4 @@ function selectValidatedClipCell(state: CoreState, coordinate: { trackIndex: num
   getTrack(state.project.tracks, coordinate.trackIndex);
   getClipCell(state.project, coordinate);
   selectClipCell(state.control, coordinate);
-}
-
-function stopPlayingClips(state: CoreState): HostCommand[] {
-  const hostCommands: HostCommand[] = [];
-  for (const trackPlayback of state.playback.tracks) {
-    const clip = getPlayingClip(state.project, trackPlayback);
-    if (!clip) continue;
-    const step = getSequenceStep(clip.sequence, state.transport.playhead % clip.sequence.length);
-    if (step?.active) {
-      hostCommands.push({ kind: "track-note-off", trackIndex: trackPlayback.trackIndex, note: step.note });
-    }
-  }
-  return hostCommands;
 }

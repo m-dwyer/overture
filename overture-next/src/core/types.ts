@@ -1,4 +1,5 @@
 import type { ControlInput, ControlMode, ControlState } from "./controls/types";
+import type { HostCommand } from "./host-commands";
 import type { PlaybackState } from "./playback";
 import type { OvertureProject } from "./project";
 import type { TransportState } from "./transport";
@@ -42,9 +43,7 @@ export interface CoreSnapshot {
   steps: CoreSnapshotStep[];
 }
 
-export type HostCommand =
-  | { kind: "track-note-on"; trackIndex: number; note: number; velocity: number }
-  | { kind: "track-note-off"; trackIndex: number; note: number };
+export type { HostCommand } from "./host-commands";
 
 export interface OvertureCore {
   readonly state: CoreState;
