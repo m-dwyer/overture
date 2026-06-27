@@ -50,6 +50,12 @@ link is real data):
 gh issue develop <number> --checkout
 ```
 
+Work one issue at a time. Do not stack a dependent issue branch on an unmerged
+issue branch unless the user explicitly asks for stacked work. For normal
+milestone execution, finish the current issue, prepare its PR, merge it, update
+`main`, then start the next issue from `main`. This keeps the branch graph simple
+and avoids carrying unrelated commits through follow-up work.
+
 Then commit with Conventional Commit subjects. When preparing the PR, pass the
 same number to the `pr` skill (`prepare_pr.sh --issue <number>`) so the body gets
 `Closes #<number>`, and a squash-merge closes the issue and advances the milestone.
