@@ -2,7 +2,7 @@ import { createInitialControlState } from "./control-state";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
-import { createPlaybackState, injectPlaybackStep } from "./playback";
+import { createPlaybackState, injectPlaybackStep, stopPlayingClips } from "./playback";
 import { createDefaultProject, getClipCell, getSequenceForCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
 import { advanceTransport, createTransport } from "./transport";
@@ -84,5 +84,9 @@ export function createOvertureCore(): OvertureCore {
     return hostCommands.splice(0);
   }
 
-  return { init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands };
+  function stopPlayback(): HostCommand[] {
+    return stopPlayingClips(state.project, state.playback, state.transport);
+  }
+
+  return { init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands, stopPlayback };
 }

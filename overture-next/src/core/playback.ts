@@ -43,6 +43,19 @@ export function launchClipCell(
   return track.playingClipId;
 }
 
+export function stopPlayingClip(
+  project: OvertureProject,
+  playback: PlaybackState,
+  transport: TransportState,
+  trackIndex: number,
+): HostCommand[] {
+  const trackPlayback = getTrackPlayback(playback, trackIndex);
+  const hostCommands = stopTrackPlayback(project, trackPlayback, transport);
+  trackPlayback.playingClipId = null;
+  trackPlayback.queuedClipId = null;
+  return hostCommands;
+}
+
 export function getPlayingClip(project: OvertureProject, track: TrackPlaybackState): OvertureClip | null {
   if (!track.playingClipId) return null;
   return project.clips[track.playingClipId] ?? null;
@@ -77,17 +90,26 @@ export function stopPlayingClips(
 ): HostCommand[] {
   const hostCommands: HostCommand[] = [];
   for (const trackPlayback of playback.tracks) {
-    const clip = getPlayingClip(project, trackPlayback);
-    if (!clip) continue;
-    const step = getSequenceStep(clip.sequence, transport.playhead % clip.sequence.length);
-    if (step?.active) {
-      hostCommands.push({
-        kind: "track-note-off",
-        route: getTrack(project.tracks, trackPlayback.trackIndex).route,
-        trackIndex: trackPlayback.trackIndex,
-        note: step.note,
-      });
-    }
+    hostCommands.push(...stopTrackPlayback(project, trackPlayback, transport));
   }
   return hostCommands;
+}
+
+function stopTrackPlayback(
+  project: OvertureProject,
+  trackPlayback: TrackPlaybackState,
+  transport: TransportState,
+): HostCommand[] {
+  const clip = getPlayingClip(project, trackPlayback);
+  if (!clip) return [];
+  const step = getSequenceStep(clip.sequence, transport.playhead % clip.sequence.length);
+  if (!step?.active) return [];
+  return [
+    {
+      kind: "track-note-off",
+      route: getTrack(project.tracks, trackPlayback.trackIndex).route,
+      trackIndex: trackPlayback.trackIndex,
+      note: step.note,
+    },
+  ];
 }

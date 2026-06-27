@@ -46,13 +46,8 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   }
 
   function onUnload(): void {
-    const snapshot = core.getSnapshot();
-    adapter.commands.execute({
-      kind: "track-note-off",
-      route: snapshot.selectedTrackRoute,
-      trackIndex: snapshot.selectedTrackIndex,
-      note: 60,
-    });
+    drainCommands();
+    for (const command of core.stopPlayback()) adapter.commands.execute(command);
   }
 
   function isBootSplashVisible(): boolean {

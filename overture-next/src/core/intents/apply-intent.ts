@@ -5,7 +5,7 @@ import {
   setShiftHeld,
   toggleControlMode,
 } from "../control-state";
-import { launchClipCell, stopPlayingClips } from "../playback";
+import { launchClipCell, stopPlayingClip, stopPlayingClips } from "../playback";
 import { getClipCell, getSequenceForCell } from "../project";
 import { toggleSequenceStep } from "../sequence";
 import { getTrack } from "../track";
@@ -46,8 +46,12 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
   }
   if (intent.kind === "launch-clip-cell") {
     selectValidatedClipCell(state, intent.coordinate);
+    const cell = getClipCell(state.project, intent.coordinate);
+    const hostCommands = cell.clipId
+      ? []
+      : stopPlayingClip(state.project, state.playback, state.transport, intent.coordinate.trackIndex);
     launchClipCell(state.project, state.playback, intent.coordinate);
-    return applied();
+    return applied(hostCommands);
   }
   return { applied: false, hostCommands: [] };
 }
