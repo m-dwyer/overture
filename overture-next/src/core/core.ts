@@ -62,6 +62,7 @@ export function createOvertureCore(): OvertureCore {
       selectedTrackIndex: state.control.selectedTrackIndex,
       visibleTrackBank: state.control.visibleTrackBank,
       controlMode: state.control.controlMode,
+      shiftHeld: state.control.shiftHeld,
       selectedStep: state.control.selectedStep,
       playing: state.transport.playing,
       selectedClipId: selectedCell.clipId,

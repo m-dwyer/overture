@@ -30,6 +30,7 @@ export interface CoreSnapshot {
   selectedTrackIndex: number;
   visibleTrackBank: number;
   controlMode: ControlMode;
+  shiftHeld: boolean;
   selectedStep: number;
   playing: boolean;
   selectedClipId: string | null;
