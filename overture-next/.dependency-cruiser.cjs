@@ -120,6 +120,36 @@ module.exports = {
       to: { path: "^src/core/playback/internal/" },
     },
     {
+      name: "playback-public-api-only",
+      severity: "error",
+      comment: "Code outside Playback imports the Playback module entry point, not its implementation files.",
+      from: { pathNot: "^src/core/playback/" },
+      to: { path: "^src/core/playback/(?!index\\.ts$)" },
+    },
+    {
+      name: "playback-does-not-own-transport",
+      severity: "error",
+      comment:
+        "Transport owns TransportState mutation; playback consumes read-only timing data and must not import transport behavior.",
+      from: { path: "^src/core/playback/" },
+      to: { path: "^src/core/transport\\.ts$" },
+    },
+    {
+      name: "project-internals-stay-private",
+      severity: "error",
+      comment:
+        "Project exposes construction and cell lookup through src/core/project; low-level project structure helpers stay module-private.",
+      from: { pathNot: "^src/core/project/" },
+      to: { path: "^src/core/project/internal/" },
+    },
+    {
+      name: "project-public-api-only",
+      severity: "error",
+      comment: "Code outside Project imports the Project module entry point, not its implementation files.",
+      from: { pathNot: "^src/core/project/" },
+      to: { path: "^src/core/project/(?!index\\.ts$)" },
+    },
+    {
       name: "view-stays-on-snapshot-contracts",
       severity: "error",
       comment:

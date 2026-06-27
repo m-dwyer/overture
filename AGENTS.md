@@ -74,6 +74,21 @@ project/transport/control state, and emits domain commands such as
 `track-note-on` and `track-note-off`; the host adapter converts those commands
 to Move MIDI packets.
 
+State owners should be the only modules that mutate their state shape:
+`transport.ts` mutates `TransportState`; `playback/` mutates `PlaybackState`;
+`control-state.ts` mutates `ControlState`; and `project/` mutates
+`OvertureProject`. Cross-state workflows belong in orchestration code that calls
+the owning modules' public verbs. `overture-next` enforces adopted ownership
+boundaries with dependency-cruiser import rules and the local ESLint
+`overture/state-ownership` rule.
+
+Overture package tests live under `overture-next/tests/`, grouped by layer or
+module such as `tests/core/`, `tests/runtime/`, `tests/render/`, `tests/host/`,
+and `tests/view/`. Keep unit tests aimed at public module entry points and use
+package integration tests for cross-module core/runtime workflows. `web/tests/`
+is for the browser emulator and web host harness, not Overture package unit
+coverage.
+
 ## Boy Scout Rule
 
 Leave touched code more aligned with the target architecture than you found it.
@@ -92,6 +107,13 @@ regardless. When you touch an Overture module:
 
 If a cleanup grows beyond the code you are touching, split it into its own
 `refactor:` commit rather than expanding the current diff.
+
+For a module with a sanctioned public entry point, add concise TSDoc to exported
+domain verbs or boundary contracts when the signature alone does not capture
+important semantics, invariants, side effects, or failure cases. Do not document
+internal helpers just because they are exported across files inside `internal/`.
+When a module needs state from another owner, pass a narrow read-only contract
+instead of the mutable state object whenever practical.
 
 ## Dependency Ratchet
 

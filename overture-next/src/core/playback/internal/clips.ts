@@ -3,8 +3,8 @@ import type { OvertureProject, ClipCellCoordinate, ClipId } from "../../project"
 import { getClipCell } from "../../project";
 import { getSequenceStep } from "../../sequence";
 import { getTrack } from "../../track";
-import type { TransportState } from "../../transport";
 import type { PlaybackState, TrackPlaybackState } from "../state";
+import type { PlaybackClock } from "../types";
 import { drainPendingNoteOffsForTrack } from "./notes";
 import { getPlayingClip } from "./playing-clips";
 import { getTrackPlayback } from "./tracks";
@@ -29,11 +29,11 @@ export function clearPlayingClip(trackPlayback: TrackPlaybackState): void {
 export function stopPlayingClipOnTrack(
   project: OvertureProject,
   playback: PlaybackState,
-  transport: TransportState,
+  clock: Readonly<PlaybackClock>,
   trackIndex: number,
 ): HostCommand[] {
   const trackPlayback = getTrackPlayback(playback, trackIndex);
-  const hostCommands = stopTrackPlayback(project, playback, trackPlayback, transport);
+  const hostCommands = stopTrackPlayback(project, playback, trackPlayback, clock);
   clearPlayingClip(trackPlayback);
   return hostCommands;
 }
@@ -41,11 +41,11 @@ export function stopPlayingClipOnTrack(
 export function stopAllPlayingClips(
   project: OvertureProject,
   playback: PlaybackState,
-  transport: TransportState,
+  clock: Readonly<PlaybackClock>,
 ): HostCommand[] {
   const hostCommands: HostCommand[] = [];
   for (const trackPlayback of playback.tracks) {
-    hostCommands.push(...stopTrackPlayback(project, playback, trackPlayback, transport));
+    hostCommands.push(...stopTrackPlayback(project, playback, trackPlayback, clock));
     clearPlayingClip(trackPlayback);
   }
   return hostCommands;
@@ -55,13 +55,13 @@ function stopTrackPlayback(
   project: OvertureProject,
   playback: PlaybackState,
   trackPlayback: TrackPlaybackState,
-  transport: TransportState,
+  clock: Readonly<PlaybackClock>,
 ): HostCommand[] {
   const pending = drainPendingNoteOffsForTrack(playback, trackPlayback.trackIndex);
   if (pending.length > 0) return pending;
   const clip = getPlayingClip(project, trackPlayback);
   if (!clip) return [];
-  const step = getSequenceStep(clip.sequence, transport.playhead % clip.sequence.length);
+  const step = getSequenceStep(clip.sequence, clock.playhead % clip.sequence.length);
   if (!step?.active) return [];
   return [
     {

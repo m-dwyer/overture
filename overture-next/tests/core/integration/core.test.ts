@@ -1,15 +1,15 @@
 import { describe, expect, test } from "vitest";
-import { createOvertureCore } from "../../../overture-next/src/core/core";
-import type { CoreSnapshot } from "../../../overture-next/src/core/types";
+import { createOvertureCore } from "../../../src/core/core";
+import type { CoreSnapshot } from "../../../src/core/types";
 import {
   CLIP_CELL_COUNT,
   SCENE_COUNT,
   createDefaultProject,
   getClipCell,
   getClipForCell,
-} from "../../../overture-next/src/core/project";
-import { createDefaultSequence } from "../../../overture-next/src/core/sequence";
-import { TRACK_COUNT, createTracks } from "../../../overture-next/src/core/track";
+} from "../../../src/core/project";
+import { createDefaultSequence } from "../../../src/core/sequence";
+import { TRACK_COUNT, createTracks } from "../../../src/core/track";
 
 describe("Overture Next core", () => {
   test("starts directly in the track view", () => {

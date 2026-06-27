@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import type { LedPort } from "../../../overture-next/src/ports/types";
-import { renderLeds } from "../../../overture-next/src/render/render-leds";
-import type { LedView } from "../../../overture-next/src/view/types";
+import type { LedPort } from "../../src/ports/types";
+import { renderLeds } from "../../src/render/render-leds";
+import type { LedView } from "../../src/view/types";
 
 describe("Overture Next LED rendering", () => {
   test("maps Session View Clip Cell pad states to central pad LEDs", () => {

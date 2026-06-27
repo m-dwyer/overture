@@ -16,11 +16,26 @@ export function createTransport(ticksPerStep = DEFAULT_TICKS_PER_STEP): Transpor
   };
 }
 
-export function toggleTransport(transport: TransportState): boolean {
-  transport.playing = !transport.playing;
-  return transport.playing;
+/**
+ * Marks transport timing as running.
+ */
+export function startTransport(transport: TransportState): void {
+  transport.playing = true;
 }
 
+/**
+ * Marks transport timing as stopped without changing the current playhead.
+ */
+export function stopTransport(transport: TransportState): void {
+  transport.playing = false;
+}
+
+/**
+ * Advances transport timing by one runtime tick when transport is running.
+ *
+ * Returns the new playhead step only on ticks that cross a sequencer step
+ * boundary.
+ */
 export function advanceTransport(transport: TransportState, stepCount: number): number | null {
   if (!transport.playing) return null;
   transport.tick++;
