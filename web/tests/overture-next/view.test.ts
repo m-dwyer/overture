@@ -3,11 +3,11 @@ import type { CoreSnapshot } from "../../../overture-next/src/core/types";
 import { createOvertureView } from "../../../overture-next/src/view/overture-view";
 
 describe("Overture Next view projection", () => {
-  test("derives screen and LED views from a core snapshot", () => {
+  test("derives Track View screen and LED views from a core snapshot", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 5,
       visibleTrackBank: 1,
-      sessionView: true,
+      sessionView: false,
       selectedStep: 1,
       playing: true,
       selectedClipId: "clip-6",
@@ -24,11 +24,11 @@ describe("Overture Next view projection", () => {
     expect(view.screen).toMatchObject({
       kind: "track",
       title: "OVERTURE NEXT",
-      mode: "session",
       selectedTrackIndex: 5,
       playing: true,
       selectedStep: 1,
     });
+    if (view.screen.kind !== "track") throw new Error("Expected Track View screen");
     expect(view.screen.steps).toEqual([
       { index: 0, active: true, selected: false, playhead: false },
       { index: 1, active: false, selected: true, playhead: true },
@@ -40,6 +40,33 @@ describe("Overture Next view projection", () => {
       { step: 2, color: 0 },
     ]);
     expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 1, color: 120 });
+    expect(view.leds.buttons).toContainEqual({ kind: "menu", color: 8 });
+  });
+
+  test("derives a Session View screen from selected Clip Cell state", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 3,
+      visibleTrackBank: 0,
+      sessionView: true,
+      selectedStep: 0,
+      playing: false,
+      selectedClipId: null,
+      selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      steps: [
+        { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
+      ],
+    };
+
+    const view = createOvertureView(snapshot);
+
+    expect(view.screen).toEqual({
+      kind: "session",
+      title: "OVERTURE NEXT",
+      selectedTrackIndex: 3,
+      selectedSceneIndex: 7,
+      selectedClipId: null,
+      playing: false,
+    });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", color: 44 });
   });
 });
