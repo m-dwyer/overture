@@ -1,3 +1,4 @@
+import type { HostCommand } from "../types";
 import type { ClipCellCoordinate } from "../project";
 
 export type DomainIntent =
@@ -8,3 +9,8 @@ export type DomainIntent =
   | { kind: "toggle-step"; stepIndex: number }
   | { kind: "select-clip-cell"; coordinate: ClipCellCoordinate }
   | { kind: "launch-clip-cell"; coordinate: ClipCellCoordinate };
+
+export interface DomainIntentTransaction {
+  applied: boolean;
+  hostCommands: HostCommand[];
+}

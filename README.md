@@ -30,6 +30,7 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 - `docs/OVERTURE-DAVEBOX-DIFFERENCES.md` — the precise per-change delta from upstream dAVEBOx.
 - `docs/PHILOSOPHY.md` — what Overture is, what it isn't, the principles behind it.
 - `docs/ARCHITECTURE.md` — the runtime stack, the monorepo + fork strategy, moveforge, how to modify it.
+- `docs/OVERTURE-NEXT-ARCHITECTURE-DEEPENING.md` — phased plan for deepening the active `overture-next/` control, intent, playback, and snapshot seams.
 - `docs/SCHWUNG-ADAPTER-MOVE-APP-PLAN.md` — planning spike for a clean Overture core based on `move-app` behind a narrow Schwung adapter.
 - `docs/EMULATOR.md` — the browser UX-dev harness (real UI + mocked host/hardware); the first build target.
 - `site/src/pages/try.astro` — public "try Overture" route embedding the browser emulator from `web/dist`.
