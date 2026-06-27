@@ -1,0 +1,7 @@
+interface:
+  display_name: "Create Issue"
+  short_description: "File a typed issue (and milestones) on the Overture Roadmap board."
+  default_prompt: "Create an issue for this repo."
+
+policy:
+  allow_implicit_invocation: false
