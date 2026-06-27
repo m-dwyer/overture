@@ -1,3 +1,4 @@
+import { createInitialControlState } from "./controls/control-state";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
@@ -10,14 +11,7 @@ import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
   const state: CoreState = {
-    control: {
-      selectedTrackIndex: 0,
-      visibleTrackBank: 0,
-      controlMode: "track",
-      shiftHeld: false,
-      selectedStep: 0,
-      selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
-    },
+    control: createInitialControlState(),
     transport: createTransport(),
     playback: createPlaybackState(),
     project,

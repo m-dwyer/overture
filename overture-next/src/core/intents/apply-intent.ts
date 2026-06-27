@@ -1,7 +1,14 @@
+import {
+  selectClipCell,
+  selectStep,
+  selectTrack,
+  setShiftHeld,
+  toggleControlMode,
+} from "../controls/control-state";
 import { getPlayingClip, launchClipCell } from "../playback";
 import { getClipCell, getSequenceForCell } from "../project";
 import { getSequenceStep, toggleSequenceStep } from "../sequence";
-import { getTrack, trackBankForTrack } from "../track";
+import { getTrack } from "../track";
 import { toggleTransport } from "../transport";
 import type { CoreState, HostCommand } from "../types";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
@@ -9,7 +16,7 @@ import type { DomainIntent, DomainIntentTransaction } from "./types";
 export function applyIntent(intent: DomainIntent, state: CoreState): DomainIntentTransaction {
   const control = state.control;
   if (intent.kind === "set-shift-held") {
-    control.shiftHeld = intent.held;
+    setShiftHeld(control, intent.held);
     return applied();
   }
   if (intent.kind === "toggle-transport") {
@@ -17,30 +24,28 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return applied(playing ? [] : stopPlayingClips(state));
   }
   if (intent.kind === "toggle-control-mode") {
-    control.controlMode = control.controlMode === "session" ? "track" : "session";
+    toggleControlMode(control);
     return applied();
   }
   if (intent.kind === "select-track") {
     const sceneIndex = control.selectedClipCell.sceneIndex;
     getTrack(state.project.tracks, intent.trackIndex);
     getClipCell(state.project, { trackIndex: intent.trackIndex, sceneIndex });
-    control.selectedTrackIndex = intent.trackIndex;
-    control.visibleTrackBank = trackBankForTrack(intent.trackIndex);
-    control.selectedClipCell = { trackIndex: intent.trackIndex, sceneIndex };
+    selectTrack(control, intent.trackIndex);
     return applied();
   }
   if (intent.kind === "toggle-step") {
-    control.selectedStep = intent.stepIndex;
+    selectStep(control, intent.stepIndex);
     const sequence = getSequenceForCell(state.project, control.selectedClipCell);
     if (sequence) toggleSequenceStep(sequence, intent.stepIndex);
     return applied();
   }
   if (intent.kind === "select-clip-cell") {
-    selectClipCell(state, intent.coordinate);
+    selectValidatedClipCell(state, intent.coordinate);
     return applied();
   }
   if (intent.kind === "launch-clip-cell") {
-    selectClipCell(state, intent.coordinate);
+    selectValidatedClipCell(state, intent.coordinate);
     launchClipCell(state.project, state.playback, intent.coordinate);
     return applied();
   }
@@ -51,13 +56,10 @@ function applied(hostCommands: HostCommand[] = []): DomainIntentTransaction {
   return { applied: true, hostCommands };
 }
 
-function selectClipCell(state: CoreState, coordinate: { trackIndex: number; sceneIndex: number }): void {
-  const control = state.control;
+function selectValidatedClipCell(state: CoreState, coordinate: { trackIndex: number; sceneIndex: number }): void {
   getTrack(state.project.tracks, coordinate.trackIndex);
   getClipCell(state.project, coordinate);
-  control.selectedClipCell = { ...coordinate };
-  control.selectedTrackIndex = coordinate.trackIndex;
-  control.visibleTrackBank = trackBankForTrack(coordinate.trackIndex);
+  selectClipCell(state.control, coordinate);
 }
 
 function stopPlayingClips(state: CoreState): HostCommand[] {
