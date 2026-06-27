@@ -32,9 +32,12 @@ as the active Overture source tree, not as a product name.
 - For user-visible workflow, control, display, pad/button, persistence, or
   manual-facing behavior changes, update the relevant docs in the same commit.
   Skip docs for internal-only architecture changes.
-- Before committing code changes, run:
-  - `pnpm -C web verify`
-  - `mise run test`
+- Before committing a finished change, run
+  `scripts/select-verification.sh --base main` and follow its recommended
+  minimum checks. The selector is a minimum, not a ceiling: run broader checks
+  when the risk is unclear.
+- Before opening a PR, rerun the selector against the PR base if the branch has
+  changed since the last verification.
 - If the public site changes, also run `pnpm -C site build`.
 - If a gate fails, fix the change. Do not loosen a ratchet to make a change pass.
 
@@ -109,6 +112,7 @@ Never weaken these rules to make a change pass.
 Common commands from the repo root:
 
 ```sh
+scripts/select-verification.sh --base main  # choose relevant checks for this change
 pnpm -C web verify        # current Overture ratchet
 mise run test             # current ratchet + emulator E2E
 pnpm -C site build        # public site check/build
