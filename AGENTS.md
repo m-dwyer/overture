@@ -85,6 +85,10 @@ When you change or extend Overture modules:
   contracts in `ports`; concrete Schwung/Move details in `host`.
 - **Coupling** - do not widen imports across layers. Prefer moving a concept
   toward its owning layer over adding convenience imports.
+- **Encapsulation** - expose domain verbs from a module before exporting helper
+  mutations. When a module needs private helpers, put them under an `internal/`
+  folder and add or preserve a dependency-cruiser rule that prevents imports
+  from outside the owning module.
 - **Tests** - extend focused tests under `web/tests/overture-next/` to pin
   changed behavior. Keep emulator-facing tests deterministic by advancing ticks
   rather than sleeping.
@@ -104,6 +108,8 @@ tests. The dependency-cruiser rules are the architecture ratchet:
 - runtime orchestrates through ports and does not import concrete host adapters.
 - view types stay neutral.
 - port types stay contracts.
+- module `internal/` folders are private implementation details protected by
+  dependency-cruiser as modules adopt them.
 
 Never weaken these rules to make a change pass.
 

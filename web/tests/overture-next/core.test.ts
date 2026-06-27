@@ -410,6 +410,47 @@ describe("Overture Next core", () => {
     ]);
   });
 
+  test("starts selected Track 5 after stopping Track 1 playback", () => {
+    const core = createOvertureCore();
+    core.init();
+
+    core.applyInput({ kind: "play" });
+    expect(core.drainHostCommands()).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+        velocity: 100,
+      },
+    ]);
+
+    core.applyInput({ kind: "play" });
+    expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+    ]);
+
+    core.applyInput({ kind: "shift", held: true });
+    core.applyInput({ kind: "track-row", row: 0 });
+    core.applyInput({ kind: "shift", held: false });
+    expect(core.getSnapshot()).toMatchObject({
+      selectedTrackIndex: 4,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 0 },
+      selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
+    });
+
+    core.applyInput({ kind: "play" });
+    expect(core.drainHostCommands()).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 60,
+        velocity: 100,
+      },
+    ]);
+  });
+
   test("starts selected Track 5 clip when transport starts from Track View", () => {
     const core = createOvertureCore();
     core.init();

@@ -2,10 +2,10 @@ import { createInitialControlState } from "./control-state";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
-import { createPlaybackState, drainDueNoteOffs, injectPlaybackStep, stopPlayingClips } from "./playback";
+import { advancePlayback, createPlaybackState, stopTransportPlayback } from "./playback";
 import { createDefaultProject, getClipCell, getSequenceForCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
-import { advanceTransport, createTransport } from "./transport";
+import { createTransport } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
 import { getTrack } from "./track";
 
@@ -23,12 +23,9 @@ export function createOvertureCore(): OvertureCore {
   function init(): void {}
 
   function tick(): void {
-    const nextStep = advanceTransport(state.transport, DEFAULT_STEP_COUNT);
-    hostCommands.push(...drainDueNoteOffs(state.playback, state.transport.tick));
-    if (nextStep !== null) {
-      state.lastInjectedStep = nextStep;
-      hostCommands.push(...injectPlaybackStep(state.project, state.playback, nextStep, state.transport.tick));
-    }
+    const advance = advancePlayback(state.project, state.playback, state.transport);
+    if (advance.injectedStep !== null) state.lastInjectedStep = advance.injectedStep;
+    hostCommands.push(...advance.hostCommands);
   }
 
   function applyInput(input: ControlInput): boolean {
@@ -86,7 +83,7 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function stopPlayback(): HostCommand[] {
-    return stopPlayingClips(state.project, state.playback, state.transport);
+    return stopTransportPlayback(state.project, state.playback, state.transport);
   }
 
   return { init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands, stopPlayback };
