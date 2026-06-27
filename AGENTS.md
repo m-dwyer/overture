@@ -50,6 +50,8 @@ Layer responsibilities:
 - `overture-next/src/runtime/` owns application orchestration: init, tick,
   runtime readiness, boot splash policy, MIDI dispatch, command draining, and
   render calls.
+- `overture-next/src/session-grid.ts` owns neutral Session grid geometry shared
+  by control interpretation and view-model derivation.
 - `overture-next/src/core/` owns groovebox domain state and decisions: tracks,
   transport, patterns, control interpretation, domain intents, and domain host
   commands.

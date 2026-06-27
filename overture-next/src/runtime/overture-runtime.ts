@@ -1,4 +1,3 @@
-import type { ControlInput } from "../core/controls/types";
 import { createOvertureCore } from "../core/core";
 import type { OvertureCore } from "../core/types";
 import type { OvertureHostAdapter } from "../host/types";
@@ -42,7 +41,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
 
   function onMidiMessage(data: readonly number[]): void {
     const input = adapter.input.parseMoveInput(data, core.getSelectedSequenceLength());
-    if (input) applyInput(input);
+    if (input) core.applyInput(input);
     drainCommands();
   }
 
@@ -60,10 +59,6 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
 
   function isReady(): boolean {
     return !isBootSplashVisible();
-  }
-
-  function applyInput(input: ControlInput): void {
-    core.applyInput(input);
   }
 
   function advanceSplash(): void {
