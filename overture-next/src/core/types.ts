@@ -46,7 +46,6 @@ export interface CoreSnapshot {
 export type { HostCommand } from "./host-commands";
 
 export interface OvertureCore {
-  readonly state: CoreState;
   init(): void;
   tick(): void;
   applyInput(input: ControlInput): boolean;

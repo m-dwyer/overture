@@ -82,5 +82,5 @@ export function createOvertureCore(): OvertureCore {
     return hostCommands.splice(0);
   }
 
-  return { state, init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands };
+  return { init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands };
 }

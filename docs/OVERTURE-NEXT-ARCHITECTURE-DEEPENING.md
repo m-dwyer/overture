@@ -104,11 +104,11 @@ Expected outcome:
 - Raw mutable Core State does not cross the runtime/host seams.
 - Future undo/redo state can change shape without breaking host/runtime code.
 
-Follow-up:
+Follow-up: complete
 
-- `OvertureCore.state` remains available to focused core tests. Retire that
-  test-facing surface after fixture builders or core editing operations cover
-  direct project setup needs.
+- `OvertureCore.state` has been retired from the public core interface. Focused
+  module tests use snapshots, host command observations, or test-local
+  `CoreState` fixtures at the module seam.
 
 ## Test Direction
 
