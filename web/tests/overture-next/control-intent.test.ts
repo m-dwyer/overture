@@ -41,7 +41,11 @@ describe("Overture Next control-to-intent pipeline", () => {
     const clipCount = Object.keys(core.state.project.clips).length;
 
     expect(
-      applyIntent({ kind: "select-clip-cell", coordinate: { trackIndex: 3, sceneIndex: 7 } }, core.state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "select-clip-cell", coordinate: { trackIndex: 3, sceneIndex: 7 } },
+        core.state,
+        hostCommands,
+      ),
     ).toBe(true);
 
     expect(core.state.control.selectedTrackIndex).toBe(3);
@@ -56,7 +60,11 @@ describe("Overture Next control-to-intent pipeline", () => {
     const clipCount = Object.keys(core.state.project.clips).length;
 
     expect(
-      applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, core.state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } },
+        core.state,
+        hostCommands,
+      ),
     ).toBe(true);
 
     expect(core.state.control.selectedTrackIndex).toBe(2);
@@ -70,11 +78,11 @@ describe("Overture Next control-to-intent pipeline", () => {
     const core = createOvertureCore();
     const hostCommands: HostCommand[] = [];
 
-    expect(applyIntent({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
     expect(core.state.transport.playing).toBe(true);
     expect(hostCommands).toEqual([]);
 
-    expect(applyIntent({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
     expect(core.state.transport.playing).toBe(false);
     expect(hostCommands).toEqual([]);
   });
@@ -84,15 +92,37 @@ describe("Overture Next control-to-intent pipeline", () => {
     const hostCommands: HostCommand[] = [];
 
     expect(
-      applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, core.state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } },
+        core.state,
+        hostCommands,
+      ),
     ).toBe(true);
     expect(
-      applyIntent({ kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 0 } }, core.state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 0 } },
+        core.state,
+        hostCommands,
+      ),
     ).toBe(true);
-    expect(applyIntent({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
-    expect(applyIntent({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, core.state, hostCommands)).toBe(true);
 
     expect(hostCommands).toEqual([{ kind: "track-note-off", trackIndex: 2, note: 60 }]);
+  });
+
+  test("returns emitted host commands as a Domain Intent transaction", () => {
+    const core = createOvertureCore();
+
+    expect(applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, core.state)).toEqual(
+      { applied: true, hostCommands: [] },
+    );
+    expect(applyIntent({ kind: "toggle-transport" }, core.state)).toEqual({ applied: true, hostCommands: [] });
+
+    expect(applyIntent({ kind: "toggle-transport" }, core.state)).toEqual({
+      applied: true,
+      hostCommands: [{ kind: "track-note-off", trackIndex: 2, note: 60 }],
+    });
   });
 
   test("applies track selection while preserving the selected scene", () => {
@@ -101,7 +131,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     core.state.control.selectedClipCell = { trackIndex: 0, sceneIndex: 7 };
 
-    expect(applyIntent({ kind: "select-track", trackIndex: 5 }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "select-track", trackIndex: 5 }, core.state, hostCommands)).toBe(true);
 
     expect(core.state.control.selectedTrackIndex).toBe(5);
     expect(core.state.control.visibleTrackBank).toBe(1);
@@ -120,7 +150,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(selectedClip.sequence.steps[1].active).toBe(false);
     expect(otherClip.sequence.steps[1].active).toBe(false);
 
-    expect(applyIntent({ kind: "toggle-step", stepIndex: 1 }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-step", stepIndex: 1 }, core.state, hostCommands)).toBe(true);
 
     expect(core.state.control.selectedStep).toBe(1);
     expect(selectedClip.sequence.steps[1].active).toBe(true);
@@ -132,7 +162,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     const core = createOvertureCore();
     const hostCommands: HostCommand[] = [];
 
-    expect(applyIntent({ kind: "set-shift-held", held: true }, core.state, hostCommands)).toBe(true);
+    expect(applyIntentAndCollect({ kind: "set-shift-held", held: true }, core.state, hostCommands)).toBe(true);
 
     expect(core.state.control.shiftHeld).toBe(true);
     expect(core.state.control.selectedTrackIndex).toBe(0);
@@ -144,12 +174,26 @@ describe("Overture Next control-to-intent pipeline", () => {
     const core = createOvertureCore();
     const hostCommands: HostCommand[] = [];
 
-    expect(() => applyIntent({ kind: "select-track", trackIndex: 99 }, core.state, hostCommands)).toThrow(
+    expect(() => applyIntentAndCollect({ kind: "select-track", trackIndex: 99 }, core.state, hostCommands)).toThrow(
       "Missing track 99",
     );
     expect(() =>
-      applyIntent({ kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 99 } }, core.state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 99 } },
+        core.state,
+        hostCommands,
+      ),
     ).toThrow("Missing clip cell 0:99");
     expect(hostCommands).toEqual([]);
   });
 });
+
+function applyIntentAndCollect(
+  intent: Parameters<typeof applyIntent>[0],
+  state: Parameters<typeof applyIntent>[1],
+  hostCommands: HostCommand[],
+): boolean {
+  const transaction = applyIntent(intent, state);
+  hostCommands.push(...transaction.hostCommands);
+  return transaction.applied;
+}

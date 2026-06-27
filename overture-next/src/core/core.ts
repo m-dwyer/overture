@@ -41,7 +41,9 @@ export function createOvertureCore(): OvertureCore {
       visibleTrackBank: state.control.visibleTrackBank,
     });
     if (!intent) return false;
-    return applyIntent(intent, state, hostCommands);
+    const transaction = applyIntent(intent, state);
+    if (transaction.applied) hostCommands.push(...transaction.hostCommands);
+    return transaction.applied;
   }
 
   function injectPlaybackStep(step: number): void {
