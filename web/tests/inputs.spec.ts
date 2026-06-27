@@ -1,5 +1,19 @@
 import { test, expect } from "@playwright/test";
 import { waitReady } from "./wait";
+import {
+  CC,
+  JOG_TOUCH,
+  KNOB_CC0,
+  KNOB_TOUCH0,
+  MASTER_TOUCH,
+  NAV,
+  NOTE_ON,
+  VOLUME_CC,
+} from "../../overture-next/src/host/move-controls";
+
+const MIDI_PRESS = 127;
+const MIDI_RELEASE = 0;
+const RELATIVE_TURN_UP = 1;
 
 // Input-completeness contract: the shell must be able to produce every input the
 // real device emits. Here we assert the capacitive knob-touch notes (0..9) and the
@@ -43,26 +57,26 @@ test("encoder: capacitive touch note on press/release + relative CC on drag", as
   const { x, y } = await center(page, "Encoder 1");
   await page.mouse.move(x, y);
   await page.mouse.down();
-  expect(await drain(page)).toContainEqual([0x90, 0, 127]); // knob 1 touch ON (note 0)
+  expect(await drain(page)).toContainEqual([NOTE_ON, KNOB_TOUCH0, MIDI_PRESS]);
 
   for (let i = 1; i <= 20; i++) await page.mouse.move(x, y - i); // drag up = clockwise
   const turn = await drain(page);
-  expect(turn.filter((m) => m[0] === 0xb0 && m[1] === 71 && m[2] === 1).length).toBeGreaterThan(0); // CC 71 +1
+  expect(turn.filter((m) => m[0] === CC && m[1] === KNOB_CC0 && m[2] === RELATIVE_TURN_UP).length).toBeGreaterThan(0);
 
   await page.mouse.up();
-  expect(await drain(page)).toContainEqual([0x90, 0, 0]); // touch OFF
+  expect(await drain(page)).toContainEqual([NOTE_ON, KNOB_TOUCH0, MIDI_RELEASE]);
 });
 
 test("volume knob: CC 79 + master touch (note 8)", async ({ page }) => {
   const { x, y } = await center(page, "Volume");
   await page.mouse.move(x, y);
   await page.mouse.down();
-  expect(await drain(page)).toContainEqual([0x90, 8, 127]); // master touch ON
+  expect(await drain(page)).toContainEqual([NOTE_ON, MASTER_TOUCH, MIDI_PRESS]);
   for (let i = 1; i <= 20; i++) await page.mouse.move(x, y - i);
   const turn = await drain(page);
-  expect(turn.filter((m) => m[0] === 0xb0 && m[1] === 79 && m[2] === 1).length).toBeGreaterThan(0); // CC 79
+  expect(turn.filter((m) => m[0] === CC && m[1] === VOLUME_CC && m[2] === RELATIVE_TURN_UP).length).toBeGreaterThan(0);
   await page.mouse.up();
-  expect(await drain(page)).toContainEqual([0x90, 8, 0]);
+  expect(await drain(page)).toContainEqual([NOTE_ON, MASTER_TOUCH, MIDI_RELEASE]);
 });
 
 test("jog wheel: main touch (note 9) on press/release", async ({ page }) => {
@@ -72,9 +86,9 @@ test("jog wheel: main touch (note 9) on press/release", async ({ page }) => {
   const y = box.y + 8;
   await page.mouse.move(x, y);
   await page.mouse.down();
-  expect(await drain(page)).toContainEqual([0x90, 9, 127]); // jog touch ON
+  expect(await drain(page)).toContainEqual([NOTE_ON, JOG_TOUCH, MIDI_PRESS]);
   await page.mouse.up();
-  expect(await drain(page)).toContainEqual([0x90, 9, 0]); // touch OFF
+  expect(await drain(page)).toContainEqual([NOTE_ON, JOG_TOUCH, MIDI_RELEASE]);
 });
 
 test("Alt-click pins a chord button so Copy + jog click can be tested", async ({ page }) => {
@@ -83,9 +97,9 @@ test("Alt-click pins a chord button so Copy + jog click can be tested", async ({
   await page.getByLabel("Copy", { exact: true }).click({ modifiers: ["Alt"] });
 
   expect(await drain(page)).toEqual([
-    [0xb0, 60, 127],
-    [0xb0, 3, 127],
-    [0xb0, 3, 0],
-    [0xb0, 60, 0],
+    [CC, NAV.Copy, MIDI_PRESS],
+    [CC, NAV.JogClick, MIDI_PRESS],
+    [CC, NAV.JogClick, MIDI_RELEASE],
+    [CC, NAV.Copy, MIDI_RELEASE],
   ]);
 });

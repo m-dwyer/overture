@@ -1,7 +1,15 @@
 import { describe, expect, test } from "vitest";
 import type { CoreSnapshot } from "../../../overture-next/src/core/types";
-import { createSchwungAdapter, moveCommandToPacket, moveMidiToInput } from "../../../overture-next/src/host/schwung-adapter";
+import {
+  createSchwungAdapter,
+  moveCommandToPacket,
+  moveMidiToInput,
+  schwungCommandToMessage,
+} from "../../../overture-next/src/host/schwung-adapter";
 import { installSchwungRuntime } from "../../../overture-next/src/host/schwung-runtime";
+
+const moveRoute = { kind: "move" as const, moveTrackTarget: 2 };
+const schwungRoute = { kind: "schwung" as const, schwungChainIndex: 0 };
 
 describe("Overture Next Schwung adapter", () => {
   test("converts Move CC and note input to control input", () => {
@@ -24,17 +32,30 @@ describe("Overture Next Schwung adapter", () => {
   });
 
   test("converts domain note commands to Move USB-MIDI packets", () => {
-    expect(moveCommandToPacket({ kind: "track-note-on", trackIndex: 2, note: 64, velocity: 101 })).toEqual([
+    expect(moveCommandToPacket({ kind: "track-note-on", route: moveRoute, trackIndex: 2, note: 64, velocity: 101 })).toEqual([
       0x29,
       0x92,
       64,
       101,
     ]);
-    expect(moveCommandToPacket({ kind: "track-note-off", trackIndex: 2, note: 64 })).toEqual([0x28, 0x82, 64, 0]);
+    expect(moveCommandToPacket({ kind: "track-note-off", route: moveRoute, trackIndex: 2, note: 64 })).toEqual([
+      0x28,
+      0x82,
+      64,
+      0,
+    ]);
   });
 
-  test("masks packet fields to the MIDI ranges used by Move", () => {
-    expect(moveCommandToPacket({ kind: "track-note-on", trackIndex: 18, note: 200, velocity: 255 })).toEqual([
+  test("uses route targets and masks packet fields to the MIDI ranges used by Move", () => {
+    expect(
+      moveCommandToPacket({
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 18 },
+        trackIndex: 2,
+        note: 200,
+        velocity: 255,
+      }),
+    ).toEqual([
       0x29,
       0x92,
       72,
@@ -42,18 +63,41 @@ describe("Overture Next Schwung adapter", () => {
     ]);
   });
 
-  test("executes domain commands through the MIDI port without exposing raw injection helpers", () => {
+  test("converts Schwung-routed note commands to slot MIDI messages", () => {
+    expect(
+      schwungCommandToMessage({ kind: "track-note-on", route: schwungRoute, trackIndex: 4, note: 60, velocity: 90 }),
+    ).toEqual([0x94, 60, 90]);
+    expect(schwungCommandToMessage({ kind: "track-note-off", route: schwungRoute, trackIndex: 4, note: 60 })).toEqual([
+      0x84,
+      60,
+      0,
+    ]);
+  });
+
+  test("executes routed domain commands through the matching MIDI host path", () => {
     const packets: unknown[] = [];
+    const schwungMessages: unknown[] = [];
     const host = {
       move_midi_inject_to_move(packet: unknown) {
         packets.push(packet);
       },
+      shadow_send_midi_to_dsp(message: unknown) {
+        schwungMessages.push(message);
+      },
     } as Record<string, unknown>;
     const adapter = createSchwungAdapter(host);
 
-    adapter.commands.execute({ kind: "track-note-on", trackIndex: 1, note: 60, velocity: 90 });
+    adapter.commands.execute({
+      kind: "track-note-on",
+      route: { kind: "move", moveTrackTarget: 1 },
+      trackIndex: 1,
+      note: 60,
+      velocity: 90,
+    });
+    adapter.commands.execute({ kind: "track-note-on", route: schwungRoute, trackIndex: 4, note: 60, velocity: 90 });
 
     expect(packets).toEqual([[0x29, 0x91, 60, 90]]);
+    expect(schwungMessages).toEqual([[0x94, 60, 90]]);
     expect("injectMoveNoteOn" in adapter).toBe(false);
     expect("injectMoveNoteOff" in adapter).toBe(false);
   });
@@ -90,6 +134,7 @@ describe("Overture Next Schwung adapter", () => {
     const adapter = createSchwungAdapter(host);
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 3,
+      selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
       visibleTrackBank: 0,
       controlMode: "session",
       shiftHeld: false,

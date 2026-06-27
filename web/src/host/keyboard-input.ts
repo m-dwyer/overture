@@ -2,7 +2,7 @@
 // nav button, number keys 1–0 act as Steps 1–10. Pulled out of App.tsx as a plain
 // installer (adds window listeners, returns a disposer) so the mapping is testable
 // without React; App wraps it in a useEffect.
-import { NAV, NOTE_OFF, NOTE_ON, STEP_CC0, type Send } from "../lib/move-controls";
+import { CC, NAV, NOTE_OFF, NOTE_ON, STEP_CC0, type Send } from "../lib/move-controls";
 
 const stepFromCode = (code: string): number | null => {
   if (/^Digit[1-9]$/.test(code)) return Number(code.slice(5));
@@ -25,7 +25,7 @@ export function installKeyboardInput(send: Send): () => void {
     if (targetIsEditable(e.target) || e.repeat || held.has(e.code)) return;
     if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
       held.add(e.code);
-      send(0xb0, NAV.Shift, 127);
+      send(CC, NAV.Shift, 127);
       return;
     }
     const step = stepFromCode(e.code);
@@ -38,7 +38,7 @@ export function installKeyboardInput(send: Send): () => void {
   const onUp = (e: KeyboardEvent) => {
     if (!held.delete(e.code)) return;
     if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
-      send(0xb0, NAV.Shift, 0);
+      send(CC, NAV.Shift, 0);
       return;
     }
     const step = stepFromCode(e.code);
@@ -51,7 +51,7 @@ export function installKeyboardInput(send: Send): () => void {
     for (const code of Array.from(held)) {
       held.delete(code);
       if (code === "ShiftLeft" || code === "ShiftRight") {
-        send(0xb0, NAV.Shift, 0);
+        send(CC, NAV.Shift, 0);
         continue;
       }
       const step = stepFromCode(code);

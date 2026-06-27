@@ -64,12 +64,14 @@ export function installOvt(
   emu: Emulator,
   dsp: Dsp,
   leds: Map<number, number>,
-  buttonLeds: Map<number, number>
+  buttonLeds: Map<number, number>,
+  schwung?: BrowserSchwungHost,
 ): void {
   globalThis.OVT = {
     dsp,
     leds,
     buttonLeds,
+    schwung,
     midiIn: (s: number, d1: number, d2: number) => emu.sendInternal(s, d1, d2),
     midiExt: (s: number, d1: number, d2: number) => emu.sendExternal(s, d1, d2),
     advanceTicks: (n = 1) => {

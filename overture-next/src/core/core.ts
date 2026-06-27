@@ -7,6 +7,7 @@ import { createDefaultProject, getClipCell, getSequenceForCell } from "./project
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
 import { advanceTransport, createTransport } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
+import { getTrack } from "./track";
 
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
@@ -42,6 +43,7 @@ export function createOvertureCore(): OvertureCore {
     const selectedCell = getClipCell(state.project, selectedClipCell);
     return {
       selectedTrackIndex: state.control.selectedTrackIndex,
+      selectedTrackRoute: getTrack(state.project.tracks, state.control.selectedTrackIndex).route,
       visibleTrackBank: state.control.visibleTrackBank,
       controlMode: state.control.controlMode,
       shiftHeld: state.control.shiftHeld,

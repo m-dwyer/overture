@@ -80,6 +80,7 @@ function createRuntimeTestAdapter(frames: string[][], frame: string[]): Overture
   };
   const midi: MidiPort = {
     sendMovePacket() {},
+    sendSchwungMessage() {},
   };
   const commands = {
     execute(_command: HostCommand) {},

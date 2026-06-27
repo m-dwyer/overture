@@ -176,7 +176,7 @@ export function App() {
       setStatus("running");
       stopLoop = startTickLoop(emu, log);
       stopInitialTrack = scheduleInitialState(emu, initialTrack, initialView);
-      installOvt(emu, dsp, ledsMap, buttonLedsMap);
+      installOvt(emu, dsp, ledsMap, buttonLedsMap, schwung);
     })();
 
     return () => {

@@ -2,6 +2,7 @@ import type { ControlInput, ControlMode, ControlState } from "./controls/types";
 import type { HostCommand } from "./host-commands";
 import type { PlaybackState } from "./playback";
 import type { OvertureProject } from "./project";
+import type { TrackRoute } from "./track";
 import type { TransportState } from "./transport";
 
 export interface CoreState {
@@ -29,6 +30,7 @@ export interface CoreSnapshotClipCell {
 
 export interface CoreSnapshot {
   selectedTrackIndex: number;
+  selectedTrackRoute: TrackRoute;
   visibleTrackBank: number;
   controlMode: ControlMode;
   shiftHeld: boolean;

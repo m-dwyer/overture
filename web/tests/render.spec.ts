@@ -1,12 +1,50 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { advanceTicks, waitReady } from "./wait";
+import { createDefaultSequence } from "../../overture-next/src/core/sequence";
+import { TRACK_BANK_SIZE } from "../../overture-next/src/core/track";
+import { DEFAULT_TICKS_PER_STEP } from "../../overture-next/src/core/transport";
+import {
+  CC,
+  NAV,
+  NOTE_OFF,
+  NOTE_ON,
+  PAD_NOTE0,
+  ROW_CC,
+  SCHWUNG_SLOT_CHANNEL_FIRST,
+  STEP_CC0,
+} from "../../overture-next/src/host/move-controls";
+import { SESSION_SCENE_COLUMNS, SESSION_TRACK_ROWS } from "../../overture-next/src/session-grid";
+
+const MIDI_PRESS = 127;
+const MIDI_RELEASE = 0;
+const TRACK_5_INDEX = TRACK_BANK_SIZE;
+const TRACK_5_ROW = TRACK_5_INDEX % TRACK_BANK_SIZE;
+const TRACK_5_SCENE_INDEX = 0;
+const TRACK_5_DEFAULT_CLIP_PAD = (SESSION_TRACK_ROWS - 1 - TRACK_5_ROW) * SESSION_SCENE_COLUMNS + TRACK_5_SCENE_INDEX;
+const TOGGLED_STEP_INDEX = 5;
+const defaultSequence = createDefaultSequence();
+const DEFAULT_STEP_4_NOTE = defaultSequence.steps[4].note;
+const TOGGLED_STEP_NOTE = defaultSequence.steps[TOGGLED_STEP_INDEX].note;
+const DEFAULT_STEP_VELOCITY = defaultSequence.steps[4].velocity;
+const SCHWUNG_SLOT_0 = TRACK_5_INDEX - TRACK_BANK_SIZE;
+const SCHWUNG_TRACK_5_CHANNEL = SCHWUNG_SLOT_CHANNEL_FIRST + SCHWUNG_SLOT_0;
+const SCHWUNG_TRACK_5_NOTE_ON = NOTE_ON | SCHWUNG_TRACK_5_CHANNEL;
+const SCHWUNG_TRACK_5_NOTE_OFF = NOTE_OFF | SCHWUNG_TRACK_5_CHANNEL;
+const SCHWUNG_MIDI_DIRECTION = "live";
+const TICKS_TO_STEP_4 = DEFAULT_TICKS_PER_STEP * 4;
+const TICKS_TO_NEXT_STEP = DEFAULT_TICKS_PER_STEP;
 
 type PageGlobal = typeof globalThis & {
   OVT: {
     leds: Map<number, number>;
     buttonLeds: Map<number, number>;
     midiIn(status: number, d1: number, d2: number): void;
+    schwung?: {
+      diagnostics(): {
+        midi: Array<{ d1: number; d2: number; direction: string; slot: number; status: number }>;
+      };
+    };
   };
   __midi: number[][];
   onMidiMessageInternal?: (data: number[]) => unknown;
@@ -45,12 +83,12 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
 test("startup query selects track and note view after init settles", async ({ page }) => {
   await page.goto("/?track=5&view=note");
   await waitReady(page);
-  await page.waitForFunction(() => {
+  await page.waitForFunction((trackIndex) => {
     const state = (globalThis as {
       overtureUiState?: { selectedTrackIndex?: number; activeTrack?: number; sessionView?: boolean };
     }).overtureUiState;
-    return (state?.selectedTrackIndex ?? state?.activeTrack) === 4 && state?.sessionView === false;
-  });
+    return (state?.selectedTrackIndex ?? state?.activeTrack) === trackIndex && state?.sessionView === false;
+  }, TRACK_5_INDEX);
 });
 
 // The shell must (a) emit the exact device MIDI on a click and (b) drive a visible
@@ -73,15 +111,15 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
   });
   await page.locator("#shell .step").first().click();
   const midi = await page.evaluate(() => (globalThis as PageGlobal).__midi);
-  expect(midi).toEqual([[0x90, 16, 127], [0x80, 16, 0]]); // step = NOTE 16
+  expect(midi).toEqual([[NOTE_ON, STEP_CC0, MIDI_PRESS], [NOTE_OFF, STEP_CC0, MIDI_RELEASE]]);
 
   // (b) Shift+Menu opens the global menu → the OLED must change.
   const mi = (s: number, d1: number, d2: number) =>
     page.evaluate(([a, b, c]) => (globalThis as PageGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
-  await mi(0xb0, 49, 127); // Shift down
-  await mi(0xb0, 50, 127); // Menu down → openGlobalMenu
-  await mi(0xb0, 50, 0);
-  await mi(0xb0, 49, 0);   // Shift up
+  await mi(CC, NAV.Shift, MIDI_PRESS);
+  await mi(CC, NAV.Menu, MIDI_PRESS);
+  await mi(CC, NAV.Menu, MIDI_RELEASE);
+  await mi(CC, NAV.Shift, MIDI_RELEASE);
   await advanceTicks(page, 4); // flush the menu-open redraw deterministically
   await page.locator("#oled").screenshot({ path: "shot-menu.png" });
 
@@ -108,9 +146,61 @@ test("keyboard Shift plus number key sends Shift + Step", async ({ page }) => {
 
   const midi = await page.evaluate(() => (globalThis as PageGlobal).__midi);
   expect(midi).toEqual([
-    [0xb0, 49, 127],
-    [0x90, 18, 127],
-    [0x80, 18, 0],
-    [0xb0, 49, 0],
+    [CC, NAV.Shift, MIDI_PRESS],
+    [NOTE_ON, STEP_CC0 + 2, MIDI_PRESS],
+    [NOTE_OFF, STEP_CC0 + 2, MIDI_RELEASE],
+    [CC, NAV.Shift, MIDI_RELEASE],
   ]);
+});
+
+test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
+  await page.goto("/");
+  await waitReady(page);
+
+  const mi = (s: number, d1: number, d2: number) =>
+    page.evaluate(([a, b, c]) => (globalThis as PageGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
+
+  await mi(CC, NAV.Shift, MIDI_PRESS);
+  await mi(CC, ROW_CC[TRACK_5_ROW], MIDI_PRESS);
+  await mi(CC, NAV.Shift, MIDI_RELEASE);
+  await mi(CC, NAV.Menu, MIDI_PRESS);
+  await mi(NOTE_ON, PAD_NOTE0 + TRACK_5_DEFAULT_CLIP_PAD, MIDI_PRESS);
+  await mi(CC, NAV.Menu, MIDI_PRESS);
+  await mi(CC, NAV.Play, MIDI_PRESS);
+  await advanceTicks(page, TICKS_TO_STEP_4);
+
+  const initialMidi = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
+  expect(initialMidi).toContainEqual({
+    d1: DEFAULT_STEP_4_NOTE,
+    d2: DEFAULT_STEP_VELOCITY,
+    direction: SCHWUNG_MIDI_DIRECTION,
+    slot: SCHWUNG_SLOT_0,
+    status: SCHWUNG_TRACK_5_NOTE_ON,
+  });
+  expect(initialMidi).toContainEqual({
+    d1: DEFAULT_STEP_4_NOTE,
+    d2: MIDI_RELEASE,
+    direction: SCHWUNG_MIDI_DIRECTION,
+    slot: SCHWUNG_SLOT_0,
+    status: SCHWUNG_TRACK_5_NOTE_OFF,
+  });
+
+  await mi(NOTE_ON, STEP_CC0 + TOGGLED_STEP_INDEX, MIDI_PRESS);
+  await advanceTicks(page, TICKS_TO_NEXT_STEP);
+
+  const editedMidi = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
+  expect(editedMidi).toContainEqual({
+    d1: TOGGLED_STEP_NOTE,
+    d2: DEFAULT_STEP_VELOCITY,
+    direction: SCHWUNG_MIDI_DIRECTION,
+    slot: SCHWUNG_SLOT_0,
+    status: SCHWUNG_TRACK_5_NOTE_ON,
+  });
+  expect(editedMidi).toContainEqual({
+    d1: TOGGLED_STEP_NOTE,
+    d2: MIDI_RELEASE,
+    direction: SCHWUNG_MIDI_DIRECTION,
+    slot: SCHWUNG_SLOT_0,
+    status: SCHWUNG_TRACK_5_NOTE_OFF,
+  });
 });

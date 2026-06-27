@@ -16,8 +16,14 @@ describe("Overture Next playback", () => {
     launchClipCell(project, playback, { trackIndex: 2, sceneIndex: 0 });
 
     expect(injectPlaybackStep(project, playback, 0)).toEqual([
-      { kind: "track-note-on", trackIndex: 2, note: 60, velocity: 100 },
-      { kind: "track-note-off", trackIndex: 2, note: 60 },
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 2 },
+        trackIndex: 2,
+        note: 60,
+        velocity: 100,
+      },
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60 },
     ]);
   });
 
@@ -30,7 +36,7 @@ describe("Overture Next playback", () => {
     transport.playhead = 4;
 
     expect(stopPlayingClips(project, playback, transport)).toEqual([
-      { kind: "track-note-off", trackIndex: 1, note: 64 },
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 64 },
     ]);
   });
 });
