@@ -150,7 +150,10 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
   }
 
   primeAudioEngine(): void {
-    if (this.#audioBooted) return;
+    if (this.#audioBooted) {
+      void this.#audioEngine?.resume();
+      return;
+    }
     void this.#syncAudio();
   }
 

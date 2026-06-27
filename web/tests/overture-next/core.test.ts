@@ -171,6 +171,7 @@ describe("Overture Next core", () => {
 
     expect(getSnapshotPlayhead(core.getSnapshot())).toBe(1);
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -201,6 +202,7 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 1 },
@@ -342,6 +344,7 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -379,6 +382,7 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.tick();
 
     expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "schwung", schwungChainIndex: 0 },
@@ -403,6 +407,45 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 12; i++) core.tick();
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 65 },
+    ]);
+  });
+
+  test("starts selected Track 5 clip when transport starts from Track View", () => {
+    const core = createOvertureCore();
+    core.init();
+
+    core.applyInput({ kind: "shift", held: true });
+    core.applyInput({ kind: "track-row", row: 0 });
+    core.applyInput({ kind: "shift", held: false });
+
+    expect(core.getSnapshot()).toMatchObject({
+      controlMode: "track",
+      selectedTrackIndex: 4,
+      selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
+      selectedClipId: "clip-5",
+    });
+
+    core.applyInput({ kind: "play" });
+    expect(core.drainHostCommands()).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 60,
+        velocity: 100,
+      },
+    ]);
+    for (let i = 0; i < 48; i++) core.tick();
+
+    expect(core.drainHostCommands()).toEqual([
+      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
+      {
+        kind: "track-note-on",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 64,
+        velocity: 100,
+      },
     ]);
   });
 });

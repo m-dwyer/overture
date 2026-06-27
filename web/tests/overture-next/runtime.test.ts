@@ -85,12 +85,28 @@ describe("Overture Next runtime", () => {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
         trackIndex: 0,
+        note: 60,
+        velocity: 100,
+      },
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
         note: 64,
         velocity: 100,
       },
     ]);
     for (let i = 0; i < 12; i++) runtime.tickPlayback();
     expect(commands).toEqual([
+      {
+        kind: "track-note-on",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+        velocity: 100,
+      },
+      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },

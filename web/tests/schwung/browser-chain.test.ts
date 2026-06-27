@@ -9,6 +9,7 @@ class FakeEngine implements ChainAudioEngine {
   config: AudioEngineConfig | null = null;
   messages: Array<{ message: WorkletMessage; slotId: string }> = [];
   maxActive = 0;
+  resumes = 0;
   specs: ChainSlotSpec[] = [];
 
   async enableChain(slots: ChainSlotSpec[], config: AudioEngineConfig): Promise<void> {
@@ -26,6 +27,10 @@ class FakeEngine implements ChainAudioEngine {
   }
 
   async reloadSlot(): Promise<void> {}
+
+  async resume(): Promise<void> {
+    this.resumes++;
+  }
 
   resetAll(): void {}
 
@@ -115,6 +120,17 @@ describe("BrowserSchwungChain", () => {
 
     expect(engine.maxActive).toBe(1);
     expect(engine.specs.map((slot) => `${slot.slotId}:${slot.moduleId}`)).toContain("slot0:fx2:faust_drive");
+  });
+
+  test("retries audio resume on gestures after the worklet graph is loaded", async () => {
+    const engine = new FakeEngine();
+    const chain = new BrowserSchwungChain(makeCatalog(), { audioEngine: engine });
+
+    chain.primeAudioEngine();
+    await flushPromises(20);
+    chain.primeAudioEngine();
+
+    expect(engine.resumes).toBe(1);
   });
 });
 

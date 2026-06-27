@@ -38,6 +38,7 @@ export interface ChainAudioEngine {
   enableChain(slots: ChainSlotSpec[], config: AudioEngineConfig): Promise<void>;
   hasSlot(slotId: string): boolean;
   reloadSlot(slotId: string): Promise<void>;
+  resume(): Promise<void>;
   resetAll(): void;
   sendToSlot(slotId: string, message: WorkletMessage): void;
   setMasterVolume(volume: number): void;
@@ -56,7 +57,7 @@ export class AudioWorkletChainEngine implements ChainAudioEngine {
   async enableChain(slots: ChainSlotSpec[], config: AudioEngineConfig): Promise<void> {
     await this.#ensureContext(config);
     this.#config = config;
-    await this.#audio?.resume();
+    await resumeAudioContext(this.#audio);
 
     const desired = new Map(slots.map((slot) => [slot.slotId, slot]));
     for (const slotId of Array.from(this.#slots.keys())) {
@@ -80,6 +81,10 @@ export class AudioWorkletChainEngine implements ChainAudioEngine {
   async reloadSlot(slotId: string): Promise<void> {
     const slot = this.#slots.get(slotId);
     if (slot) await this.#loadWasmInto(slot);
+  }
+
+  resume(): Promise<void> {
+    return resumeAudioContext(this.#audio);
   }
 
   resetAll(): void {
@@ -106,9 +111,11 @@ export class AudioWorkletChainEngine implements ChainAudioEngine {
 
   async #startContext(config: AudioEngineConfig): Promise<void> {
     const audio = new AudioContext({ sampleRate: 44100 });
+    const unlock = resumeAudioContext(audio);
     const loadedWorkletUrl = new URL(config.workletUrl, window.location.href);
     loadedWorkletUrl.searchParams.set("v", String(Date.now()));
     await audio.audioWorklet.addModule(loadedWorkletUrl.toString());
+    await unlock;
     this.#audio = audio;
     this.#processorName = config.processorName;
     this.#masterGain = audio.createGain();
@@ -213,4 +220,14 @@ function slotIndexFromId(slotId: string): number | null {
 function looksLikeWasm(bytes: ArrayBuffer): boolean {
   const header = new Uint8Array(bytes, 0, Math.min(bytes.byteLength, 4));
   return header.length === 4 && header[0] === 0x00 && header[1] === 0x61 && header[2] === 0x73 && header[3] === 0x6d;
+}
+
+async function resumeAudioContext(audio: AudioContext | null): Promise<void> {
+  if (!audio || audio.state === "closed") return;
+  try {
+    await audio.resume();
+  } catch {
+    // Browser autoplay policy can defer unlock until a later gesture; module
+    // loading and MIDI routing should still complete so the next gesture can resume.
+  }
 }
