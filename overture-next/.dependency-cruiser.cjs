@@ -120,6 +120,14 @@ module.exports = {
       to: { path: "^src/core/playback/internal/" },
     },
     {
+      name: "project-internals-stay-private",
+      severity: "error",
+      comment:
+        "Project exposes construction and cell lookup through src/core/project; low-level project structure helpers stay module-private.",
+      from: { pathNot: "^src/core/project/" },
+      to: { path: "^src/core/project/internal/" },
+    },
+    {
       name: "view-stays-on-snapshot-contracts",
       severity: "error",
       comment:
