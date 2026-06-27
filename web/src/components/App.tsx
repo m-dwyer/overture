@@ -346,7 +346,7 @@ function scheduleInitialState(emu: Emulator, trackNumber: number | null, view: "
     const state = readOvertureUiState();
     const settled = state && readOvertureRuntime()?.isReady();
     if (!settled && attempts < 40) return;
-    if (state && trackNumber != null && ((state.activeTrack ?? 0) | 0) !== trackNumber - 1) {
+    if (state && trackNumber != null && (readSelectedTrackIndex(state) | 0) !== trackNumber - 1) {
       applyInitialTrack(emu, trackNumber, !!state.sessionView);
     }
     const nextState = readOvertureUiState() ?? state;
@@ -358,15 +358,21 @@ function scheduleInitialState(emu: Emulator, trackNumber: number | null, view: "
 
 function readOvertureUiState(): {
   activeTrack?: number;
+  selectedTrackIndex?: number;
   sessionView?: boolean;
 } | null {
   const state = (globalThis as {
     overtureUiState?: {
       activeTrack?: number;
+      selectedTrackIndex?: number;
       sessionView?: boolean;
     };
   }).overtureUiState;
   return state ?? null;
+}
+
+function readSelectedTrackIndex(state: { activeTrack?: number; selectedTrackIndex?: number }): number {
+  return state.selectedTrackIndex ?? state.activeTrack ?? 0;
 }
 
 function readOvertureRuntime(): { isReady(): boolean } | null {

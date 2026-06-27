@@ -9,7 +9,7 @@ export interface TrackScreenView {
   kind: "track";
   title: string;
   mode: "track" | "session";
-  activeTrack: number;
+  selectedTrackIndex: number;
   playing: boolean;
   selectedStep: number;
   steps: StepView[];

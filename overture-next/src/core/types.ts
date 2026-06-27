@@ -1,15 +1,16 @@
 import type { CoreInput } from "./input";
-import type { TrackState } from "./track";
+import type { OvertureProject } from "./project";
 import type { TransportState } from "./transport";
 import type { OvertureView } from "../view/types";
 
 export interface CoreState {
-  activeTrack: number;
+  selectedTrackIndex: number;
+  visibleTrackBank: number;
   sessionView: boolean;
   shiftHeld: boolean;
   selectedStep: number;
   transport: TransportState;
-  tracks: TrackState[];
+  project: OvertureProject;
   lastInjectedStep: number;
 }
 
@@ -23,5 +24,6 @@ export interface OvertureCore {
   tick(): void;
   applyInput(input: CoreInput): boolean;
   getView(): OvertureView;
+  getSelectedSequenceLength(): number;
   drainHostCommands(): HostCommand[];
 }
