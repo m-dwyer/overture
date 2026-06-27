@@ -45,7 +45,7 @@ export function createOvertureCore(): OvertureCore {
       return true;
     }
     if (input.kind === "track-row") {
-      selectTrack(selectTrackFromRow(input.row, state.shiftHeld ? 1 : state.visibleTrackBank));
+      selectTrack(selectTrackFromRow(input.row, state.shiftHeld ? 1 : 0));
       return true;
     }
     if (input.kind === "step") {
