@@ -5,13 +5,13 @@ import {
   selectTrack,
   setShiftHeld,
   toggleControlMode,
-} from "../src/core/control-state";
-import { interpretControl } from "../src/core/controls/interpret-control";
-import { applyIntent } from "../src/core/intents/apply-intent";
-import { createPlaybackState } from "../src/core/playback";
-import { createDefaultProject, getClipCell, getClipForCell } from "../src/core/project";
-import { createTransport } from "../src/core/transport";
-import type { CoreState, HostCommand } from "../src/core/types";
+} from "../../../src/core/control-state";
+import { interpretControl } from "../../../src/core/controls/interpret-control";
+import { applyIntent } from "../../../src/core/intents/apply-intent";
+import { createPlaybackState } from "../../../src/core/playback";
+import { createDefaultProject, getClipCell, getClipForCell } from "../../../src/core/project";
+import { createTransport } from "../../../src/core/transport";
+import type { CoreState, HostCommand } from "../../../src/core/types";
 
 describe("Overture Next control-to-intent pipeline", () => {
   test("interprets track rows against the current shift modifier", () => {

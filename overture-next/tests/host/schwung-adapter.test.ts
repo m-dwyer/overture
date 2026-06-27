@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
-import type { CoreSnapshot } from "../src/core/types";
+import type { CoreSnapshot } from "../../src/core/types";
 import {
   createSchwungAdapter,
   moveCommandToPacket,
   moveMidiToInput,
   schwungCommandToMessage,
-} from "../src/host/schwung-adapter";
-import { installSchwungRuntime } from "../src/host/schwung-runtime";
+} from "../../src/host/schwung-adapter";
+import { installSchwungRuntime } from "../../src/host/schwung-runtime";
 
 const moveRoute = { kind: "move" as const, moveTrackTarget: 2 };
 const schwungRoute = { kind: "schwung" as const, schwungChainIndex: 0 };

@@ -5,15 +5,15 @@ import {
   launchClipCellPlayback,
   startPlayback,
   stopPlayback,
-} from "../src/core/playback";
-import { createDefaultProject } from "../src/core/project";
-import { DEFAULT_STEP_COUNT } from "../src/core/sequence";
+} from "../../src/core/playback";
+import { createDefaultProject } from "../../src/core/project";
+import { DEFAULT_STEP_COUNT } from "../../src/core/sequence";
 import {
   advanceTransport,
   createTransport,
   startTransport,
   stopTransport,
-} from "../src/core/transport";
+} from "../../src/core/transport";
 
 describe("Overture Next playback", () => {
   test("injects note commands for active steps in playing clips", () => {

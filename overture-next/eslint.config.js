@@ -56,18 +56,31 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["../src/**/internal/*"],
+              group: ["../src/**/internal/*", "../../src/**/internal/*", "../../../src/**/internal/*"],
               message: "Tests should exercise module contracts through public entry points, not internal helpers.",
             },
             {
-              group: ["../src/core/playback/*"],
-              message: "Import Playback through ../src/core/playback.",
+              group: ["../src/core/playback/*", "../../src/core/playback/*", "../../../src/core/playback/*"],
+              message: "Import Playback through its public module entry point.",
             },
             {
-              group: ["../src/core/project/*"],
-              message: "Import Project through ../src/core/project.",
+              group: ["../src/core/project/*", "../../src/core/project/*", "../../../src/core/project/*"],
+              message: "Import Project through its public module entry point.",
             },
           ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["tests/*.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "Program",
+          message:
+            "Overture package tests should live under a layer/module directory such as tests/core, tests/runtime, tests/render, tests/host, or tests/view.",
         },
       ],
     },

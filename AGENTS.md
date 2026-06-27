@@ -82,10 +82,12 @@ the owning modules' public verbs. `overture-next` enforces adopted ownership
 boundaries with dependency-cruiser import rules and the local ESLint
 `overture/state-ownership` rule.
 
-Overture package tests live under `overture-next/tests/`. Keep unit tests aimed
-at public module entry points and use package integration tests for cross-module
-core/runtime workflows. `web/tests/` is for the browser emulator and web host
-harness, not Overture package unit coverage.
+Overture package tests live under `overture-next/tests/`, grouped by layer or
+module such as `tests/core/`, `tests/runtime/`, `tests/render/`, `tests/host/`,
+and `tests/view/`. Keep unit tests aimed at public module entry points and use
+package integration tests for cross-module core/runtime workflows. `web/tests/`
+is for the browser emulator and web host harness, not Overture package unit
+coverage.
 
 ## Boy Scout Rule
 

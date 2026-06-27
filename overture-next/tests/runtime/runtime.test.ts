@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
-import type { HostCommand } from "../src/core/types";
-import type { InputPort, MidiPort, OvertureHostAdapter } from "../src/host/types";
-import type { DisplayPort, LedPort, RuntimePort } from "../src/ports/types";
-import { createOvertureRuntime } from "../src/runtime/overture-runtime";
+import type { HostCommand } from "../../src/core/types";
+import type { InputPort, MidiPort, OvertureHostAdapter } from "../../src/host/types";
+import type { DisplayPort, LedPort, RuntimePort } from "../../src/ports/types";
+import { createOvertureRuntime } from "../../src/runtime/overture-runtime";
 
 describe("Overture Next runtime", () => {
   test("owns the boot splash while core is already in its track view", () => {
