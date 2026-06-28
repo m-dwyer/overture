@@ -2,7 +2,7 @@ import { createInitialControlState, type ControlStateSnapshot } from "./control-
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
-import { advancePlayback, createPlaybackState, stopPlayback as stopClipPlayback } from "./playback";
+import { createPlayback } from "./playback";
 import { createDefaultProject } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
 import { createTransport, type TransportStateSnapshot } from "./transport";
@@ -13,7 +13,7 @@ export function createOvertureCore(): OvertureCore {
   const state: CoreState = {
     control: createInitialControlState(),
     transport: createTransport(),
-    playback: createPlaybackState(),
+    playback: createPlayback(),
     project,
     lastInjectedStep: -1,
   };
@@ -23,7 +23,7 @@ export function createOvertureCore(): OvertureCore {
 
   function tick(): void {
     const transportTick = state.transport.advance(DEFAULT_STEP_COUNT);
-    const advance = advancePlayback(state.project, state.playback, transportTick);
+    const advance = state.playback.advance(state.project, transportTick);
     if (advance.injectedStep !== null) state.lastInjectedStep = advance.injectedStep;
     hostCommands.push(...advance.hostCommands);
   }
@@ -86,7 +86,7 @@ export function createOvertureCore(): OvertureCore {
 
   function stopPlayback(): HostCommand[] {
     state.transport.stop();
-    return stopClipPlayback(state.project, state.playback, state.transport.clock());
+    return state.playback.stop(state.project, state.transport.clock());
   }
 
   function getSelectedSequenceLength(): number {

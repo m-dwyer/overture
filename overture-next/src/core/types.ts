@@ -1,7 +1,7 @@
 import type { ControlMode, ControlState, ControlStateSnapshot } from "./control-state";
 import type { ControlInput } from "./controls/types";
 import type { HostCommand } from "./host-commands";
-import type { PlaybackState } from "./playback";
+import type { Playback } from "./playback";
 import type { OvertureProject } from "./project";
 import type { TrackRoute } from "./track";
 import type { TransportState } from "./transport";
@@ -9,7 +9,7 @@ import type { TransportState } from "./transport";
 export interface CoreState {
   control: ControlState;
   transport: TransportState;
-  playback: PlaybackState;
+  playback: Playback;
   project: OvertureProject;
   lastInjectedStep: number;
 }

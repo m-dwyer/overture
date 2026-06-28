@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { createInitialControlState } from "../../../src/core/control-state";
 import { interpretControl } from "../../../src/core/controls/interpret-control";
 import { applyIntent } from "../../../src/core/intents/apply-intent";
-import { createPlaybackState } from "../../../src/core/playback";
+import { createPlayback } from "../../../src/core/playback";
 import { createDefaultProject } from "../../../src/core/project";
 import { createTransport } from "../../../src/core/transport";
 import type { CoreState, HostCommand } from "../../../src/core/types";
@@ -90,7 +90,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       selectedTrackIndex: 2,
       selectedClipCell: { trackIndex: 2, sceneIndex: 0 },
     });
-    expect(state.playback.tracks[2].playingClipId).toBe("clip-3");
+    expect(state.playback.snapshot().tracks[2].playingClipId).toBe("clip-3");
     expect(state.project.clipCellSnapshots().filter((cell) => cell.clipId)).toHaveLength(clipCount);
     expect(hostCommands).toEqual([]);
   });
@@ -101,7 +101,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
     expect(state.transport.snapshot().playing).toBe(true);
-    expect(state.playback.tracks[0].playingClipId).toBe("clip-1");
+    expect(state.playback.snapshot().tracks[0].playingClipId).toBe("clip-1");
     expect(hostCommands).toEqual([
       { kind: "track-note-on", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60, velocity: 100 },
     ]);
@@ -115,7 +115,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
     expect(state.transport.snapshot().playing).toBe(true);
-    expect(state.playback.tracks[0].playingClipId).toBeNull();
+    expect(state.playback.snapshot().tracks[0].playingClipId).toBeNull();
     expect(hostCommands).toEqual([]);
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
@@ -190,7 +190,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       ),
     ).toBe(true);
 
-    expect(state.playback.tracks[4].playingClipId).toBeNull();
+    expect(state.playback.snapshot().tracks[4].playingClipId).toBeNull();
     expect(hostCommands).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
     ]);
@@ -296,7 +296,7 @@ function createTestCoreState(): CoreState {
   return {
     control: createInitialControlState(),
     transport: createTransport(),
-    playback: createPlaybackState(),
+    playback: createPlayback(),
     project: createDefaultProject(),
     lastInjectedStep: -1,
   };
