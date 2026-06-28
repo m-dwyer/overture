@@ -27,10 +27,14 @@ export interface ClipCellSnapshot {
   readonly clipId: ClipId | null;
 }
 
+/**
+ * An Overture Clip. Its Clip Cell Coordinate is intentionally not stored here:
+ * a clip's location is derived from the Clip Cell that holds its Clip ID, which
+ * is the single source of truth for occupancy. Do not re-add trackIndex/
+ * sceneIndex fields; derive the coordinate from the owning Clip Cell instead.
+ */
 export interface OvertureClip {
   id: ClipId;
-  trackIndex: TrackIndex;
-  sceneIndex: SceneIndex;
   sequence: Sequence;
 }
 

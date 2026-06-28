@@ -48,18 +48,16 @@ function createClipCells(trackCount = TRACK_COUNT, sceneCount = SCENE_COUNT): Cl
 
 function createClipInCell(project: OvertureProject, coordinate: ClipCellCoordinate): OvertureClip {
   const cell = getClipCell(project, coordinate);
-  const clip = createOvertureClip("clip-" + project.nextClipNumber, coordinate);
+  const clip = createOvertureClip("clip-" + project.nextClipNumber);
   project.nextClipNumber++;
   project.clips[clip.id] = clip;
   cell.clipId = clip.id;
   return clip;
 }
 
-function createOvertureClip(id: ClipId, coordinate: ClipCellCoordinate): OvertureClip {
+function createOvertureClip(id: ClipId): OvertureClip {
   return {
     id,
-    trackIndex: coordinate.trackIndex,
-    sceneIndex: coordinate.sceneIndex,
     sequence: createDefaultSequence(),
   };
 }
