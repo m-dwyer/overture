@@ -42,6 +42,10 @@ describe("emulator harness port", () => {
       ["render", 4],
       ["tick"],
     ]);
+    expect(handle.drive.midiIn).toBe(handle.midiIn);
+    expect(handle.drive.advanceTicks).toBe(handle.advanceTicks);
+    expect(handle.inspection.dsp).toBe(handle.dsp);
+    expect(handle.inspection.leds).toBe(handle.leds);
   });
 });
 

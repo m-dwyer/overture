@@ -1,6 +1,7 @@
 // The OLED display sink: binds the emulator's 1-bit draw ops to a 2D canvas. Pulled
 // out of App.tsx so the device-pixel render path is a plain, unit-testable module
 // with no React. value 0 = black (BG), nonzero = white (FG) — monochrome Move OLED.
+import { createGlobalBrowserObservability, type BrowserObservabilityPort } from "./browser-observability";
 import type { DisplaySink } from "./sinks";
 import { DEVICE_FONT } from "./device-font";
 
@@ -34,7 +35,8 @@ export const OLED_READABLE_SCALE = 8;
 export function createCanvasDisplaySink(
   canvas: HTMLCanvasElement,
   getScale: () => number,
-  getSmooth: () => boolean
+  getSmooth: () => boolean,
+  observability: Pick<BrowserObservabilityPort, "publishOledText"> = createGlobalBrowserObservability(),
 ): DisplaySink {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("createCanvasDisplaySink: 2D context unavailable");
@@ -47,7 +49,7 @@ export function createCanvasDisplaySink(
   // each frame on clearScreen. Observability, not app logic.
   let oledFrame: string[] = [];
   const publishOled = () => {
-    globalThis.__OVT_OLED_TEXT = oledFrame.join(" ");
+    observability.publishOledText(oledFrame.join(" "));
   };
 
   return {
