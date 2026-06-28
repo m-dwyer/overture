@@ -78,9 +78,14 @@ State owners should be the only modules that mutate their state shape:
 `transport.ts` mutates `TransportState`; `playback/` mutates `PlaybackState`;
 `control-state.ts` mutates `ControlState`; and `project/` mutates
 `OvertureProject`. Cross-state workflows belong in orchestration code that calls
-the owning modules' public verbs. `overture-next` enforces adopted ownership
-boundaries with dependency-cruiser import rules and the local ESLint
-`overture/state-ownership` rule.
+the owning modules' public verbs. For newly adopted state owners, prefer a
+stateful owner object such as a class or closure-backed object over exported
+mutator functions that accept the owned state object as a parameter. Read-only
+consumers should receive snapshots or narrow read contracts. Orchestration code
+may hold owner objects and call their domain methods, but should not directly
+mutate state shapes. `overture-next` enforces adopted ownership boundaries with
+dependency-cruiser import rules and the local ESLint `overture/state-ownership`
+rule.
 
 Overture package tests live under `overture-next/tests/`, grouped by layer or
 module such as `tests/core/`, `tests/runtime/`, `tests/render/`, `tests/host/`,
@@ -97,8 +102,11 @@ This is about *incidental* cleanup to code you are already editing — the
 [Dependency Ratchet](#dependency-ratchet) constraints apply to every change
 regardless. When you touch an Overture module:
 
-- **Encapsulation** - expose domain verbs before helper mutations. Put private
-  helpers under an `internal/` folder, guarded by a dependency-cruiser rule.
+- **Encapsulation** - expose domain methods on state owners before helper
+  mutations. Avoid new exported mutator functions shaped like
+  `doThing(state, ...)` for owned state; prefer owner objects with methods,
+  snapshots/read contracts, or module entry-point APIs. Put private helpers
+  under an `internal/` folder, guarded by a dependency-cruiser rule.
 - **Types** - move a contract you touch into its owning layer.
 - **Language** - rename legacy naming where you touch it; do not carry it into
   new code or public copy.
