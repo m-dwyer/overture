@@ -1,0 +1,85 @@
+import { CC, MIDI_STATUS_TYPE_MASK, VOLUME_CC } from "../lib/move-controls.js";
+import type { BrowserSchwungHost } from "../schwung/browser-chain.js";
+import type { MidiSink } from "./sinks.js";
+
+interface CorunState {
+  target: number;
+  id: number;
+  keep_mask: number;
+}
+
+export interface SchwungHostApi {
+  api: {
+    move_midi_inject_to_move(packet: number[]): void;
+    shadow_send_midi_to_dsp(...args: unknown[]): void;
+    shadow_corun_begin(target: number, id: number, keepMask: number): void;
+    shadow_corun_end(): void;
+    shadow_corun_state(): CorunState | null;
+    shadow_get_slots(): Array<Record<string, unknown>>;
+    shadow_get_param(slot: number, key: string): string | null;
+    shadow_set_param(slot: number, key: string, val: string | number): boolean;
+    host_get_volume(): number;
+    host_set_volume(volume: number): void;
+    host_list_modules(): Array<Record<string, unknown>>;
+    shadow_get_ui_flags(): Record<string, unknown>;
+  };
+  handleHostInternalMidi(status: number, d1: number, d2: number): boolean;
+}
+
+export function createSchwungHostApi(
+  schwung: BrowserSchwungHost,
+  midi: MidiSink,
+  log: (message: string) => void,
+): SchwungHostApi {
+  let corunState: CorunState | null = null;
+
+  return {
+    api: {
+      move_midi_inject_to_move(packet: number[]): void {
+        midi.inject(packet);
+      },
+      shadow_send_midi_to_dsp(...args: unknown[]): void {
+        midi.toChain(args);
+        schwung.sendMidiToDsp(args);
+      },
+      shadow_corun_begin(target: number, id: number, keepMask: number): void {
+        corunState = { target, id, keep_mask: keepMask };
+        log("corun_begin " + JSON.stringify([target, id, keepMask]));
+      },
+      shadow_corun_end(): void {
+        corunState = null;
+        log("corun_end");
+      },
+      shadow_corun_state(): CorunState | null {
+        return corunState ? { ...corunState } : null;
+      },
+      shadow_get_slots(): Array<Record<string, unknown>> {
+        return schwung.shadowGetSlots();
+      },
+      shadow_get_param(slot: number, key: string): string | null {
+        return schwung.shadowGetParam(slot, key);
+      },
+      shadow_set_param(slot: number, key: string, val: string | number): boolean {
+        const ok = schwung.shadowSetParam(slot, key, val);
+        log("shadow_set_param " + JSON.stringify([slot | 0, key, String(val ?? ""), ok]));
+        return ok;
+      },
+      host_get_volume(): number {
+        return schwung.hostGetVolume();
+      },
+      host_set_volume(volume: number): void {
+        schwung.hostSetVolume(Number(volume));
+      },
+      host_list_modules(): Array<Record<string, unknown>> {
+        return schwung.hostListModules();
+      },
+      shadow_get_ui_flags(): Record<string, unknown> {
+        return {};
+      },
+    },
+    handleHostInternalMidi(status: number, d1: number, d2: number): boolean {
+      if ((status & MIDI_STATUS_TYPE_MASK) !== CC || d1 !== VOLUME_CC) return false;
+      return schwung.handleHostVolumeCc(d2);
+    },
+  };
+}
