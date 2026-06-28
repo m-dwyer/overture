@@ -1,7 +1,6 @@
 import type { HostCommand } from "../../host-commands";
 import type { OvertureProject } from "../../project";
 import { getSequenceStep } from "../../sequence";
-import { getTrack } from "../../track";
 import type { PlaybackState, ScheduledNoteOff } from "../state";
 import { getPlayingClip } from "./playing-clips";
 
@@ -17,7 +16,7 @@ export function injectPlaybackStep(
     if (!clip) continue;
     const sequenceStep = getSequenceStep(clip.sequence, step % clip.sequence.length);
     if (!sequenceStep?.active) continue;
-    const route = getTrack(project.tracks, trackPlayback.trackIndex).route;
+    const route = project.trackRoute(trackPlayback.trackIndex);
     hostCommands.push({
       kind: "track-note-on",
       route,

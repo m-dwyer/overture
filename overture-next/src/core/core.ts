@@ -3,7 +3,7 @@ import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
 import { advancePlayback, createPlaybackState, stopPlayback as stopClipPlayback } from "./playback";
-import { createDefaultProject, getClipCell, getProjectTrackRoute, getSequenceForCell, listClipCellSnapshots } from "./project";
+import { createDefaultProject } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
 import { createTransport, type TransportStateSnapshot } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
@@ -40,10 +40,10 @@ export function createOvertureCore(): OvertureCore {
     const control = state.control.snapshot();
     const transport = state.transport.snapshot();
     const selectedClipCell = control.selectedClipCell;
-    const selectedCell = getClipCell(state.project, selectedClipCell);
+    const selectedCell = state.project.clipCellAt(selectedClipCell);
     return {
       selectedTrackIndex: control.selectedTrackIndex,
-      selectedTrackRoute: getProjectTrackRoute(state.project, control.selectedTrackIndex),
+      selectedTrackRoute: state.project.trackRoute(control.selectedTrackIndex),
       visibleTrackBank: control.visibleTrackBank,
       controlMode: control.controlMode,
       shiftHeld: control.shiftHeld,
@@ -51,13 +51,13 @@ export function createOvertureCore(): OvertureCore {
       playing: transport.playing,
       selectedClipId: selectedCell.clipId,
       selectedClipCell: { ...selectedClipCell },
-      clipCells: listClipCellSnapshots(state.project),
+      clipCells: state.project.clipCellSnapshots(),
       steps: getSnapshotSteps(control, transport),
     };
   }
 
   function selectedSequence(control: ControlStateSnapshot) {
-    return getSequenceForCell(state.project, control.selectedClipCell);
+    return state.project.sequenceFor(control.selectedClipCell);
   }
 
   function getSelectedSequenceLengthFor(control: ControlStateSnapshot): number {

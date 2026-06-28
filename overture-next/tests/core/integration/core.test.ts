@@ -5,8 +5,6 @@ import {
   CLIP_CELL_COUNT,
   SCENE_COUNT,
   createDefaultProject,
-  getClipCell,
-  getClipForCell,
 } from "../../../src/core/project";
 import { createDefaultSequence, toggleSequenceStep } from "../../../src/core/sequence";
 import { TRACK_COUNT, createTracks } from "../../../src/core/track";
@@ -30,10 +28,11 @@ describe("Overture Next core", () => {
   test("creates a default project with structural tracks, scenes, and clip cells", () => {
     const project = createDefaultProject();
 
-    expect(project.tracks).toHaveLength(TRACK_COUNT);
-    expect(project.scenes).toHaveLength(SCENE_COUNT);
-    expect(project.clipCells).toHaveLength(CLIP_CELL_COUNT);
-    expect(getClipCell(project, { trackIndex: 7, sceneIndex: 7 })).toMatchObject({
+    const cells = project.clipCellSnapshots();
+    expect(cells).toHaveLength(CLIP_CELL_COUNT);
+    expect(new Set(cells.map((cell) => cell.trackIndex)).size).toBe(TRACK_COUNT);
+    expect(new Set(cells.map((cell) => cell.sceneIndex)).size).toBe(SCENE_COUNT);
+    expect(project.clipCellAt({ trackIndex: 7, sceneIndex: 7 })).toMatchObject({
       trackIndex: 7,
       sceneIndex: 7,
       clipId: null,
@@ -299,8 +298,8 @@ describe("Overture Next core", () => {
 
   test("keeps sequences owned by independent clips", () => {
     const project = createDefaultProject();
-    const firstClip = getClipForCell(project, { trackIndex: 0, sceneIndex: 0 });
-    const secondClip = getClipForCell(project, { trackIndex: 1, sceneIndex: 0 });
+    const firstClip = project.clipFor({ trackIndex: 0, sceneIndex: 0 });
+    const secondClip = project.clipFor({ trackIndex: 1, sceneIndex: 0 });
 
     expect(firstClip?.id).toBe("clip-1");
     expect(secondClip?.id).toBe("clip-2");
@@ -314,11 +313,11 @@ describe("Overture Next core", () => {
 
   test("selects an empty clip cell without creating an Overture Clip", () => {
     const project = createDefaultProject();
-    const clipCount = Object.keys(project.clips).length;
+    const occupied = project.clipCellSnapshots().filter((cell) => cell.clipId).length;
 
-    expect(getClipForCell(project, { trackIndex: 0, sceneIndex: 7 })).toBeNull();
-    expect(Object.keys(project.clips)).toHaveLength(clipCount);
-    expect(getClipCell(project, { trackIndex: 0, sceneIndex: 7 }).clipId).toBeNull();
+    expect(project.clipFor({ trackIndex: 0, sceneIndex: 7 })).toBeNull();
+    expect(project.clipCellSnapshots().filter((cell) => cell.clipId)).toHaveLength(occupied);
+    expect(project.clipCellAt({ trackIndex: 0, sceneIndex: 7 }).clipId).toBeNull();
   });
 
   test("wraps the transport playhead through the default playback timeline", () => {

@@ -1,6 +1,5 @@
 import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinate, OvertureProject } from "../project";
-import { getClipCell } from "../project";
 import { launchPlayingClip, stopAllPlayingClips, stopPlayingClipOnTrack } from "./internal/clips";
 import { drainDueNoteOffs, injectPlaybackStep } from "./internal/notes";
 import type { PlaybackState } from "./state";
@@ -70,7 +69,7 @@ export function launchClipCellPlayback(
   coordinate: ClipCellCoordinate,
   clock: Readonly<PlaybackClock>,
 ): HostCommand[] {
-  const cell = getClipCell(project, coordinate);
+  const cell = project.clipCellAt(coordinate);
   const hostCommands = cell.clipId ? [] : stopPlayingClipOnTrack(project, playback, clock, coordinate.trackIndex);
   launchPlayingClip(project, playback, coordinate);
   return hostCommands;
@@ -82,6 +81,6 @@ function launchSelectedClipIfPlaybackIdle(
   selectedClipCell: ClipCellCoordinate,
 ): void {
   if (playback.tracks.some((track) => track.playingClipId)) return;
-  const cell = getClipCell(project, selectedClipCell);
+  const cell = project.clipCellAt(selectedClipCell);
   if (cell.clipId) launchPlayingClip(project, playback, selectedClipCell);
 }

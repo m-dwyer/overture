@@ -1,8 +1,6 @@
 import type { HostCommand } from "../../host-commands";
 import type { OvertureProject, ClipCellCoordinate, ClipId } from "../../project";
-import { getClipCell } from "../../project";
 import { getSequenceStep } from "../../sequence";
-import { getTrack } from "../../track";
 import type { PlaybackState, TrackPlaybackState } from "../state";
 import type { PlaybackClock } from "../types";
 import { drainPendingNoteOffsForTrack } from "./notes";
@@ -14,7 +12,7 @@ export function launchPlayingClip(
   playback: PlaybackState,
   coordinate: ClipCellCoordinate,
 ): ClipId | null {
-  const cell = getClipCell(project, coordinate);
+  const cell = project.clipCellAt(coordinate);
   const track = getTrackPlayback(playback, coordinate.trackIndex);
   track.playingClipId = cell.clipId;
   track.queuedClipId = null;
@@ -66,7 +64,7 @@ function stopTrackPlayback(
   return [
     {
       kind: "track-note-off",
-      route: getTrack(project.tracks, trackPlayback.trackIndex).route,
+      route: project.trackRoute(trackPlayback.trackIndex),
       trackIndex: trackPlayback.trackIndex,
       note: step.note,
     },

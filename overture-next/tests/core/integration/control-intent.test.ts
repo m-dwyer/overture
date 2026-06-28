@@ -3,7 +3,7 @@ import { createInitialControlState } from "../../../src/core/control-state";
 import { interpretControl } from "../../../src/core/controls/interpret-control";
 import { applyIntent } from "../../../src/core/intents/apply-intent";
 import { createPlaybackState } from "../../../src/core/playback";
-import { createDefaultProject, getClipCell, getClipForCell } from "../../../src/core/project";
+import { createDefaultProject } from "../../../src/core/project";
 import { createTransport } from "../../../src/core/transport";
 import type { CoreState, HostCommand } from "../../../src/core/types";
 
@@ -55,7 +55,7 @@ describe("Overture Next control-to-intent pipeline", () => {
   test("applies clip-cell selection without creating clips", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
-    const clipCount = Object.keys(state.project.clips).length;
+    const clipCount = state.project.clipCellSnapshots().filter((cell) => cell.clipId).length;
 
     expect(
       applyIntentAndCollect(
@@ -69,14 +69,14 @@ describe("Overture Next control-to-intent pipeline", () => {
       selectedTrackIndex: 3,
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
     });
-    expect(Object.keys(state.project.clips)).toHaveLength(clipCount);
+    expect(state.project.clipCellSnapshots().filter((cell) => cell.clipId)).toHaveLength(clipCount);
     expect(hostCommands).toEqual([]);
   });
 
   test("applies Clip Cell launch as playback state and explicit UI selection", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
-    const clipCount = Object.keys(state.project.clips).length;
+    const clipCount = state.project.clipCellSnapshots().filter((cell) => cell.clipId).length;
 
     expect(
       applyIntentAndCollect(
@@ -91,7 +91,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       selectedClipCell: { trackIndex: 2, sceneIndex: 0 },
     });
     expect(state.playback.tracks[2].playingClipId).toBe("clip-3");
-    expect(Object.keys(state.project.clips)).toHaveLength(clipCount);
+    expect(state.project.clipCellSnapshots().filter((cell) => cell.clipId)).toHaveLength(clipCount);
     expect(hostCommands).toEqual([]);
   });
 
@@ -237,8 +237,8 @@ describe("Overture Next control-to-intent pipeline", () => {
   test("applies step toggles only to the selected clip sequence", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
-    const selectedClip = getClipForCell(state.project, state.control.snapshot().selectedClipCell);
-    const otherClip = getClipForCell(state.project, { trackIndex: 1, sceneIndex: 0 });
+    const selectedClip = state.project.clipFor(state.control.snapshot().selectedClipCell);
+    const otherClip = state.project.clipFor({ trackIndex: 1, sceneIndex: 0 });
     if (!selectedClip || !otherClip) throw new Error("Expected default clips");
 
     expect(selectedClip.sequence.steps[1].active).toBe(false);

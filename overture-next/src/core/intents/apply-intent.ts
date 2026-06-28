@@ -1,7 +1,5 @@
 import { launchClipCellPlayback, startPlayback, stopPlayback as stopClipPlayback } from "../playback";
-import { getClipCell, getClipForCell } from "../project";
 import { toggleSequenceStep } from "../sequence";
-import { getTrack } from "../track";
 import type { CoreState, HostCommand } from "../types";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
@@ -25,19 +23,19 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
   }
   if (intent.kind === "select-track") {
     const sceneIndex = control.snapshot().selectedClipCell.sceneIndex;
-    getTrack(state.project.tracks, intent.trackIndex);
-    getClipCell(state.project, { trackIndex: intent.trackIndex, sceneIndex });
+    state.project.track(intent.trackIndex);
+    state.project.clipCellAt({ trackIndex: intent.trackIndex, sceneIndex });
     control.selectTrack(intent.trackIndex);
     return applied();
   }
   if (intent.kind === "toggle-step") {
     control.selectStep(intent.stepIndex);
-    const clip = getClipForCell(state.project, control.snapshot().selectedClipCell);
+    const clip = state.project.clipFor(control.snapshot().selectedClipCell);
     if (clip) toggleSequenceStep(clip.sequence, intent.stepIndex);
     return applied();
   }
   if (intent.kind === "audition-note") {
-    const route = getTrack(state.project.tracks, intent.trackIndex).route;
+    const route = state.project.trackRoute(intent.trackIndex);
     const hostCommand = intent.held
       ? {
           kind: "track-note-on" as const,
@@ -70,7 +68,7 @@ function applied(hostCommands: HostCommand[] = []): DomainIntentTransaction {
 }
 
 function selectValidatedClipCell(state: CoreState, coordinate: { trackIndex: number; sceneIndex: number }): void {
-  getTrack(state.project.tracks, coordinate.trackIndex);
-  getClipCell(state.project, coordinate);
+  state.project.track(coordinate.trackIndex);
+  state.project.clipCellAt(coordinate);
   state.control.selectClipCell(coordinate);
 }

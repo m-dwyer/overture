@@ -5,16 +5,16 @@ import type {
   ClipCellCoordinate,
   ClipId,
   OvertureClip,
-  OvertureProject,
+  ProjectState,
   SceneState,
 } from "../types";
-import { getClipCell } from "./cells";
+import { findCell } from "./cells";
 
 export const SCENE_COUNT = 8;
 export const CLIP_CELL_COUNT = TRACK_COUNT * SCENE_COUNT;
 
-export function createDefaultProject(): OvertureProject {
-  const project: OvertureProject = {
+export function createDefaultProjectState(): ProjectState {
+  const state: ProjectState = {
     tracks: createTracks(),
     scenes: createScenes(),
     clipCells: createClipCells(),
@@ -23,10 +23,10 @@ export function createDefaultProject(): OvertureProject {
   };
 
   for (let trackIndex = 0; trackIndex < TRACK_COUNT; trackIndex++) {
-    createClipInCell(project, { trackIndex, sceneIndex: 0 });
+    createClipInCell(state, { trackIndex, sceneIndex: 0 });
   }
 
-  return project;
+  return state;
 }
 
 function createScenes(sceneCount = SCENE_COUNT): SceneState[] {
@@ -46,11 +46,12 @@ function createClipCells(trackCount = TRACK_COUNT, sceneCount = SCENE_COUNT): Cl
   return clipCells;
 }
 
-function createClipInCell(project: OvertureProject, coordinate: ClipCellCoordinate): OvertureClip {
-  const cell = getClipCell(project, coordinate);
-  const clip = createOvertureClip("clip-" + project.nextClipNumber);
-  project.nextClipNumber++;
-  project.clips[clip.id] = clip;
+function createClipInCell(state: ProjectState, coordinate: ClipCellCoordinate): OvertureClip {
+  const cell = findCell(state.clipCells, coordinate);
+  if (!cell) throw new Error("Missing clip cell " + coordinate.trackIndex + ":" + coordinate.sceneIndex);
+  const clip = createOvertureClip("clip-" + state.nextClipNumber);
+  state.nextClipNumber++;
+  state.clips[clip.id] = clip;
   cell.clipId = clip.id;
   return clip;
 }

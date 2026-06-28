@@ -38,7 +38,12 @@ export interface OvertureClip {
   sequence: Sequence;
 }
 
-export interface OvertureProject {
+/**
+ * The raw, mutable state owned by the OvertureProject aggregate. This is the
+ * internal shape; callers go through the OvertureProject owner-object, which
+ * keeps this private and exposes read contracts instead of these fields.
+ */
+export interface ProjectState {
   tracks: TrackState[];
   scenes: SceneState[];
   clipCells: ClipCell[];
