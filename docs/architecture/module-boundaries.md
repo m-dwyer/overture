@@ -73,3 +73,16 @@ Before changing a boundary:
 4. Make the smallest change that improves the verified boundary.
 5. Update tests through public APIs.
 6. Add or tighten ratchets only after the boundary is true.
+
+Before adopting a new module boundary, verify that the module really owns the
+concept it names. A new boundary should usually satisfy all three checks:
+
+- it owns the primary type or state shape its public verbs operate on
+- it contains domain policy, invariants, or authority reduction that callers
+  should not duplicate
+- it improves the caller contract rather than only wrapping another module's
+  public function
+
+Thin wrappers that import another module's owned type and immediately delegate
+back to that owner's public function are usually not a boundary improvement.
+Prefer the existing owner API until the new module has a real ownership model.
