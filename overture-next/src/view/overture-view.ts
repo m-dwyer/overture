@@ -1,12 +1,14 @@
 import type { CoreSnapshot } from "../core/types";
 import { SESSION_PAD_COUNT, clipCellCoordinateForSessionPad } from "../session-grid";
 import { createSurfaceHints, hasSessionSceneColumnHint, hasTrackRowHint, type SurfaceHint } from "./surface-hints";
-import type { LedView, OvertureView, ScreenView } from "./types";
+import type { LedView, OvertureSurfaceView, ScreenView } from "./types";
 
-export function createOvertureView(snapshot: CoreSnapshot): OvertureView {
+export function createOvertureSurfaceView(snapshot: CoreSnapshot): OvertureSurfaceView {
+  const surfaceHints = createSurfaceHints(snapshot);
   return {
+    surfaceHints,
     screen: createScreenView(snapshot),
-    leds: createLedView(snapshot),
+    leds: createLedView(snapshot, surfaceHints),
   };
 }
 
@@ -37,8 +39,7 @@ export function createScreenView(snapshot: CoreSnapshot): ScreenView {
   };
 }
 
-export function createLedView(snapshot: CoreSnapshot): LedView {
-  const surfaceHints = createSurfaceHints(snapshot);
+export function createLedView(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHint[]): LedView {
   return {
     steps: snapshot.steps.map((step) => ({
       step: step.index,

@@ -1,3 +1,5 @@
+import type { SurfaceHint } from "./surface-hints";
+
 export interface StepView {
   index: number;
   active: boolean;
@@ -46,7 +48,8 @@ export interface LedView {
   buttons: ButtonLedView[];
 }
 
-export interface OvertureView {
+export interface OvertureSurfaceView {
+  surfaceHints: SurfaceHint[];
   screen: ScreenView;
   leds: LedView;
 }
