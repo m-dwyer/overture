@@ -1,7 +1,5 @@
-// Layout-tier mock DSP — just enough param state to let the real UI render and
-// be navigated. NOT behaviourally accurate (no real sequencer/playback): that is
-// the behaviour tier (real seq8-wasm). Flesh out keys here only as the UI needs
-// them for layout/flow work; prefer moving to wasm over deepening this mock.
+// Mock DSP — just enough param state to let the real UI render and be navigated.
+// Keep it shallow; behavior that belongs to Overture should live in overture-next.
 //
 // Mirrors host semantics: get returns a string, or null when absent.
 

@@ -3,9 +3,9 @@ import { beginnerGuide } from "./manual/content";
 import { generateGuide } from "./manual/generate";
 import { scenes } from "./manual/scenarios";
 
-// Generated beginner-manual figures. This drives the browser emulator's REAL
-// ui.js + seq8-wasm engine through the same MIDI entry point as the hardware
-// shell, then captures the Move-like panel from ?manual=1.
+// Generated beginner-manual figures. This drives the browser emulator's real
+// Overture UI through the same MIDI entry point as the hardware shell, then
+// captures the Move-like panel from ?manual=1.
 //
 // The work lives in tests/manual/: scenarios.ts (content data), driver.ts (the
 // real-gesture MIDI engine), annotate.ts (callouts + capture), emit-markdown.ts

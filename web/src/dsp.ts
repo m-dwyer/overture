@@ -1,6 +1,6 @@
-// Common DSP interface the host shims route to. Two implementations:
-//   - mock-dsp.ts  (layout tier: just enough param state)
-//   - wasm-dsp.ts  (behavior tier: the real seq8 engine compiled to wasm)
+// Common DSP interface the host shims route to. The active tool currently uses
+// the mock implementation; keep this boundary so a real DSP can replace it
+// without changing the emulator host.
 export interface Dsp {
   /** get_param: returns the value string, or null when absent (host semantics). */
   get(key: string): string | null;

@@ -6,7 +6,7 @@ import { GUIDE_PATH, HTML_PATH } from "./paths";
 import type { GuideConfig } from "./types";
 
 export const intro = [
-  "This guide is a screenshot-driven introduction to Overture's current UI. It is intentionally shorter than the inherited dAVEBOx manual — learn the main surfaces here first, then dive into the references below.",
+  "This guide is a screenshot-driven introduction to Overture's current UI. Learn the main surfaces here first, then dive into the references below.",
   "Each screenshot is produced by the real Overture UI running in the browser emulator, so it always reflects the current build. A cyan outline with a numbered badge marks each control you press for the action, and the numbers match the legend on the action banner. Coloured button fills are Overture's own live LED state.",
 ];
 
@@ -16,11 +16,11 @@ export interface DocLink {
   note: string;
 }
 
-// Cross-links (this guide lives in docs/generated/). The full dAVEBOx reference
+// Cross-links (this guide lives in docs/generated/). The full Overture reference
 // link is intentionally omitted for now — it will return once that manual is
 // also HTML-generated.
 export const links: DocLink[] = [
-  { label: "Overture vs dAVEBOx", href: "../OVERTURE-VS-DAVEBOX.md", note: "what this fork changes, and why" },
+  { label: "Overture architecture", href: "../ARCHITECTURE.md", note: "how the active implementation is structured" },
 ];
 
 export interface CheatRow {

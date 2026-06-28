@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "verify": "pnpm typecheck",
+    "verify": "pnpm typecheck && pnpm test:node",
     "test:node": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test tests/render.spec.ts tests/inputs.spec.ts",
