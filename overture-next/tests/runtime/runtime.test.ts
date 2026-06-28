@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { HostCommand } from "../../src/core/types";
+import type { HostCommand } from "../../src/application/types";
 import type { OvertureHostPorts } from "../../src/ports/host-ports";
 import type { ControlSurfacePort } from "../../src/ports/inbound";
 import type { DisplayPort, LedPort, MidiPort, RuntimePort } from "../../src/ports/outbound";

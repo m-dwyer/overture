@@ -1,4 +1,4 @@
-import type { CoreSnapshot } from "../core/types";
+import type { CoreSnapshot } from "../application/types";
 import { viewModuleFor } from "./internal/view-modules";
 import type { LedView, OvertureSurfaceView, SurfaceHint } from "./types";
 

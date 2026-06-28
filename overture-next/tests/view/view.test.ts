@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { CoreSnapshot } from "../../src/core/types";
+import type { CoreSnapshot } from "../../src/application/types";
 import { createOvertureSurfaceView } from "../../src/view";
 
 describe("Overture Next view projection", () => {

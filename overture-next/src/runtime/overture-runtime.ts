@@ -1,5 +1,5 @@
-import { createOvertureCore } from "../core/core";
-import type { OvertureCore } from "../core/types";
+import { createOvertureCore } from "../application/core";
+import type { OvertureCore } from "../application/types";
 import type { OvertureHostPorts } from "../ports/host-ports";
 import { renderLeds } from "../render/render-leds";
 import { renderScreen } from "../render/render-screen";

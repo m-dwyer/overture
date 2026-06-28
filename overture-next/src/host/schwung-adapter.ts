@@ -1,6 +1,6 @@
-import type { ControlInput } from "../core/controls/types";
-import type { HostCommand } from "../core/host-commands";
-import type { CoreSnapshot } from "../core/types";
+import type { ControlInput } from "../application/controls/types";
+import type { HostCommand } from "../application/host-commands";
+import type { CoreSnapshot } from "../application/types";
 import {
   CC,
   NAV,

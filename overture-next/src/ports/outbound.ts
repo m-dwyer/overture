@@ -1,5 +1,5 @@
-import type { HostCommand } from "../core/host-commands";
-import type { CoreSnapshot } from "../core/types";
+import type { HostCommand } from "../application/host-commands";
+import type { CoreSnapshot } from "../application/types";
 
 export type MoveMidiPacket = readonly [number, number, number, number];
 export type SchwungMidiMessage = readonly [number, number, number];

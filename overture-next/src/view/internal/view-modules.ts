@@ -1,4 +1,4 @@
-import type { CoreSnapshot } from "../../core/types";
+import type { CoreSnapshot } from "../../application/types";
 import { sessionView } from "../session";
 import { trackView } from "../track";
 import type { PadLedView, ScreenView, SurfaceHint } from "../types";

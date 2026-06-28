@@ -1,4 +1,4 @@
-import type { CoreSnapshot } from "../../../core/types";
+import type { CoreSnapshot } from "../../../application/types";
 import type { ScreenView } from "../../types";
 
 export function createSessionScreenView(snapshot: CoreSnapshot): ScreenView {

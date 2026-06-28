@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { CoreSnapshot } from "../../src/core/types";
+import type { CoreSnapshot } from "../../src/application/types";
 import { sessionView } from "../../src/view/session";
 
 describe("Overture Next Session View module", () => {

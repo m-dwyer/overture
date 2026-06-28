@@ -1,5 +1,5 @@
-import type { CoreSnapshot } from "../../core/types";
-import { SESSION_PAD_COUNT } from "../../session-grid";
+import type { CoreSnapshot } from "../../application/types";
+import { SESSION_PAD_COUNT } from "../../shared/session-grid";
 import type { PadLedView, ScreenView, SurfaceHint } from "../types";
 import { createTrackScreenView } from "./internal/screen-view";
 import { createTrackSurfaceHints } from "./internal/surface-hints";

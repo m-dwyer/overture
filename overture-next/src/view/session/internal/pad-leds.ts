@@ -1,5 +1,5 @@
-import type { CoreSnapshot } from "../../../core/types";
-import { SESSION_PAD_COUNT, clipCellCoordinateForSessionPad } from "../../../session-grid";
+import type { CoreSnapshot } from "../../../application/types";
+import { SESSION_PAD_COUNT, clipCellCoordinateForSessionPad } from "../../../shared/session-grid";
 import type { PadLedView, SurfaceHint } from "../../types";
 
 /**

@@ -1,4 +1,4 @@
-import type { ControlInput } from "../core/controls/types";
+import type { ControlInput } from "../application/controls/types";
 
 /**
  * Inbound hardware surface boundary. Host adapters own raw Move MIDI parsing;

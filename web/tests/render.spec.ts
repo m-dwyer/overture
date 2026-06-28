@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { advanceTicks, waitReady } from "./wait";
-import { createDefaultSequence } from "../../overture-next/src/core/sequence";
-import { TRACK_BANK_SIZE } from "../../overture-next/src/core/surface-addressing";
-import { DEFAULT_TICKS_PER_STEP } from "../../overture-next/src/core/transport";
+import { createDefaultSequence } from "../../overture-next/src/domain/sequence";
+import { TRACK_BANK_SIZE } from "../../overture-next/src/state/surface-addressing";
+import { DEFAULT_TICKS_PER_STEP } from "../../overture-next/src/application/transport";
 import {
   CC,
   NAV,
@@ -14,7 +14,7 @@ import {
   SCHWUNG_SLOT_CHANNEL_FIRST,
   STEP_CC0,
 } from "../../overture-next/src/host/move-controls";
-import { SESSION_SCENE_COLUMNS, SESSION_TRACK_ROWS } from "../../overture-next/src/session-grid";
+import { SESSION_SCENE_COLUMNS, SESSION_TRACK_ROWS } from "../../overture-next/src/shared/session-grid";
 
 const MIDI_PRESS = 127;
 const MIDI_RELEASE = 0;

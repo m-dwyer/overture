@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { CoreSnapshot } from "../../src/core/types";
+import type { CoreSnapshot } from "../../src/application/types";
 import { trackView } from "../../src/view/track";
 
 describe("Overture Next Track View module", () => {
