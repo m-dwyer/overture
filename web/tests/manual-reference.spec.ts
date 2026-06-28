@@ -4,8 +4,8 @@ import { referenceGuide } from "./manual/reference-content";
 import { scenes } from "./manual/reference";
 
 // Generated full Overture reference manual. Same pipeline as the beginner guide
-// (manual-shots.spec.ts) — the REAL ui.js + seq8-wasm engine driven over MIDI —
-// but a far larger scene set covering the whole surface. Output:
+// (manual-shots.spec.ts) — the real Overture UI driven over MIDI — but a far
+// larger scene set covering the whole surface. Output:
 // docs/generated/overture-reference.{md,html}, with `ref-` figure filenames in
 // the shared assets/ directory.
 //

@@ -3,7 +3,7 @@
 // cheat-sheet, and glossary can be edited without touching capture logic. Mirrors
 // content.ts (the beginner guide) but is intentionally COMPREHENSIVE and
 // SELF-CONTAINED: it documents Overture's whole surface and never defers coverage
-// to the dAVEBOx manual.
+// to any legacy manual.
 
 import { REF_GUIDE_PATH, REF_HTML_PATH } from "./paths";
 import type { CheatRow, DocLink, GlossaryRow } from "./content";
@@ -15,10 +15,10 @@ export const intro = [
   "Three things live only on real hardware and are noted where they appear: Move's tracks 1–4 sound editing (the firmware owns those voices), the final step of Bake/Export (it writes files through the host), and automation *playback* emission (the edit surface is shown here; emission is verified on device).",
 ];
 
-// Self-contained: the only cross-link is the friendly fork overview. The manual
-// never sends the reader to the dAVEBOx manual for coverage.
+// Self-contained: the manual should not depend on any legacy reference for
+// coverage.
 export const links: DocLink[] = [
-  { label: "Overture vs dAVEBOx", href: "../OVERTURE-VS-DAVEBOX.md", note: "what this fork changes vs upstream, and why" },
+  { label: "Overture architecture", href: "../ARCHITECTURE.md", note: "how the active implementation is structured" },
 ];
 
 export const cheatSheet: CheatRow[] = [

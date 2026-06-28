@@ -139,7 +139,7 @@ export const scenes: Scene[] = [
     slug: "select-tracks",
     body: [
       "In Overture's Track View, the four side buttons select tracks 1-4. Hold Shift with a side button to reach tracks 5-8.",
-      "This is one of Overture's Move-native changes from dAVEBOx: side buttons are track identity first, not clip buttons.",
+      "Side buttons are track identity first, not clip buttons.",
     ],
     shots: [
       {

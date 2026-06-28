@@ -234,7 +234,7 @@ export const scenes: Scene[] = [
     slug: "per-step-length-on-the-jog",
     body: [
       "Hold a step and turn the jog wheel to adjust that step's length — Move's \"hold step + wheel = length\" gesture. On an empty step the jog does nothing.",
-      "This is an Overture change: in dAVEBOx, turning the jog while holding a step silently cycled the parameter banks underneath. The jog is now reserved for step length during a hold and never changes banks.",
+      "Turning the jog while holding a step is reserved for step length and never changes banks underneath.",
     ],
     shots: [
       {

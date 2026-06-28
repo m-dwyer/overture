@@ -22,5 +22,5 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 - `site/src/pages/try.astro` — public "try Overture" route embedding the browser emulator from `web/dist`.
 
 ## Credits / licence
-Built on **Schwung** (© Charles Vestal, MIT) and **dAVEBOx** (© Josh Gaines, MIT). Overture
-bundles and extends both; all attribution preserved. See those projects' licences.
+Built on **Schwung** (© Charles Vestal, MIT). See Schwung's licence for its
+source and submodule contents.
