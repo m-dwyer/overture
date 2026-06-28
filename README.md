@@ -16,6 +16,7 @@ ecosystem for the rest. Under the hood it bundles Schwung as its (invisible) eng
 ## Docs
 - `AGENTS.md` — canonical source-tree and workflow contract for agents.
 - `docs/ARCHITECTURE.md` — current active architecture summary.
+- `docs/architecture/` — architecture playbooks for module boundaries, state ownership, and ratchets.
 - `docs/EMULATOR.md` — browser emulator and Moveforge module WASM workflow.
 - `docs/DEVICE-SMOKE.md` — minimal on-device checks for changes the emulator cannot prove.
 - `docs/adr/` — retained architecture decision history.

@@ -46,46 +46,17 @@ as the active Overture source tree, not as a product name.
 The browser emulator and current test ratchet boot Overture from
 `overture-next/ui/ui.js`.
 
-Layer responsibilities:
+Start with `CONTEXT.md` for domain language. For architecture work, read:
 
-- `overture-next/ui/ui.js` is the Schwung compatibility shell. It creates the
-  adapter/runtime and installs Schwung entrypoints. Keep it small.
-- `overture-next/src/runtime/` owns application orchestration: init, tick,
-  runtime readiness, boot splash policy, MIDI dispatch, command draining, and
-  render calls.
-- `overture-next/src/session-grid.ts` owns neutral Session grid geometry shared
-  by control interpretation and view-model derivation.
-- `overture-next/src/core/` owns groovebox domain state and decisions: project
-  data, transport, control-surface state, control interpretation, domain
-  intents, and domain host commands. Keep transient control focus and mode in
-  explicit Control State, not in Overture Project data.
-- `overture-next/src/host/` owns Schwung/Move translation. Raw `globalThis`,
-  Schwung host function names, Move MIDI bytes, Move CC/note numbers, and
-  track-to-Move-channel mapping belong here.
-- `overture-next/src/ports/` owns typed boundary contracts between runtime,
-  host, display, LEDs, MIDI, and command execution.
-- `overture-next/src/view/` owns view-model data contracts.
-- `overture-next/src/render/` is presentational. It renders view models through
-  display/LED ports and must not own domain or host policy.
+- `docs/ARCHITECTURE.md` for the active source-tree summary.
+- `docs/architecture/module-boundaries.md` for layer ownership and public API
+  boundaries.
+- `docs/architecture/state-ownership.md` for mutable state-owner patterns.
+- `docs/architecture/ratchets.md` for dependency-cruiser, ESLint, and test
+  enforcement policy.
 
-The host adapter converts raw Move MIDI input into typed control input. Core
-interprets control input against Control State, applies resulting intents to
-project/transport/control state, and emits domain commands such as
-`track-note-on` and `track-note-off`; the host adapter converts those commands
-to Move MIDI packets.
-
-State owners should be the only modules that mutate their state shape:
-`transport.ts` mutates `TransportState`; `playback/` mutates `PlaybackState`;
-`control-state.ts` mutates `ControlState`; and `project/` mutates
-`OvertureProject`. Cross-state workflows belong in orchestration code that calls
-the owning modules' public verbs. For newly adopted state owners, prefer a
-stateful owner object such as a class or closure-backed object over exported
-mutator functions that accept the owned state object as a parameter. Read-only
-consumers should receive snapshots or narrow read contracts. Orchestration code
-may hold owner objects and call their domain methods, but should not directly
-mutate state shapes. `overture-next` enforces adopted ownership boundaries with
-dependency-cruiser import rules and the local ESLint `overture/state-ownership`
-rule.
+Do not add broad rules from memory. Verify the boundary is true first, then
+ratchet it.
 
 Overture package tests live under `overture-next/tests/`, grouped by layer or
 module such as `tests/core/`, `tests/runtime/`, `tests/render/`, `tests/host/`,
@@ -96,22 +67,14 @@ coverage.
 
 ## Boy Scout Rule
 
-Leave touched code more aligned with the target architecture than you found it.
-This is about *incidental* cleanup to code you are already editing — the
-[Active Architecture](#active-architecture) layer model and
-[Dependency Ratchet](#dependency-ratchet) constraints apply to every change
-regardless. When you touch an Overture module:
+Leave touched code more aligned with the documented architecture than you found
+it. Keep cleanup incidental to the code you are already changing. When touching
+an Overture module:
 
-- **Encapsulation** - expose domain methods on state owners before helper
-  mutations. Avoid new exported mutator functions shaped like
-  `doThing(state, ...)` for owned state; prefer owner objects with methods,
-  snapshots/read contracts, or module entry-point APIs. Put private helpers
-  under an `internal/` folder, guarded by a dependency-cruiser rule.
-- **Types** - move a contract you touch into its owning layer.
-- **Language** - rename legacy naming where you touch it; do not carry it into
-  new code or public copy.
-- **Ratchets** - when a change makes an aspirational boundary real, tighten
-  `overture-next/.dependency-cruiser.cjs` to lock it in.
+- preserve or improve its ownership boundary
+- prefer public module APIs over deep/internal imports
+- avoid adding new `doThing(state, ...)` APIs for owned mutable state
+- add or tighten ratchets only after the boundary is true
 
 If a cleanup grows beyond the code you are touching, split it into its own
 `refactor:` commit rather than expanding the current diff.
@@ -126,18 +89,9 @@ instead of the mutable state object whenever practical.
 ## Dependency Ratchet
 
 `pnpm verify` runs the active Overture package checks and focused web harness
-tests. The dependency-cruiser rules are the architecture ratchet:
-
-- core does not import host, render, runtime, or UI shell code.
-- host adapters stay at the boundary and do not import core behavior or renderers.
-- renderers stay presentational.
-- runtime orchestrates through ports and does not import concrete host adapters.
-- view types stay neutral.
-- port types stay contracts.
-- module `internal/` folders are private implementation details protected by
-  dependency-cruiser as modules adopt them.
-
-Never weaken these rules to make a change pass.
+tests. The dependency-cruiser and ESLint rules are executable architecture
+ratchets. Never weaken them to make a change pass. For the ratchet model, read
+`docs/architecture/ratchets.md`.
 
 ## Build, Test, Debug
 

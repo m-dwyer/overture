@@ -3,6 +3,15 @@
 This is the current active architecture summary. `AGENTS.md` remains the
 canonical operating contract for agents working in this repo.
 
+For deeper architecture guidance, read:
+
+- `docs/architecture/README.md` for the CONTEXT-to-ratchets workflow.
+- `docs/architecture/module-boundaries.md` for layer ownership and public API
+  boundaries.
+- `docs/architecture/state-ownership.md` for mutable state-owner patterns.
+- `docs/architecture/ratchets.md` for dependency-cruiser, ESLint, and test
+  enforcement policy.
+
 ## Active Source Tree
 
 The active Overture implementation is `overture-next/`.
