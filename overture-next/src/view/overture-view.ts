@@ -1,5 +1,6 @@
 import type { CoreSnapshot } from "../core/types";
 import { SESSION_PAD_COUNT, clipCellCoordinateForSessionPad } from "../session-grid";
+import { createSurfaceHints, hasSessionSceneColumnHint, hasTrackRowHint, type SurfaceHint } from "./surface-hints";
 import type { LedView, OvertureView, ScreenView } from "./types";
 
 export function createOvertureView(snapshot: CoreSnapshot): OvertureView {
@@ -37,26 +38,35 @@ export function createScreenView(snapshot: CoreSnapshot): ScreenView {
 }
 
 export function createLedView(snapshot: CoreSnapshot): LedView {
+  const surfaceHints = createSurfaceHints(snapshot);
   return {
     steps: snapshot.steps.map((step) => ({
       step: step.index,
-      color: step.playhead ? 120 : step.active ? 48 : 0,
+      state: step.playhead ? "playhead" : step.active ? "active" : "off",
     })),
-    clipCellPads: createClipCellPadLedView(snapshot),
+    clipCellPads: createClipCellPadLedView(snapshot, surfaceHints),
     buttons: [
-      ...[0, 1, 2, 3].map((row) => ({ kind: "track-row" as const, row, state: trackRowLedState(snapshot, row) })),
-      { kind: "play", color: snapshot.playing ? 16 : 4 },
-      { kind: "menu", color: snapshot.controlMode === "session" ? 44 : 8 },
+      ...[0, 1, 2, 3].map((row) => ({
+        kind: "track-row" as const,
+        row,
+        state: trackRowLedState(snapshot, surfaceHints, row),
+      })),
+      { kind: "play", state: snapshot.playing ? "playing" : "stopped" },
+      { kind: "menu", state: snapshot.controlMode === "session" ? "session" : "track" },
     ],
   };
 }
 
-function trackRowLedState(snapshot: CoreSnapshot, row: number): "selected" | "hinted" | "available" {
+function trackRowLedState(
+  snapshot: CoreSnapshot,
+  surfaceHints: readonly SurfaceHint[],
+  row: number,
+): "selected" | "hinted" | "available" {
   if (row === snapshot.selectedTrackIndex % 4) return "selected";
-  return snapshot.shiftHeld ? "hinted" : "available";
+  return hasTrackRowHint(surfaceHints, row) ? "hinted" : "available";
 }
 
-function createClipCellPadLedView(snapshot: CoreSnapshot): LedView["clipCellPads"] {
+function createClipCellPadLedView(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHint[]): LedView["clipCellPads"] {
   return Array.from({ length: SESSION_PAD_COUNT }, (_, padIndex) => {
     if (snapshot.controlMode !== "session") return { padIndex, state: "off" };
 
@@ -67,9 +77,15 @@ function createClipCellPadLedView(snapshot: CoreSnapshot): LedView["clipCellPads
     const selected =
       snapshot.selectedClipCell.trackIndex === coordinate.trackIndex &&
       snapshot.selectedClipCell.sceneIndex === coordinate.sceneIndex;
+    const hinted = hasSessionSceneColumnHint(surfaceHints, coordinate.sceneIndex);
+    let state: LedView["clipCellPads"][number]["state"];
+    if (hinted) state = "hinted";
+    else if (selected) state = "selected";
+    else if (clipCell?.clipId) state = "occupied";
+    else state = "empty";
     return {
       padIndex,
-      state: selected ? "selected" : clipCell?.clipId ? "occupied" : "empty",
+      state,
     };
   });
 }
