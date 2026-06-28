@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { OVERTURE_LED_COLOR } from "../../src/ports/led-colors";
 import type { LedPort } from "../../src/ports/outbound";
 import { renderLeds } from "../../src/render/render-leds";
 import type { LedView } from "../../src/view/types";
@@ -8,9 +9,14 @@ describe("Overture Next LED rendering", () => {
     const calls: string[] = [];
     const leds = createLedRecorder(calls);
     const view: LedView = {
-      steps: [],
+      steps: [
+        { step: 0, state: "active" },
+        { step: 1, state: "playhead" },
+        { step: 2, state: "off" },
+      ],
       clipCellPads: [
         { padIndex: 7, state: "selected" },
+        { padIndex: 15, state: "hinted" },
         { padIndex: 24, state: "occupied" },
         { padIndex: 8, state: "empty" },
         { padIndex: 0, state: "off" },
@@ -19,19 +25,27 @@ describe("Overture Next LED rendering", () => {
         { kind: "track-row", row: 0, state: "selected" },
         { kind: "track-row", row: 1, state: "hinted" },
         { kind: "track-row", row: 2, state: "available" },
+        { kind: "play", state: "playing" },
+        { kind: "menu", state: "session" },
       ],
     };
 
     renderLeds(view, leds);
 
     expect(calls).toEqual([
-      "pad:7:120",
-      "pad:24:48",
-      "pad:8:4",
-      "pad:0:0",
-      "track-row:0:120",
-      "track-row:1:44",
-      "track-row:2:12",
+      "step:0:" + OVERTURE_LED_COLOR.active,
+      "step:1:" + OVERTURE_LED_COLOR.selected,
+      "step:2:" + OVERTURE_LED_COLOR.off,
+      "pad:7:" + OVERTURE_LED_COLOR.selected,
+      "pad:15:" + OVERTURE_LED_COLOR.hint,
+      "pad:24:" + OVERTURE_LED_COLOR.active,
+      "pad:8:" + OVERTURE_LED_COLOR.dim,
+      "pad:0:" + OVERTURE_LED_COLOR.off,
+      "track-row:0:" + OVERTURE_LED_COLOR.selected,
+      "track-row:1:" + OVERTURE_LED_COLOR.hint,
+      "track-row:2:" + OVERTURE_LED_COLOR.available,
+      "play:" + OVERTURE_LED_COLOR.playing,
+      "menu:" + OVERTURE_LED_COLOR.hint,
     ]);
   });
 });

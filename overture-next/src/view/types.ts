@@ -27,18 +27,18 @@ export type ScreenView = TrackScreenView | SessionScreenView;
 
 export interface StepLedView {
   step: number;
-  color: number;
+  state: "playhead" | "active" | "off";
 }
 
 export interface ClipCellPadLedView {
   padIndex: number;
-  state: "selected" | "occupied" | "empty" | "off";
+  state: "selected" | "hinted" | "occupied" | "empty" | "off";
 }
 
 export type ButtonLedView =
   | { kind: "track-row"; row: number; state: "selected" | "hinted" | "available" }
-  | { kind: "play"; color: number }
-  | { kind: "menu"; color: number };
+  | { kind: "play"; state: "playing" | "stopped" }
+  | { kind: "menu"; state: "session" | "track" };
 
 export interface LedView {
   steps: StepLedView[];

@@ -9,8 +9,10 @@
 const NAMED: Record<number, string> = {
   0: "", // Off — caller reverts to the element's unlit background
   3: "#f4f4f5",   // Bright
+  4: "#4b5563",   // Overture dim/unselected
   7: "#ffd84d",   // VividYellow
   8: "#63ef8a",   // BrightGreen
+  12: "#7c8490",  // Overture available
   14: "#55f0e8",  // Cyan
   16: "#6f8dff",  // RoyalBlue
   21: "#ff70d8",  // HotMagenta
@@ -19,7 +21,9 @@ const NAMED: Record<number, string> = {
   29: "#f0c341",  // Mustard
   32: "#4bc06f",  // DeepGreen
   36: "#d9dde2",  // LED_STEP_ACTIVE
+  44: "#ffd84d",  // Overture hint
   47: "#72c7ff",  // SkyBlue
+  48: "#8b949e",  // Overture active/occupied
   49: "#555e69",  // beat-marker grey
   50: "#7c8490",  // OOB grey
   65: "#ff6262",  // DeepRed
@@ -41,6 +45,10 @@ const NAMED: Record<number, string> = {
 };
 
 const dynamic = new Map<number, string>();
+
+export function hasStaticLedPaletteEntry(index: number): boolean {
+  return index in NAMED;
+}
 
 function isRuntimePaletteEntry(index: number): boolean {
   return !(index in NAMED);
