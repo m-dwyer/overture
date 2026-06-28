@@ -11,12 +11,16 @@ what is public, what is private, and which dependencies are allowed?
 - `overture-next/src/runtime/` owns application orchestration: init, tick,
   runtime readiness, boot splash policy, control-surface input dispatch,
   command draining, and render calls through port contracts.
-- `overture-next/src/session-grid.ts` owns neutral Session grid geometry shared
+- `overture-next/src/shared/session-grid.ts` owns neutral Session grid geometry shared
   by control interpretation and view-model derivation.
-- `overture-next/src/core/` owns groovebox domain state and decisions: project
-  data, transport, control-surface state, control interpretation, domain
-  intents, and domain host commands. Keep transient control focus and mode in
-  explicit Control State, not in Overture Project data.
+- `overture-next/src/domain/` owns pure musical vocabulary, data shapes, and
+  deterministic domain transforms. It must not import Session grid geometry,
+  state owners, application behavior, or adapters.
+- `overture-next/src/state/` owns mutable state-owner objects such as
+  `ControlState` and `OvertureProject`, plus surface-addressing state helpers.
+- `overture-next/src/application/` owns orchestration and application behavior:
+  core transactions, control interpretation, domain intent application,
+  transport, playback, and host command contracts.
 - `overture-next/src/host/` owns Schwung/Move translation. Raw `globalThis`,
   Schwung host function names, Move MIDI bytes, Move CC/note numbers, and
   track-to-Move-channel mapping belong here.
@@ -30,8 +34,8 @@ what is public, what is private, and which dependencies are allowed?
 
 Concrete adapters belong in `src/host/`. The Schwung adapter implements the
 `ControlSurfacePort` inbound boundary by converting raw Move MIDI input into
-typed control input. Core interprets control input against Control State,
-applies resulting intents to project/transport/control state, and emits domain
+typed control input. Application code interprets control input against Control
+State, applies resulting intents to project/transport/control state, and emits
 commands such as `track-note-on` and `track-note-off`; the host adapter converts
 those commands to Move or Schwung MIDI through outbound ports.
 
@@ -43,9 +47,9 @@ belong under `internal/` when the module has enough structure to justify it.
 
 Examples:
 
-- `overture-next/src/core/project/index.ts` exposes Project construction and
-  lookup APIs; `project/internal/` contains implementation helpers.
-- `overture-next/src/core/playback/index.ts` exposes Playback lifecycle APIs;
+- `overture-next/src/state/project.ts` exposes Project construction, lookup,
+  and Project-owned mutation APIs.
+- `overture-next/src/application/playback/index.ts` exposes Playback lifecycle APIs;
   `playback/internal/` contains low-level playback helpers.
 - `overture-next/src/view/index.ts` exposes view-model derivation contracts;
   `view/internal/` contains view-specific projection helpers.
@@ -63,11 +67,16 @@ Keep this table current when a boundary changes materially.
 
 | Domain Area | Owner | Public Surface | Private Implementation | Enforcement |
 | --- | --- | --- | --- | --- |
-| Session grid geometry | `src/session-grid.ts` | Coordinate helpers | None | dependency-cruiser neutrality rule |
-| Control input interpretation | `src/core/controls/` | `interpret-control.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
-| Domain intent application | `src/core/intents/` | `apply-intent.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
-| Project data | `src/core/project/` | `project/index.ts` | `project/internal/` | dependency-cruiser public/internal rules |
-| Playback state and lifecycle | `src/core/playback/` | `playback/index.ts` | `playback/internal/` | dependency-cruiser public/internal rules |
+| Session grid geometry | `src/shared/session-grid.ts` | Coordinate helpers | None | dependency-cruiser neutrality rule |
+| Pure musical domain | `src/domain/` | `project.ts`, `track.ts`, `sequence.ts` | None | dependency-cruiser domain purity rules |
+| Control State | `src/state/control-state.ts` | Owner-object class and snapshot contract | None | ESLint state ownership rule |
+| Project state owner | `src/state/project.ts` | Project construction, lookup, and Project-owned mutation APIs | None | ESLint state ownership rule |
+| Surface addressing state helpers | `src/state/surface-addressing.ts` | Track Bank row helpers | None | dependency-cruiser state layer rules |
+| Control input interpretation | `src/application/controls/` | `interpret-control.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
+| Domain intent application | `src/application/intents/` | `apply-intent.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
+| Transport state owner | `src/application/transport.ts` | Owner-object class and timing read contracts | None | ESLint state ownership rule |
+| Playback state and lifecycle | `src/application/playback/` | `playback/index.ts` | `playback/internal/` | dependency-cruiser public/internal rules |
+| Application core and read model | `src/application/core.ts`, `src/application/types.ts` | Core factory, `CoreSnapshot`, `OvertureCore` | Local private helpers | dependency-cruiser application layer rules |
 | Host translation | `src/host/` | Host adapter and host types | Adapter-local helpers | dependency-cruiser host boundary rules |
 | Runtime-host boundary contracts | `src/ports/` | `inbound.ts`, `outbound.ts`, `host-ports.ts` | None | dependency-cruiser ports/runtime rules |
 | View models | `src/view/` | `view/index.ts`, `view/<view>/index.ts` | `view/internal/`, `view/<view>/internal/` | dependency-cruiser view/public/internal rules |

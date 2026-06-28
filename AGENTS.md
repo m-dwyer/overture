@@ -53,6 +53,13 @@ implements the Schwung/Move adapter; `web/src/host/browser-emulator-harness.ts`
 owns browser emulator composition and `web/src/host/emulator-harness.ts` owns
 the browser-only `OVT` harness port.
 
+The active source layers are `src/shared/` for neutral helpers,
+`src/domain/` for pure musical vocabulary/data/transforms, `src/state/` for
+mutable state owners such as `ControlState` and `OvertureProject`,
+`src/application/` for control interpretation, intent application, transport,
+playback, core read models, and host command contracts, then `src/ports/`,
+`src/host/`, `src/view/`, `src/render/`, and `src/runtime/` at the edges.
+
 Start with `CONTEXT.md` for domain language. For architecture work, read:
 
 - `docs/ARCHITECTURE.md` for the active source-tree summary.
@@ -68,11 +75,11 @@ Do not add broad rules from memory. Verify the boundary is true first, then
 ratchet it.
 
 Overture package tests live under `overture-next/tests/`, grouped by layer or
-module such as `tests/core/`, `tests/runtime/`, `tests/render/`, `tests/host/`,
-and `tests/view/`. Keep unit tests aimed at public module entry points and use
-package integration tests for cross-module core/runtime workflows. `web/tests/`
-is for the browser emulator and web host harness, not Overture package unit
-coverage.
+module such as `tests/domain/`, `tests/state/`, `tests/application/`,
+`tests/runtime/`, `tests/render/`, `tests/host/`, and `tests/view/`. Keep unit
+tests aimed at public module entry points and use package integration tests for
+cross-module application/runtime workflows. `web/tests/` is for the browser
+emulator and web host harness, not Overture package unit coverage.
 
 ## Boy Scout Rule
 

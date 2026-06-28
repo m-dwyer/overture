@@ -8,10 +8,10 @@ mutating another owner's data.
 
 | State Shape | Owner | Notes |
 | --- | --- | --- |
-| `ControlState` | `src/core/control-state.ts` | Owner-object class with `snapshot()` read contract. |
-| `TransportState` | `src/core/transport.ts` | Owner-object class with `snapshot()` and `clock()` read contracts. |
-| `PlaybackState` | `src/core/playback/` | Playback lifecycle and note-off scheduling owner. |
-| `OvertureProject` | `src/core/project/` | Project data owner and public lookup surface. |
+| `ControlState` | `src/state/control-state.ts` | Owner-object class with `snapshot()` read contract. |
+| `OvertureProject` | `src/state/project.ts` | Project data owner with public lookup and Project-owned mutation APIs. |
+| `TransportState` | `src/application/transport.ts` | Owner-object class with `snapshot()` and `clock()` read contracts. |
+| `PlaybackState` | `src/application/playback/` | Playback lifecycle and note-off scheduling owner. |
 
 ## Preferred Pattern for Newly Adopted Owners
 
@@ -46,8 +46,7 @@ Acceptable orchestration:
 
 ```ts
 state.control.selectStep(stepIndex);
-const clip = getClipForCell(state.project, state.control.snapshot().selectedClipCell);
-if (clip) toggleSequenceStep(clip.sequence, stepIndex);
+state.project.toggleSequenceStepAt(state.control.snapshot().selectedClipCell, stepIndex);
 ```
 
 Avoid:
