@@ -36,7 +36,7 @@ export interface StepLedView {
   state: "playhead" | "active" | "off";
 }
 
-export interface ClipCellPadLedView {
+export interface PadLedView {
   padIndex: number;
   state: "selected" | "hinted" | "occupied" | "empty" | "off";
 }
@@ -48,7 +48,7 @@ export type ButtonLedView =
 
 export interface LedView {
   steps: StepLedView[];
-  clipCellPads: ClipCellPadLedView[];
+  pads: PadLedView[];
   buttons: ButtonLedView[];
 }
 

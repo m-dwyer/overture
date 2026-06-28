@@ -45,8 +45,8 @@ describe("Overture Next view projection", () => {
     ]);
     expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 1, state: "selected" });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", state: "track" });
-    expect(view.leds.clipCellPads).toHaveLength(32);
-    expect(view.leds.clipCellPads.every((pad) => pad.state === "off")).toBe(true);
+    expect(view.leds.pads).toHaveLength(32);
+    expect(view.leds.pads.every((pad) => pad.state === "off")).toBe(true);
   });
 
   test("derives a Session View screen and pad LEDs from selected Clip Cell state", () => {
@@ -80,9 +80,9 @@ describe("Overture Next view projection", () => {
       selectedClipId: null,
       playing: false,
     });
-    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 24, state: "occupied" });
-    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 7, state: "selected" });
-    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 8, state: "empty" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 24, state: "occupied" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 7, state: "selected" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 8, state: "empty" });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", state: "session" });
   });
 
@@ -111,13 +111,13 @@ describe("Overture Next view projection", () => {
     expect(view.surfaceHints).toEqual([
       { kind: "scene-launch-target", surface: { kind: "session-scene-column", sceneIndex: 7 } },
     ]);
-    expect(view.leds.clipCellPads.filter((pad) => pad.state === "hinted")).toEqual([
+    expect(view.leds.pads.filter((pad) => pad.state === "hinted")).toEqual([
       { padIndex: 7, state: "hinted" },
       { padIndex: 15, state: "hinted" },
       { padIndex: 23, state: "hinted" },
       { padIndex: 31, state: "hinted" },
     ]);
-    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 24, state: "occupied" });
-    expect(view.leds.clipCellPads).toContainEqual({ padIndex: 8, state: "empty" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 24, state: "occupied" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 8, state: "empty" });
   });
 });

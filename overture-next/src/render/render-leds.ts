@@ -8,7 +8,7 @@ const STEP_COLORS = {
   off: OVERTURE_LED_COLOR.off,
 } as const;
 
-const CLIP_CELL_PAD_COLORS = {
+const PAD_COLORS = {
   selected: OVERTURE_LED_COLOR.selected,
   hinted: OVERTURE_LED_COLOR.hint,
   occupied: OVERTURE_LED_COLOR.active,
@@ -36,8 +36,8 @@ export function renderLeds(view: LedView, leds: LedPort): void {
   for (const step of view.steps) {
     leds.setStepLed(step.step, STEP_COLORS[step.state]);
   }
-  for (const pad of view.clipCellPads) {
-    leds.setPadLed(pad.padIndex, CLIP_CELL_PAD_COLORS[pad.state]);
+  for (const pad of view.pads) {
+    leds.setPadLed(pad.padIndex, PAD_COLORS[pad.state]);
   }
   for (const button of view.buttons) {
     if (button.kind === "track-row") leds.setTrackRowLed(button.row, TRACK_ROW_COLORS[button.state]);
