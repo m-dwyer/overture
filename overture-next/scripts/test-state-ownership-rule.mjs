@@ -1,5 +1,6 @@
 import { RuleTester } from "@typescript-eslint/rule-tester";
 import tseslint from "typescript-eslint";
+import stateApiEncapsulation from "../eslint-rules/state-api-encapsulation.js";
 import stateOwnership from "../eslint-rules/state-ownership.js";
 
 RuleTester.afterAll = () => {};
@@ -60,6 +61,63 @@ ruleTester.run("state-ownership", stateOwnership, {
       `,
       options: [{ owners: [{ type: "PlaybackState", allow: ["rule-tests/playback/**"] }] }],
       errors: [{ messageId: "ownedStateMutation" }],
+    },
+  ],
+});
+
+ruleTester.run("state-api-encapsulation", stateApiEncapsulation, {
+  valid: [
+    {
+      filename: "rule-tests/control-state.ts",
+      code: `
+        class ControlState {
+          selectStep(stepIndex: number): void {}
+        }
+        export function createControlState(): ControlState {
+          return new ControlState();
+        }
+      `,
+      options: [{ owners: [{ type: "ControlState" }] }],
+    },
+    {
+      filename: "rule-tests/interpret-control.ts",
+      code: `
+        interface ControlStateSnapshot {
+          selectedStep: number;
+        }
+        export function selectedStep(snapshot: ControlStateSnapshot): number {
+          return snapshot.selectedStep;
+        }
+      `,
+      options: [{ owners: [{ type: "ControlState" }] }],
+    },
+  ],
+  invalid: [
+    {
+      filename: "rule-tests/control-state.ts",
+      code: `
+        class ControlState {
+          selectStep(stepIndex: number): void {}
+        }
+        export function selectStep(control: ControlState, stepIndex: number): void {
+          control.selectStep(stepIndex);
+        }
+      `,
+      options: [{ owners: [{ type: "ControlState" }] }],
+      errors: [{ messageId: "exportedOwnedStateParameter" }],
+    },
+    {
+      filename: "rule-tests/control-state.ts",
+      code: `
+        class ControlState {
+          selectStep(stepIndex: number): void {}
+        }
+        export const selectStep = (control: ControlState, stepIndex: number): void => {
+          control.selectStep(stepIndex);
+        };
+      `,
+      options: [{ owners: [{ type: "ControlState" }] }],
+      errors: [{ messageId: "exportedOwnedStateParameter" }],
     },
   ],
 });

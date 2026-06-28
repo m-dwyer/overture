@@ -3,48 +3,67 @@ import { trackBankForTrack } from "./track";
 
 export type ControlMode = "track" | "session";
 
-export interface ControlState {
-  selectedTrackIndex: number;
-  visibleTrackBank: number;
-  controlMode: ControlMode;
-  shiftHeld: boolean;
-  selectedStep: number;
-  selectedClipCell: {
-    trackIndex: number;
-    sceneIndex: number;
-  };
+export interface ControlStateSnapshot {
+  readonly selectedTrackIndex: number;
+  readonly visibleTrackBank: number;
+  readonly controlMode: ControlMode;
+  readonly shiftHeld: boolean;
+  readonly selectedStep: number;
+  readonly selectedClipCell: Readonly<ClipCellCoordinate>;
+}
+
+export class ControlState {
+  private selectedTrackIndexValue: number;
+  private visibleTrackBankValue: number;
+  private controlModeValue: ControlMode;
+  private shiftHeldValue: boolean;
+  private selectedStepValue: number;
+  private selectedClipCellValue: ClipCellCoordinate;
+
+  constructor() {
+    this.selectedTrackIndexValue = 0;
+    this.visibleTrackBankValue = 0;
+    this.controlModeValue = "track";
+    this.shiftHeldValue = false;
+    this.selectedStepValue = 0;
+    this.selectedClipCellValue = { trackIndex: 0, sceneIndex: 0 };
+  }
+
+  snapshot(): ControlStateSnapshot {
+    return {
+      selectedTrackIndex: this.selectedTrackIndexValue,
+      visibleTrackBank: this.visibleTrackBankValue,
+      controlMode: this.controlModeValue,
+      shiftHeld: this.shiftHeldValue,
+      selectedStep: this.selectedStepValue,
+      selectedClipCell: { ...this.selectedClipCellValue },
+    };
+  }
+
+  setShiftHeld(held: boolean): void {
+    this.shiftHeldValue = held;
+  }
+
+  toggleControlMode(): ControlMode {
+    this.controlModeValue = this.controlModeValue === "session" ? "track" : "session";
+    return this.controlModeValue;
+  }
+
+  selectTrack(trackIndex: number): void {
+    this.selectClipCell({ trackIndex, sceneIndex: this.selectedClipCellValue.sceneIndex });
+  }
+
+  selectClipCell(coordinate: ClipCellCoordinate): void {
+    this.selectedClipCellValue = { ...coordinate };
+    this.selectedTrackIndexValue = coordinate.trackIndex;
+    this.visibleTrackBankValue = trackBankForTrack(coordinate.trackIndex);
+  }
+
+  selectStep(stepIndex: number): void {
+    this.selectedStepValue = stepIndex;
+  }
 }
 
 export function createInitialControlState(): ControlState {
-  return {
-    selectedTrackIndex: 0,
-    visibleTrackBank: 0,
-    controlMode: "track",
-    shiftHeld: false,
-    selectedStep: 0,
-    selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
-  };
-}
-
-export function setShiftHeld(control: ControlState, held: boolean): void {
-  control.shiftHeld = held;
-}
-
-export function toggleControlMode(control: ControlState): ControlMode {
-  control.controlMode = control.controlMode === "session" ? "track" : "session";
-  return control.controlMode;
-}
-
-export function selectTrack(control: ControlState, trackIndex: number): void {
-  selectClipCell(control, { trackIndex, sceneIndex: control.selectedClipCell.sceneIndex });
-}
-
-export function selectClipCell(control: ControlState, coordinate: ClipCellCoordinate): void {
-  control.selectedClipCell = { ...coordinate };
-  control.selectedTrackIndex = coordinate.trackIndex;
-  control.visibleTrackBank = trackBankForTrack(coordinate.trackIndex);
-}
-
-export function selectStep(control: ControlState, stepIndex: number): void {
-  control.selectedStep = stepIndex;
+  return new ControlState();
 }

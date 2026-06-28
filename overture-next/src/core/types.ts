@@ -1,4 +1,4 @@
-import type { ControlMode, ControlState } from "./control-state";
+import type { ControlMode, ControlState, ControlStateSnapshot } from "./control-state";
 import type { ControlInput } from "./controls/types";
 import type { HostCommand } from "./host-commands";
 import type { PlaybackState } from "./playback";
@@ -38,10 +38,7 @@ export interface CoreSnapshot {
   selectedStep: number;
   playing: boolean;
   selectedClipId: string | null;
-  selectedClipCell: {
-    trackIndex: number;
-    sceneIndex: number;
-  };
+  selectedClipCell: ControlStateSnapshot["selectedClipCell"];
   clipCells: CoreSnapshotClipCell[];
   steps: CoreSnapshotStep[];
 }

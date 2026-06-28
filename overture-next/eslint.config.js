@@ -1,4 +1,5 @@
 import tseslint from "typescript-eslint";
+import stateApiEncapsulation from "./eslint-rules/state-api-encapsulation.js";
 import stateOwnership from "./eslint-rules/state-ownership.js";
 
 export default tseslint.config(
@@ -18,6 +19,7 @@ export default tseslint.config(
       "@typescript-eslint": tseslint.plugin,
       overture: {
         rules: {
+          "state-api-encapsulation": stateApiEncapsulation,
           "state-ownership": stateOwnership,
         },
       },
@@ -41,6 +43,12 @@ export default tseslint.config(
             { type: "ControlState", allow: ["src/core/control-state.ts"] },
             { type: "OvertureProject", allow: ["src/core/project/**"] },
           ],
+        },
+      ],
+      "overture/state-api-encapsulation": [
+        "error",
+        {
+          owners: [{ type: "ControlState" }],
         },
       ],
     },
