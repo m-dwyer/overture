@@ -49,6 +49,8 @@ The browser emulator and current test ratchet boot Overture from
 Start with `CONTEXT.md` for domain language. For architecture work, read:
 
 - `docs/ARCHITECTURE.md` for the active source-tree summary.
+- `docs/architecture/target-architecture.md` for the feature-first target
+  architecture and migration posture.
 - `docs/architecture/module-boundaries.md` for layer ownership and public API
   boundaries.
 - `docs/architecture/state-ownership.md` for mutable state-owner patterns.
@@ -75,6 +77,11 @@ an Overture module:
 - prefer public module APIs over deep/internal imports
 - avoid adding new `doThing(state, ...)` APIs for owned mutable state
 - add or tighten ratchets only after the boundary is true
+
+For feature work, deliver the behavior first, then check whether touched code
+can move one narrow step toward `docs/architecture/target-architecture.md`.
+Deepen an interface only when it concentrates real policy, invariants, copying,
+validation, lookup rules, or authority reduction. Avoid thin wrappers.
 
 If a cleanup grows beyond the code you are touching, split it into its own
 `refactor:` commit rather than expanding the current diff.

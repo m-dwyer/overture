@@ -6,6 +6,8 @@ canonical operating contract for agents working in this repo.
 For deeper architecture guidance, read:
 
 - `docs/architecture/README.md` for the CONTEXT-to-ratchets workflow.
+- `docs/architecture/target-architecture.md` for the feature-first target
+  architecture and migration posture.
 - `docs/architecture/module-boundaries.md` for layer ownership and public API
   boundaries.
 - `docs/architecture/state-ownership.md` for mutable state-owner patterns.

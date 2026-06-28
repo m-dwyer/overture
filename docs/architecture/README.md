@@ -1,17 +1,18 @@
 # Architecture Playbooks
 
 These notes turn the domain language in `CONTEXT.md` into source ownership,
-module boundaries, and executable ratchets. They are intentionally more detailed
-than `AGENTS.md`; read them when a task touches architecture, boundaries, state
-ownership, or verification policy.
+module boundaries, target architecture, and executable ratchets. They are
+intentionally more detailed than `AGENTS.md`; read them when a task touches
+architecture, boundaries, state ownership, or verification policy.
 
 ## Reading Order
 
 1. `CONTEXT.md` names the domain concepts, workflows, and invariants.
 2. `docs/ARCHITECTURE.md` summarizes the active source tree.
-3. `module-boundaries.md` maps layers and module entry points.
-4. `state-ownership.md` describes mutable state owners and read contracts.
-5. `ratchets.md` explains when and how to enforce adopted boundaries.
+3. `target-architecture.md` describes the feature-first direction of travel.
+4. `module-boundaries.md` maps layers and module entry points.
+5. `state-ownership.md` describes mutable state owners and read contracts.
+6. `ratchets.md` explains when and how to enforce adopted boundaries.
 
 ## CONTEXT to Ratchets Workflow
 
