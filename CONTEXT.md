@@ -320,7 +320,8 @@ _Avoid_: Immediate launch when transport is running
 - An **Overture Clip** is identified by its **Clip ID**.
 - Moving or editing an **Overture Clip** preserves its **Clip ID**.
 - Copying, duplicating, or overwriting creates a new **Clip ID** for the new **Overture Clip**.
-- An **Overture Project** has one **Selected Clip Cell**.
+- Overture runtime/control context has one **Selected Clip Cell**.
+- The **Selected Clip Cell** is a **Clip Cell Coordinate** into the **Overture Project**.
 - An **Empty Overture Clip** still exists in a **Clip Cell**.
 - An **Empty Clip Cell** has no **Overture Clip**.
 - Selecting an **Empty Clip Cell** does not create an **Overture Clip**.
@@ -423,7 +424,7 @@ _Avoid_: Immediate launch when transport is running
 > **Domain expert:** "Use **Selected Clip Cell**. Focus is UI implementation language, while selected matches Move's musical workflow language."
 
 > **Dev:** "Can each track have its own selected clip?"
-> **Domain expert:** "No. The **Overture Project** has one **Selected Clip Cell**, which determines the current track and scene position for editing."
+> **Domain expert:** "No. Overture runtime/control context has one **Selected Clip Cell**, which points into the **Overture Project** and determines the current track and scene position for editing."
 
 > **Dev:** "Can a performer launch one clip without launching the whole scene?"
 > **Domain expert:** "Yes. A **Clip Launch** affects one **Track**; a **Scene Launch** affects all eight **Tracks**."
