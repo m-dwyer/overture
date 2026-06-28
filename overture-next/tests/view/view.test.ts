@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { CoreSnapshot } from "../../src/core/types";
-import { createOvertureView } from "../../src/view/overture-view";
-import { createSurfaceHints } from "../../src/view/surface-hints";
+import { createOvertureSurfaceView } from "../../src/view/overture-view";
 
 describe("Overture Next view projection", () => {
   test("derives Track View screen and LED views from a core snapshot", () => {
@@ -23,8 +22,9 @@ describe("Overture Next view projection", () => {
       ],
     };
 
-    const view = createOvertureView(snapshot);
+    const view = createOvertureSurfaceView(snapshot);
 
+    expect(view.surfaceHints).toEqual([]);
     expect(view.screen).toMatchObject({
       kind: "track",
       title: "OVERTURE NEXT",
@@ -69,8 +69,9 @@ describe("Overture Next view projection", () => {
       ],
     };
 
-    const view = createOvertureView(snapshot);
+    const view = createOvertureSurfaceView(snapshot);
 
+    expect(view.surfaceHints).toEqual([]);
     expect(view.screen).toEqual({
       kind: "session",
       title: "OVERTURE NEXT",
@@ -105,12 +106,11 @@ describe("Overture Next view projection", () => {
       ],
     };
 
-    expect(createSurfaceHints(snapshot)).toEqual([
+    const view = createOvertureSurfaceView(snapshot);
+
+    expect(view.surfaceHints).toEqual([
       { kind: "scene-launch-target", surface: { kind: "session-scene-column", sceneIndex: 7 } },
     ]);
-
-    const view = createOvertureView(snapshot);
-
     expect(view.leds.clipCellPads.filter((pad) => pad.state === "hinted")).toEqual([
       { padIndex: 7, state: "hinted" },
       { padIndex: 15, state: "hinted" },
