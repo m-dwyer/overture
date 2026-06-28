@@ -1,7 +1,5 @@
-import { SESSION_TRACK_ROWS } from "../session-grid";
-
 export const TRACK_COUNT = 8;
-export const TRACK_BANK_SIZE = SESSION_TRACK_ROWS;
+export const DEFAULT_MOVE_ROUTE_TRACK_COUNT = 4;
 
 export type TrackRoute =
   | { kind: "move"; moveTrackTarget: number }
@@ -22,16 +20,8 @@ export function createTracks(trackCount = TRACK_COUNT): TrackState[] {
 }
 
 export function createDefaultTrackRoute(trackIndex: number): TrackRoute {
-  if (trackIndex < TRACK_BANK_SIZE) return { kind: "move", moveTrackTarget: trackIndex };
-  return { kind: "schwung", schwungChainIndex: trackIndex - TRACK_BANK_SIZE };
-}
-
-export function trackBankForTrack(trackIndex: number): number {
-  return Math.floor(trackIndex / TRACK_BANK_SIZE);
-}
-
-export function selectTrackFromRow(row: number, bankIndex: number): number {
-  return row + bankIndex * TRACK_BANK_SIZE;
+  if (trackIndex < DEFAULT_MOVE_ROUTE_TRACK_COUNT) return { kind: "move", moveTrackTarget: trackIndex };
+  return { kind: "schwung", schwungChainIndex: trackIndex - DEFAULT_MOVE_ROUTE_TRACK_COUNT };
 }
 
 export function getTrack(tracks: readonly TrackState[], index: number): TrackState {

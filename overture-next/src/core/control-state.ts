@@ -1,5 +1,5 @@
 import type { ClipCellCoordinate } from "./project";
-import { trackBankForTrack } from "./track";
+import { trackBankForTrack } from "./surface-addressing";
 
 export type ActiveView = "track" | "session";
 

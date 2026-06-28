@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { advanceTicks, waitReady } from "./wait";
 import { createDefaultSequence } from "../../overture-next/src/core/sequence";
-import { TRACK_BANK_SIZE } from "../../overture-next/src/core/track";
+import { TRACK_BANK_SIZE } from "../../overture-next/src/core/surface-addressing";
 import { DEFAULT_TICKS_PER_STEP } from "../../overture-next/src/core/transport";
 import {
   CC,

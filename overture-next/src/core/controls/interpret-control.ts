@@ -1,6 +1,6 @@
 import type { ControlStateSnapshot } from "../control-state";
-import { selectTrackFromRow } from "../track";
 import type { DomainIntent } from "../intents/types";
+import { selectTrackFromRow } from "../surface-addressing";
 import { interpretSessionControl } from "./session";
 import { interpretTrackControl } from "./track";
 import type { ControlInput } from "./types";

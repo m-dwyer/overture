@@ -1,5 +1,5 @@
 import type { Sequence } from "../sequence";
-import { getTrack, TRACK_BANK_SIZE } from "../track";
+import { getTrack } from "../track";
 import type { TrackRoute, TrackState } from "../track";
 import { findCell, snapshotCell } from "./internal/cells";
 import { createDefaultProjectState } from "./internal/default-project";
@@ -84,8 +84,4 @@ export class OvertureProject {
 
 export function createDefaultProject(): OvertureProject {
   return new OvertureProject(createDefaultProjectState());
-}
-
-export function visibleTrackRowsForBank(bankIndex: number): TrackIndex[] {
-  return Array.from({ length: TRACK_BANK_SIZE }, (_, row) => row + bankIndex * TRACK_BANK_SIZE);
 }

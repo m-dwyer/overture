@@ -1,10 +1,6 @@
 import { describe, expect, test } from "vitest";
-import {
-  CLIP_CELL_COUNT,
-  SCENE_COUNT,
-  createDefaultProject,
-  visibleTrackRowsForBank,
-} from "../../src/core/project";
+import { CLIP_CELL_COUNT, SCENE_COUNT, createDefaultProject } from "../../src/core/project";
+import { visibleTrackRowsForBank } from "../../src/core/surface-addressing";
 
 describe("Overture Next Project", () => {
   test("creates structural scenes, tracks, and clip cells through the public Project API", () => {
