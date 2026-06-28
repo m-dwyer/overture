@@ -1,7 +1,8 @@
 import { clipCellCoordinateForSessionPad } from "../../session-grid";
+import type { ControlState } from "../control-state";
 import { selectTrackFromRow } from "../track";
 import type { DomainIntent } from "../intents/types";
-import type { ControlInput, ControlState } from "./types";
+import type { ControlInput } from "./types";
 
 const TRACK_PAD_NOTE_BASE = 60;
 

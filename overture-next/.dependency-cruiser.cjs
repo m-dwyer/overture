@@ -105,6 +105,13 @@ module.exports = {
       to: { path: "^src/core/intents/(?!types\\.ts$)" },
     },
     {
+      name: "control-state-owns-state-contract",
+      severity: "error",
+      comment: "Control State owns its state contract and must not depend on the control input interpreter package.",
+      from: { path: "^src/core/control-state\\.ts$" },
+      to: { path: "^src/core/controls/" },
+    },
+    {
       name: "core-intents-do-not-know-controls",
       severity: "error",
       comment: "Domain intent application owns domain mutations and must not depend back on control-shaped input.",

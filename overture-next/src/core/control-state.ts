@@ -1,6 +1,19 @@
 import type { ClipCellCoordinate } from "./project";
 import { trackBankForTrack } from "./track";
-import type { ControlMode, ControlState } from "./controls/types";
+
+export type ControlMode = "track" | "session";
+
+export interface ControlState {
+  selectedTrackIndex: number;
+  visibleTrackBank: number;
+  controlMode: ControlMode;
+  shiftHeld: boolean;
+  selectedStep: number;
+  selectedClipCell: {
+    trackIndex: number;
+    sceneIndex: number;
+  };
+}
 
 export function createInitialControlState(): ControlState {
   return {

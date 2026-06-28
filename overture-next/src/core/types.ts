@@ -1,4 +1,5 @@
-import type { ControlInput, ControlMode, ControlState } from "./controls/types";
+import type { ControlMode, ControlState } from "./control-state";
+import type { ControlInput } from "./controls/types";
 import type { HostCommand } from "./host-commands";
 import type { PlaybackState } from "./playback";
 import type { OvertureProject } from "./project";
