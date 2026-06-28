@@ -80,7 +80,7 @@ declare global {
   var host_list_modules: HostApi["host_list_modules"];
   var shadow_get_ui_flags: HostApi["shadow_get_ui_flags"];
 
-  // Console-driven input handle until the Move shell is wired.
+  // Console/test harness published by the browser emulator host.
   var OVT: unknown;
   var __OVT_MANUAL_GESTURE: string | undefined;
   var __OVT_MANUAL_CONTROLS: string | undefined;

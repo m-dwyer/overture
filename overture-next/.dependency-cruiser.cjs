@@ -84,11 +84,11 @@ module.exports = {
       to: { path: "^src/runtime/" },
     },
     {
-      name: "runtime-uses-host-ports",
+      name: "runtime-uses-ports",
       severity: "error",
-      comment: "Runtime depends on host port types, not concrete Schwung adapters.",
+      comment: "Runtime depends on port contracts, not concrete host adapters or host compatibility types.",
       from: { path: "^src/runtime/" },
-      to: { path: "^src/host/(?!types\\.ts$)" },
+      to: { path: "^src/host/" },
     },
     {
       name: "runtime-does-not-interpret-controls",

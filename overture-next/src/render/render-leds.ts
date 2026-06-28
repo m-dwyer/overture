@@ -1,4 +1,4 @@
-import type { LedPort } from "../ports/types";
+import type { LedPort } from "../ports/outbound";
 import type { LedView } from "../view/types";
 
 const CLIP_CELL_PAD_COLORS = {

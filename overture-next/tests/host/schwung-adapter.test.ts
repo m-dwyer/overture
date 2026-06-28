@@ -6,6 +6,7 @@ import {
   moveMidiToInput,
   schwungCommandToMessage,
 } from "../../src/host/schwung-adapter";
+import { KNOB_CC0, KNOB_TOUCH0, NAV, NOTE_ON, CC, JOG_TOUCH } from "../../src/host/move-controls";
 import { installSchwungRuntime } from "../../src/host/schwung-runtime";
 
 const moveRoute = { kind: "move" as const, moveTrackTarget: 2 };
@@ -31,6 +32,33 @@ describe("Overture Next Schwung adapter", () => {
     expect(moveMidiToInput([0x90, 17, 0], 16)).toBeNull();
     expect(moveMidiToInput([0x90, 40, 100], 16)).toBeNull();
     expect(moveMidiToInput([0xe0, 0, 64], 16)).toBeNull();
+  });
+
+  test("treats real Move controls without current Overture intents as deliberate no-ops", () => {
+    const unsupportedCc = [
+      NAV.Back,
+      NAV.Capture,
+      NAV.Down,
+      NAV.Up,
+      NAV.Undo,
+      NAV.Loop,
+      NAV.Copy,
+      NAV.Left,
+      NAV.Right,
+      NAV.Rec,
+      NAV.Mute,
+      NAV.Sample,
+      NAV.Delete,
+      NAV.JogClick,
+      NAV.JogRotate,
+      KNOB_CC0,
+    ];
+    for (const cc of unsupportedCc) expect(moveMidiToInput([CC, cc, 127], 16)).toBeNull();
+
+    for (let touch = KNOB_TOUCH0; touch < KNOB_TOUCH0 + 8; touch++) {
+      expect(moveMidiToInput([NOTE_ON, touch, 127], 16)).toBeNull();
+    }
+    expect(moveMidiToInput([NOTE_ON, JOG_TOUCH, 127], 16)).toBeNull();
   });
 
   test("converts domain note commands to Move USB-MIDI packets", () => {
@@ -89,14 +117,14 @@ describe("Overture Next Schwung adapter", () => {
     } as Record<string, unknown>;
     const adapter = createSchwungAdapter(host);
 
-    adapter.commands.execute({
+    adapter.outbound.commands.execute({
       kind: "track-note-on",
       route: { kind: "move", moveTrackTarget: 1 },
       trackIndex: 1,
       note: 60,
       velocity: 90,
     });
-    adapter.commands.execute({ kind: "track-note-on", route: schwungRoute, trackIndex: 4, note: 60, velocity: 90 });
+    adapter.outbound.commands.execute({ kind: "track-note-on", route: schwungRoute, trackIndex: 4, note: 60, velocity: 90 });
 
     expect(packets).toEqual([[0x29, 0x91, 60, 90]]);
     expect(schwungMessages).toEqual([[0x94, 60, 90]]);
@@ -116,11 +144,11 @@ describe("Overture Next Schwung adapter", () => {
     } as Record<string, unknown>;
     const adapter = createSchwungAdapter(host);
 
-    adapter.leds.setStepLed(2, 48);
-    adapter.leds.setPadLed(3, 120);
-    adapter.leds.setTrackRowLed(1, 120);
-    adapter.leds.setPlayLed(16);
-    adapter.leds.setMenuLed(44);
+    adapter.outbound.leds.setStepLed(2, 48);
+    adapter.outbound.leds.setPadLed(3, 120);
+    adapter.outbound.leds.setTrackRowLed(1, 120);
+    adapter.outbound.leds.setPlayLed(16);
+    adapter.outbound.leds.setMenuLed(44);
 
     expect(calls).toEqual([
       ["setLED", 18, 48],
@@ -150,7 +178,7 @@ describe("Overture Next Schwung adapter", () => {
       ],
     };
 
-    adapter.runtime.publishState(snapshot);
+    adapter.outbound.runtime.publishState(snapshot);
 
     expect(host.overtureUiState).toMatchObject({
       selectedTrackIndex: 3,

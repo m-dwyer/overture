@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { LedPort } from "../../src/ports/types";
+import type { LedPort } from "../../src/ports/outbound";
 import { renderLeds } from "../../src/render/render-leds";
 import type { LedView } from "../../src/view/types";
 

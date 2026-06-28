@@ -46,6 +46,13 @@ as the active Overture source tree, not as a product name.
 The browser emulator and current test ratchet boot Overture from
 `overture-next/ui/ui.js`.
 
+Runtime-host contracts live in `overture-next/src/ports/`: inbound
+control-surface contracts are in `inbound.ts`, outbound host surfaces are in
+`outbound.ts`, and `host-ports.ts` composes them for the runtime. `src/host/`
+implements the Schwung/Move adapter; `web/src/host/browser-emulator-harness.ts`
+owns browser emulator composition and `web/src/host/emulator-harness.ts` owns
+the browser-only `OVT` harness port.
+
 Start with `CONTEXT.md` for domain language. For architecture work, read:
 
 - `docs/ARCHITECTURE.md` for the active source-tree summary.

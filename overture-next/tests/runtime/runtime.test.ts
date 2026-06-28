@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import type { HostCommand } from "../../src/core/types";
-import type { InputPort, MidiPort, OvertureHostAdapter } from "../../src/host/types";
-import type { DisplayPort, LedPort, RuntimePort } from "../../src/ports/types";
+import type { OvertureHostPorts } from "../../src/ports/host-ports";
+import type { ControlSurfacePort } from "../../src/ports/inbound";
+import type { DisplayPort, LedPort, MidiPort, RuntimePort } from "../../src/ports/outbound";
 import { createOvertureRuntime } from "../../src/runtime/overture-runtime";
 
 describe("Overture Next runtime", () => {
@@ -127,7 +128,7 @@ function createRuntimeTestAdapter(
   frames: string[][],
   frame: string[],
   commandLog: HostCommand[] = [],
-): OvertureHostAdapter {
+): OvertureHostPorts {
   const runtime: RuntimePort = {
     publishState() {},
   };
@@ -161,7 +162,7 @@ function createRuntimeTestAdapter(
     setPlayLed() {},
     setMenuLed() {},
   };
-  const input: InputPort = {
+  const controlSurface: ControlSurfacePort = {
     parseMoveInput(data) {
       return data[0] === 0xb0 && data[1] === 85 && data[2] > 0 ? { kind: "play" } : null;
     },
@@ -175,7 +176,10 @@ function createRuntimeTestAdapter(
       commandLog.push(command);
     },
   };
-  return { runtime, display, leds, input, midi, commands };
+  return {
+    inbound: { controlSurface },
+    outbound: { runtime, display, leds, midi, commands },
+  };
 }
 
 function padPress(padIndex: number) {

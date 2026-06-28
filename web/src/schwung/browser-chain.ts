@@ -1,12 +1,15 @@
 import {
   AudioWorkletChainEngine,
-  DEFAULT_BROWSER_MASTER_GAIN,
   type AudioEngineConfig,
   type ChainAudioEngine,
   type ChainSlotSpec,
   type MidiOutEvent,
 } from "./audio-engine.js";
-import { HOST_VOLUME, MIDI_DATA_MASK, RELATIVE_ENCODER } from "../lib/move-controls.js";
+import {
+  BrowserSchwungDiagnosticsStore,
+  type BrowserSchwungDiagnostics,
+} from "./diagnostics.js";
+import { HostVolumeController } from "./host-volume.js";
 import {
   type LoadedSchwungModule,
   type SchwungCatalog,
@@ -31,25 +34,7 @@ interface SlotState {
   name: string;
 }
 
-export interface BrowserSchwungDiagnosticEvent {
-  detail: BrowserSchwungDiagnostics;
-}
-
-export interface BrowserSchwungDiagnostics {
-  errors: Array<{ message: string; slotId: string }>;
-  hostVolume: number;
-  midi: Array<{ d1: number; d2: number; direction: string; slot: number; status: number }>;
-  params: Array<{ key: string; slot: number; value: string }>;
-  slots: Array<{
-    channel: number;
-    fx1: string;
-    fx2: string;
-    midiFx: string;
-    name: string;
-    synth: string;
-  }>;
-  worklet: Record<string, string>;
-}
+export type { BrowserSchwungDiagnosticEvent, BrowserSchwungDiagnostics } from "./diagnostics.js";
 
 export interface BrowserSchwungHost {
   diagnostics(): BrowserSchwungDiagnostics;
@@ -101,18 +86,15 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
   #audioBooted = false;
   #audioEngine: ChainAudioEngine | null;
   #catalog: SchwungCatalog;
-  #errors: BrowserSchwungDiagnostics["errors"] = [];
-  #hostVolume: number = HOST_VOLUME.Default;
+  #diagnostics = new BrowserSchwungDiagnosticsStore();
+  #hostVolume: HostVolumeController;
   #log: (message: string) => void;
-  #midi: BrowserSchwungDiagnostics["midi"] = [];
   #modules = new Map<string, LoadedSchwungModule>();
   #notify: (diagnostics: BrowserSchwungDiagnostics) => void;
-  #params: BrowserSchwungDiagnostics["params"] = [];
   #processorName: string;
   #slots: SlotState[];
   #syncInFlight: Promise<void> | null = null;
   #syncQueued = false;
-  #worklet: Record<string, string> = {};
   #workletUrl: string;
 
   constructor(catalog: SchwungCatalog, options: BrowserSchwungChainOptions = {}) {
@@ -120,6 +102,11 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
     this.#audioEngine = options.audioEngine ?? null;
     this.#log = options.log ?? (() => {});
     this.#notify = options.notify ?? (() => {});
+    this.#hostVolume = new HostVolumeController({
+      log: this.#log,
+      onChange: () => this.#emit(),
+      setMasterGain: (volume) => this.#audioEngine?.setMasterVolume(volume),
+    });
     const search = typeof location === "undefined" ? new URLSearchParams() : new URLSearchParams(location.search);
     this.#processorName = options.processorName ?? search.get("processor") ?? "module-processor";
     this.#workletUrl = options.workletUrl ?? search.get("worklet") ?? `${import.meta.env.BASE_URL}module-worklet.js`;
@@ -129,11 +116,8 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
   }
 
   diagnostics(): BrowserSchwungDiagnostics {
-    return {
-      errors: this.#errors.slice(-8),
-      hostVolume: this.#hostVolume,
-      midi: this.#midi.slice(-16),
-      params: this.#params.slice(-16),
+    return this.#diagnostics.snapshot({
+      hostVolume: this.#hostVolume.get(),
       slots: this.#slots.map((slot) => ({
         channel: slot.channel,
         fx1: slot.components.fx1.moduleId,
@@ -142,30 +126,19 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
         name: slot.name,
         synth: slot.components.synth.moduleId,
       })),
-      worklet: { ...this.#worklet },
-    };
+    });
   }
 
   handleHostVolumeCc(value: number): boolean {
-    const delta = relativeVolumeDelta(value);
-    if (delta !== 0) this.hostSetVolume(this.#hostVolume + delta);
-    return true;
+    return this.#hostVolume.handleRelativeCc(value);
   }
 
   hostGetVolume(): number {
-    return this.#hostVolume;
+    return this.#hostVolume.get();
   }
 
   hostSetVolume(volume: number): void {
-    const next = clampHostVolume(volume);
-    if (next === this.#hostVolume) {
-      this.#log(`host volume: ${next}`);
-      return;
-    }
-    this.#hostVolume = next;
-    this.#audioEngine?.setMasterVolume(hostVolumeToBrowserGain(next));
-    this.#log(`host volume: ${next}`);
-    this.#emit();
+    this.#hostVolume.set(volume);
   }
 
   hostListModules(): Array<Record<string, unknown>> {
@@ -305,7 +278,7 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
     try {
       await this.#audioEngine.enableChain(specs, this.#audioConfig());
       this.#audioBooted = true;
-      this.#audioEngine.setMasterVolume(hostVolumeToBrowserGain(this.#hostVolume));
+      this.#audioEngine.setMasterVolume(this.#hostVolume.browserGain());
       for (const slot of this.#slots) this.#seedSlot(slot);
     } catch (error) {
       this.#recordError("chain", String((error as Error).message ?? error));
@@ -317,7 +290,7 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
       onError: (slotId, message) => this.#recordError(slotId, message),
       onMidiOut: (event) => this.#handleMidiFxOut(event),
       onSlotReady: (slotId, mode) => {
-        this.#worklet[slotId] = mode;
+        this.#diagnostics.setWorklet(slotId, mode);
         this.#emit();
       },
       processorName: this.#processorName,
@@ -412,21 +385,18 @@ export class BrowserSchwungChain implements BrowserSchwungHost {
   }
 
   #recordError(slotId: string, message: string): void {
-    this.#errors.push({ message, slotId });
-    this.#errors = this.#errors.slice(-8);
+    this.#diagnostics.recordError(slotId, message);
     this.#log(`schwung ${slotId}: ${message}`);
     this.#emit();
   }
 
   #recordMidi(slot: number, status: number, d1: number, d2: number, direction: string): void {
-    this.#midi.push({ d1, d2, direction, slot, status });
-    this.#midi = this.#midi.slice(-16);
+    this.#diagnostics.recordMidi(slot, status, d1, d2, direction);
     this.#emit();
   }
 
   #recordParam(slot: number, key: string, value: string): void {
-    this.#params.push({ key, slot, value });
-    this.#params = this.#params.slice(-16);
+    this.#diagnostics.recordParam(slot, key, value);
     this.#emit();
   }
 
@@ -487,31 +457,6 @@ function parseComponentParamKey(key: string): { component: ComponentKey; param: 
   const component = key.slice(0, idx);
   if (component !== "midi_fx1" && component !== "synth" && component !== "fx1" && component !== "fx2") return null;
   return { component, param: key.slice(idx + 1) };
-}
-
-function clampHostVolume(volume: number): number {
-  const numeric = Number.isFinite(volume) ? Math.round(volume) : HOST_VOLUME.Default;
-  return Math.max(HOST_VOLUME.Min, Math.min(HOST_VOLUME.Max, numeric));
-}
-
-function hostVolumeToBrowserGain(volume: number): number {
-  return (clampHostVolume(volume) / HOST_VOLUME.Max) * DEFAULT_BROWSER_MASTER_GAIN;
-}
-
-function relativeVolumeDelta(value: number): number {
-  const midiValue = value & MIDI_DATA_MASK;
-  if (midiValue >= RELATIVE_ENCODER.ClockwiseMin && midiValue <= RELATIVE_ENCODER.ClockwiseMax) {
-    if (midiValue > RELATIVE_ENCODER.AccelerationFastThreshold) return RELATIVE_ENCODER.FastStep;
-    if (midiValue > RELATIVE_ENCODER.AccelerationMediumThreshold) return RELATIVE_ENCODER.MediumStep;
-    return RELATIVE_ENCODER.SlowStep;
-  }
-  if (midiValue >= RELATIVE_ENCODER.CounterClockwiseMin && midiValue <= RELATIVE_ENCODER.CounterClockwiseMax) {
-    const speed = RELATIVE_ENCODER.CounterClockwiseMax + RELATIVE_ENCODER.SlowStep - midiValue;
-    if (speed > RELATIVE_ENCODER.AccelerationFastThreshold) return -RELATIVE_ENCODER.FastStep;
-    if (speed > RELATIVE_ENCODER.AccelerationMediumThreshold) return -RELATIVE_ENCODER.MediumStep;
-    return -RELATIVE_ENCODER.SlowStep;
-  }
-  return 0;
 }
 
 function parseSlotId(id: string): { component: ComponentKey; slot: number } | null {

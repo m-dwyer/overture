@@ -1,4 +1,4 @@
-import type { SplashSurface } from "../ports/types";
+import type { SplashSurface } from "../ports/outbound";
 
 export interface SplashRenderState {
   splashWasVisible: boolean;

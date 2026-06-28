@@ -9,8 +9,8 @@ what is public, what is private, and which dependencies are allowed?
 - `overture-next/ui/ui.js` is the Schwung compatibility shell. It creates the
   adapter/runtime and installs Schwung entrypoints. Keep it small.
 - `overture-next/src/runtime/` owns application orchestration: init, tick,
-  runtime readiness, boot splash policy, MIDI dispatch, command draining, and
-  render calls.
+  runtime readiness, boot splash policy, control-surface input dispatch,
+  command draining, and render calls through port contracts.
 - `overture-next/src/session-grid.ts` owns neutral Session grid geometry shared
   by control interpretation and view-model derivation.
 - `overture-next/src/core/` owns groovebox domain state and decisions: project
@@ -21,16 +21,19 @@ what is public, what is private, and which dependencies are allowed?
   Schwung host function names, Move MIDI bytes, Move CC/note numbers, and
   track-to-Move-channel mapping belong here.
 - `overture-next/src/ports/` owns typed boundary contracts between runtime,
-  host, display, LEDs, MIDI, and command execution.
+  host, display, LEDs, MIDI, and command execution. `inbound.ts` names
+  hardware/control input contracts, `outbound.ts` names host surfaces Overture
+  drives, and `host-ports.ts` composes those contracts for the runtime.
 - `overture-next/src/view/` owns view-model data contracts.
 - `overture-next/src/render/` is presentational. It renders view models through
   display/LED ports and must not own domain or host policy.
 
-The host adapter converts raw Move MIDI input into typed control input. Core
-interprets control input against Control State, applies resulting intents to
-project/transport/control state, and emits domain commands such as
-`track-note-on` and `track-note-off`; the host adapter converts those commands
-to Move MIDI packets.
+Concrete adapters belong in `src/host/`. The Schwung adapter implements the
+`ControlSurfacePort` inbound boundary by converting raw Move MIDI input into
+typed control input. Core interprets control input against Control State,
+applies resulting intents to project/transport/control state, and emits domain
+commands such as `track-note-on` and `track-note-off`; the host adapter converts
+those commands to Move or Schwung MIDI through outbound ports.
 
 ## Public APIs and Internals
 
@@ -60,6 +63,7 @@ Keep this table current when a boundary changes materially.
 | Project data | `src/core/project/` | `project/index.ts` | `project/internal/` | dependency-cruiser public/internal rules |
 | Playback state and lifecycle | `src/core/playback/` | `playback/index.ts` | `playback/internal/` | dependency-cruiser public/internal rules |
 | Host translation | `src/host/` | Host adapter and host types | Adapter-local helpers | dependency-cruiser host boundary rules |
+| Runtime-host boundary contracts | `src/ports/` | `inbound.ts`, `outbound.ts`, `host-ports.ts` | None | dependency-cruiser ports/runtime rules |
 | View models | `src/view/` | View derivation contracts | Local private helpers | dependency-cruiser view rules |
 | Rendering | `src/render/` | Screen/LED renderers | Local private helpers | dependency-cruiser render rules |
 

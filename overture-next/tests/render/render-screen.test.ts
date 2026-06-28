@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { renderScreen } from "../../src/render/render-screen";
-import type { DisplayPort } from "../../src/ports/types";
+import type { DisplayPort } from "../../src/ports/outbound";
 import type { ScreenView } from "../../src/view/types";
 
 describe("Overture Next screen rendering", () => {

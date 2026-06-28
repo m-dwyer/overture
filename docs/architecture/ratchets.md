@@ -24,7 +24,7 @@ The dependency-cruiser rules are the architecture import ratchet:
 - host adapters stay at the boundary and do not import core behavior or
   renderers.
 - renderers stay presentational.
-- runtime orchestrates through ports and does not import concrete host adapters.
+- runtime orchestrates through ports and does not import host modules.
 - view types stay neutral.
 - port types stay contracts.
 - module `internal/` folders are private implementation details protected as
