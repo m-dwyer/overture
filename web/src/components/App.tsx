@@ -1,20 +1,21 @@
 // Root of the React emulator surface. This is now just the view + lifecycle wiring:
 // it owns the canvas/log/shell refs and the OLED readable⇄exact toggle, and an effect
-// orchestrates the async boot by composing the host modules (display/LED sinks,
-// keyboard input, DSP pick, tick loop, OVT handle). The browser-binding logic lives
-// in src/host/*; the host core stays untouched.
+// instantiates the browser host harness from the view-owned sinks. The browser
+// binding logic lives in src/host/*; the host core stays untouched.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createEmulator, type Emulator } from "@/host/emulator.js";
+import {
+  createBrowserEmulatorHarness,
+  type BrowserEmulatorHarness,
+  type BrowserHarnessDiagnostics,
+} from "@/host/browser-emulator-harness";
 import { createBrowserFileStore } from "@/host/browser-file-store.js";
 import type { LedSink } from "@/host/sinks.js";
 import { createCanvasDisplaySink, OLED_READABLE_SCALE } from "@/host/canvas-display-sink";
 import { createShellLedSink } from "@/host/shell-led-sink";
 import { installKeyboardInput } from "@/host/keyboard-input";
-import { installOvt, pickDsp, startTickLoop } from "@/host/emulator-runtime";
-import { CC, HOST_VOLUME, NAV, NOTE_OFF, NOTE_ON, PAD_COUNT, PAD_NOTE0, ROW_CC, type Send } from "@/lib/move-controls";
-import { type BrowserSchwungDiagnostics, type BrowserSchwungHost, createBrowserSchwungChain } from "@/schwung/browser-chain";
-import { createManualSchwungChain } from "@/schwung/manual-catalog";
+import type { Send } from "@/lib/move-controls";
 import { OledScreen } from "./OledScreen";
+import { SchwungDiagnosticsDrawer } from "./SchwungDiagnosticsDrawer";
 import { Shell } from "./Shell";
 import { TooltipProvider } from "./ui/tooltip";
 
@@ -22,7 +23,7 @@ export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLPreElement>(null);
-  const emuRef = useRef<Emulator | null>(null);
+  const harnessRef = useRef<BrowserEmulatorHarness | null>(null);
   const shellLedsRef = useRef<LedSink | null>(null);
   const searchParams = new URLSearchParams(location.search);
   const manualMode = searchParams.has("manual");
@@ -53,8 +54,7 @@ export function App() {
   const [manualGesture, setManualGesture] = useState("");
   const [manualControls, setManualControls] = useState("");
   const [manualShowing, setManualShowing] = useState("");
-  const [schwungDiagnostics, setSchwungDiagnostics] = useState<BrowserSchwungDiagnostics | null>(null);
-  const schwungRef = useRef<BrowserSchwungHost | null>(null);
+  const [schwungDiagnostics, setSchwungDiagnostics] = useState<BrowserHarnessDiagnostics | null>(null);
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
   const ledsMap = useRef(new Map<number, number>()).current;
@@ -62,8 +62,7 @@ export function App() {
 
   // Stable handle to the emulator for the shell's button clicks (emu boots async).
   const send = useCallback<Send>((s, d1, d2) => {
-    if (shouldPrimeSchwungAudio(s, d1, d2)) schwungRef.current?.primeAudioEngine();
-    emuRef.current?.sendInternal(s, d1, d2);
+    harnessRef.current?.send(s, d1, d2);
   }, []);
 
   useEffect(() => installKeyboardInput(send), [send]);
@@ -107,75 +106,31 @@ export function App() {
       buttonLedsMap,
       getShell: () => shellLedsRef.current,
     });
-    const files = createBrowserFileStore(localStorage);
-
-    let stopLoop: (() => void) | undefined;
-    let stopInitialTrack: (() => void) | undefined;
-    let cancelled = false;
-    display.clearScreen();
-
-    void (async () => {
-      let schwung: BrowserSchwungHost;
-      try {
-        const schwungOptions = {
-          log,
-          notify: (diagnostics: BrowserSchwungDiagnostics) => setSchwungDiagnostics(diagnostics),
-        };
-        schwung = manualMode
-          ? await createManualSchwungChain(schwungOptions)
-          : await createBrowserSchwungChain(schwungOptions);
-        schwungRef.current = schwung;
-      } catch (e) {
-        setStatus("FAILED to load Schwung modules");
-        log("schwung load error: " + ((e as Error)?.stack || e));
-        return;
-      }
-
-      const dsp = await pickDsp(log, schwung);
-      if (cancelled) return;
-
-      let emu: Emulator;
-      try {
-        emu = await createEmulator({
-          dsp,
-          display,
-          leds,
-          log,
-          midi: {
-            inject: (p) => log("inject_to_move " + JSON.stringify(p)),
-            toChain: (a) => log("send_midi_to_dsp " + JSON.stringify(a)),
-          },
-          files,
-          schwung,
-        });
-      } catch (e) {
-        setStatus("FAILED to load tool ui.js");
-        log("import error: " + ((e as Error)?.stack || e));
-        return;
-      }
-      if (cancelled) return;
-      emuRef.current = emu;
-
-      try {
-        emu.init();
-      } catch (e) {
-        log("init() threw: " + ((e as Error)?.stack || e));
-      }
-
-      // Replay any LEDs the tool set during init() into an already-mounted shell.
-      for (const [i, c] of ledsMap) shellLedsRef.current?.setLED(i, c);
-      for (const [cc, c] of buttonLedsMap) shellLedsRef.current?.setButtonLED(cc, c);
-
-      setStatus("running");
-      stopLoop = startTickLoop(emu, log);
-      stopInitialTrack = scheduleInitialState(emu, initialTrack, initialView);
-      installOvt(emu, dsp, ledsMap, buttonLedsMap, schwung);
-    })();
+    const harness = createBrowserEmulatorHarness({
+      host: {
+        display,
+        leds,
+        files: createBrowserFileStore(localStorage),
+        ledState: {
+          padsAndSteps: ledsMap,
+          buttons: buttonLedsMap,
+        },
+        manualMode,
+        log,
+        setStatus,
+        notifyDiagnostics: setSchwungDiagnostics,
+      },
+      initialState: {
+        trackNumber: initialTrack,
+        view: initialView,
+      },
+    });
+    harnessRef.current = harness;
+    void harness.start();
 
     return () => {
-      cancelled = true;
-      stopInitialTrack?.();
-      stopLoop?.();
+      harness.stop();
+      if (harnessRef.current === harness) harnessRef.current = null;
     };
     // Mount-once boot; all referenced values are stable refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -289,7 +244,7 @@ export function App() {
             {diagMode ? (
               <SchwungDiagnosticsDrawer
                 diagnostics={schwungDiagnostics}
-                onReset={() => schwungRef.current?.resetAudioEngine()}
+                onReset={() => harnessRef.current?.resetSchwungAudio()}
               />
             ) : null}
           </div>
@@ -297,13 +252,6 @@ export function App() {
       </div>
     </TooltipProvider>
   );
-}
-
-function shouldPrimeSchwungAudio(status: number, d1: number, d2: number): boolean {
-  const message = status & 0xf0;
-  if (message === CC) return d1 === NAV.Play && d2 > 0;
-  if (message !== NOTE_ON || d2 <= 0) return false;
-  return d1 >= PAD_NOTE0 && d1 < PAD_NOTE0 + PAD_COUNT;
 }
 
 function parseInitialTrack(value: string | null): number | null {
@@ -314,112 +262,4 @@ function parseInitialTrack(value: string | null): number | null {
 
 function parseInitialView(value: string | null): "note" | null {
   return value === "note" ? "note" : null;
-}
-
-function applyInitialTrack(emu: Emulator, trackNumber: number | null, sessionView = false): void {
-  if (trackNumber == null || trackNumber === 1) return;
-  const trackIndex = trackNumber - 1;
-  if (sessionView) {
-    const note = 92 + trackIndex;
-    emu.sendInternal(NOTE_ON, note, 110);
-    emu.sendInternal(NOTE_OFF, note, 0);
-    return;
-  }
-  const needsShift = trackIndex >= 4;
-  const rowIndex = trackIndex % 4;
-  if (needsShift) emu.sendInternal(CC, NAV.Shift, 127);
-  emu.sendInternal(CC, ROW_CC[rowIndex], 127);
-  emu.sendInternal(CC, ROW_CC[rowIndex], 0);
-  if (needsShift) emu.sendInternal(CC, NAV.Shift, 0);
-}
-
-function enterNoteView(emu: Emulator): void {
-  emu.sendInternal(CC, NAV.Menu, 127);
-  emu.sendInternal(CC, NAV.Menu, 0);
-}
-
-function scheduleInitialState(emu: Emulator, trackNumber: number | null, view: "note" | null): () => void {
-  if ((trackNumber == null || trackNumber === 1) && view !== "note") return () => {};
-  let attempts = 0;
-  const timer = window.setInterval(() => {
-    attempts++;
-    const state = readOvertureUiState();
-    const settled = state && readOvertureRuntime()?.isReady();
-    if (!settled && attempts < 40) return;
-    if (state && trackNumber != null && (readSelectedTrackIndex(state) | 0) !== trackNumber - 1) {
-      applyInitialTrack(emu, trackNumber, !!state.sessionView);
-    }
-    const nextState = readOvertureUiState() ?? state;
-    if (view === "note" && nextState?.sessionView) enterNoteView(emu);
-    window.clearInterval(timer);
-  }, 50);
-  return () => window.clearInterval(timer);
-}
-
-function readOvertureUiState(): {
-  activeTrack?: number;
-  selectedTrackIndex?: number;
-  sessionView?: boolean;
-} | null {
-  const state = (globalThis as {
-    overtureUiState?: {
-      activeTrack?: number;
-      selectedTrackIndex?: number;
-      sessionView?: boolean;
-    };
-  }).overtureUiState;
-  return state ?? null;
-}
-
-function readSelectedTrackIndex(state: { activeTrack?: number; selectedTrackIndex?: number }): number {
-  return state.selectedTrackIndex ?? state.activeTrack ?? 0;
-}
-
-function readOvertureRuntime(): { isReady(): boolean } | null {
-  return (globalThis as { overtureRuntime?: { isReady(): boolean } }).overtureRuntime ?? null;
-}
-
-function SchwungDiagnosticsDrawer({
-  diagnostics,
-  onReset,
-}: {
-  diagnostics: BrowserSchwungDiagnostics | null;
-  onReset(): void;
-}) {
-  const diag = diagnostics ?? { errors: [], hostVolume: HOST_VOLUME.Default, midi: [], params: [], slots: [], worklet: {} };
-  return (
-    <aside className="w-[min(92vw,440px)] rounded border border-line bg-black/70 p-3 text-left text-[11px] text-muted">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 className="text-xs font-semibold tracking-[0.16em] text-accent">SCHWUNG AUDIO</h2>
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded border border-line px-2 py-0.5 text-[11px] text-text hover:border-accent"
-        >
-          Reset
-        </button>
-      </div>
-      <DiagBlock title="Chain" rows={diag.slots.map((slot) =>
-        `${slot.name} ch${slot.channel}: ${slot.midiFx || "--"} > ${slot.synth || "--"} > ${slot.fx1 || "--"} > ${slot.fx2 || "--"}`
-      )} />
-      <DiagBlock title="Worklet" rows={Object.entries(diag.worklet).map(([slot, state]) => `${slot}: ${state}`)} />
-      <DiagBlock title="Host" rows={[`volume=${diag.hostVolume}`]} />
-      <DiagBlock title="Params" rows={diag.params.map((item) => `S${item.slot + 1} ${item.key}=${item.value}`)} />
-      <DiagBlock title="MIDI" rows={diag.midi.map((item) =>
-        `S${item.slot + 1} ${item.direction} ${item.status.toString(16)} ${item.d1} ${item.d2}`
-      )} />
-      <DiagBlock title="Errors" rows={diag.errors.map((item) => `${item.slotId}: ${item.message}`)} />
-    </aside>
-  );
-}
-
-function DiagBlock({ title, rows }: { title: string; rows: string[] }) {
-  return (
-    <section className="mt-2">
-      <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text">{title}</h3>
-      <pre className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded bg-black/50 p-2 leading-snug">
-        {rows.length ? rows.join("\n") : "--"}
-      </pre>
-    </section>
-  );
 }

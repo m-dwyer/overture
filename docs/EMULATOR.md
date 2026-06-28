@@ -21,6 +21,7 @@ MIDI, file, and Schwung-chain host surfaces.
 | `get_param`/`set_param` | MOCK -> route to the Overture mock DSP surface |
 | **Move's Ableton engines / MIDI inject** | MOCK/stub (placeholder + local synth or silence) |
 | **co-run** (Move device UI / Schwung chain editor) | MOCK → a stub "editor" view; design the *transition*, not the native editor |
+| **OVT console/test harness** | HOST PORT → publishes a browser-only handle for deterministic MIDI injection and tick advancement |
 
 **Net:** UI + tool logic are real; only the host/hardware/Move-engine boundary is faked — the right
 fidelity for UX design.
@@ -40,6 +41,12 @@ Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Rep
 - **MIDI:** `move_midi_inject_to_move([type,status,d1,d2])`, `host_module_send_midi`,
   `shadow_send_midi_to_dsp` → stub/log/local synth.
 - **co-run:** `shadow_corun_begin/end/state` (+ the gated `typeof` checks) → stub editor view.
+- **Browser composition:** `web/src/host/browser-emulator-harness.ts` owns
+  the browser host port bundle, Schwung host-port creation, the real Overture
+  tool boot, tick-loop lifecycle, initial state scheduling, and the shell's
+  inbound MIDI send boundary.
+- **Harness:** `web/src/host/emulator-harness.ts` publishes `globalThis.OVT`
+  from a browser-only harness port; Overture itself does not depend on it.
 
 > Replicate the *gotchas* that shape UX where cheap: input coalescing,
 > `get_param`-null-from-onMidi, and the LED per-tick budget. They affect

@@ -1,6 +1,6 @@
 import { createOvertureCore } from "../core/core";
 import type { OvertureCore } from "../core/types";
-import type { OvertureHostAdapter } from "../host/types";
+import type { OvertureHostPorts } from "../ports/host-ports";
 import { renderLeds } from "../render/render-leds";
 import { renderScreen } from "../render/render-screen";
 import type { SplashScreenView } from "../render/types";
@@ -20,7 +20,7 @@ export interface OvertureRuntime {
   isBootSplashVisible(): boolean;
 }
 
-export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRuntime {
+export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRuntime {
   const core = createOvertureCore();
   let splashTicks = 0;
   let splashWasVisible = false;
@@ -46,14 +46,14 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   }
 
   function onMidiMessage(data: readonly number[]): void {
-    const input = adapter.input.parseMoveInput(data, core.getSelectedSequenceLength());
+    const input = hostPorts.inbound.controlSurface.parseMoveInput(data, core.getSelectedSequenceLength());
     if (input) core.applyInput(input);
     drainCommands();
   }
 
   function onUnload(): void {
     drainCommands();
-    for (const command of core.stopPlayback()) adapter.commands.execute(command);
+    for (const command of core.stopPlayback()) hostPorts.outbound.commands.execute(command);
   }
 
   function isBootSplashVisible(): boolean {
@@ -77,10 +77,10 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
 
   function render(): void {
     const snapshot = core.getSnapshot();
-    adapter.runtime.publishState(snapshot);
+    hostPorts.outbound.runtime.publishState(snapshot);
     const view = createOvertureView(snapshot);
-    renderScreen(splashTicks > 0 ? getSplashView() : view.screen, adapter.display);
-    renderLeds(view.leds, adapter.leds);
+    renderScreen(splashTicks > 0 ? getSplashView() : view.screen, hostPorts.outbound.display);
+    renderLeds(view.leds, hostPorts.outbound.leds);
   }
 
   function getSplashView(): SplashScreenView {
@@ -92,7 +92,7 @@ export function createOvertureRuntime(adapter: OvertureHostAdapter): OvertureRun
   }
 
   function drainCommands(): void {
-    for (const command of core.drainHostCommands()) adapter.commands.execute(command);
+    for (const command of core.drainHostCommands()) hostPorts.outbound.commands.execute(command);
   }
 
   return { core, init, tickPlayback, render, tick, onMidiMessage, onUnload, isReady, isBootSplashVisible };

@@ -1,6 +1,9 @@
 import type { HostCommand } from "../core/host-commands";
 import type { CoreSnapshot } from "../core/types";
 
+export type MoveMidiPacket = readonly [number, number, number, number];
+export type SchwungMidiMessage = readonly [number, number, number];
+
 export interface SplashSurface {
   clear(): void;
   fillRect(x: number, y: number, width: number, height: number, color: number): void;
@@ -28,4 +31,9 @@ export interface LedPort {
 
 export interface HostCommandPort {
   execute(command: HostCommand): void;
+}
+
+export interface MidiPort {
+  sendMovePacket(packet: MoveMidiPacket): void;
+  sendSchwungMessage(message: SchwungMidiMessage): void;
 }

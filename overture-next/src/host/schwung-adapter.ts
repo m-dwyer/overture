@@ -12,7 +12,8 @@ import {
   SCHWUNG_SLOT_CHANNEL_FIRST,
   STEP_CC0,
 } from "./move-controls";
-import type { MoveMidiPacket, OvertureHostAdapter, SchwungMidiMessage } from "./types";
+import type { OvertureHostPorts } from "../ports/host-ports";
+import type { MoveMidiPacket, SchwungMidiMessage } from "../ports/outbound";
 
 const CIN_NOTE_OFF = 0x08;
 const CIN_NOTE_ON = 0x09;
@@ -68,81 +69,85 @@ function parseMoveNote(status: number, note: number, velocity: number, stepCount
   return { kind: "step", step: note - STEP_CC0 };
 }
 
-export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHostAdapter {
+export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHostPorts {
   function call(name: string, args: unknown[]): unknown {
     const fn = host[name];
     if (typeof fn === "function") return (fn as HostFunction)(...args);
     return undefined;
   }
 
-  const adapter: OvertureHostAdapter = {
-    runtime: {
-      publishState(snapshot: CoreSnapshot) {
-        host.overtureUiState = {
-          ...snapshot,
-          sessionView: snapshot.controlMode === "session",
-          activeTrack: snapshot.selectedTrackIndex,
-        };
-      },
-    },
-    display: {
-      splashSurface: {
-        clear: () => adapter.display.clear(),
-        fillRect: (x, y, width, height, color) => {
-          call("fill_rect", [x, y, width, height, color]);
+  const hostPorts: OvertureHostPorts = {
+    inbound: {
+      controlSurface: {
+        parseMoveInput(data, stepCount) {
+          return moveMidiToInput(data, stepCount);
         },
       },
-      clear() {
-        call("clear_screen", []);
-      },
-      print(x, y, text, color) {
-        call("print", [x, y, text, color]);
-      },
-      rect(x, y, width, height, color, fill) {
-        if (fill) call("fill_rect", [x, y, width, height, color]);
-        else call("draw_rect", [x, y, width, height, color]);
-      },
-      flush() {
-        call("host_flush_display", []);
-      },
     },
-    leds: {
-      setStepLed(step, color) {
-        call("setLED", [STEP_CC0 + step, color]);
+    outbound: {
+      runtime: {
+        publishState(snapshot: CoreSnapshot) {
+          host.overtureUiState = {
+            ...snapshot,
+            sessionView: snapshot.controlMode === "session",
+            activeTrack: snapshot.selectedTrackIndex,
+          };
+        },
       },
-      setPadLed(padIndex, color) {
-        call("setLED", [PAD_NOTE0 + padIndex, color]);
+      display: {
+        splashSurface: {
+          clear: () => hostPorts.outbound.display.clear(),
+          fillRect: (x, y, width, height, color) => {
+            call("fill_rect", [x, y, width, height, color]);
+          },
+        },
+        clear() {
+          call("clear_screen", []);
+        },
+        print(x, y, text, color) {
+          call("print", [x, y, text, color]);
+        },
+        rect(x, y, width, height, color, fill) {
+          if (fill) call("fill_rect", [x, y, width, height, color]);
+          else call("draw_rect", [x, y, width, height, color]);
+        },
+        flush() {
+          call("host_flush_display", []);
+        },
       },
-      setTrackRowLed(row, color) {
-        const cc = ROW_CC[row];
-        if (cc !== undefined) call("setButtonLED", [cc, color, true]);
+      leds: {
+        setStepLed(step, color) {
+          call("setLED", [STEP_CC0 + step, color]);
+        },
+        setPadLed(padIndex, color) {
+          call("setLED", [PAD_NOTE0 + padIndex, color]);
+        },
+        setTrackRowLed(row, color) {
+          const cc = ROW_CC[row];
+          if (cc !== undefined) call("setButtonLED", [cc, color, true]);
+        },
+        setPlayLed(color) {
+          call("setButtonLED", [NAV.Play, color, true]);
+        },
+        setMenuLed(color) {
+          call("setButtonLED", [NAV.Menu, color, true]);
+        },
       },
-      setPlayLed(color) {
-        call("setButtonLED", [NAV.Play, color, true]);
+      midi: {
+        sendMovePacket(packet) {
+          call("move_midi_inject_to_move", [packet]);
+        },
+        sendSchwungMessage(message) {
+          call("shadow_send_midi_to_dsp", [message]);
+        },
       },
-      setMenuLed(color) {
-        call("setButtonLED", [NAV.Menu, color, true]);
-      },
-    },
-    input: {
-      parseMoveInput(data, stepCount) {
-        return moveMidiToInput(data, stepCount);
-      },
-    },
-    midi: {
-      sendMovePacket(packet) {
-        call("move_midi_inject_to_move", [packet]);
-      },
-      sendSchwungMessage(message) {
-        call("shadow_send_midi_to_dsp", [message]);
-      },
-    },
-    commands: {
-      execute(command) {
-        if (command.route.kind === "move") adapter.midi.sendMovePacket(moveCommandToPacket(command));
-        else adapter.midi.sendSchwungMessage(schwungCommandToMessage(command));
+      commands: {
+        execute(command) {
+          if (command.route.kind === "move") hostPorts.outbound.midi.sendMovePacket(moveCommandToPacket(command));
+          else hostPorts.outbound.midi.sendSchwungMessage(schwungCommandToMessage(command));
+        },
       },
     },
   };
-  return adapter;
+  return hostPorts;
 }
