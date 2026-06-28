@@ -100,7 +100,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     const hostCommands: HostCommand[] = [];
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
-    expect(state.transport.playing).toBe(true);
+    expect(state.transport.snapshot().playing).toBe(true);
     expect(state.playback.tracks[0].playingClipId).toBe("clip-1");
     expect(hostCommands).toEqual([
       { kind: "track-note-on", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60, velocity: 100 },
@@ -114,12 +114,12 @@ describe("Overture Next control-to-intent pipeline", () => {
     state.control.selectClipCell({ trackIndex: 0, sceneIndex: 7 });
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
-    expect(state.transport.playing).toBe(true);
+    expect(state.transport.snapshot().playing).toBe(true);
     expect(state.playback.tracks[0].playingClipId).toBeNull();
     expect(hostCommands).toEqual([]);
 
     expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
-    expect(state.transport.playing).toBe(false);
+    expect(state.transport.snapshot().playing).toBe(false);
     expect(hostCommands).toEqual([]);
   });
 
@@ -173,7 +173,7 @@ describe("Overture Next control-to-intent pipeline", () => {
   test("launching an empty Schwung Clip Cell stops that Track via its route", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
-    state.transport.playhead = 4;
+    state.transport.seekToStep(4);
 
     expect(
       applyIntentAndCollect(

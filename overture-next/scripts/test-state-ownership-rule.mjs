@@ -91,6 +91,18 @@ ruleTester.run("state-api-encapsulation", stateApiEncapsulation, {
       `,
       options: [{ owners: [{ type: "ControlState" }] }],
     },
+    {
+      filename: "rule-tests/transport.ts",
+      code: `
+        class TransportState {
+          start(): void {}
+        }
+        export function createTransport(): TransportState {
+          return new TransportState();
+        }
+      `,
+      options: [{ owners: [{ type: "TransportState" }] }],
+    },
   ],
   invalid: [
     {
@@ -117,6 +129,19 @@ ruleTester.run("state-api-encapsulation", stateApiEncapsulation, {
         };
       `,
       options: [{ owners: [{ type: "ControlState" }] }],
+      errors: [{ messageId: "exportedOwnedStateParameter" }],
+    },
+    {
+      filename: "rule-tests/transport.ts",
+      code: `
+        class TransportState {
+          start(): void {}
+        }
+        export function startTransport(transport: TransportState): void {
+          transport.start();
+        }
+      `,
+      options: [{ owners: [{ type: "TransportState" }] }],
       errors: [{ messageId: "exportedOwnedStateParameter" }],
     },
   ],

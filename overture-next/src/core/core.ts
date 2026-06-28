@@ -5,7 +5,7 @@ import { applyIntent } from "./intents/apply-intent";
 import { advancePlayback, createPlaybackState, stopPlayback as stopClipPlayback } from "./playback";
 import { createDefaultProject, getClipCell, getSequenceForCell } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
-import { advanceTransport, createTransport, stopTransport } from "./transport";
+import { createTransport, type TransportStateSnapshot } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
 import { getTrack } from "./track";
 
@@ -23,8 +23,8 @@ export function createOvertureCore(): OvertureCore {
   function init(): void {}
 
   function tick(): void {
-    const injectedStep = advanceTransport(state.transport, DEFAULT_STEP_COUNT);
-    const advance = advancePlayback(state.project, state.playback, { injectedStep, tick: state.transport.tick });
+    const transportTick = state.transport.advance(DEFAULT_STEP_COUNT);
+    const advance = advancePlayback(state.project, state.playback, transportTick);
     if (advance.injectedStep !== null) state.lastInjectedStep = advance.injectedStep;
     hostCommands.push(...advance.hostCommands);
   }
@@ -39,6 +39,7 @@ export function createOvertureCore(): OvertureCore {
 
   function getSnapshot(): CoreSnapshot {
     const control = state.control.snapshot();
+    const transport = state.transport.snapshot();
     const selectedClipCell = control.selectedClipCell;
     const selectedCell = getClipCell(state.project, selectedClipCell);
     return {
@@ -48,11 +49,11 @@ export function createOvertureCore(): OvertureCore {
       controlMode: control.controlMode,
       shiftHeld: control.shiftHeld,
       selectedStep: control.selectedStep,
-      playing: state.transport.playing,
+      playing: transport.playing,
       selectedClipId: selectedCell.clipId,
       selectedClipCell: { ...selectedClipCell },
       clipCells: state.project.clipCells.map((cell) => ({ ...cell })),
-      steps: getSnapshotSteps(control),
+      steps: getSnapshotSteps(control, transport),
     };
   }
 
@@ -65,7 +66,7 @@ export function createOvertureCore(): OvertureCore {
     return sequence?.length ?? DEFAULT_STEP_COUNT;
   }
 
-  function getSnapshotSteps(control: ControlStateSnapshot) {
+  function getSnapshotSteps(control: ControlStateSnapshot, transport: TransportStateSnapshot) {
     const sequence = selectedSequence(control);
     return Array.from({ length: getSelectedSequenceLengthFor(control) }, (_, index) => {
       const step = sequence ? getSequenceStep(sequence, index) : null;
@@ -75,7 +76,7 @@ export function createOvertureCore(): OvertureCore {
         note: step?.note ?? null,
         velocity: step?.velocity ?? null,
         selected: index === control.selectedStep,
-        playhead: index === state.transport.playhead,
+        playhead: index === transport.playhead,
       };
     });
   }
@@ -85,8 +86,8 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function stopPlayback(): HostCommand[] {
-    stopTransport(state.transport);
-    return stopClipPlayback(state.project, state.playback, state.transport);
+    state.transport.stop();
+    return stopClipPlayback(state.project, state.playback, state.transport.clock());
   }
 
   function getSelectedSequenceLength(): number {

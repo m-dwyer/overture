@@ -8,12 +8,7 @@ import {
 } from "../../src/core/playback";
 import { createDefaultProject } from "../../src/core/project";
 import { DEFAULT_STEP_COUNT } from "../../src/core/sequence";
-import {
-  advanceTransport,
-  createTransport,
-  startTransport,
-  stopTransport,
-} from "../../src/core/transport";
+import { createTransport } from "../../src/core/transport";
 
 describe("Overture Next playback", () => {
   test("injects note commands for active steps in playing clips", () => {
@@ -21,10 +16,10 @@ describe("Overture Next playback", () => {
     const playback = createPlaybackState();
     const transport = createTransport();
 
-    launchClipCellPlayback(project, playback, { trackIndex: 2, sceneIndex: 0 }, transport);
-    startTransport(transport);
+    launchClipCellPlayback(project, playback, { trackIndex: 2, sceneIndex: 0 }, transport.clock());
+    transport.start();
 
-    expect(startPlayback(project, playback, { trackIndex: 2, sceneIndex: 0 }, transport)).toEqual([
+    expect(startPlayback(project, playback, { trackIndex: 2, sceneIndex: 0 }, transport.clock())).toEqual([
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 2 },
@@ -44,15 +39,15 @@ describe("Overture Next playback", () => {
     const playback = createPlaybackState();
     const transport = createTransport();
 
-    launchClipCellPlayback(project, playback, { trackIndex: 1, sceneIndex: 0 }, transport);
-    startTransport(transport);
-    transport.playhead = 4;
+    launchClipCellPlayback(project, playback, { trackIndex: 1, sceneIndex: 0 }, transport.clock());
+    transport.start();
+    transport.seekToStep(4);
 
-    stopTransport(transport);
-    expect(stopPlayback(project, playback, transport)).toEqual([
+    transport.stop();
+    expect(stopPlayback(project, playback, transport.clock())).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 64 },
     ]);
-    expect(transport.playing).toBe(false);
+    expect(transport.snapshot().playing).toBe(false);
     expect(playback.tracks.every((track) => track.playingClipId === null && track.queuedClipId === null)).toBe(true);
   });
 
@@ -61,10 +56,10 @@ describe("Overture Next playback", () => {
     const playback = createPlaybackState();
     const transport = createTransport();
 
-    launchClipCellPlayback(project, playback, { trackIndex: 4, sceneIndex: 0 }, transport);
-    transport.playhead = 4;
+    launchClipCellPlayback(project, playback, { trackIndex: 4, sceneIndex: 0 }, transport.clock());
+    transport.seekToStep(4);
 
-    expect(launchClipCellPlayback(project, playback, { trackIndex: 4, sceneIndex: 7 }, transport)).toEqual([
+    expect(launchClipCellPlayback(project, playback, { trackIndex: 4, sceneIndex: 7 }, transport.clock())).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
     ]);
     expect(playback.tracks[4].playingClipId).toBeNull();
@@ -76,6 +71,5 @@ function advancePlaybackTick(
   playback: Parameters<typeof advancePlayback>[1],
   transport: ReturnType<typeof createTransport>,
 ) {
-  const injectedStep = advanceTransport(transport, DEFAULT_STEP_COUNT);
-  return advancePlayback(project, playback, { injectedStep, tick: transport.tick });
+  return advancePlayback(project, playback, transport.advance(DEFAULT_STEP_COUNT));
 }

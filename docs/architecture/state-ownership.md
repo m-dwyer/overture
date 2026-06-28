@@ -9,7 +9,7 @@ mutating another owner's data.
 | State Shape | Owner | Notes |
 | --- | --- | --- |
 | `ControlState` | `src/core/control-state.ts` | Owner-object class with `snapshot()` read contract. |
-| `TransportState` | `src/core/transport.ts` | Transport timing owner. |
+| `TransportState` | `src/core/transport.ts` | Owner-object class with `snapshot()` and `clock()` read contracts. |
 | `PlaybackState` | `src/core/playback/` | Playback lifecycle and note-off scheduling owner. |
 | `OvertureProject` | `src/core/project/` | Project data owner and public lookup surface. |
 
