@@ -6,7 +6,7 @@ describe("Overture Next Control State", () => {
     expect(createInitialControlState().snapshot()).toEqual({
       selectedTrackIndex: 0,
       visibleTrackBank: 0,
-      controlMode: "track",
+      activeView: "track",
       shiftHeld: false,
       selectedStep: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
@@ -42,12 +42,12 @@ describe("Overture Next Control State", () => {
     const control = createInitialControlState();
 
     control.setShiftHeld(true);
-    expect(control.toggleControlMode()).toBe("session");
+    expect(control.toggleView()).toBe("session");
     control.selectStep(9);
 
     expect(control.snapshot()).toMatchObject({
       shiftHeld: true,
-      controlMode: "session",
+      activeView: "session",
       selectedStep: 9,
     });
   });

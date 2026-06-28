@@ -32,7 +32,7 @@ export function createLedView(snapshot: CoreSnapshot, surfaceHints: readonly Sur
         state: trackRowLedState(snapshot, surfaceHints, row),
       })),
       { kind: "play", state: snapshot.playing ? "playing" : "stopped" },
-      { kind: "menu", state: snapshot.controlMode === "session" ? "session" : "track" },
+      { kind: "menu", state: snapshot.activeView === "session" ? "session" : "track" },
     ],
   };
 }
@@ -48,7 +48,7 @@ function trackRowLedState(
 
 function createClipCellPadLedView(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHint[]): LedView["clipCellPads"] {
   return Array.from({ length: SESSION_PAD_COUNT }, (_, padIndex) => {
-    if (snapshot.controlMode !== "session") return { padIndex, state: "off" };
+    if (snapshot.activeView !== "session") return { padIndex, state: "off" };
 
     const coordinate = clipCellCoordinateForSessionPad(snapshot.visibleTrackBank, padIndex);
     const clipCell = snapshot.clipCells.find(

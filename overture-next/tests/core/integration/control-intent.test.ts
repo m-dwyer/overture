@@ -44,7 +44,7 @@ describe("Overture Next control-to-intent pipeline", () => {
   test("interprets Session View pads as Clip Cell launch without leaking pad indexes", () => {
     const control = createInitialControlState();
     control.selectTrack(4);
-    control.toggleControlMode();
+    control.toggleView();
 
     const intent = interpretControl(padPress(26), control.snapshot());
 

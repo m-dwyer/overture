@@ -89,7 +89,7 @@ export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHos
         publishState(snapshot: CoreSnapshot) {
           host.overtureUiState = {
             ...snapshot,
-            sessionView: snapshot.controlMode === "session",
+            sessionView: snapshot.activeView === "session",
             activeTrack: snapshot.selectedTrackIndex,
           };
         },

@@ -1,12 +1,12 @@
 import type { ClipCellCoordinate } from "./project";
 import { trackBankForTrack } from "./track";
 
-export type ControlMode = "track" | "session";
+export type ActiveView = "track" | "session";
 
 export interface ControlStateSnapshot {
   readonly selectedTrackIndex: number;
   readonly visibleTrackBank: number;
-  readonly controlMode: ControlMode;
+  readonly activeView: ActiveView;
   readonly shiftHeld: boolean;
   readonly selectedStep: number;
   readonly selectedClipCell: Readonly<ClipCellCoordinate>;
@@ -15,7 +15,7 @@ export interface ControlStateSnapshot {
 export class ControlState {
   private selectedTrackIndexValue: number;
   private visibleTrackBankValue: number;
-  private controlModeValue: ControlMode;
+  private activeViewValue: ActiveView;
   private shiftHeldValue: boolean;
   private selectedStepValue: number;
   private selectedClipCellValue: ClipCellCoordinate;
@@ -23,7 +23,7 @@ export class ControlState {
   constructor() {
     this.selectedTrackIndexValue = 0;
     this.visibleTrackBankValue = 0;
-    this.controlModeValue = "track";
+    this.activeViewValue = "track";
     this.shiftHeldValue = false;
     this.selectedStepValue = 0;
     this.selectedClipCellValue = { trackIndex: 0, sceneIndex: 0 };
@@ -33,7 +33,7 @@ export class ControlState {
     return {
       selectedTrackIndex: this.selectedTrackIndexValue,
       visibleTrackBank: this.visibleTrackBankValue,
-      controlMode: this.controlModeValue,
+      activeView: this.activeViewValue,
       shiftHeld: this.shiftHeldValue,
       selectedStep: this.selectedStepValue,
       selectedClipCell: { ...this.selectedClipCellValue },
@@ -44,9 +44,9 @@ export class ControlState {
     this.shiftHeldValue = held;
   }
 
-  toggleControlMode(): ControlMode {
-    this.controlModeValue = this.controlModeValue === "session" ? "track" : "session";
-    return this.controlModeValue;
+  toggleView(): ActiveView {
+    this.activeViewValue = this.activeViewValue === "session" ? "track" : "session";
+    return this.activeViewValue;
   }
 
   selectTrack(trackIndex: number): void {

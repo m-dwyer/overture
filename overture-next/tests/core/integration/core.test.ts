@@ -100,7 +100,7 @@ describe("Overture Next core", () => {
     const clipCount = countSnapshotClips(core.getSnapshot());
 
     core.applyInput({ kind: "menu" });
-    expect(core.getSnapshot().controlMode).toBe("session");
+    expect(core.getSnapshot().activeView).toBe("session");
 
     expect(core.applyInput(padPress(0))).toBe(true);
 
@@ -227,7 +227,7 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "step", step: 1 });
 
     expect(core.getSnapshot()).toMatchObject({
-      controlMode: "track",
+      activeView: "track",
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
     });
     expect(core.getSnapshot().steps[1].active).toBe(true);
@@ -459,7 +459,7 @@ describe("Overture Next core", () => {
     core.applyInput({ kind: "shift", held: false });
 
     expect(core.getSnapshot()).toMatchObject({
-      controlMode: "track",
+      activeView: "track",
       selectedTrackIndex: 4,
       selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
       selectedClipId: "clip-5",

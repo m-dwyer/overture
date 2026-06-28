@@ -9,5 +9,5 @@ interface ViewModule {
 }
 
 export function viewModuleFor(snapshot: CoreSnapshot): ViewModule {
-  return snapshot.controlMode === "session" ? sessionView : trackView;
+  return snapshot.activeView === "session" ? sessionView : trackView;
 }

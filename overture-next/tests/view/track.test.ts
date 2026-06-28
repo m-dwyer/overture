@@ -8,7 +8,7 @@ describe("Overture Next Track View module", () => {
       selectedTrackIndex: 5,
       selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
       visibleTrackBank: 1,
-      controlMode: "track",
+      activeView: "track",
       shiftHeld: false,
       selectedStep: 1,
       playing: true,

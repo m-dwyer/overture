@@ -16,8 +16,8 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     state.transport.start();
     return applied(state.playback.start(state.project, control.snapshot().selectedClipCell, state.transport.clock()));
   }
-  if (intent.kind === "toggle-control-mode") {
-    control.toggleControlMode();
+  if (intent.kind === "toggle-view") {
+    control.toggleView();
     return applied();
   }
   if (intent.kind === "select-track") {

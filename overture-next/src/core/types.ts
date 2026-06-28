@@ -1,4 +1,4 @@
-import type { ControlMode, ControlState, ControlStateSnapshot } from "./control-state";
+import type { ActiveView, ControlState, ControlStateSnapshot } from "./control-state";
 import type { ControlInput } from "./controls/types";
 import type { HostCommand } from "./host-commands";
 import type { Playback } from "./playback";
@@ -33,7 +33,7 @@ export interface CoreSnapshot {
   selectedTrackIndex: number;
   selectedTrackRoute: TrackRoute;
   visibleTrackBank: number;
-  controlMode: ControlMode;
+  activeView: ActiveView;
   shiftHeld: boolean;
   selectedStep: number;
   playing: boolean;

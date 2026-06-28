@@ -29,7 +29,7 @@ function sessionSnapshot({ shiftHeld }: { shiftHeld: boolean }): CoreSnapshot {
     selectedTrackIndex: 3,
     selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
     visibleTrackBank: 0,
-    controlMode: "session",
+    activeView: "session",
     shiftHeld,
     selectedStep: 0,
     playing: false,

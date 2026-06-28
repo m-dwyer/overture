@@ -45,7 +45,7 @@ export function createOvertureCore(): OvertureCore {
       selectedTrackIndex: control.selectedTrackIndex,
       selectedTrackRoute: state.project.trackRoute(control.selectedTrackIndex),
       visibleTrackBank: control.visibleTrackBank,
-      controlMode: control.controlMode,
+      activeView: control.activeView,
       shiftHeld: control.shiftHeld,
       selectedStep: control.selectedStep,
       playing: transport.playing,
