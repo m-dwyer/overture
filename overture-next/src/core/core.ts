@@ -3,11 +3,10 @@ import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
 import { advancePlayback, createPlaybackState, stopPlayback as stopClipPlayback } from "./playback";
-import { createDefaultProject, getClipCell, getSequenceForCell } from "./project";
+import { createDefaultProject, getClipCell, getProjectTrackRoute, getSequenceForCell, listClipCellSnapshots } from "./project";
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "./sequence";
 import { createTransport, type TransportStateSnapshot } from "./transport";
 import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
-import { getTrack } from "./track";
 
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
@@ -44,7 +43,7 @@ export function createOvertureCore(): OvertureCore {
     const selectedCell = getClipCell(state.project, selectedClipCell);
     return {
       selectedTrackIndex: control.selectedTrackIndex,
-      selectedTrackRoute: getTrack(state.project.tracks, control.selectedTrackIndex).route,
+      selectedTrackRoute: getProjectTrackRoute(state.project, control.selectedTrackIndex),
       visibleTrackBank: control.visibleTrackBank,
       controlMode: control.controlMode,
       shiftHeld: control.shiftHeld,
@@ -52,7 +51,7 @@ export function createOvertureCore(): OvertureCore {
       playing: transport.playing,
       selectedClipId: selectedCell.clipId,
       selectedClipCell: { ...selectedClipCell },
-      clipCells: state.project.clipCells.map((cell) => ({ ...cell })),
+      clipCells: listClipCellSnapshots(state.project),
       steps: getSnapshotSteps(control, transport),
     };
   }
