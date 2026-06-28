@@ -8,6 +8,7 @@ import {
   type BrowserEmulatorHarness,
   type BrowserHarnessDiagnostics,
 } from "@/host/browser-emulator-harness";
+import { createGlobalBrowserObservability } from "@/host/browser-observability";
 import { createBrowserFileStore } from "@/host/browser-file-store.js";
 import type { LedSink } from "@/host/sinks.js";
 import { createCanvasDisplaySink, OLED_READABLE_SCALE } from "@/host/canvas-display-sink";
@@ -25,6 +26,7 @@ export function App() {
   const logRef = useRef<HTMLPreElement>(null);
   const harnessRef = useRef<BrowserEmulatorHarness | null>(null);
   const shellLedsRef = useRef<LedSink | null>(null);
+  const observabilityRef = useRef(createGlobalBrowserObservability());
   const searchParams = new URLSearchParams(location.search);
   const manualMode = searchParams.has("manual");
   const diagMode = searchParams.has("diag");
@@ -99,7 +101,8 @@ export function App() {
     const display = createCanvasDisplaySink(
       canvas,
       () => oledModeRef.current.scale,
-      () => oledModeRef.current.smooth
+      () => oledModeRef.current.smooth,
+      observabilityRef.current
     );
     const leds: LedSink = createShellLedSink({
       ledsMap,
@@ -119,6 +122,7 @@ export function App() {
         log,
         setStatus,
         notifyDiagnostics: setSchwungDiagnostics,
+        harnessPort: observabilityRef.current,
       },
       initialState: {
         trackNumber: initialTrack,
@@ -139,9 +143,10 @@ export function App() {
   useEffect(() => {
     if (!manualMode) return;
     const interval = setInterval(() => {
-      setManualGesture(globalThis.__OVT_MANUAL_GESTURE ?? "");
-      setManualControls(globalThis.__OVT_MANUAL_CONTROLS ?? "");
-      setManualShowing(globalThis.__OVT_MANUAL_SHOWING ?? "");
+      const annotation = observabilityRef.current.readManualAnnotation();
+      setManualGesture(annotation.gesture);
+      setManualControls(annotation.controls);
+      setManualShowing(annotation.showing);
     }, 100);
     return () => clearInterval(interval);
   }, [manualMode]);

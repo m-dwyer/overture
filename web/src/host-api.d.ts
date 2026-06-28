@@ -38,6 +38,8 @@ export interface HostApi {
   shadow_get_slots(): Array<Record<string, unknown>>;
   shadow_get_param(slot: number, key: string): string | null;
   shadow_set_param(slot: number, key: string, val: string | number): boolean;
+  host_get_volume(): number;
+  host_set_volume(volume: number): void;
   host_list_modules(): Array<Record<string, unknown>>;
   shadow_get_ui_flags(): Record<string, unknown>;
 }
@@ -77,6 +79,8 @@ declare global {
   var shadow_get_slots: HostApi["shadow_get_slots"];
   var shadow_get_param: HostApi["shadow_get_param"];
   var shadow_set_param: HostApi["shadow_set_param"];
+  var host_get_volume: HostApi["host_get_volume"];
+  var host_set_volume: HostApi["host_set_volume"];
   var host_list_modules: HostApi["host_list_modules"];
   var shadow_get_ui_flags: HostApi["shadow_get_ui_flags"];
 

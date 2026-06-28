@@ -1,6 +1,12 @@
+import type { HostApi } from "../host-api.js";
 import type { FileStore } from "./sinks.js";
 
-export function createFileHostApi(files: FileStore) {
+type FileHostApi = Pick<
+  HostApi,
+  "host_write_file" | "host_read_file" | "host_file_exists" | "host_ensure_dir" | "host_remove_dir"
+>;
+
+export function createFileHostApi(files: FileStore): FileHostApi {
   return {
     host_write_file(path: string, data: string): number {
       return files.write(path, data);

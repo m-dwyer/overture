@@ -1,6 +1,12 @@
+import type { HostApi } from "../host-api.js";
 import type { DisplaySink } from "./sinks.js";
 
-export function createDisplayHostApi(display: DisplaySink) {
+type DisplayHostApi = Pick<
+  HostApi,
+  "clear_screen" | "fill_rect" | "draw_rect" | "set_pixel" | "print" | "text_width" | "host_flush_display"
+>;
+
+export function createDisplayHostApi(display: DisplaySink): DisplayHostApi {
   return {
     clear_screen(): void {
       display.clearScreen();

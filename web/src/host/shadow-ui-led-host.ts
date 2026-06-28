@@ -1,4 +1,7 @@
+import type { HostApi } from "../host-api.js";
 import type { LedSink } from "./sinks.js";
+
+type LedHostApi = Pick<HostApi, "setLED" | "setButtonLED" | "clearAllLEDs" | "move_midi_internal_send">;
 
 function usbMidiSysexBytes(packet: number[]): number[] {
   const bytes: number[] = [];
@@ -30,7 +33,7 @@ function parsePaletteEntry(packet: number[]): { index: number; r: number; g: num
   };
 }
 
-export function createLedHostApi(leds: LedSink) {
+export function createLedHostApi(leds: LedSink): LedHostApi {
   return {
     setLED(index: number, color: number): void {
       leds.setLED(index, color);

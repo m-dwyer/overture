@@ -1,10 +1,10 @@
 import type { Dsp } from "../dsp.js";
+import type { HostApi } from "../host-api.js";
+
+type DspHostGlobals = Pick<HostApi, "host_module_get_param" | "host_module_set_param">;
 
 export interface DspHostApi {
-  api: {
-    host_module_get_param(key: string): string | null;
-    host_module_set_param(key: string, val: string | number): void;
-  };
+  api: DspHostGlobals;
   flushSetParams(): void;
 }
 
