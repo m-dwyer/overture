@@ -21,6 +21,12 @@ export interface ClipCell {
   clipId: ClipId | null;
 }
 
+export interface ClipCellSnapshot {
+  readonly trackIndex: TrackIndex;
+  readonly sceneIndex: SceneIndex;
+  readonly clipId: ClipId | null;
+}
+
 export interface OvertureClip {
   id: ClipId;
   trackIndex: TrackIndex;
