@@ -1,10 +1,9 @@
 import type { CoreSnapshot } from "../core/types";
+import { viewModuleFor } from "./internal/view-modules";
 import type { SurfaceHint } from "./types";
-import { createSessionSurfaceHints } from "./internal/session-surface-hints";
 
 export function createSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[] {
-  if (snapshot.controlMode === "session") return createSessionSurfaceHints(snapshot);
-  return [];
+  return viewModuleFor(snapshot).createSurfaceHints(snapshot);
 }
 
 export function hasSessionSceneColumnHint(hints: readonly SurfaceHint[], sceneIndex: number): boolean {

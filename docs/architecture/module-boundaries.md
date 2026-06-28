@@ -49,6 +49,10 @@ Examples:
   `playback/internal/` contains low-level playback helpers.
 - `overture-next/src/view/index.ts` exposes view-model derivation contracts;
   `view/internal/` contains view-specific projection helpers.
+- `overture-next/src/view/session/index.ts` and
+  `overture-next/src/view/track/index.ts` expose view-specific projection
+  modules; their `internal/` folders contain the screen and Surface Hint
+  projection details.
 
 Code outside an adopted module should import through the public entry point, not
 from implementation files or `internal/`.
@@ -66,7 +70,7 @@ Keep this table current when a boundary changes materially.
 | Playback state and lifecycle | `src/core/playback/` | `playback/index.ts` | `playback/internal/` | dependency-cruiser public/internal rules |
 | Host translation | `src/host/` | Host adapter and host types | Adapter-local helpers | dependency-cruiser host boundary rules |
 | Runtime-host boundary contracts | `src/ports/` | `inbound.ts`, `outbound.ts`, `host-ports.ts` | None | dependency-cruiser ports/runtime rules |
-| View models | `src/view/` | View derivation contracts | Local private helpers | dependency-cruiser view rules |
+| View models | `src/view/` | `view/index.ts`, `view/<view>/index.ts` | `view/internal/`, `view/<view>/internal/` | dependency-cruiser view/public/internal rules |
 | Rendering | `src/render/` | Screen/LED renderers | Local private helpers | dependency-cruiser render rules |
 
 ## Boundary Change Checklist

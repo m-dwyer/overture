@@ -1,42 +1,21 @@
 import type { CoreSnapshot } from "../core/types";
 import { SESSION_PAD_COUNT, clipCellCoordinateForSessionPad } from "../session-grid";
-import { createSurfaceHints, hasSessionSceneColumnHint, hasTrackRowHint } from "./surface-hints";
+import { viewModuleFor } from "./internal/view-modules";
+import { hasSessionSceneColumnHint, hasTrackRowHint } from "./surface-hints";
 import type { LedView, OvertureSurfaceView, ScreenView, SurfaceHint } from "./types";
 
 export function createOvertureSurfaceView(snapshot: CoreSnapshot): OvertureSurfaceView {
-  const surfaceHints = createSurfaceHints(snapshot);
+  const viewModule = viewModuleFor(snapshot);
+  const surfaceHints = viewModule.createSurfaceHints(snapshot);
   return {
     surfaceHints,
-    screen: createScreenView(snapshot),
+    screen: viewModule.createScreenView(snapshot),
     leds: createLedView(snapshot, surfaceHints),
   };
 }
 
 export function createScreenView(snapshot: CoreSnapshot): ScreenView {
-  if (snapshot.controlMode === "session") {
-    return {
-      kind: "session",
-      title: "OVERTURE NEXT",
-      selectedTrackIndex: snapshot.selectedTrackIndex,
-      selectedSceneIndex: snapshot.selectedClipCell.sceneIndex,
-      selectedClipId: snapshot.selectedClipId,
-      playing: snapshot.playing,
-    };
-  }
-
-  return {
-    kind: "track",
-    title: "OVERTURE NEXT",
-    selectedTrackIndex: snapshot.selectedTrackIndex,
-    playing: snapshot.playing,
-    selectedStep: snapshot.selectedStep,
-    steps: snapshot.steps.map((step) => ({
-      index: step.index,
-      active: step.active,
-      selected: step.selected,
-      playhead: step.playhead,
-    })),
-  };
+  return viewModuleFor(snapshot).createScreenView(snapshot);
 }
 
 export function createLedView(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHint[]): LedView {
