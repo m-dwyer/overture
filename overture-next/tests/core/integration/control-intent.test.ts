@@ -238,9 +238,8 @@ describe("Overture Next control-to-intent pipeline", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
     const selectedClip = getClipForCell(state.project, state.control.snapshot().selectedClipCell);
-    const otherClipId = getClipCell(state.project, { trackIndex: 1, sceneIndex: 0 }).clipId;
-    if (!selectedClip || !otherClipId) throw new Error("Expected default clips");
-    const otherClip = state.project.clips[otherClipId];
+    const otherClip = getClipForCell(state.project, { trackIndex: 1, sceneIndex: 0 });
+    if (!selectedClip || !otherClip) throw new Error("Expected default clips");
 
     expect(selectedClip.sequence.steps[1].active).toBe(false);
     expect(otherClip.sequence.steps[1].active).toBe(false);

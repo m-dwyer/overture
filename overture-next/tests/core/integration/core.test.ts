@@ -8,7 +8,7 @@ import {
   getClipCell,
   getClipForCell,
 } from "../../../src/core/project";
-import { createDefaultSequence } from "../../../src/core/sequence";
+import { createDefaultSequence, toggleSequenceStep } from "../../../src/core/sequence";
 import { TRACK_COUNT, createTracks } from "../../../src/core/track";
 
 describe("Overture Next core", () => {
@@ -299,17 +299,17 @@ describe("Overture Next core", () => {
 
   test("keeps sequences owned by independent clips", () => {
     const project = createDefaultProject();
-    const firstClipId = getClipCell(project, { trackIndex: 0, sceneIndex: 0 }).clipId;
-    const secondClipId = getClipCell(project, { trackIndex: 1, sceneIndex: 0 }).clipId;
+    const firstClip = getClipForCell(project, { trackIndex: 0, sceneIndex: 0 });
+    const secondClip = getClipForCell(project, { trackIndex: 1, sceneIndex: 0 });
 
-    expect(firstClipId).toBe("clip-1");
-    expect(secondClipId).toBe("clip-2");
-    if (!firstClipId || !secondClipId) throw new Error("Expected default clips");
+    expect(firstClip?.id).toBe("clip-1");
+    expect(secondClip?.id).toBe("clip-2");
+    if (!firstClip || !secondClip) throw new Error("Expected default clips");
 
-    project.clips[firstClipId].sequence.steps[1].active = true;
+    toggleSequenceStep(firstClip.sequence, 1);
 
-    expect(project.clips[firstClipId].sequence.steps[1].active).toBe(true);
-    expect(project.clips[secondClipId].sequence.steps[1].active).toBe(false);
+    expect(firstClip.sequence.steps[1].active).toBe(true);
+    expect(secondClip.sequence.steps[1].active).toBe(false);
   });
 
   test("selects an empty clip cell without creating an Overture Clip", () => {

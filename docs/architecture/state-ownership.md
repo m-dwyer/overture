@@ -46,7 +46,8 @@ Acceptable orchestration:
 
 ```ts
 state.control.selectStep(stepIndex);
-const sequence = getSequenceForCell(state.project, state.control.snapshot().selectedClipCell);
+const clip = getClipForCell(state.project, state.control.snapshot().selectedClipCell);
+if (clip) toggleSequenceStep(clip.sequence, stepIndex);
 ```
 
 Avoid:

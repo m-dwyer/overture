@@ -1,5 +1,5 @@
 import { launchClipCellPlayback, startPlayback, stopPlayback as stopClipPlayback } from "../playback";
-import { getClipCell, getSequenceForCell } from "../project";
+import { getClipCell, getClipForCell } from "../project";
 import { toggleSequenceStep } from "../sequence";
 import { getTrack } from "../track";
 import type { CoreState, HostCommand } from "../types";
@@ -32,8 +32,8 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
   }
   if (intent.kind === "toggle-step") {
     control.selectStep(intent.stepIndex);
-    const sequence = getSequenceForCell(state.project, control.snapshot().selectedClipCell);
-    if (sequence) toggleSequenceStep(sequence, intent.stepIndex);
+    const clip = getClipForCell(state.project, control.snapshot().selectedClipCell);
+    if (clip) toggleSequenceStep(clip.sequence, intent.stepIndex);
     return applied();
   }
   if (intent.kind === "audition-note") {
