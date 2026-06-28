@@ -1,19 +1,10 @@
 import type { CoreSnapshot } from "../core/types";
-
-export type SurfaceRegion =
-  | { kind: "session-scene-column"; sceneIndex: number }
-  | { kind: "track-row"; row: number };
-
-export type SurfaceHint = { kind: "scene-launch-target"; surface: SurfaceRegion };
+import type { SurfaceHint } from "./types";
+import { createSessionSurfaceHints } from "./internal/session-surface-hints";
 
 export function createSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[] {
-  if (snapshot.controlMode !== "session" || !snapshot.shiftHeld) return [];
-  return [
-    {
-      kind: "scene-launch-target",
-      surface: { kind: "session-scene-column", sceneIndex: snapshot.selectedClipCell.sceneIndex },
-    },
-  ];
+  if (snapshot.controlMode === "session") return createSessionSurfaceHints(snapshot);
+  return [];
 }
 
 export function hasSessionSceneColumnHint(hints: readonly SurfaceHint[], sceneIndex: number): boolean {

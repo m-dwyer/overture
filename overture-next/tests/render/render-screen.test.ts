@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { renderScreen } from "../../src/render/render-screen";
 import type { DisplayPort } from "../../src/ports/outbound";
-import type { ScreenView } from "../../src/view/types";
+import type { ScreenView } from "../../src/view";
 
 describe("Overture Next screen rendering", () => {
   test("renders Session View as selected Clip Cell state instead of a step strip", () => {

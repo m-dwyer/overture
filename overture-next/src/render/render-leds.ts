@@ -1,6 +1,6 @@
 import type { LedPort } from "../ports/outbound";
 import { OVERTURE_LED_COLOR } from "../ports/led-colors";
-import type { LedView } from "../view/types";
+import type { LedView } from "../view";
 
 const STEP_COLORS = {
   playhead: OVERTURE_LED_COLOR.selected,

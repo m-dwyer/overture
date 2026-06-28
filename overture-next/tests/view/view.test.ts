@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { CoreSnapshot } from "../../src/core/types";
-import { createOvertureSurfaceView } from "../../src/view/overture-view";
+import { createOvertureSurfaceView } from "../../src/view";
 
 describe("Overture Next view projection", () => {
   test("derives Track View screen and LED views from a core snapshot", () => {

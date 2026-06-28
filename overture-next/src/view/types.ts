@@ -1,5 +1,3 @@
-import type { SurfaceHint } from "./surface-hints";
-
 export interface StepView {
   index: number;
   active: boolean;
@@ -26,6 +24,12 @@ export interface SessionScreenView {
 }
 
 export type ScreenView = TrackScreenView | SessionScreenView;
+
+export type SurfaceRegion =
+  | { kind: "session-scene-column"; sceneIndex: number }
+  | { kind: "track-row"; row: number };
+
+export type SurfaceHint = { kind: "scene-launch-target"; surface: SurfaceRegion };
 
 export interface StepLedView {
   step: number;

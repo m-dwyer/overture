@@ -27,8 +27,14 @@ The dependency-cruiser rules are the architecture import ratchet:
 - runtime orchestrates through ports and does not import host modules.
 - view types stay neutral.
 - port types stay contracts.
-- module `internal/` folders are private implementation details protected as
-  modules adopt them.
+- every `src/**/internal/` folder is private to its nearest parent module.
+  The dependency-cruiser config discovers these folders and generates the
+  matching privacy rules, so new internals are ratcheted as they are added.
+- when an internalized module has an `index.ts`, the dependency-cruiser config
+  also generates a public-entrypoint-only rule for imports from outside that
+  module.
+- `pnpm -C overture-next test:lint-rules` checks that every internalized module
+  has an `index.ts` public entry point and a matching test path under `tests/`.
 
 Use dependency-cruiser when a boundary can be expressed as "this path may not
 import that path."

@@ -107,6 +107,11 @@ tests. The dependency-cruiser and ESLint rules are executable architecture
 ratchets. Never weaken them to make a change pass. For the ratchet model, read
 `docs/architecture/ratchets.md`.
 
+`src/**/internal/` directories are discovered by the dependency-cruiser config:
+new internals are private to their nearest parent module, internalized modules
+must expose `index.ts`, and matching package tests must live under the
+corresponding `tests/` path.
+
 ## Build, Test, Debug
 
 Common commands from the repo root:

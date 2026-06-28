@@ -1,7 +1,7 @@
 import type { CoreSnapshot } from "../core/types";
 import { SESSION_PAD_COUNT, clipCellCoordinateForSessionPad } from "../session-grid";
-import { createSurfaceHints, hasSessionSceneColumnHint, hasTrackRowHint, type SurfaceHint } from "./surface-hints";
-import type { LedView, OvertureSurfaceView, ScreenView } from "./types";
+import { createSurfaceHints, hasSessionSceneColumnHint, hasTrackRowHint } from "./surface-hints";
+import type { LedView, OvertureSurfaceView, ScreenView, SurfaceHint } from "./types";
 
 export function createOvertureSurfaceView(snapshot: CoreSnapshot): OvertureSurfaceView {
   const surfaceHints = createSurfaceHints(snapshot);

@@ -1,4 +1,4 @@
-import type { ScreenView } from "../view/types";
+import type { ScreenView } from "../view";
 
 export interface SplashScreenView {
   kind: "splash";
