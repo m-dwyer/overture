@@ -2,7 +2,6 @@ import { launchClipCellPlayback, startPlayback, stopPlayback as stopClipPlayback
 import { getClipCell, getSequenceForCell } from "../project";
 import { toggleSequenceStep } from "../sequence";
 import { getTrack } from "../track";
-import { startTransport, stopTransport } from "../transport";
 import type { CoreState, HostCommand } from "../types";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
@@ -13,12 +12,12 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return applied();
   }
   if (intent.kind === "toggle-transport") {
-    if (state.transport.playing) {
-      stopTransport(state.transport);
-      return applied(stopClipPlayback(state.project, state.playback, state.transport));
+    if (state.transport.isPlaying()) {
+      state.transport.stop();
+      return applied(stopClipPlayback(state.project, state.playback, state.transport.clock()));
     }
-    startTransport(state.transport);
-    return applied(startPlayback(state.project, state.playback, control.snapshot().selectedClipCell, state.transport));
+    state.transport.start();
+    return applied(startPlayback(state.project, state.playback, control.snapshot().selectedClipCell, state.transport.clock()));
   }
   if (intent.kind === "toggle-control-mode") {
     control.toggleControlMode();
@@ -61,7 +60,7 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
   }
   if (intent.kind === "launch-clip-cell") {
     selectValidatedClipCell(state, intent.coordinate);
-    return applied(launchClipCellPlayback(state.project, state.playback, intent.coordinate, state.transport));
+    return applied(launchClipCellPlayback(state.project, state.playback, intent.coordinate, state.transport.clock()));
   }
   return { applied: false, hostCommands: [] };
 }

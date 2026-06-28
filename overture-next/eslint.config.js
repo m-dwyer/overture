@@ -48,7 +48,7 @@ export default tseslint.config(
       "overture/state-api-encapsulation": [
         "error",
         {
-          owners: [{ type: "ControlState" }],
+          owners: [{ type: "ControlState" }, { type: "TransportState" }],
         },
       ],
     },
