@@ -6,6 +6,8 @@
  * only when they describe known, counted debt; promote them to `error` once the
  * count reaches zero.
  */
+const { createInternalPrivacyRules, createPublicApiRules } = require("./scripts/internal-privacy-rules.cjs");
+
 module.exports = {
   forbidden: [
     {
@@ -118,21 +120,8 @@ module.exports = {
       from: { path: "^src/core/intents/" },
       to: { path: "^src/core/controls/" },
     },
-    {
-      name: "playback-internals-stay-private",
-      severity: "error",
-      comment:
-        "Playback exposes lifecycle verbs through src/core/playback; low-level Playing Clip, Queued Clip, and note-off helpers stay module-private.",
-      from: { pathNot: "^src/core/playback/" },
-      to: { path: "^src/core/playback/internal/" },
-    },
-    {
-      name: "playback-public-api-only",
-      severity: "error",
-      comment: "Code outside Playback imports the Playback module entry point, not its implementation files.",
-      from: { pathNot: "^src/core/playback/" },
-      to: { path: "^src/core/playback/(?!index\\.ts$)" },
-    },
+    ...createInternalPrivacyRules({ rootDir: __dirname, sourceDir: "src" }),
+    ...createPublicApiRules({ rootDir: __dirname, sourceDir: "src" }),
     {
       name: "playback-does-not-own-transport",
       severity: "error",
@@ -140,21 +129,6 @@ module.exports = {
         "Transport owns TransportState mutation; playback consumes read-only timing data and must not import transport behavior.",
       from: { path: "^src/core/playback/" },
       to: { path: "^src/core/transport\\.ts$" },
-    },
-    {
-      name: "project-internals-stay-private",
-      severity: "error",
-      comment:
-        "Project exposes construction and cell lookup through src/core/project; low-level project structure helpers stay module-private.",
-      from: { pathNot: "^src/core/project/" },
-      to: { path: "^src/core/project/internal/" },
-    },
-    {
-      name: "project-public-api-only",
-      severity: "error",
-      comment: "Code outside Project imports the Project module entry point, not its implementation files.",
-      from: { pathNot: "^src/core/project/" },
-      to: { path: "^src/core/project/(?!index\\.ts$)" },
     },
     {
       name: "view-stays-on-snapshot-contracts",

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { OVERTURE_LED_COLOR } from "../../src/ports/led-colors";
 import type { LedPort } from "../../src/ports/outbound";
 import { renderLeds } from "../../src/render/render-leds";
-import type { LedView } from "../../src/view/types";
+import type { LedView } from "../../src/view";
 
 describe("Overture Next LED rendering", () => {
   test("maps Session View Clip Cell pad states to central pad LEDs", () => {

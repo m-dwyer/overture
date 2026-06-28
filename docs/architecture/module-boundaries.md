@@ -47,6 +47,8 @@ Examples:
   lookup APIs; `project/internal/` contains implementation helpers.
 - `overture-next/src/core/playback/index.ts` exposes Playback lifecycle APIs;
   `playback/internal/` contains low-level playback helpers.
+- `overture-next/src/view/index.ts` exposes view-model derivation contracts;
+  `view/internal/` contains view-specific projection helpers.
 
 Code outside an adopted module should import through the public entry point, not
 from implementation files or `internal/`.

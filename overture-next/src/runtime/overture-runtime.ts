@@ -4,7 +4,7 @@ import type { OvertureHostPorts } from "../ports/host-ports";
 import { renderLeds } from "../render/render-leds";
 import { renderScreen } from "../render/render-screen";
 import type { SplashScreenView } from "../render/types";
-import { createOvertureSurfaceView } from "../view/overture-view";
+import { createOvertureSurfaceView } from "../view";
 
 const BOOT_SPLASH_TICKS = 48;
 
