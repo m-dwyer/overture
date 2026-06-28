@@ -33,6 +33,9 @@ The dependency-cruiser rules are the architecture import ratchet:
 - when an internalized module has an `index.ts`, the dependency-cruiser config
   also generates a public-entrypoint-only rule for imports from outside that
   module.
+- nested internalized modules may expose their own public entry points, such as
+  `src/view/session/index.ts`; parent public-entrypoint rules allow those child
+  entry points while still blocking implementation-file imports.
 - `pnpm -C overture-next test:lint-rules` checks that every internalized module
   has an `index.ts` public entry point and a matching test path under `tests/`.
 

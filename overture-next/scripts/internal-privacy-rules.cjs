@@ -8,9 +8,10 @@ function createInternalPrivacyRules({ rootDir, sourceDir }) {
 }
 
 function createPublicApiRules({ rootDir, sourceDir }) {
-  return discoverInternalModules({ rootDir, sourceDir })
+  const internalModules = discoverInternalModules({ rootDir, sourceDir });
+  return internalModules
     .filter((internalModule) => internalModule.hasIndex)
-    .map((internalModule) => createPublicApiRule(internalModule, sourceDir))
+    .map((internalModule) => createPublicApiRule(internalModule, internalModules))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -59,14 +60,29 @@ function createInternalPrivacyRule({ ownerPath, ownerPrefix, internalPrefix }) {
   };
 }
 
-function createPublicApiRule({ ownerPath, ownerPrefix }) {
+function createPublicApiRule(internalModule, internalModules) {
+  const { ownerPath, ownerPrefix } = internalModule;
+  const allowedPublicEntries = ["index.ts", ...nestedPublicEntryPaths(internalModule, internalModules)];
+  const allowedPattern = allowedPublicEntries.map(escapeRegExp).join("|");
   return {
     name: ownerPath ? `${ownerPath.replaceAll("/", "-")}-public-api-only` : "source-public-api-only",
     severity: "error",
     comment: `Code outside ${ownerPrefix} imports its public entry point, not implementation files.`,
     from: { pathNot: `^${escapeRegExp(ownerPrefix)}` },
-    to: { path: `^${escapeRegExp(ownerPrefix)}(?!index\\.ts$)` },
+    to: { path: `^${escapeRegExp(ownerPrefix)}(?!(?:${allowedPattern})$)` },
   };
+}
+
+function nestedPublicEntryPaths(internalModule, internalModules) {
+  const nestedPrefix = internalModule.ownerPath ? `${internalModule.ownerPath}/` : "";
+  return internalModules
+    .filter(
+      (candidate) =>
+        candidate.hasIndex &&
+        candidate.ownerPath.startsWith(nestedPrefix) &&
+        candidate.ownerPath !== internalModule.ownerPath,
+    )
+    .map((candidate) => `${candidate.ownerPath.slice(nestedPrefix.length)}/index.ts`);
 }
 
 function toPosix(filePath) {

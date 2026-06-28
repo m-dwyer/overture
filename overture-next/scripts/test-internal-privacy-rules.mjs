@@ -44,6 +44,7 @@ assert.deepEqual(
 );
 
 fs.writeFileSync(path.join(fixtureRoot, "src/view/index.ts"), "");
+fs.writeFileSync(path.join(fixtureRoot, "src/view/session/index.ts"), "");
 
 assert.deepEqual(createPublicApiRules({ rootDir: fixtureRoot, sourceDir: "src" }), [
   {
@@ -51,7 +52,14 @@ assert.deepEqual(createPublicApiRules({ rootDir: fixtureRoot, sourceDir: "src" }
     severity: "error",
     comment: "Code outside src/view/ imports its public entry point, not implementation files.",
     from: { pathNot: "^src/view/" },
-    to: { path: "^src/view/(?!index\\.ts$)" },
+    to: { path: "^src/view/(?!(?:index\\.ts|session/index\\.ts)$)" },
+  },
+  {
+    name: "view-session-public-api-only",
+    severity: "error",
+    comment: "Code outside src/view/session/ imports its public entry point, not implementation files.",
+    from: { pathNot: "^src/view/session/" },
+    to: { path: "^src/view/session/(?!(?:index\\.ts)$)" },
   },
 ]);
 

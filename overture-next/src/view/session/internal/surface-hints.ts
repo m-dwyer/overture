@@ -1,5 +1,5 @@
-import type { CoreSnapshot } from "../../core/types";
-import type { SurfaceHint } from "../types";
+import type { CoreSnapshot } from "../../../core/types";
+import type { SurfaceHint } from "../../types";
 
 export function createSessionSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[] {
   if (!snapshot.shiftHeld) return [];
