@@ -1,10 +1,9 @@
-import { clipCellCoordinateForSessionPad } from "../../session-grid";
 import type { ControlStateSnapshot } from "../control-state";
 import { selectTrackFromRow } from "../track";
 import type { DomainIntent } from "../intents/types";
+import { interpretSessionControl } from "./session";
+import { interpretTrackControl } from "./track";
 import type { ControlInput } from "./types";
-
-const TRACK_PAD_NOTE_BASE = 60;
 
 export function interpretControl(input: ControlInput, control: ControlStateSnapshot): DomainIntent | null {
   if (input.kind === "shift") return { kind: "set-shift-held", held: input.held };
@@ -28,18 +27,6 @@ function interpretPad(
   input: Extract<ControlInput, { kind: "pad" }>,
   control: ControlStateSnapshot,
 ): DomainIntent | null {
-  if (control.controlMode !== "session") {
-    return {
-      kind: "audition-note",
-      held: input.held,
-      note: TRACK_PAD_NOTE_BASE + input.padIndex,
-      trackIndex: control.selectedTrackIndex,
-      velocity: input.velocity,
-    };
-  }
-  if (!input.held) return null;
-  return {
-    kind: "launch-clip-cell",
-    coordinate: clipCellCoordinateForSessionPad(control.visibleTrackBank, input.padIndex),
-  };
+  if (control.controlMode === "session") return interpretSessionControl(input, control);
+  return interpretTrackControl(input, control);
 }
