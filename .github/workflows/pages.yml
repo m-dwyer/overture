@@ -8,7 +8,6 @@ on:
       - "site/**"
       - "web/**"
       - "overture-next/**"
-      - "overture-ui/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -19,7 +18,6 @@ on:
       - "site/**"
       - "web/**"
       - "overture-next/**"
-      - "overture-ui/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -39,7 +37,6 @@ env:
   NODE_VERSION: "24"
   PNPM_VERSION: "10.33.2"
   EMSCRIPTEN_IMAGE: "emscripten/emsdk:3.1.74"
-  EMSDK_IMAGE: "emscripten/emsdk:3.1.74"
   MOVEFORGE_REF: "fe81dc5facb6d642c77d7cfed4a15d175b77da49"
 
 concurrency:
@@ -74,7 +71,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: |
             pnpm-lock.yaml
-            overture-ui/pnpm-lock.yaml
             moveforge/pnpm-lock.yaml
 
       - name: Restore Moveforge WASM cache
@@ -83,13 +79,6 @@ jobs:
         with:
           path: moveforge/web/wasm
           key: moveforge-wasm-${{ runner.os }}-${{ env.EMSCRIPTEN_IMAGE }}-${{ env.MOVEFORGE_REF }}-${{ hashFiles('moveforge/package.json', 'moveforge/pnpm-lock.yaml', 'moveforge/scripts/build-wasm.sh', 'moveforge/scripts/module-target.ts', 'moveforge/scripts/lib/**', 'moveforge/src/host/**', 'moveforge/src/modules/**') }}
-
-      - name: Restore Overture seq8 WASM cache
-        id: seq8-wasm-cache
-        uses: actions/cache@v4
-        with:
-          path: overture-ui/dist/wasm
-          key: seq8-wasm-${{ runner.os }}-${{ env.EMSDK_IMAGE }}-${{ hashFiles('overture-ui/scripts/build-wasm.sh', 'overture-ui/dsp/**/*.c', 'overture-ui/dsp/**/*.h') }}
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
@@ -112,17 +101,6 @@ jobs:
           wasm_count="$(find web/wasm -maxdepth 1 -type f -name '*.wasm' | wc -l)"
           test "$wasm_count" -gt 0
         working-directory: moveforge
-
-      - name: Build Overture seq8 WASM
-        if: steps.seq8-wasm-cache.outputs.cache-hit != 'true'
-        run: ./scripts/build-wasm.sh
-        working-directory: overture-ui
-        env:
-          EMSDK_IMAGE: ${{ env.EMSDK_IMAGE }}
-
-      - name: Verify Overture seq8 WASM
-        run: node scripts/seq8-wasm-smoke.mjs
-        working-directory: overture-ui
 
       - name: Build emulator
         run: pnpm -C web build
