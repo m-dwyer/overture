@@ -1,28 +1,27 @@
-import type { CoreState, HostCommand } from "../types";
+import type { CoreState } from "../types";
 import {
   auditionNote,
   launchClipCell,
   selectClipCell,
   selectTrack,
+  setShiftHeld,
   startTransport,
   stopTransport,
+  toggleView,
   toggleSelectedStep,
 } from "../operations";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
 export function applyIntent(intent: DomainIntent, state: CoreState): DomainIntentTransaction {
-  const control = state.control;
   if (intent.kind === "set-shift-held") {
-    control.setShiftHeld(intent.held);
-    return applied();
+    return setShiftHeld(state, intent.held);
   }
   if (intent.kind === "toggle-transport") {
     if (state.transport.isPlaying()) return stopTransport(state);
     return startTransport(state);
   }
   if (intent.kind === "toggle-view") {
-    control.toggleView();
-    return applied();
+    return toggleView(state);
   }
   if (intent.kind === "select-track") {
     return selectTrack(state, intent.trackIndex);
@@ -40,8 +39,4 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return launchClipCell(state, intent.coordinate);
   }
   return { applied: false, hostCommands: [] };
-}
-
-function applied(hostCommands: HostCommand[] = []): DomainIntentTransaction {
-  return { applied: true, hostCommands };
 }
