@@ -139,9 +139,14 @@ test("keyboard Shift plus number key sends Shift + Step", async ({ page }) => {
     g.onMidiMessageInternal = (d: number[]) => { g.__midi.push([...d]); return orig?.(d); };
   });
 
+  const shiftButton = page.getByLabel("Shift", { exact: true });
   await page.keyboard.down("Shift");
+  await expect(shiftButton).toHaveAttribute("aria-pressed", "true");
+  await expect(shiftButton).toHaveClass(/pressed/);
   await page.keyboard.press("3");
   await page.keyboard.up("Shift");
+  await expect(shiftButton).toHaveAttribute("aria-pressed", "false");
+  await expect(shiftButton).not.toHaveClass(/pressed/);
 
   const midi = await page.evaluate(() => (globalThis as PageGlobal).__midi);
   expect(midi).toEqual([

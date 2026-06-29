@@ -33,13 +33,26 @@ interface MomentaryProps {
   refCb?: Ref<HTMLButtonElement>;
   /** Toggle-and-hold instead of momentary (for modifier buttons like Shift). */
   latch?: boolean;
+  /** External physical hold state, such as a matching computer keyboard key. */
+  heldExternally?: boolean;
   /** Emulator-only: Alt-click toggles a physical hold for testing chords. */
   altHold?: boolean;
   "aria-label"?: string;
 }
 
 /** A CC button: momentary (127 down / 0 up) by default, or toggle-held when `latch`. */
-export function MomentaryButton({ cc, send, className, children, tooltip, refCb, latch, altHold, ...rest }: MomentaryProps) {
+export function MomentaryButton({
+  cc,
+  send,
+  className,
+  children,
+  tooltip,
+  refCb,
+  latch,
+  heldExternally,
+  altHold,
+  ...rest
+}: MomentaryProps) {
   const [held, setHeld] = useState(false);
   const [pinned, setPinned] = useState(false);
   const pinnedRef = useRef(false);
@@ -65,8 +78,8 @@ export function MomentaryButton({ cc, send, className, children, tooltip, refCb,
   const btn = latch ? (
     <button
       ref={refCb}
-      aria-pressed={held}
-      className={cn("select-none", held && "pressed", className)}
+      aria-pressed={held || heldExternally}
+      className={cn("select-none", (held || heldExternally) && "pressed", className)}
       onClick={toggle}
       {...rest}
     >
