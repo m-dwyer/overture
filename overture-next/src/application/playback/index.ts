@@ -1,6 +1,6 @@
 import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinateInput, ClipId } from "../../domain/project";
-import type { OvertureProject } from "../../state/project";
+import type { ProjectPlaybackReadModel } from "../../state/project";
 import { launchPlayingClip, stopAllPlayingClips, stopPlayingClipOnTrack } from "./internal/clips";
 import { drainDueNoteOffs, injectPlaybackStep } from "./internal/notes";
 import { createPlaybackState } from "./state";
@@ -39,7 +39,7 @@ export class Playback {
    * are emitted every tick; step note injection happens only when the transport
    * advances to a new sequencer step.
    */
-  advance(project: OvertureProject, tick: Readonly<PlaybackTick>): PlaybackAdvance {
+  advance(project: ProjectPlaybackReadModel, tick: Readonly<PlaybackTick>): PlaybackAdvance {
     const hostCommands = drainDueNoteOffs(this.state, tick.tick);
     if (tick.injectedStep !== null) {
       hostCommands.push(...injectPlaybackStep(project, this.state, tick.injectedStep, tick.tick));
@@ -52,7 +52,11 @@ export class Playback {
    * track is playing a clip, playback starts from the selected clip cell when
    * that cell contains a clip.
    */
-  start(project: OvertureProject, selectedClipCell: ClipCellCoordinateInput, clock: Readonly<PlaybackClock>): HostCommand[] {
+  start(
+    project: ProjectPlaybackReadModel,
+    selectedClipCell: ClipCellCoordinateInput,
+    clock: Readonly<PlaybackClock>,
+  ): HostCommand[] {
     this.launchSelectedClipIfIdle(project, selectedClipCell);
     return injectPlaybackStep(project, this.state, clock.playhead, clock.tick);
   }
@@ -61,7 +65,7 @@ export class Playback {
    * Clears all playing clips and emits any note-off commands needed to silence
    * the currently active playback state.
    */
-  stop(project: OvertureProject, clock: Readonly<PlaybackClock>): HostCommand[] {
+  stop(project: ProjectPlaybackReadModel, clock: Readonly<PlaybackClock>): HostCommand[] {
     return stopAllPlayingClips(project, this.state, clock);
   }
 
@@ -71,7 +75,7 @@ export class Playback {
    * clip, returning any note-off commands for the interrupted playback.
    */
   launchClipCell(
-    project: OvertureProject,
+    project: ProjectPlaybackReadModel,
     coordinate: ClipCellCoordinateInput,
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
@@ -92,7 +96,10 @@ export class Playback {
     };
   }
 
-  private launchSelectedClipIfIdle(project: OvertureProject, selectedClipCell: ClipCellCoordinateInput): void {
+  private launchSelectedClipIfIdle(
+    project: ProjectPlaybackReadModel,
+    selectedClipCell: ClipCellCoordinateInput,
+  ): void {
     if (this.state.tracks.some((track) => track.playingClipId)) return;
     const cell = project.clipCellAt(selectedClipCell);
     if (cell.clipId) launchPlayingClip(project, this.state, selectedClipCell);

@@ -1,11 +1,11 @@
 import type { HostCommand } from "../../host-commands";
 import { getSequenceStep } from "../../../domain/sequence";
-import type { OvertureProject } from "../../../state/project";
+import type { ProjectPlaybackReadModel } from "../../../state/project";
 import type { PlaybackState, ScheduledNoteOff } from "../state";
 import { getPlayingClip } from "./playing-clips";
 
 export function injectPlaybackStep(
-  project: OvertureProject,
+  project: ProjectPlaybackReadModel,
   playback: PlaybackState,
   step: number,
   tick: number,

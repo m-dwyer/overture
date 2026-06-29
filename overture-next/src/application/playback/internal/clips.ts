@@ -1,7 +1,7 @@
 import type { HostCommand } from "../../host-commands";
 import type { ClipCellCoordinateInput, ClipId } from "../../../domain/project";
 import { getSequenceStep } from "../../../domain/sequence";
-import type { OvertureProject } from "../../../state/project";
+import type { ProjectPlaybackReadModel } from "../../../state/project";
 import type { PlaybackState, TrackPlaybackState } from "../state";
 import type { PlaybackClock } from "../types";
 import { drainPendingNoteOffsForTrack } from "./notes";
@@ -9,7 +9,7 @@ import { getPlayingClip } from "./playing-clips";
 import { getTrackPlayback } from "./tracks";
 
 export function launchPlayingClip(
-  project: OvertureProject,
+  project: ProjectPlaybackReadModel,
   playback: PlaybackState,
   coordinate: ClipCellCoordinateInput,
 ): ClipId | null {
@@ -26,7 +26,7 @@ export function clearPlayingClip(trackPlayback: TrackPlaybackState): void {
 }
 
 export function stopPlayingClipOnTrack(
-  project: OvertureProject,
+  project: ProjectPlaybackReadModel,
   playback: PlaybackState,
   clock: Readonly<PlaybackClock>,
   trackIndex: number,
@@ -38,7 +38,7 @@ export function stopPlayingClipOnTrack(
 }
 
 export function stopAllPlayingClips(
-  project: OvertureProject,
+  project: ProjectPlaybackReadModel,
   playback: PlaybackState,
   clock: Readonly<PlaybackClock>,
 ): HostCommand[] {
@@ -51,7 +51,7 @@ export function stopAllPlayingClips(
 }
 
 function stopTrackPlayback(
-  project: OvertureProject,
+  project: ProjectPlaybackReadModel,
   playback: PlaybackState,
   trackPlayback: TrackPlaybackState,
   clock: Readonly<PlaybackClock>,

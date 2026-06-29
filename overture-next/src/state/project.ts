@@ -46,6 +46,13 @@ export interface OvertureClipSnapshot {
   readonly sequence: SequenceSnapshot;
 }
 
+/** Read-only Project contract for runtime playback resolution. */
+export interface ProjectPlaybackReadModel {
+  clipCellAt(coordinate: ClipCellCoordinateInput): ClipCellSnapshot;
+  clipById(clipId: ClipId): OvertureClipSnapshot | null;
+  trackRoute(trackIndexValue: number): TrackRoute;
+}
+
 /**
  * The OvertureProject state owner: durable owner of Tracks, Overture Scenes,
  * Clip Cells, and Overture Clips. It keeps occupancy and identity state private
