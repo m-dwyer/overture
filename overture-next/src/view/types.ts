@@ -40,7 +40,15 @@ export interface StepLedView {
 
 export interface PadLedView {
   padIndex: number;
-  state: "selected" | "hinted" | "occupied" | "empty" | "off";
+  state:
+    | "playing"
+    | "queued"
+    | "queued-stop"
+    | "selected"
+    | "hinted"
+    | "occupied"
+    | "empty"
+    | "off";
 }
 
 export type ButtonLedView =

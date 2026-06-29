@@ -9,24 +9,15 @@ import {
   NAV,
   NOTE_OFF,
   NOTE_ON,
-  PAD_NOTE0,
   ROW_CC,
   SCHWUNG_SLOT_CHANNEL_FIRST,
   STEP_CC0,
 } from "../../overture-next/src/host/move-controls";
-import {
-  SESSION_SCENE_COLUMNS,
-  SESSION_TRACK_ROWS,
-} from "../../overture-next/src/shared/session-grid";
 
 const MIDI_PRESS = 127;
 const MIDI_RELEASE = 0;
 const TRACK_5_INDEX = TRACK_BANK_SIZE;
 const TRACK_5_ROW = TRACK_5_INDEX % TRACK_BANK_SIZE;
-const TRACK_5_SCENE_INDEX = 0;
-const TRACK_5_DEFAULT_CLIP_PAD =
-  (SESSION_TRACK_ROWS - 1 - TRACK_5_ROW) * SESSION_SCENE_COLUMNS +
-  TRACK_5_SCENE_INDEX;
 const TOGGLED_STEP_INDEX = 5;
 const defaultSequence = createDefaultSequence();
 const DEFAULT_STEP_4_NOTE = defaultSequence.steps[4].note;
@@ -210,8 +201,6 @@ test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
   await mi(CC, NAV.Shift, MIDI_PRESS);
   await mi(CC, ROW_CC[TRACK_5_ROW], MIDI_PRESS);
   await mi(CC, NAV.Shift, MIDI_RELEASE);
-  await mi(CC, NAV.Menu, MIDI_PRESS);
-  await mi(NOTE_ON, PAD_NOTE0 + TRACK_5_DEFAULT_CLIP_PAD, MIDI_PRESS);
   await mi(CC, NAV.Menu, MIDI_PRESS);
   await mi(CC, NAV.Play, MIDI_PRESS);
   await advanceTicks(page, TICKS_TO_STEP_4);

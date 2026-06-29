@@ -2,7 +2,11 @@ import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinateInput, ClipId } from "../../domain/project";
 import type { ProjectPlaybackReadModel } from "../../state/project";
 import {
+  applyQueuedTrackChanges,
   launchPlayingClip,
+  queuePlayingClip,
+  queueStopPlayingClipOnTrack,
+  silenceAllPlayingClips,
   stopAllPlayingClips,
   stopPlayingClipOnTrack,
 } from "./internal/clips";
@@ -20,6 +24,7 @@ export interface TrackPlaybackSnapshot {
   readonly trackIndex: number;
   readonly playingClipId: ClipId | null;
   readonly queuedClipId: ClipId | null;
+  readonly queuedStop: boolean;
 }
 
 export interface PlaybackSnapshot {
@@ -53,6 +58,12 @@ export class Playback {
   ): PlaybackAdvance {
     const hostCommands = drainDueNoteOffs(this.state, tick.tick);
     if (tick.injectedStep !== null) {
+      hostCommands.push(
+        ...applyQueuedTrackChanges(project, this.state, {
+          playhead: tick.injectedStep,
+          tick: tick.tick,
+        }),
+      );
       hostCommands.push(
         ...injectPlaybackStep(
           project,
@@ -88,6 +99,17 @@ export class Playback {
   }
 
   /**
+   * Emits note-off commands needed to stop current sound while preserving
+   * Playback-owned playing Clip focus for transport resume.
+   */
+  silenceAll(
+    project: ProjectPlaybackReadModel,
+    clock: Readonly<PlaybackClock>,
+  ): HostCommand[] {
+    return silenceAllPlayingClips(project, this.state, clock);
+  }
+
+  /**
    * Stops one Track's playing clip and emits any note-off commands needed to
    * silence that Track.
    */
@@ -112,16 +134,21 @@ export class Playback {
   }
 
   /**
-   * Launches the selected Clip Cell only when no Track is already playing.
-   * This preserves the current transport-start behavior without letting
-   * transport own playing clip focus.
+   * Queues the clip occupying a Clip Cell to start on that cell's Track at the
+   * next launch boundary.
    */
-  launchClipOnTrackIfIdle(
+  queueClipOnTrack(
     project: ProjectPlaybackReadModel,
     coordinate: ClipCellCoordinateInput,
   ): ClipId | null {
-    if (this.state.tracks.some((track) => track.playingClipId)) return null;
-    return this.launchClipOnTrack(project, coordinate);
+    return queuePlayingClip(project, this.state, coordinate);
+  }
+
+  /**
+   * Queues one Track to stop at the next launch boundary.
+   */
+  queueStopTrack(trackIndex: number): void {
+    queueStopPlayingClipOnTrack(this.state, trackIndex);
   }
 
   /** Per-track playing/queued clip focus for read-only projections. */
@@ -131,6 +158,7 @@ export class Playback {
         trackIndex: track.trackIndex,
         playingClipId: track.playingClipId,
         queuedClipId: track.queuedClipId,
+        queuedStop: track.queuedStop,
       })),
     };
   }

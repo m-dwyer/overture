@@ -1,4 +1,4 @@
-import { CC, NAV, NOTE_OFF, NOTE_ON, ROW_CC } from "../lib/move-controls";
+import { CC, NAV, ROW_CC } from "../lib/move-controls";
 import type { Emulator } from "./emulator";
 
 export interface InitialState {
@@ -57,7 +57,7 @@ export function scheduleInitialState(
       trackNumber != null &&
       (readSelectedTrackIndex(state) | 0) !== trackNumber - 1
     ) {
-      applyInitialTrack(emu, trackNumber, !!state.sessionView);
+      applyInitialTrack(emu, trackNumber);
     }
     const nextState = port.readOvertureUiState() ?? state;
     if (view === "note" && nextState?.sessionView) enterNoteView(emu);
@@ -66,18 +66,8 @@ export function scheduleInitialState(
   return () => port.clearInterval(timer);
 }
 
-function applyInitialTrack(
-  emu: Emulator,
-  trackNumber: number,
-  sessionView = false,
-): void {
+function applyInitialTrack(emu: Emulator, trackNumber: number): void {
   const trackIndex = trackNumber - 1;
-  if (sessionView) {
-    const note = 92 + trackIndex;
-    emu.sendInternal(NOTE_ON, note, 110);
-    emu.sendInternal(NOTE_OFF, note, 0);
-    return;
-  }
   const needsShift = trackIndex >= 4;
   const rowIndex = trackIndex % 4;
   if (needsShift) emu.sendInternal(CC, NAV.Shift, 127);

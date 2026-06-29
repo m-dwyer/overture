@@ -2,11 +2,11 @@ import { describe, expect, test } from "vitest";
 import { createInitialControlSurfaceContext } from "../../src/state/control-surface-context";
 
 describe("Overture Next Control Surface Context", () => {
-  test("starts in Track View on the first Track and Clip Cell", () => {
+  test("starts in Session View on the first Track and Clip Cell", () => {
     expect(createInitialControlSurfaceContext().snapshot()).toEqual({
       selectedTrackIndex: 0,
       visibleTrackBank: 0,
-      activeView: "track",
+      activeView: "session",
       heldControls: [],
       selectedStep: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
@@ -42,12 +42,12 @@ describe("Overture Next Control Surface Context", () => {
     const control = createInitialControlSurfaceContext();
 
     control.setSurfaceControlHeld("shift", true);
-    expect(control.toggleActiveView()).toBe("session");
+    expect(control.toggleActiveView()).toBe("track");
     control.selectStep(9);
 
     expect(control.snapshot()).toMatchObject({
       heldControls: ["shift"],
-      activeView: "session",
+      activeView: "track",
       selectedStep: 9,
     });
 

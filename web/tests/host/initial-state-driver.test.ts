@@ -1,11 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  CC,
-  NAV,
-  NOTE_OFF,
-  NOTE_ON,
-  ROW_CC,
-} from "../../src/lib/move-controls";
+import { CC, NAV, ROW_CC } from "../../src/lib/move-controls";
 import {
   scheduleInitialState,
   type InitialStateDriverPort,
@@ -34,7 +28,7 @@ describe("initial-state driver", () => {
     expect(port.cleared).toBe(1);
   });
 
-  test("uses session pads for initial track selection when Overture is in session view", () => {
+  test("uses track rows for initial track selection when Overture is in session view", () => {
     const emu = createRecorderEmulator();
     const port = createManualPort({ selectedTrackIndex: 0, sessionView: true });
 
@@ -42,8 +36,10 @@ describe("initial-state driver", () => {
     port.fire();
 
     expect(emu.calls).toEqual([
-      [NOTE_ON, 96, 110],
-      [NOTE_OFF, 96, 0],
+      [CC, NAV.Shift, 127],
+      [CC, ROW_CC[0], 127],
+      [CC, ROW_CC[0], 0],
+      [CC, NAV.Shift, 0],
       [CC, NAV.Menu, 127],
       [CC, NAV.Menu, 0],
     ]);

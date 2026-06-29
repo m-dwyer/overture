@@ -35,6 +35,7 @@ export function createOvertureCore(): OvertureCore {
   const control = createInitialControlSurfaceContext();
   const transport = createTransport();
   const playback = createPlayback();
+  seedDefaultScenePlayback(project, playback);
   const intentHandlers = createIntentHandlers({
     control,
     project,
@@ -60,7 +61,12 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function snapshot(): CoreSnapshot {
-    return buildCoreSnapshot(project, control.snapshot(), transport.snapshot());
+    return buildCoreSnapshot(
+      project,
+      control.snapshot(),
+      transport.snapshot(),
+      playback.snapshot(),
+    );
   }
 
   function drainHostCommands(): HostCommand[] {
@@ -113,7 +119,6 @@ function createIntentHandlers({
         });
       }
       return startTransport({
-        control,
         project,
         playback,
         transport,
@@ -148,10 +153,24 @@ function createIntentHandlers({
   };
 }
 
+function seedDefaultScenePlayback(
+  project: OvertureProject,
+  playback: Playback,
+): void {
+  for (const cell of project.clipCellSnapshots()) {
+    if (cell.sceneIndex !== 0 || !cell.clipId) continue;
+    playback.launchClipOnTrack(project, {
+      trackIndex: cell.trackIndex,
+      sceneIndex: cell.sceneIndex,
+    });
+  }
+}
+
 function buildCoreSnapshot(
   project: ProjectCoreReadModel,
   control: ControlSurfaceContextSnapshot,
   transport: TransportStateSnapshot,
+  playback: ReturnType<Playback["snapshot"]>,
 ): CoreSnapshot {
   const selectedClipCell = control.selectedClipCell;
   const selectedCell = project.clipCellAt(selectedClipCell);
@@ -166,6 +185,7 @@ function buildCoreSnapshot(
     selectedClipId: selectedCell.clipId,
     selectedClipCell: { ...selectedClipCell },
     clipCells: project.clipCellSnapshots(),
+    playbackTracks: playback.tracks,
     steps: getSnapshotSteps(project, control, transport),
   };
 }

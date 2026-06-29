@@ -150,7 +150,29 @@ describe("Overture Next view projection", () => {
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
       clipCells: [
         { trackIndex: 0, sceneIndex: 0, clipId: "clip-1" },
+        { trackIndex: 1, sceneIndex: 0, clipId: "clip-2" },
+        { trackIndex: 2, sceneIndex: 0, clipId: "clip-3" },
         { trackIndex: 3, sceneIndex: 7, clipId: null },
+      ],
+      playbackTracks: [
+        {
+          trackIndex: 0,
+          playingClipId: "clip-1",
+          queuedClipId: null,
+          queuedStop: false,
+        },
+        {
+          trackIndex: 1,
+          playingClipId: null,
+          queuedClipId: "clip-2",
+          queuedStop: false,
+        },
+        {
+          trackIndex: 3,
+          playingClipId: "clip-4",
+          queuedClipId: null,
+          queuedStop: true,
+        },
       ],
       steps: [
         {
@@ -175,9 +197,14 @@ describe("Overture Next view projection", () => {
       selectedClipId: null,
       playing: false,
     });
-    expect(view.leds.pads).toContainEqual({ padIndex: 24, state: "occupied" });
-    expect(view.leds.pads).toContainEqual({ padIndex: 7, state: "selected" });
-    expect(view.leds.pads).toContainEqual({ padIndex: 8, state: "empty" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 24, state: "playing" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 16, state: "queued" });
+    expect(view.leds.pads).toContainEqual({ padIndex: 8, state: "occupied" });
+    expect(view.leds.pads).toContainEqual({
+      padIndex: 7,
+      state: "queued-stop",
+    });
+    expect(view.leds.pads).toContainEqual({ padIndex: 9, state: "empty" });
     expect(view.leds.buttons).toContainEqual({
       kind: "menu",
       state: "session",

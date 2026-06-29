@@ -6,8 +6,9 @@ import type { ControlInput } from "../types";
 
 /**
  * Interprets control input in Session View context.
- * Pad presses launch Clip Cells; pad releases and Step buttons do not produce
- * Domain Intents in this view.
+ * Pad presses address Clip Cells; the operation selects different cells and
+ * toggles playback activation for the already selected cell. Pad releases and
+ * Step buttons do not produce Domain Intents in this view.
  */
 export function interpretSessionViewControl(
   input: ControlInput,

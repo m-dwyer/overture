@@ -18,12 +18,63 @@ export function launchPlayingClip(
   const track = getTrackPlayback(playback, coordinate.trackIndex);
   track.playingClipId = cell.clipId;
   track.queuedClipId = null;
+  track.queuedStop = false;
   return track.playingClipId;
 }
 
 export function clearPlayingClip(trackPlayback: TrackPlaybackState): void {
   trackPlayback.playingClipId = null;
   trackPlayback.queuedClipId = null;
+  trackPlayback.queuedStop = false;
+}
+
+export function queuePlayingClip(
+  project: ProjectPlaybackReadModel,
+  playback: PlaybackState,
+  coordinate: ClipCellCoordinateInput,
+): ClipId | null {
+  const cell = project.clipCellAt(coordinate);
+  if (!cell.clipId) return null;
+  const track = getTrackPlayback(playback, coordinate.trackIndex);
+  if (track.playingClipId === cell.clipId) {
+    track.queuedClipId = null;
+    track.queuedStop = false;
+    return track.playingClipId;
+  }
+  track.queuedClipId = cell.clipId;
+  track.queuedStop = false;
+  return track.queuedClipId;
+}
+
+export function queueStopPlayingClipOnTrack(
+  playback: PlaybackState,
+  trackIndex: number,
+): void {
+  const track = getTrackPlayback(playback, trackIndex);
+  if (!track.playingClipId && !track.queuedClipId) return;
+  track.queuedClipId = null;
+  track.queuedStop = true;
+}
+
+export function applyQueuedTrackChanges(
+  project: ProjectPlaybackReadModel,
+  playback: PlaybackState,
+  clock: Readonly<PlaybackClock>,
+): HostCommand[] {
+  const hostCommands: HostCommand[] = [];
+  for (const trackPlayback of playback.tracks) {
+    if (!trackPlayback.queuedStop && !trackPlayback.queuedClipId) continue;
+    hostCommands.push(
+      ...stopTrackPlayback(project, playback, trackPlayback, clock),
+    );
+    if (trackPlayback.queuedStop) clearPlayingClip(trackPlayback);
+    else {
+      trackPlayback.playingClipId = trackPlayback.queuedClipId;
+      trackPlayback.queuedClipId = null;
+      trackPlayback.queuedStop = false;
+    }
+  }
+  return hostCommands;
 }
 
 export function stopPlayingClipOnTrack(
@@ -54,6 +105,22 @@ export function stopAllPlayingClips(
       ...stopTrackPlayback(project, playback, trackPlayback, clock),
     );
     clearPlayingClip(trackPlayback);
+  }
+  return hostCommands;
+}
+
+export function silenceAllPlayingClips(
+  project: ProjectPlaybackReadModel,
+  playback: PlaybackState,
+  clock: Readonly<PlaybackClock>,
+): HostCommand[] {
+  const hostCommands: HostCommand[] = [];
+  for (const trackPlayback of playback.tracks) {
+    hostCommands.push(
+      ...stopTrackPlayback(project, playback, trackPlayback, clock),
+    );
+    trackPlayback.queuedClipId = null;
+    trackPlayback.queuedStop = false;
   }
   return hostCommands;
 }

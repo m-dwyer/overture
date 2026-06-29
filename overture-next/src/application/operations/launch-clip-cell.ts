@@ -17,16 +17,57 @@ export function launchClipCell(
   context: LaunchClipCellContext,
   coordinate: ClipCellCoordinateInput,
 ): OperationResult {
+  const selectedBefore = context.control.snapshot().selectedClipCell;
+  const alreadySelected =
+    selectedBefore.trackIndex === coordinate.trackIndex &&
+    selectedBefore.sceneIndex === coordinate.sceneIndex;
+
   selectClipCell(context, coordinate);
+  if (!alreadySelected) return operationApplied();
+
   const cell = context.project.clipCellAt(coordinate);
-  const hostCommands = cell.clipId
-    ? []
-    : context.playback.stopTrack(
-        context.project,
-        coordinate.trackIndex,
-        context.transport.clock(),
-      );
-  if (cell.clipId)
-    context.playback.launchClipOnTrack(context.project, coordinate);
-  return operationApplied(hostCommands);
+  if (cell.clipId) {
+    const trackPlayback = context.playback.snapshot().tracks[cell.trackIndex];
+    const alreadyPlayingClip = trackPlayback?.playingClipId === cell.clipId;
+    const alreadyQueuedClip = trackPlayback?.queuedClipId === cell.clipId;
+    const queuedStopForClip =
+      alreadyPlayingClip && Boolean(trackPlayback?.queuedStop);
+
+    if (context.transport.isPlaying() && queuedStopForClip) {
+      context.playback.queueClipOnTrack(context.project, coordinate);
+      return operationApplied();
+    }
+
+    if (alreadyPlayingClip || alreadyQueuedClip) {
+      if (context.transport.isPlaying())
+        context.playback.queueStopTrack(coordinate.trackIndex);
+      else
+        return operationApplied(
+          context.playback.stopTrack(
+            context.project,
+            coordinate.trackIndex,
+            context.transport.clock(),
+          ),
+        );
+      return operationApplied();
+    }
+
+    if (context.transport.isPlaying())
+      context.playback.queueClipOnTrack(context.project, coordinate);
+    else context.playback.launchClipOnTrack(context.project, coordinate);
+    return operationApplied();
+  }
+
+  if (context.transport.isPlaying()) {
+    context.playback.queueStopTrack(coordinate.trackIndex);
+    return operationApplied();
+  }
+
+  return operationApplied(
+    context.playback.stopTrack(
+      context.project,
+      coordinate.trackIndex,
+      context.transport.clock(),
+    ),
+  );
 }
