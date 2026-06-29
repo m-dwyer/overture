@@ -1,5 +1,12 @@
 import type { CoreState, HostCommand } from "../types";
-import { launchClipCell, selectClipCell, startTransport, stopTransport } from "../operations";
+import {
+  launchClipCell,
+  selectClipCell,
+  selectTrack,
+  startTransport,
+  stopTransport,
+  toggleSelectedStep,
+} from "../operations";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
 export function applyIntent(intent: DomainIntent, state: CoreState): DomainIntentTransaction {
@@ -17,16 +24,10 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return applied();
   }
   if (intent.kind === "select-track") {
-    const sceneIndex = control.snapshot().selectedClipCell.sceneIndex;
-    state.project.track(intent.trackIndex);
-    state.project.clipCellAt({ trackIndex: intent.trackIndex, sceneIndex });
-    control.selectTrack(intent.trackIndex);
-    return applied();
+    return selectTrack(state, intent.trackIndex);
   }
   if (intent.kind === "toggle-step") {
-    control.selectStep(intent.stepIndex);
-    state.project.toggleSequenceStepAt(control.snapshot().selectedClipCell, intent.stepIndex);
-    return applied();
+    return toggleSelectedStep(state, intent.stepIndex);
   }
   if (intent.kind === "audition-note") {
     const route = state.project.trackRoute(intent.trackIndex);
