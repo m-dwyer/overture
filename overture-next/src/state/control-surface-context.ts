@@ -29,7 +29,7 @@ export class ControlSurfaceContext {
   constructor() {
     this.selectedTrackIndexValue = 0;
     this.visibleTrackBankValue = 0;
-    this.activeViewValue = "track";
+    this.activeViewValue = "session";
     this.heldControlsValue = new Set();
     this.selectedStepValue = stepIndex(0);
     this.selectedClipCellValue = clipCellCoordinate({

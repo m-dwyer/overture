@@ -21,6 +21,13 @@ export interface CoreSnapshotClipCell {
   clipId: string | null;
 }
 
+export interface CoreSnapshotPlaybackTrack {
+  trackIndex: number;
+  playingClipId: string | null;
+  queuedClipId: string | null;
+  queuedStop: boolean;
+}
+
 export interface CoreSnapshot {
   selectedTrackIndex: number;
   selectedTrackRoute: TrackRoute;
@@ -32,6 +39,7 @@ export interface CoreSnapshot {
   selectedClipId: string | null;
   selectedClipCell: ControlSurfaceContextSnapshot["selectedClipCell"];
   clipCells: readonly CoreSnapshotClipCell[];
+  playbackTracks?: readonly CoreSnapshotPlaybackTrack[];
   steps: readonly CoreSnapshotStep[];
 }
 

@@ -5,13 +5,14 @@ import { TRACK_COUNT, type ClipId } from "../../domain/project";
  * Per-track playback focus.
  *
  * `playingClipId` is the clip currently driving note injection for the track.
- * `queuedClipId` is reserved for launch quantization and is currently cleared
- * with the playing clip.
+ * `queuedClipId` is the clip scheduled to replace it at the next launch
+ * boundary. `queuedStop` schedules the Track to stop at that boundary.
  */
 export interface TrackPlaybackState {
   trackIndex: number;
   playingClipId: ClipId | null;
   queuedClipId: ClipId | null;
+  queuedStop: boolean;
 }
 
 /**
@@ -42,6 +43,7 @@ export function createPlaybackState(trackCount = TRACK_COUNT): PlaybackState {
       trackIndex,
       playingClipId: null,
       queuedClipId: null,
+      queuedStop: false,
     })),
   };
 }

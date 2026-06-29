@@ -51,11 +51,12 @@ describe("Overture Next runtime", () => {
     const adapter = createRuntimeTestAdapter(frames, frame, commandLog);
     const runtime = createOvertureRuntime(adapter);
     runtime.init();
+    runtime.debug.core.stopPlayback();
+    commandLog.length = 0;
 
     runtime.debug.core.dispatchControlInput({ kind: "shift", held: true });
     runtime.debug.core.dispatchControlInput({ kind: "track-row", row: 0 });
     runtime.debug.core.dispatchControlInput({ kind: "shift", held: false });
-    runtime.debug.core.dispatchControlInput({ kind: "menu" });
     runtime.debug.core.dispatchControlInput(padPress(24));
     runtime.debug.core.dispatchControlInput({ kind: "menu" });
     runtime.debug.core.dispatchControlInput({ kind: "play" });
@@ -81,9 +82,10 @@ describe("Overture Next runtime", () => {
     const adapter = createRuntimeTestAdapter(frames, frame, commands);
     const runtime = createOvertureRuntime(adapter);
     runtime.init();
+    runtime.debug.core.stopPlayback();
+    commands.length = 0;
     const renderedFrameCount = frames.length;
 
-    runtime.debug.core.dispatchControlInput({ kind: "menu" });
     runtime.debug.core.dispatchControlInput(padPress(24));
     runtime.debug.core.dispatchControlInput({ kind: "menu" });
     runtime.debug.core.dispatchControlInput({ kind: "play" });

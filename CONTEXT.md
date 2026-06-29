@@ -235,12 +235,33 @@ The Clip Cell currently focused for editing or clip creation.
 _Avoid_: Focused Clip Cell, Created clip
 
 **Playing Clip**:
-An Overture Clip currently producing playback.
+An Overture Clip assigned to produce playback when Transport is running.
 _Avoid_: Active Clip
 
+**Transport Start**:
+Starting Overture's playback clock. Transport Start does not choose, launch, or
+stop Clips.
+_Avoid_: Clip Launch, Selected Clip launch
+
+**Transport Stop**:
+Stopping Overture's playback clock and silencing current notes without choosing
+or launching a different Clip.
+_Avoid_: Clip Stop, Scene Stop
+
 **Queued Clip**:
-An Overture Clip scheduled to start at the next launch boundary.
+A Clip Launch scheduled to replace the Playing Clip on its Track at the next
+Launch Boundary.
 _Avoid_: Active Clip
+
+**Queued Track Stop**:
+A Track stop scheduled to clear that Track's Playing Clip at the next Launch
+Boundary.
+_Avoid_: Transport Stop
+
+**Launch Boundary**:
+The next step boundary where Playback applies queued Clip Launches and queued
+Track stops before injecting notes for that step.
+_Avoid_: Tick, arbitrary time
 
 **Empty Clip Cell**:
 A Clip Cell without an Overture Clip.
@@ -251,7 +272,10 @@ An Overture Clip whose Sequence contains no events.
 _Avoid_: Empty Clip Cell
 
 **Clip Launch**:
-Starting one Overture Clip on its Track without changing other Tracks.
+Activating one Overture Clip on its Track without changing other Tracks. If
+Transport is stopped, the Clip becomes the Track's Playing Clip immediately and
+will produce notes when Transport starts. If Transport is running, the launch is
+queued until the next Launch Boundary.
 _Avoid_: Scene Launch
 
 **Scene Launch**:

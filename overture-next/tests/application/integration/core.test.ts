@@ -11,7 +11,7 @@ import { createDefaultSequence } from "../../../src/domain/sequence";
 import { createDefaultProject } from "../../../src/state/project";
 
 describe("Overture Next core", () => {
-  test("starts directly in the track view", () => {
+  test("starts in Session View with Scene 1 active", () => {
     const core = createOvertureCore();
     core.init();
 
@@ -19,11 +19,24 @@ describe("Overture Next core", () => {
     expect(snapshot).toMatchObject({
       selectedTrackIndex: 0,
       visibleTrackBank: 0,
+      activeView: "session",
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
       selectedClipId: "clip-1",
       playing: false,
       selectedStep: 0,
     });
+    expect(
+      snapshot.playbackTracks?.map((track) => track.playingClipId),
+    ).toEqual([
+      "clip-1",
+      "clip-2",
+      "clip-3",
+      "clip-4",
+      "clip-5",
+      "clip-6",
+      "clip-7",
+      "clip-8",
+    ]);
   });
 
   test("creates a default project with structural tracks, scenes, and clip cells", () => {
@@ -88,6 +101,7 @@ describe("Overture Next core", () => {
     });
 
     expect(core.snapshot().steps[1].active).toBe(false);
+    expect(core.dispatchControlInput({ kind: "menu" })).toBe(true);
     expect(core.dispatchControlInput({ kind: "step", step: 1 })).toBe(true);
     expect(core.snapshot().steps[1]).toMatchObject({
       selected: true,
@@ -117,7 +131,6 @@ describe("Overture Next core", () => {
     core.init();
     const clipCount = countSnapshotClips(core.snapshot());
 
-    core.dispatchControlInput({ kind: "menu" });
     expect(core.snapshot().activeView).toBe("session");
 
     expect(core.dispatchControlInput(padPress(0))).toBe(true);
@@ -137,7 +150,6 @@ describe("Overture Next core", () => {
     core.dispatchControlInput({ kind: "shift", held: true });
     core.dispatchControlInput({ kind: "track-row", row: 0 });
     core.dispatchControlInput({ kind: "shift", held: false });
-    core.dispatchControlInput({ kind: "menu" });
 
     expect(core.snapshot().visibleTrackBank).toBe(1);
     expect(core.dispatchControlInput(padPress(26))).toBe(true);
@@ -153,6 +165,7 @@ describe("Overture Next core", () => {
   test("auditions central pad presses in Track View", () => {
     const core = createOvertureCore();
     core.init();
+    core.dispatchControlInput({ kind: "menu" });
     const selectedBefore = core.snapshot().selectedClipCell;
 
     expect(core.dispatchControlInput(padPress(7, 101))).toBe(true);
@@ -179,10 +192,8 @@ describe("Overture Next core", () => {
   });
 
   test("emits Move note commands when the playhead reaches an active step", () => {
-    const core = createOvertureCore();
-    core.init();
+    const core = createCoreWithClearedPlayback();
 
-    core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput(padPress(24));
     core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput({ kind: "play" });
@@ -220,10 +231,9 @@ describe("Overture Next core", () => {
   });
 
   test("transport ticks emit notes from the playing clip when another Clip Cell is selected", () => {
-    const core = createOvertureCore();
-    core.init();
+    const core = createCoreWithClearedPlayback();
 
-    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(16));
     core.dispatchControlInput(padPress(16));
     core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput({ kind: "track-row", row: 0 });
@@ -263,10 +273,9 @@ describe("Overture Next core", () => {
   });
 
   test("Track View step editing targets the selected Clip Cell, not the playing clip", () => {
-    const core = createOvertureCore();
-    core.init();
+    const core = createCoreWithClearedPlayback();
 
-    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(16));
     core.dispatchControlInput(padPress(16));
     core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput({ kind: "track-row", row: 0 });
@@ -287,17 +296,17 @@ describe("Overture Next core", () => {
   });
 
   test("launching an Empty Clip Cell stops that Track without creating a clip", () => {
-    const core = createOvertureCore();
-    core.init();
+    const core = createCoreWithClearedPlayback();
     const clipCount = countSnapshotClips(core.snapshot());
 
-    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(0));
     core.dispatchControlInput(padPress(0));
     expect(core.snapshot()).toMatchObject({
       selectedClipCell: { trackIndex: 3, sceneIndex: 0 },
       selectedClipId: "clip-4",
     });
 
+    core.dispatchControlInput(padPress(7));
     core.dispatchControlInput(padPress(7));
 
     expect(core.snapshot()).toMatchObject({
@@ -439,10 +448,8 @@ describe("Overture Next core", () => {
   });
 
   test("uses the playing clip sequence note when emitting Move commands", () => {
-    const core = createOvertureCore();
-    core.init();
+    const core = createCoreWithClearedPlayback();
 
-    core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput(padPress(24));
     core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput({ kind: "play" });
@@ -477,13 +484,11 @@ describe("Overture Next core", () => {
   });
 
   test("launches Track 5 playback through its Schwung route and applies step edits", () => {
-    const core = createOvertureCore();
-    core.init();
+    const core = createCoreWithClearedPlayback();
 
     core.dispatchControlInput({ kind: "shift", held: true });
     core.dispatchControlInput({ kind: "track-row", row: 0 });
     core.dispatchControlInput({ kind: "shift", held: false });
-    core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput(padPress(24));
     core.dispatchControlInput({ kind: "menu" });
 
@@ -542,16 +547,20 @@ describe("Overture Next core", () => {
     ]);
   });
 
-  test("starts selected Track 5 after stopping Track 1 playback", () => {
-    const core = createOvertureCore();
-    core.init();
+  test("transport resume preserves launched clip focus after track selection changes", () => {
+    const core = createCoreWithClearedPlayback();
 
+    core.dispatchControlInput({ kind: "shift", held: true });
+    core.dispatchControlInput({ kind: "track-row", row: 3 });
+    core.dispatchControlInput({ kind: "shift", held: false });
+    core.dispatchControlInput(padPress(0));
+    core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput({ kind: "play" });
     expect(core.drainHostCommands()).toEqual([
       {
         kind: "track-note-on",
-        route: { kind: "move", moveTrackTarget: 0 },
-        trackIndex: 0,
+        route: { kind: "schwung", schwungChainIndex: 3 },
+        trackIndex: 7,
         note: 60,
         velocity: 100,
       },
@@ -561,40 +570,40 @@ describe("Overture Next core", () => {
     expect(core.drainHostCommands()).toEqual([
       {
         kind: "track-note-off",
-        route: { kind: "move", moveTrackTarget: 0 },
-        trackIndex: 0,
+        route: { kind: "schwung", schwungChainIndex: 3 },
+        trackIndex: 7,
         note: 60,
       },
     ]);
 
     core.dispatchControlInput({ kind: "shift", held: true });
-    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    core.dispatchControlInput({ kind: "track-row", row: 2 });
     core.dispatchControlInput({ kind: "shift", held: false });
     expect(core.snapshot()).toMatchObject({
-      selectedTrackIndex: 4,
-      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 0 },
-      selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
+      selectedTrackIndex: 6,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 2 },
+      selectedClipCell: { trackIndex: 6, sceneIndex: 0 },
     });
 
     core.dispatchControlInput({ kind: "play" });
     expect(core.drainHostCommands()).toEqual([
       {
         kind: "track-note-on",
-        route: { kind: "schwung", schwungChainIndex: 0 },
-        trackIndex: 4,
+        route: { kind: "schwung", schwungChainIndex: 3 },
+        trackIndex: 7,
         note: 60,
         velocity: 100,
       },
     ]);
   });
 
-  test("starts selected Track 5 clip when transport starts from Track View", () => {
-    const core = createOvertureCore();
-    core.init();
+  test("transport start does not launch the selected Track View clip", () => {
+    const core = createCoreWithClearedPlayback();
 
     core.dispatchControlInput({ kind: "shift", held: true });
     core.dispatchControlInput({ kind: "track-row", row: 0 });
     core.dispatchControlInput({ kind: "shift", held: false });
+    core.dispatchControlInput({ kind: "menu" });
 
     expect(core.snapshot()).toMatchObject({
       activeView: "track",
@@ -604,37 +613,22 @@ describe("Overture Next core", () => {
     });
 
     core.dispatchControlInput({ kind: "play" });
-    expect(core.drainHostCommands()).toEqual([
-      {
-        kind: "track-note-on",
-        route: { kind: "schwung", schwungChainIndex: 0 },
-        trackIndex: 4,
-        note: 60,
-        velocity: 100,
-      },
-    ]);
+    expect(core.drainHostCommands()).toEqual([]);
     for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
-    expect(core.drainHostCommands()).toEqual([
-      {
-        kind: "track-note-off",
-        route: { kind: "schwung", schwungChainIndex: 0 },
-        trackIndex: 4,
-        note: 60,
-      },
-      {
-        kind: "track-note-on",
-        route: { kind: "schwung", schwungChainIndex: 0 },
-        trackIndex: 4,
-        note: 64,
-        velocity: 100,
-      },
-    ]);
+    expect(core.drainHostCommands()).toEqual([]);
   });
 });
 
 function countSnapshotClips(snapshot: CoreSnapshot): number {
   return snapshot.clipCells.filter((cell) => cell.clipId !== null).length;
+}
+
+function createCoreWithClearedPlayback() {
+  const core = createOvertureCore();
+  core.init();
+  core.stopPlayback();
+  return core;
 }
 
 function padPress(padIndex: number, velocity = 100) {
