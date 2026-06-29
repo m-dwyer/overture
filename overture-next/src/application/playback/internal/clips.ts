@@ -14,6 +14,7 @@ export function launchPlayingClip(
   coordinate: ClipCellCoordinateInput,
 ): ClipId | null {
   const cell = project.clipCellAt(coordinate);
+  if (!cell.clipId) return null;
   const track = getTrackPlayback(playback, coordinate.trackIndex);
   track.playingClipId = cell.clipId;
   track.queuedClipId = null;

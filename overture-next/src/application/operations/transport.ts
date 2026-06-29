@@ -3,12 +3,11 @@ import { operationApplied, type OperationResult } from "./types";
 
 export function startTransport(state: CoreState): OperationResult {
   state.transport.start();
-  return operationApplied(
-    state.playback.start(state.project, state.control.snapshot().selectedClipCell, state.transport.clock()),
-  );
+  state.playback.launchClipOnTrackIfIdle(state.project, state.control.snapshot().selectedClipCell);
+  return operationApplied(state.playback.injectStep(state.project, state.transport.clock()));
 }
 
 export function stopTransport(state: CoreState): OperationResult {
   state.transport.stop();
-  return operationApplied(state.playback.stop(state.project, state.transport.clock()));
+  return operationApplied(state.playback.stopAll(state.project, state.transport.clock()));
 }

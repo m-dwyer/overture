@@ -23,7 +23,7 @@ export function createOvertureCore(): OvertureCore {
 
   function tick(): void {
     const transportTick = state.transport.advance(DEFAULT_STEP_COUNT);
-    const advance = state.playback.advance(state.project, transportTick);
+    const advance = state.playback.advanceTick(state.project, transportTick);
     if (advance.injectedStep !== null) state.lastInjectedStep = advance.injectedStep;
     hostCommands.push(...advance.hostCommands);
   }
@@ -48,7 +48,7 @@ export function createOvertureCore(): OvertureCore {
 
   function stopPlayback(): HostCommand[] {
     state.transport.stop();
-    return state.playback.stop(state.project, state.transport.clock());
+    return state.playback.stopAll(state.project, state.transport.clock());
   }
 
   function getSelectedSequenceLength(): number {

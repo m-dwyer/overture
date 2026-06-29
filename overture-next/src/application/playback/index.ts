@@ -39,7 +39,7 @@ export class Playback {
    * are emitted every tick; step note injection happens only when the transport
    * advances to a new sequencer step.
    */
-  advance(project: ProjectPlaybackReadModel, tick: Readonly<PlaybackTick>): PlaybackAdvance {
+  advanceTick(project: ProjectPlaybackReadModel, tick: Readonly<PlaybackTick>): PlaybackAdvance {
     const hostCommands = drainDueNoteOffs(this.state, tick.tick);
     if (tick.injectedStep !== null) {
       hostCommands.push(...injectPlaybackStep(project, this.state, tick.injectedStep, tick.tick));
@@ -48,16 +48,10 @@ export class Playback {
   }
 
   /**
-   * Starts playback and emits note commands for the current playhead. If no
-   * track is playing a clip, playback starts from the selected clip cell when
-   * that cell contains a clip.
+   * Emits note commands for the current playhead and schedules matching
+   * note-offs. Transport owns the clock; playback owns the emitted note work.
    */
-  start(
-    project: ProjectPlaybackReadModel,
-    selectedClipCell: ClipCellCoordinateInput,
-    clock: Readonly<PlaybackClock>,
-  ): HostCommand[] {
-    this.launchSelectedClipIfIdle(project, selectedClipCell);
+  injectStep(project: ProjectPlaybackReadModel, clock: Readonly<PlaybackClock>): HostCommand[] {
     return injectPlaybackStep(project, this.state, clock.playhead, clock.tick);
   }
 
@@ -65,24 +59,35 @@ export class Playback {
    * Clears all playing clips and emits any note-off commands needed to silence
    * the currently active playback state.
    */
-  stop(project: ProjectPlaybackReadModel, clock: Readonly<PlaybackClock>): HostCommand[] {
+  stopAll(project: ProjectPlaybackReadModel, clock: Readonly<PlaybackClock>): HostCommand[] {
     return stopAllPlayingClips(project, this.state, clock);
   }
 
   /**
-   * Launches the clip cell on its track. An occupied cell becomes the track's
-   * playing clip; an empty cell stops and clears the track's current playing
-   * clip, returning any note-off commands for the interrupted playback.
+   * Stops one Track's playing clip and emits any note-off commands needed to
+   * silence that Track.
    */
-  launchClipCell(
-    project: ProjectPlaybackReadModel,
-    coordinate: ClipCellCoordinateInput,
-    clock: Readonly<PlaybackClock>,
-  ): HostCommand[] {
-    const cell = project.clipCellAt(coordinate);
-    const hostCommands = cell.clipId ? [] : stopPlayingClipOnTrack(project, this.state, clock, coordinate.trackIndex);
-    launchPlayingClip(project, this.state, coordinate);
-    return hostCommands;
+  stopTrack(project: ProjectPlaybackReadModel, trackIndex: number, clock: Readonly<PlaybackClock>): HostCommand[] {
+    return stopPlayingClipOnTrack(project, this.state, clock, trackIndex);
+  }
+
+  /**
+   * Launches the clip occupying a Clip Cell on that cell's Track. Empty Clip
+   * Cells do not mutate playback; callers that treat empties as stop targets
+   * should call `stopTrack`.
+   */
+  launchClipOnTrack(project: ProjectPlaybackReadModel, coordinate: ClipCellCoordinateInput): ClipId | null {
+    return launchPlayingClip(project, this.state, coordinate);
+  }
+
+  /**
+   * Launches the selected Clip Cell only when no Track is already playing.
+   * This preserves the current transport-start behavior without letting
+   * transport own playing clip focus.
+   */
+  launchClipOnTrackIfIdle(project: ProjectPlaybackReadModel, coordinate: ClipCellCoordinateInput): ClipId | null {
+    if (this.state.tracks.some((track) => track.playingClipId)) return null;
+    return this.launchClipOnTrack(project, coordinate);
   }
 
   /** Per-track playing/queued clip focus for read-only projections. */
@@ -94,15 +99,6 @@ export class Playback {
         queuedClipId: track.queuedClipId,
       })),
     };
-  }
-
-  private launchSelectedClipIfIdle(
-    project: ProjectPlaybackReadModel,
-    selectedClipCell: ClipCellCoordinateInput,
-  ): void {
-    if (this.state.tracks.some((track) => track.playingClipId)) return;
-    const cell = project.clipCellAt(selectedClipCell);
-    if (cell.clipId) launchPlayingClip(project, this.state, selectedClipCell);
   }
 }
 
