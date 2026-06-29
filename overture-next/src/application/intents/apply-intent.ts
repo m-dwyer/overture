@@ -1,5 +1,5 @@
 import type { CoreState, HostCommand } from "../types";
-import { launchClipCell, selectClipCell } from "../workflows";
+import { launchClipCell, selectClipCell, startTransport, stopTransport } from "../operations";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
 export function applyIntent(intent: DomainIntent, state: CoreState): DomainIntentTransaction {
@@ -9,12 +9,8 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return applied();
   }
   if (intent.kind === "toggle-transport") {
-    if (state.transport.isPlaying()) {
-      state.transport.stop();
-      return applied(state.playback.stop(state.project, state.transport.clock()));
-    }
-    state.transport.start();
-    return applied(state.playback.start(state.project, control.snapshot().selectedClipCell, state.transport.clock()));
+    if (state.transport.isPlaying()) return stopTransport(state);
+    return startTransport(state);
   }
   if (intent.kind === "toggle-view") {
     control.toggleView();
