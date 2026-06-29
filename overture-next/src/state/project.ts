@@ -62,8 +62,12 @@ export interface ProjectPlaybackReadModel {
 export class OvertureProject {
   private readonly data: OvertureProjectData;
 
-  constructor(data: OvertureProjectData) {
+  private constructor(data: OvertureProjectData) {
     this.data = data;
+  }
+
+  static createDefault(): OvertureProject {
+    return new OvertureProject(createDefaultProjectData());
   }
 
   /** Read-only occupancy at a coordinate. Throws when the coordinate is off-grid. */
@@ -117,7 +121,7 @@ export class OvertureProject {
 }
 
 export function createDefaultProject(): OvertureProject {
-  return new OvertureProject(createDefaultProjectData());
+  return OvertureProject.createDefault();
 }
 
 function snapshotCell(cell: ClipCell): ClipCellSnapshot {
