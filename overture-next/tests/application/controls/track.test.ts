@@ -28,4 +28,18 @@ describe("Overture Next Track control interpretation", () => {
       velocity: 0,
     });
   });
+
+  test("interprets track rows and Step buttons in Track View context", () => {
+    const control = createInitialControlSurfaceContext();
+    control.setShiftHeld(true);
+
+    expect(interpretTrackControl({ kind: "track-row", row: 1 }, control.snapshot())).toEqual({
+      kind: "select-track",
+      trackIndex: 5,
+    });
+    expect(interpretTrackControl({ kind: "step", step: 1 }, control.snapshot())).toEqual({
+      kind: "toggle-step",
+      stepIndex: 1,
+    });
+  });
 });

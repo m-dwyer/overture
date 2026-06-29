@@ -70,6 +70,20 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(intent).not.toHaveProperty("padIndex");
   });
 
+  test("falls through from global controls to the active view context", () => {
+    const control = createInitialControlSurfaceContext();
+
+    expect(interpretControl({ kind: "step", step: 1 }, control.snapshot())).toEqual({
+      kind: "toggle-step",
+      stepIndex: 1,
+    });
+
+    control.toggleActiveView();
+
+    expect(interpretControl({ kind: "step", step: 1 }, control.snapshot())).toBeNull();
+    expect(interpretControl({ kind: "play" }, control.snapshot())).toEqual({ kind: "toggle-transport" });
+  });
+
   test("applies clip-cell selection without creating clips", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];

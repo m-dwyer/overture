@@ -20,4 +20,15 @@ describe("Overture Next Session control interpretation", () => {
       interpretSessionControl({ kind: "pad", held: false, padIndex: 26, velocity: 0 }, control.snapshot()),
     ).toBeNull();
   });
+
+  test("interprets track rows in Session View without treating Step buttons as hidden sequence edits", () => {
+    const control = createInitialControlSurfaceContext();
+    control.setShiftHeld(true);
+
+    expect(interpretSessionControl({ kind: "track-row", row: 1 }, control.snapshot())).toEqual({
+      kind: "select-track",
+      trackIndex: 5,
+    });
+    expect(interpretSessionControl({ kind: "step", step: 1 }, control.snapshot())).toBeNull();
+  });
 });
