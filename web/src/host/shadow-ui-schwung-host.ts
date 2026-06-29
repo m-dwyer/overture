@@ -37,11 +37,13 @@ export function createSchwungHostApi(
 
   return {
     api: {
+      // Overture chooses HostCommand.route.kind before this point. The emulator
+      // only exposes Schwung's raw MIDI host functions as named output sinks.
       move_midi_inject_to_move(packet: number[]): void {
-        midi.inject(packet);
+        midi.sendToMove(packet);
       },
       shadow_send_midi_to_dsp(...args: unknown[]): void {
-        midi.toChain(args);
+        midi.sendToSchwungChain(args);
         schwung.sendMidiToDsp(args);
       },
       shadow_corun_begin(target: number, id: number, keepMask: number): void {
