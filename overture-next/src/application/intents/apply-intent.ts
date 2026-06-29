@@ -1,5 +1,6 @@
 import type { CoreState, HostCommand } from "../types";
 import {
+  auditionNote,
   launchClipCell,
   selectClipCell,
   selectTrack,
@@ -30,22 +31,7 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return toggleSelectedStep(state, intent.stepIndex);
   }
   if (intent.kind === "audition-note") {
-    const route = state.project.trackRoute(intent.trackIndex);
-    const hostCommand = intent.held
-      ? {
-          kind: "track-note-on" as const,
-          route,
-          trackIndex: intent.trackIndex,
-          note: intent.note,
-          velocity: intent.velocity,
-        }
-      : {
-          kind: "track-note-off" as const,
-          route,
-          trackIndex: intent.trackIndex,
-          note: intent.note,
-        };
-    return applied([hostCommand]);
+    return auditionNote(state, intent);
   }
   if (intent.kind === "select-clip-cell") {
     return selectClipCell(state, intent.coordinate);
