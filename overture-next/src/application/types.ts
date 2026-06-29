@@ -39,8 +39,8 @@ export interface CoreSnapshot {
   playing: boolean;
   selectedClipId: string | null;
   selectedClipCell: ControlSurfaceContextSnapshot["selectedClipCell"];
-  clipCells: CoreSnapshotClipCell[];
-  steps: CoreSnapshotStep[];
+  clipCells: readonly CoreSnapshotClipCell[];
+  steps: readonly CoreSnapshotStep[];
 }
 
 export type { HostCommand } from "./host-commands";

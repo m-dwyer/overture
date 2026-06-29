@@ -17,6 +17,11 @@ export interface Sequence {
   steps: SequenceStep[];
 }
 
+export interface SequenceReadModel {
+  readonly length: number;
+  readonly steps: readonly Readonly<SequenceStep>[];
+}
+
 export function stepIndex(value: number, stepCount = DEFAULT_STEP_COUNT): StepIndex {
   return integerInRange("Step Index", value, stepCount) as StepIndex;
 }
@@ -40,7 +45,7 @@ export function createDefaultSequence(stepCount = DEFAULT_STEP_COUNT, gateTicks 
   return { length: stepCount, steps };
 }
 
-export function getSequenceStep(sequence: Sequence, index: number): SequenceStep | null {
+export function getSequenceStep(sequence: SequenceReadModel, index: number): Readonly<SequenceStep> | null {
   const parsedIndex = parseStepIndex(index, sequence.steps.length);
   if (parsedIndex === null) return null;
   return sequence.steps[parsedIndex] ?? null;

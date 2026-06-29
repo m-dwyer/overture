@@ -24,4 +24,17 @@ describe("Overture Next Project", () => {
     expect(visibleTrackRowsForBank(1)).toEqual([4, 5, 6, 7]);
     expect(project.trackRoute(4)).toEqual({ kind: "schwung", schwungChainIndex: 0 });
   });
+
+  test("returns copied clip and route read models instead of Project-owned state", () => {
+    const project = createDefaultProject();
+    const clip = project.clipFor({ trackIndex: 0, sceneIndex: 0 });
+    const route = project.trackRoute(4);
+    if (!clip || route.kind !== "schwung") throw new Error("Expected default clip and Schwung route");
+
+    (clip.sequence.steps as unknown as Array<{ active: boolean }>)[1].active = true;
+    route.schwungChainIndex = 99;
+
+    expect(project.clipFor({ trackIndex: 0, sceneIndex: 0 })?.sequence.steps[1].active).toBe(false);
+    expect(project.trackRoute(4)).toEqual({ kind: "schwung", schwungChainIndex: 0 });
+  });
 });

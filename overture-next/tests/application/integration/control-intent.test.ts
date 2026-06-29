@@ -318,7 +318,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(applyIntentAndCollect({ kind: "toggle-step", stepIndex: 1 }, state, hostCommands)).toBe(true);
 
     expect(state.control.snapshot().selectedStep).toBe(1);
-    expect(selectedClip.sequence.steps[1].active).toBe(true);
+    expect(state.project.clipFor(state.control.snapshot().selectedClipCell)?.sequence.steps[1].active).toBe(true);
     expect(otherClip.sequence.steps[1].active).toBe(false);
     expect(hostCommands).toEqual([]);
   });

@@ -304,7 +304,7 @@ describe("Overture Next core", () => {
 
     project.toggleSequenceStepAt({ trackIndex: 0, sceneIndex: 0 }, 1);
 
-    expect(firstClip.sequence.steps[1].active).toBe(true);
+    expect(project.clipFor({ trackIndex: 0, sceneIndex: 0 })?.sequence.steps[1].active).toBe(true);
     expect(secondClip.sequence.steps[1].active).toBe(false);
   });
 
