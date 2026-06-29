@@ -1,15 +1,15 @@
 import type { Sequence, SequenceStep } from "../domain/sequence";
-import { sequenceWithToggledStep } from "../domain/sequence";
-import { getTrack } from "../domain/track";
+import { createDefaultSequence, sequenceWithToggledStep } from "../domain/sequence";
+import { createTracks, getTrack, TRACK_COUNT, type Track } from "../domain/track";
 import type { TrackRoute } from "../domain/track";
 import {
-  createDefaultProjectData,
-  findClipCell,
-  type ClipCell,
+  clipCellCoordinate,
+  clipId,
   type ClipCellCoordinateInput,
   type ClipId,
-  type OvertureProjectData,
+  SCENE_COUNT,
   type SceneIndex,
+  sceneIndex,
   type TrackIndex,
   trackIndex,
 } from "../domain/project";
@@ -44,6 +44,36 @@ export interface SequenceSnapshot {
 export interface OvertureClipSnapshot {
   readonly id: ClipId;
   readonly sequence: SequenceSnapshot;
+}
+
+interface OvertureScene {
+  index: SceneIndex;
+  name: string;
+}
+
+interface ClipCell {
+  trackIndex: TrackIndex;
+  sceneIndex: SceneIndex;
+  clipId: ClipId | null;
+}
+
+/**
+ * An Overture Clip. Its Clip Cell Coordinate is intentionally not stored here:
+ * a clip's location is derived from the Clip Cell that holds its Clip ID, which
+ * is the single source of truth for occupancy. Do not re-add trackIndex/
+ * sceneIndex fields; derive the coordinate from the owning Clip Cell instead.
+ */
+interface OvertureClip {
+  id: ClipId;
+  sequence: Sequence;
+}
+
+interface OvertureProjectData {
+  tracks: Track[];
+  scenes: OvertureScene[];
+  clipCells: ClipCell[];
+  clips: Record<ClipId, OvertureClip>;
+  nextClipNumber: number;
 }
 
 /** Read-only Project contract for runtime playback resolution. */
@@ -162,5 +192,64 @@ function snapshotStep(step: SequenceStep): SequenceStepSnapshot {
     note: step.note,
     velocity: step.velocity,
     gateTicks: step.gateTicks,
+  };
+}
+
+function createDefaultProjectData(): OvertureProjectData {
+  const data: OvertureProjectData = {
+    tracks: createTracks(),
+    scenes: createScenes(),
+    clipCells: createClipCells(),
+    clips: {},
+    nextClipNumber: 1,
+  };
+
+  for (let trackIndexValue = 0; trackIndexValue < TRACK_COUNT; trackIndexValue++) {
+    createClipInCell(data, { trackIndex: trackIndexValue, sceneIndex: 0 });
+  }
+
+  return data;
+}
+
+function findClipCell(cells: readonly ClipCell[], coordinateInput: ClipCellCoordinateInput): ClipCell | undefined {
+  const coordinate = clipCellCoordinate(coordinateInput);
+  return cells.find((cell) => cell.trackIndex === coordinate.trackIndex && cell.sceneIndex === coordinate.sceneIndex);
+}
+
+function createScenes(sceneCount = SCENE_COUNT): OvertureScene[] {
+  return Array.from({ length: sceneCount }, (_, index) => ({
+    index: sceneIndex(index),
+    name: "Scene " + (index + 1),
+  }));
+}
+
+function createClipCells(trackCount = TRACK_COUNT, sceneCount = SCENE_COUNT): ClipCell[] {
+  const clipCells: ClipCell[] = [];
+  for (let sceneIndexValue = 0; sceneIndexValue < sceneCount; sceneIndexValue++) {
+    for (let trackIndexValue = 0; trackIndexValue < trackCount; trackIndexValue++) {
+      clipCells.push({
+        trackIndex: trackIndex(trackIndexValue),
+        sceneIndex: sceneIndex(sceneIndexValue),
+        clipId: null,
+      });
+    }
+  }
+  return clipCells;
+}
+
+function createClipInCell(data: OvertureProjectData, coordinate: ClipCellCoordinateInput): OvertureClip {
+  const cell = findClipCell(data.clipCells, coordinate);
+  if (!cell) throw new Error("Missing clip cell " + coordinate.trackIndex + ":" + coordinate.sceneIndex);
+  const clip = createOvertureClip(clipId("clip-" + data.nextClipNumber));
+  data.nextClipNumber++;
+  data.clips[clip.id] = clip;
+  cell.clipId = clip.id;
+  return clip;
+}
+
+function createOvertureClip(id: ClipId): OvertureClip {
+  return {
+    id,
+    sequence: createDefaultSequence(),
   };
 }

@@ -25,16 +25,22 @@ describe("Overture Next Project", () => {
     expect(project.trackRoute(4)).toEqual({ kind: "schwung", schwungChainIndex: 0 });
   });
 
-  test("returns copied clip and route read models instead of Project-owned state", () => {
+  test("returns copied clip, Clip Cell, and route read models instead of Project-owned state", () => {
     const project = createDefaultProject();
     const clip = project.clipFor({ trackIndex: 0, sceneIndex: 0 });
+    const cell = project.clipCellAt({ trackIndex: 0, sceneIndex: 0 });
+    const cells = project.clipCellSnapshots();
     const route = project.trackRoute(4);
     if (!clip || route.kind !== "schwung") throw new Error("Expected default clip and Schwung route");
 
     (clip.sequence.steps as unknown as Array<{ active: boolean }>)[1].active = true;
+    (cell as { clipId: string | null }).clipId = "mutated";
+    (cells as Array<{ clipId: string | null }>)[0].clipId = "mutated";
     route.schwungChainIndex = 99;
 
     expect(project.clipFor({ trackIndex: 0, sceneIndex: 0 })?.sequence.steps[1].active).toBe(false);
+    expect(project.clipCellAt({ trackIndex: 0, sceneIndex: 0 }).clipId).toBe("clip-1");
+    expect(project.clipCellSnapshots()[0]?.clipId).toBe("clip-1");
     expect(project.trackRoute(4)).toEqual({ kind: "schwung", schwungChainIndex: 0 });
   });
 });
