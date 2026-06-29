@@ -1,5 +1,5 @@
-import { TRACK_COUNT } from "./track";
-import { integerInRange, nonEmptyString, type Branded } from "./value-objects";
+import { TRACK_COUNT } from "../track";
+import { integerInRange, nonEmptyString, type Branded } from "../value-objects";
 
 export type TrackIndex = Branded<number, "TrackIndex">;
 export type SceneIndex = Branded<number, "SceneIndex">;
