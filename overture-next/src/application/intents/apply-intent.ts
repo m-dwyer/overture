@@ -1,42 +1,41 @@
-import type { CoreState } from "../types";
-import {
-  auditionNote,
-  launchClipCell,
-  selectClipCell,
-  selectTrack,
-  setShiftHeld,
-  startTransport,
-  stopTransport,
-  toggleView,
-  toggleSelectedStep,
-} from "../operations";
+import type { ClipCellCoordinateInput } from "../../domain/project";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
-export function applyIntent(intent: DomainIntent, state: CoreState): DomainIntentTransaction {
+export interface IntentHandlers {
+  setShiftHeld(held: boolean): DomainIntentTransaction;
+  toggleTransport(): DomainIntentTransaction;
+  toggleView(): DomainIntentTransaction;
+  selectTrack(trackIndex: number): DomainIntentTransaction;
+  toggleStep(stepIndex: number): DomainIntentTransaction;
+  auditionNote(command: Extract<DomainIntent, { kind: "audition-note" }>): DomainIntentTransaction;
+  selectClipCell(coordinate: ClipCellCoordinateInput): DomainIntentTransaction;
+  launchClipCell(coordinate: ClipCellCoordinateInput): DomainIntentTransaction;
+}
+
+export function applyIntent(intent: DomainIntent, handlers: IntentHandlers): DomainIntentTransaction {
   if (intent.kind === "set-shift-held") {
-    return setShiftHeld(state, intent.held);
+    return handlers.setShiftHeld(intent.held);
   }
   if (intent.kind === "toggle-transport") {
-    if (state.transport.isPlaying()) return stopTransport(state);
-    return startTransport(state);
+    return handlers.toggleTransport();
   }
   if (intent.kind === "toggle-view") {
-    return toggleView(state);
+    return handlers.toggleView();
   }
   if (intent.kind === "select-track") {
-    return selectTrack(state, intent.trackIndex);
+    return handlers.selectTrack(intent.trackIndex);
   }
   if (intent.kind === "toggle-step") {
-    return toggleSelectedStep(state, intent.stepIndex);
+    return handlers.toggleStep(intent.stepIndex);
   }
   if (intent.kind === "audition-note") {
-    return auditionNote(state, intent);
+    return handlers.auditionNote(intent);
   }
   if (intent.kind === "select-clip-cell") {
-    return selectClipCell(state, intent.coordinate);
+    return handlers.selectClipCell(intent.coordinate);
   }
   if (intent.kind === "launch-clip-cell") {
-    return launchClipCell(state, intent.coordinate);
+    return handlers.launchClipCell(intent.coordinate);
   }
   return { applied: false, hostCommands: [] };
 }

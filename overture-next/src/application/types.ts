@@ -1,18 +1,7 @@
 import type { TrackRoute } from "../domain/project";
-import type { ActiveView, ControlSurfaceContext, ControlSurfaceContextSnapshot } from "../state/control-surface-context";
-import type { OvertureProject } from "../state/project";
+import type { ActiveView, ControlSurfaceContextSnapshot } from "../state/control-surface-context";
 import type { ControlInput } from "./controls/types";
 import type { HostCommand } from "./host-commands";
-import type { Playback } from "./playback";
-import type { TransportState } from "./transport";
-
-export interface CoreState {
-  control: ControlSurfaceContext;
-  transport: TransportState;
-  playback: Playback;
-  project: OvertureProject;
-  lastInjectedStep: number;
-}
 
 export interface CoreSnapshotStep {
   index: number;
@@ -47,10 +36,10 @@ export type { HostCommand } from "./host-commands";
 
 export interface OvertureCore {
   init(): void;
-  tick(): void;
-  applyInput(input: ControlInput): boolean;
-  getSnapshot(): CoreSnapshot;
-  getSelectedSequenceLength(): number;
+  advancePlaybackTick(): void;
+  dispatchControlInput(input: ControlInput): boolean;
+  snapshot(): CoreSnapshot;
+  selectedSequenceLength(): number;
   drainHostCommands(): HostCommand[];
   stopPlayback(): HostCommand[];
 }

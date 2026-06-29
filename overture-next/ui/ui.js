@@ -22,6 +22,6 @@ installSchwungRuntime({
     runtime.onUnload();
   },
 }, {
-  overtureNext: runtime.core,
+  overtureDebug: runtime.debug,
   overtureRuntime: runtime,
 });

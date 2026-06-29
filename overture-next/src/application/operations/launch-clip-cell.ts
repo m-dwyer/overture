@@ -1,14 +1,24 @@
 import type { ClipCellCoordinateInput } from "../../domain/project";
-import type { CoreState } from "../types";
+import type { ControlSurfaceContext } from "../../state/control-surface-context";
+import type { OvertureProject } from "../../state/project";
+import type { Playback } from "../playback";
+import type { TransportState } from "../transport";
 import { selectClipCell } from "./select-clip-cell";
 import { operationApplied, type OperationResult } from "./types";
 
-export function launchClipCell(state: CoreState, coordinate: ClipCellCoordinateInput): OperationResult {
-  selectClipCell(state, coordinate);
-  const cell = state.project.clipCellAt(coordinate);
+export interface LaunchClipCellContext {
+  readonly control: ControlSurfaceContext;
+  readonly project: OvertureProject;
+  readonly playback: Playback;
+  readonly transport: TransportState;
+}
+
+export function launchClipCell(context: LaunchClipCellContext, coordinate: ClipCellCoordinateInput): OperationResult {
+  selectClipCell(context, coordinate);
+  const cell = context.project.clipCellAt(coordinate);
   const hostCommands = cell.clipId
     ? []
-    : state.playback.stopTrack(state.project, coordinate.trackIndex, state.transport.clock());
-  if (cell.clipId) state.playback.launchClipOnTrack(state.project, coordinate);
+    : context.playback.stopTrack(context.project, coordinate.trackIndex, context.transport.clock());
+  if (cell.clipId) context.playback.launchClipOnTrack(context.project, coordinate);
   return operationApplied(hostCommands);
 }

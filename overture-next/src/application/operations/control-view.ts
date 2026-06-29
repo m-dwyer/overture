@@ -1,12 +1,16 @@
-import type { CoreState } from "../types";
+import type { ControlSurfaceContext } from "../../state/control-surface-context";
 import { operationApplied, type OperationResult } from "./types";
 
-export function setShiftHeld(state: CoreState, held: boolean): OperationResult {
-  state.control.setShiftHeld(held);
+export interface ControlViewContext {
+  readonly control: ControlSurfaceContext;
+}
+
+export function setShiftHeld(context: ControlViewContext, held: boolean): OperationResult {
+  context.control.setShiftHeld(held);
   return operationApplied();
 }
 
-export function toggleView(state: CoreState): OperationResult {
-  state.control.toggleActiveView();
+export function toggleView(context: ControlViewContext): OperationResult {
+  context.control.toggleActiveView();
   return operationApplied();
 }

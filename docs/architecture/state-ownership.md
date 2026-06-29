@@ -56,11 +56,28 @@ state.control.selectedStep = stepIndex;
 state.playback.pendingNoteOffs.push(noteOff);
 ```
 
+Workflow orchestration should avoid passing broad composition objects into
+lower-level workflows. Prefer narrow context objects or explicit parameters
+that match the workflow's required authority.
+
+Prefer:
+
+```ts
+runWorkflow({ durableOwner, interactionOwner }, command);
+```
+
+Avoid:
+
+```ts
+runWorkflow(applicationState, command);
+```
+
 ## Public Contracts
 
 Use public contracts that match caller authority:
 
 - mutation-capable orchestration receives owner objects or public owner APIs
+- application operations receive narrow workflow contexts, not broad core state
 - read-only modules receive snapshots or narrow read contracts
 - host/render/view code should not receive mutable domain state when a snapshot
   or view model is sufficient

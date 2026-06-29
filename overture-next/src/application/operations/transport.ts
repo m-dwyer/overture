@@ -1,13 +1,29 @@
-import type { CoreState } from "../types";
+import type { ControlSurfaceContext } from "../../state/control-surface-context";
+import type { OvertureProject } from "../../state/project";
+import type { Playback } from "../playback";
+import type { TransportState } from "../transport";
 import { operationApplied, type OperationResult } from "./types";
 
-export function startTransport(state: CoreState): OperationResult {
-  state.transport.start();
-  state.playback.launchClipOnTrackIfIdle(state.project, state.control.snapshot().selectedClipCell);
-  return operationApplied(state.playback.injectStep(state.project, state.transport.clock()));
+export interface StartTransportContext {
+  readonly control: ControlSurfaceContext;
+  readonly project: OvertureProject;
+  readonly playback: Playback;
+  readonly transport: TransportState;
 }
 
-export function stopTransport(state: CoreState): OperationResult {
-  state.transport.stop();
-  return operationApplied(state.playback.stopAll(state.project, state.transport.clock()));
+export interface StopTransportContext {
+  readonly project: OvertureProject;
+  readonly playback: Playback;
+  readonly transport: TransportState;
+}
+
+export function startTransport(context: StartTransportContext): OperationResult {
+  context.transport.start();
+  context.playback.launchClipOnTrackIfIdle(context.project, context.control.snapshot().selectedClipCell);
+  return operationApplied(context.playback.injectStep(context.project, context.transport.clock()));
+}
+
+export function stopTransport(context: StopTransportContext): OperationResult {
+  context.transport.stop();
+  return operationApplied(context.playback.stopAll(context.project, context.transport.clock()));
 }

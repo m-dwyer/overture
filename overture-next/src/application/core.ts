@@ -1,45 +1,50 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
 import { createInitialControlSurfaceContext, type ControlSurfaceContextSnapshot } from "../state/control-surface-context";
-import { createDefaultProject, type ProjectCoreReadModel } from "../state/project";
+import { createDefaultProject, type OvertureProject, type ProjectCoreReadModel } from "../state/project";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
-import { applyIntent } from "./intents/apply-intent";
-import { createPlayback } from "./playback";
-import { createTransport, type TransportStateSnapshot } from "./transport";
-import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types";
+import { applyIntent, type IntentHandlers } from "./intents/apply-intent";
+import {
+  auditionNote,
+  launchClipCell,
+  selectClipCell,
+  selectTrack,
+  setShiftHeld,
+  startTransport,
+  stopTransport,
+  toggleSelectedStep,
+  toggleView,
+} from "./operations";
+import { createPlayback, type Playback } from "./playback";
+import { createTransport, type TransportState, type TransportStateSnapshot } from "./transport";
+import type { CoreSnapshot, HostCommand, OvertureCore } from "./types";
 
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
-  const state: CoreState = {
-    control: createInitialControlSurfaceContext(),
-    transport: createTransport(),
-    playback: createPlayback(),
-    project,
-    lastInjectedStep: -1,
-  };
+  const control = createInitialControlSurfaceContext();
+  const transport = createTransport();
+  const playback = createPlayback();
+  const intentHandlers = createIntentHandlers({ control, project, playback, transport });
   const hostCommands: HostCommand[] = [];
 
   function init(): void {}
 
-  function tick(): void {
-    const transportTick = state.transport.advance(DEFAULT_STEP_COUNT);
-    const advance = state.playback.advanceTick(state.project, transportTick);
-    if (advance.injectedStep !== null) state.lastInjectedStep = advance.injectedStep;
+  function advancePlaybackTick(): void {
+    const transportTick = transport.advance(DEFAULT_STEP_COUNT);
+    const advance = playback.advanceTick(project, transportTick);
     hostCommands.push(...advance.hostCommands);
   }
 
-  function applyInput(input: ControlInput): boolean {
-    const intent = interpretControl(input, state.control.snapshot());
+  function dispatchControlInput(input: ControlInput): boolean {
+    const intent = interpretControl(input, control.snapshot());
     if (!intent) return false;
-    const transaction = applyIntent(intent, state);
+    const transaction = applyIntent(intent, intentHandlers);
     if (transaction.applied) hostCommands.push(...transaction.hostCommands);
     return transaction.applied;
   }
 
-  function getSnapshot(): CoreSnapshot {
-    const control = state.control.snapshot();
-    const transport = state.transport.snapshot();
-    return buildCoreSnapshot(state.project, control, transport);
+  function snapshot(): CoreSnapshot {
+    return buildCoreSnapshot(project, control.snapshot(), transport.snapshot());
   }
 
   function drainHostCommands(): HostCommand[] {
@@ -47,15 +52,79 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function stopPlayback(): HostCommand[] {
-    state.transport.stop();
-    return state.playback.stopAll(state.project, state.transport.clock());
+    transport.stop();
+    return playback.stopAll(project, transport.clock());
   }
 
-  function getSelectedSequenceLength(): number {
-    return getSelectedSequenceLengthFor(state.project, state.control.snapshot());
+  function selectedSequenceLength(): number {
+    return getSelectedSequenceLengthFor(project, control.snapshot());
   }
 
-  return { init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands, stopPlayback };
+  return {
+    init,
+    advancePlaybackTick,
+    dispatchControlInput,
+    snapshot,
+    selectedSequenceLength,
+    drainHostCommands,
+    stopPlayback,
+  };
+}
+
+interface CoreOwners {
+  readonly control: ReturnType<typeof createInitialControlSurfaceContext>;
+  readonly project: OvertureProject;
+  readonly playback: Playback;
+  readonly transport: TransportState;
+}
+
+function createIntentHandlers({ control, project, playback, transport }: CoreOwners): IntentHandlers {
+  return {
+    setShiftHeld(held) {
+      return setShiftHeld({ control }, held);
+    },
+    toggleTransport() {
+      if (transport.isPlaying()) {
+        return stopTransport({
+          project,
+          playback,
+          transport,
+        });
+      }
+      return startTransport({
+        control,
+        project,
+        playback,
+        transport,
+      });
+    },
+    toggleView() {
+      return toggleView({ control });
+    },
+    selectTrack(trackIndex) {
+      return selectTrack({ control, project }, trackIndex);
+    },
+    toggleStep(stepIndex) {
+      return toggleSelectedStep({ control, project }, stepIndex);
+    },
+    auditionNote(command) {
+      return auditionNote({ project }, command);
+    },
+    selectClipCell(coordinate) {
+      return selectClipCell({ control, project }, coordinate);
+    },
+    launchClipCell(coordinate) {
+      return launchClipCell(
+        {
+          control,
+          project,
+          playback,
+          transport,
+        },
+        coordinate,
+      );
+    },
+  };
 }
 
 function buildCoreSnapshot(

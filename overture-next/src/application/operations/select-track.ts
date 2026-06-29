@@ -1,9 +1,15 @@
-import type { CoreState } from "../types";
+import type { ControlSurfaceContext } from "../../state/control-surface-context";
+import type { OvertureProject } from "../../state/project";
 import { operationApplied, type OperationResult } from "./types";
 
-export function selectTrack(state: CoreState, trackIndex: number): OperationResult {
-  const sceneIndex = state.control.snapshot().selectedClipCell.sceneIndex;
-  state.project.clipCellAt({ trackIndex, sceneIndex });
-  state.control.selectTrackPreservingScene(trackIndex);
+export interface SelectTrackContext {
+  readonly control: ControlSurfaceContext;
+  readonly project: OvertureProject;
+}
+
+export function selectTrack(context: SelectTrackContext, trackIndex: number): OperationResult {
+  const sceneIndex = context.control.snapshot().selectedClipCell.sceneIndex;
+  context.project.clipCellAt({ trackIndex, sceneIndex });
+  context.control.selectTrackPreservingScene(trackIndex);
   return operationApplied();
 }

@@ -1,8 +1,14 @@
-import type { CoreState } from "../types";
+import type { ControlSurfaceContext } from "../../state/control-surface-context";
+import type { OvertureProject } from "../../state/project";
 import { operationApplied, type OperationResult } from "./types";
 
-export function toggleSelectedStep(state: CoreState, stepIndex: number): OperationResult {
-  state.control.selectStep(stepIndex);
-  state.project.toggleSequenceStepAt(state.control.snapshot().selectedClipCell, stepIndex);
+export interface ToggleSelectedStepContext {
+  readonly control: ControlSurfaceContext;
+  readonly project: OvertureProject;
+}
+
+export function toggleSelectedStep(context: ToggleSelectedStepContext, stepIndex: number): OperationResult {
+  context.control.selectStep(stepIndex);
+  context.project.toggleSequenceStepAt(context.control.snapshot().selectedClipCell, stepIndex);
   return operationApplied();
 }

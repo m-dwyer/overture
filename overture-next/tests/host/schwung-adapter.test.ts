@@ -202,7 +202,7 @@ describe("Overture Next Schwung adapter", () => {
         onMidiMessageExternal: (data) => calls.push("external:" + data.join(",")),
         onUnload: () => calls.push("unload"),
       },
-      { overtureNext: { marker: true } },
+      { overtureDebug: { marker: true } },
       host,
     );
 
@@ -212,7 +212,7 @@ describe("Overture Next Schwung adapter", () => {
     (host.onMidiMessageExternal as (data: unknown) => void)(null);
     (host.onUnload as () => void)();
 
-    expect(host.overtureNext).toEqual({ marker: true });
+    expect(host.overtureDebug).toEqual({ marker: true });
     expect(calls).toEqual(["init", "tick", "internal:144,60,100", "external:", "unload"]);
   });
 });

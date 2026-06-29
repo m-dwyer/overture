@@ -1,4 +1,4 @@
-import type { CoreState } from "../types";
+import type { OvertureProject } from "../../state/project";
 import { operationApplied, type OperationResult } from "./types";
 
 export interface AuditionNoteCommand {
@@ -8,8 +8,12 @@ export interface AuditionNoteCommand {
   velocity: number;
 }
 
-export function auditionNote(state: CoreState, command: AuditionNoteCommand): OperationResult {
-  const route = state.project.trackRoute(command.trackIndex);
+export interface AuditionNoteContext {
+  readonly project: OvertureProject;
+}
+
+export function auditionNote(context: AuditionNoteContext, command: AuditionNoteCommand): OperationResult {
+  const route = context.project.trackRoute(command.trackIndex);
   const hostCommand = command.held
     ? {
         kind: "track-note-on" as const,

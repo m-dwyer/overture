@@ -1,11 +1,29 @@
 import { describe, expect, test } from "vitest";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
 import { interpretControl } from "../../../src/application/controls/interpret-control";
-import { applyIntent } from "../../../src/application/intents/apply-intent";
+import { applyIntent, type IntentHandlers } from "../../../src/application/intents/apply-intent";
+import {
+  auditionNote,
+  launchClipCell,
+  selectClipCell,
+  selectTrack,
+  setShiftHeld,
+  startTransport,
+  stopTransport,
+  toggleSelectedStep,
+  toggleView,
+} from "../../../src/application/operations";
 import { createPlayback } from "../../../src/application/playback";
 import { createDefaultProject } from "../../../src/state/project";
 import { createTransport } from "../../../src/application/transport";
-import type { CoreState, HostCommand } from "../../../src/application/types";
+import type { HostCommand } from "../../../src/application/types";
+
+interface TestCoreState {
+  readonly control: ReturnType<typeof createInitialControlSurfaceContext>;
+  readonly transport: ReturnType<typeof createTransport>;
+  readonly playback: ReturnType<typeof createPlayback>;
+  readonly project: ReturnType<typeof createDefaultProject>;
+}
 
 describe("Overture Next control-to-intent pipeline", () => {
   test("interprets track rows against the current shift modifier", () => {
@@ -270,18 +288,18 @@ describe("Overture Next control-to-intent pipeline", () => {
   test("returns emitted host commands as a Domain Intent transaction", () => {
     const state = createTestCoreState();
 
-    expect(applyIntent({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, state)).toEqual({
+    expect(applyIntentWithState({ kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } }, state)).toEqual({
       applied: true,
       hostCommands: [],
     });
-    expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({
+    expect(applyIntentWithState({ kind: "toggle-transport" }, state)).toEqual({
       applied: true,
       hostCommands: [
         { kind: "track-note-on", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60, velocity: 100 },
       ],
     });
 
-    expect(applyIntent({ kind: "toggle-transport" }, state)).toEqual({
+    expect(applyIntentWithState({ kind: "toggle-transport" }, state)).toEqual({
       applied: true,
       hostCommands: [
         { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60 },
@@ -363,22 +381,77 @@ function padRelease(padIndex: number) {
   return { kind: "pad" as const, held: false, padIndex, velocity: 0 };
 }
 
-function createTestCoreState(): CoreState {
+function createTestCoreState(): TestCoreState {
   return {
     control: createInitialControlSurfaceContext(),
     transport: createTransport(),
     playback: createPlayback(),
     project: createDefaultProject(),
-    lastInjectedStep: -1,
   };
+}
+
+function applyIntentWithState(
+  intent: Parameters<typeof applyIntent>[0],
+  state: TestCoreState,
+): ReturnType<typeof applyIntent> {
+  return applyIntent(intent, createIntentHandlers(state));
 }
 
 function applyIntentAndCollect(
   intent: Parameters<typeof applyIntent>[0],
-  state: Parameters<typeof applyIntent>[1],
+  state: TestCoreState,
   hostCommands: HostCommand[],
 ): boolean {
-  const transaction = applyIntent(intent, state);
+  const transaction = applyIntentWithState(intent, state);
   hostCommands.push(...transaction.hostCommands);
   return transaction.applied;
+}
+
+function createIntentHandlers(state: TestCoreState): IntentHandlers {
+  return {
+    setShiftHeld(held) {
+      return setShiftHeld({ control: state.control }, held);
+    },
+    toggleTransport() {
+      if (state.transport.isPlaying()) {
+        return stopTransport({
+          project: state.project,
+          playback: state.playback,
+          transport: state.transport,
+        });
+      }
+      return startTransport({
+        control: state.control,
+        project: state.project,
+        playback: state.playback,
+        transport: state.transport,
+      });
+    },
+    toggleView() {
+      return toggleView({ control: state.control });
+    },
+    selectTrack(trackIndex) {
+      return selectTrack({ control: state.control, project: state.project }, trackIndex);
+    },
+    toggleStep(stepIndex) {
+      return toggleSelectedStep({ control: state.control, project: state.project }, stepIndex);
+    },
+    auditionNote(command) {
+      return auditionNote({ project: state.project }, command);
+    },
+    selectClipCell(coordinate) {
+      return selectClipCell({ control: state.control, project: state.project }, coordinate);
+    },
+    launchClipCell(coordinate) {
+      return launchClipCell(
+        {
+          control: state.control,
+          project: state.project,
+          playback: state.playback,
+          transport: state.transport,
+        },
+        coordinate,
+      );
+    },
+  };
 }

@@ -10,7 +10,7 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    const snapshot = core.getSnapshot();
+    const snapshot = core.snapshot();
     expect(snapshot).toMatchObject({
       selectedTrackIndex: 0,
       visibleTrackBank: 0,
@@ -56,35 +56,35 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    expect(core.applyInput({ kind: "play" })).toBe(true);
-    expect(core.getSnapshot().playing).toBe(true);
+    expect(core.dispatchControlInput({ kind: "play" })).toBe(true);
+    expect(core.snapshot().playing).toBe(true);
 
-    expect(core.applyInput({ kind: "shift", held: true })).toBe(true);
-    expect(core.applyInput({ kind: "track-row", row: 1 })).toBe(true);
-    expect(core.applyInput({ kind: "shift", held: false })).toBe(true);
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.dispatchControlInput({ kind: "shift", held: true })).toBe(true);
+    expect(core.dispatchControlInput({ kind: "track-row", row: 1 })).toBe(true);
+    expect(core.dispatchControlInput({ kind: "shift", held: false })).toBe(true);
+    expect(core.snapshot()).toMatchObject({
       selectedTrackIndex: 5,
       visibleTrackBank: 1,
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
     });
 
-    expect(core.getSnapshot().steps[1].active).toBe(false);
-    expect(core.applyInput({ kind: "step", step: 1 })).toBe(true);
-    expect(core.getSnapshot().steps[1]).toMatchObject({ selected: true, active: true });
+    expect(core.snapshot().steps[1].active).toBe(false);
+    expect(core.dispatchControlInput({ kind: "step", step: 1 })).toBe(true);
+    expect(core.snapshot().steps[1]).toMatchObject({ selected: true, active: true });
   });
 
   test("uses shift as the upper track bank modifier for side buttons", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "shift", held: true });
-    core.applyInput({ kind: "track-row", row: 0 });
-    expect(core.getSnapshot().selectedTrackIndex).toBe(4);
+    core.dispatchControlInput({ kind: "shift", held: true });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    expect(core.snapshot().selectedTrackIndex).toBe(4);
 
-    core.applyInput({ kind: "shift", held: false });
-    core.applyInput({ kind: "track-row", row: 0 });
+    core.dispatchControlInput({ kind: "shift", held: false });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       selectedTrackIndex: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
     });
@@ -93,34 +93,34 @@ describe("Overture Next core", () => {
   test("launches Clip Cells from Session View pads without creating clips", () => {
     const core = createOvertureCore();
     core.init();
-    const clipCount = countSnapshotClips(core.getSnapshot());
+    const clipCount = countSnapshotClips(core.snapshot());
 
-    core.applyInput({ kind: "menu" });
-    expect(core.getSnapshot().activeView).toBe("session");
+    core.dispatchControlInput({ kind: "menu" });
+    expect(core.snapshot().activeView).toBe("session");
 
-    expect(core.applyInput(padPress(0))).toBe(true);
+    expect(core.dispatchControlInput(padPress(0))).toBe(true);
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       selectedTrackIndex: 3,
       selectedClipCell: { trackIndex: 3, sceneIndex: 0 },
       selectedClipId: "clip-4",
     });
-    expect(countSnapshotClips(core.getSnapshot())).toBe(clipCount);
+    expect(countSnapshotClips(core.snapshot())).toBe(clipCount);
   });
 
   test("Session View pads use the visible track bank rows and stable scene columns", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "shift", held: true });
-    core.applyInput({ kind: "track-row", row: 0 });
-    core.applyInput({ kind: "shift", held: false });
-    core.applyInput({ kind: "menu" });
+    core.dispatchControlInput({ kind: "shift", held: true });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    core.dispatchControlInput({ kind: "shift", held: false });
+    core.dispatchControlInput({ kind: "menu" });
 
-    expect(core.getSnapshot().visibleTrackBank).toBe(1);
-    expect(core.applyInput(padPress(26))).toBe(true);
+    expect(core.snapshot().visibleTrackBank).toBe(1);
+    expect(core.dispatchControlInput(padPress(26))).toBe(true);
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       selectedTrackIndex: 4,
       selectedClipCell: { trackIndex: 4, sceneIndex: 2 },
       visibleTrackBank: 1,
@@ -131,9 +131,9 @@ describe("Overture Next core", () => {
   test("auditions central pad presses in Track View", () => {
     const core = createOvertureCore();
     core.init();
-    const selectedBefore = core.getSnapshot().selectedClipCell;
+    const selectedBefore = core.snapshot().selectedClipCell;
 
-    expect(core.applyInput(padPress(7, 101))).toBe(true);
+    expect(core.dispatchControlInput(padPress(7, 101))).toBe(true);
     expect(core.drainHostCommands()).toEqual([
       {
         kind: "track-note-on",
@@ -143,28 +143,28 @@ describe("Overture Next core", () => {
         velocity: 101,
       },
     ]);
-    expect(core.applyInput(padRelease(7))).toBe(true);
+    expect(core.dispatchControlInput(padRelease(7))).toBe(true);
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 67 },
     ]);
 
-    expect(core.getSnapshot().selectedClipCell).toEqual(selectedBefore);
+    expect(core.snapshot().selectedClipCell).toEqual(selectedBefore);
   });
 
   test("emits Move note commands when the playhead reaches an active step", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "menu" });
-    core.applyInput(padPress(24));
-    core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "play" });
-    core.applyInput({ kind: "step", step: 1 });
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(24));
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "step", step: 1 });
     core.drainHostCommands();
 
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 12; i++) core.advancePlaybackTick();
 
-    expect(getSnapshotPlayhead(core.getSnapshot())).toBe(1);
+    expect(getSnapshotPlayhead(core.snapshot())).toBe(1);
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
       {
@@ -175,7 +175,7 @@ describe("Overture Next core", () => {
         velocity: 100,
       },
     ]);
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 61 },
     ]);
@@ -186,15 +186,15 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "menu" });
-    core.applyInput(padPress(16));
-    core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "track-row", row: 0 });
-    expect(core.getSnapshot().selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(16));
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    expect(core.snapshot().selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
 
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "play" });
     core.drainHostCommands();
-    for (let i = 0; i < 48; i++) core.tick();
+    for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 60 },
@@ -206,7 +206,7 @@ describe("Overture Next core", () => {
         velocity: 100,
       },
     ]);
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 64 },
     ]);
@@ -216,49 +216,49 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "menu" });
-    core.applyInput(padPress(16));
-    core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "track-row", row: 0 });
-    core.applyInput({ kind: "step", step: 1 });
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(16));
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    core.dispatchControlInput({ kind: "step", step: 1 });
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       activeView: "track",
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
     });
-    expect(core.getSnapshot().steps[1].active).toBe(true);
+    expect(core.snapshot().steps[1].active).toBe(true);
 
-    core.applyInput({ kind: "track-row", row: 1 });
+    core.dispatchControlInput({ kind: "track-row", row: 1 });
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       selectedClipCell: { trackIndex: 1, sceneIndex: 0 },
     });
-    expect(core.getSnapshot().steps[1].active).toBe(false);
+    expect(core.snapshot().steps[1].active).toBe(false);
   });
 
   test("launching an Empty Clip Cell stops that Track without creating a clip", () => {
     const core = createOvertureCore();
     core.init();
-    const clipCount = countSnapshotClips(core.getSnapshot());
+    const clipCount = countSnapshotClips(core.snapshot());
 
-    core.applyInput({ kind: "menu" });
-    core.applyInput(padPress(0));
-    expect(core.getSnapshot()).toMatchObject({
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(0));
+    expect(core.snapshot()).toMatchObject({
       selectedClipCell: { trackIndex: 3, sceneIndex: 0 },
       selectedClipId: "clip-4",
     });
 
-    core.applyInput(padPress(7));
+    core.dispatchControlInput(padPress(7));
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
       selectedClipId: null,
     });
-    expect(countSnapshotClips(core.getSnapshot())).toBe(clipCount);
+    expect(countSnapshotClips(core.snapshot())).toBe(clipCount);
 
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "play" });
     core.drainHostCommands();
-    for (let i = 0; i < 48; i++) core.tick();
+    for (let i = 0; i < 48; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([]);
   });
 
@@ -266,7 +266,7 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    const snapshot = core.getSnapshot();
+    const snapshot = core.snapshot();
     expect(snapshot.steps.slice(0, 5)).toEqual([
       { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
       { index: 1, active: false, note: 61, velocity: 100, selected: false, playhead: false },
@@ -320,23 +320,23 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "play" });
-    for (let i = 0; i < 12 * 16; i++) core.tick();
+    core.dispatchControlInput({ kind: "play" });
+    for (let i = 0; i < 12 * 16; i++) core.advancePlaybackTick();
 
-    expect(getSnapshotPlayhead(core.getSnapshot())).toBe(0);
+    expect(getSnapshotPlayhead(core.snapshot())).toBe(0);
   });
 
   test("uses the playing clip sequence note when emitting Move commands", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "menu" });
-    core.applyInput(padPress(24));
-    core.applyInput({ kind: "menu" });
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(24));
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput({ kind: "play" });
     core.drainHostCommands();
 
-    for (let i = 0; i < 48; i++) core.tick();
+    for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
@@ -348,7 +348,7 @@ describe("Overture Next core", () => {
         velocity: 100,
       },
     ]);
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 64 },
     ]);
@@ -358,23 +358,23 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "shift", held: true });
-    core.applyInput({ kind: "track-row", row: 0 });
-    core.applyInput({ kind: "shift", held: false });
-    core.applyInput({ kind: "menu" });
-    core.applyInput(padPress(24));
-    core.applyInput({ kind: "menu" });
+    core.dispatchControlInput({ kind: "shift", held: true });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    core.dispatchControlInput({ kind: "shift", held: false });
+    core.dispatchControlInput({ kind: "menu" });
+    core.dispatchControlInput(padPress(24));
+    core.dispatchControlInput({ kind: "menu" });
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       selectedTrackIndex: 4,
       selectedTrackRoute: { kind: "schwung", schwungChainIndex: 0 },
       selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
       selectedClipId: "clip-5",
     });
 
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "play" });
     core.drainHostCommands();
-    for (let i = 0; i < 48; i++) core.tick();
+    for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
@@ -386,9 +386,9 @@ describe("Overture Next core", () => {
         velocity: 100,
       },
     ]);
-    core.applyInput({ kind: "step", step: 5 });
+    core.dispatchControlInput({ kind: "step", step: 5 });
     core.drainHostCommands();
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
       {
@@ -399,7 +399,7 @@ describe("Overture Next core", () => {
         velocity: 100,
       },
     ]);
-    for (let i = 0; i < 12; i++) core.tick();
+    for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 65 },
     ]);
@@ -409,7 +409,7 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "play" });
     expect(core.drainHostCommands()).toEqual([
       {
         kind: "track-note-on",
@@ -420,21 +420,21 @@ describe("Overture Next core", () => {
       },
     ]);
 
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "play" });
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
     ]);
 
-    core.applyInput({ kind: "shift", held: true });
-    core.applyInput({ kind: "track-row", row: 0 });
-    core.applyInput({ kind: "shift", held: false });
-    expect(core.getSnapshot()).toMatchObject({
+    core.dispatchControlInput({ kind: "shift", held: true });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    core.dispatchControlInput({ kind: "shift", held: false });
+    expect(core.snapshot()).toMatchObject({
       selectedTrackIndex: 4,
       selectedTrackRoute: { kind: "schwung", schwungChainIndex: 0 },
       selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
     });
 
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "play" });
     expect(core.drainHostCommands()).toEqual([
       {
         kind: "track-note-on",
@@ -450,18 +450,18 @@ describe("Overture Next core", () => {
     const core = createOvertureCore();
     core.init();
 
-    core.applyInput({ kind: "shift", held: true });
-    core.applyInput({ kind: "track-row", row: 0 });
-    core.applyInput({ kind: "shift", held: false });
+    core.dispatchControlInput({ kind: "shift", held: true });
+    core.dispatchControlInput({ kind: "track-row", row: 0 });
+    core.dispatchControlInput({ kind: "shift", held: false });
 
-    expect(core.getSnapshot()).toMatchObject({
+    expect(core.snapshot()).toMatchObject({
       activeView: "track",
       selectedTrackIndex: 4,
       selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
       selectedClipId: "clip-5",
     });
 
-    core.applyInput({ kind: "play" });
+    core.dispatchControlInput({ kind: "play" });
     expect(core.drainHostCommands()).toEqual([
       {
         kind: "track-note-on",
@@ -471,7 +471,7 @@ describe("Overture Next core", () => {
         velocity: 100,
       },
     ]);
-    for (let i = 0; i < 48; i++) core.tick();
+    for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
       { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
