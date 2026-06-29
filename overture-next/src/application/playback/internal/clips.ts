@@ -33,7 +33,12 @@ export function stopPlayingClipOnTrack(
   trackIndex: number,
 ): HostCommand[] {
   const trackPlayback = getTrackPlayback(playback, trackIndex);
-  const hostCommands = stopTrackPlayback(project, playback, trackPlayback, clock);
+  const hostCommands = stopTrackPlayback(
+    project,
+    playback,
+    trackPlayback,
+    clock,
+  );
   clearPlayingClip(trackPlayback);
   return hostCommands;
 }
@@ -45,7 +50,9 @@ export function stopAllPlayingClips(
 ): HostCommand[] {
   const hostCommands: HostCommand[] = [];
   for (const trackPlayback of playback.tracks) {
-    hostCommands.push(...stopTrackPlayback(project, playback, trackPlayback, clock));
+    hostCommands.push(
+      ...stopTrackPlayback(project, playback, trackPlayback, clock),
+    );
     clearPlayingClip(trackPlayback);
   }
   return hostCommands;
@@ -57,11 +64,17 @@ function stopTrackPlayback(
   trackPlayback: TrackPlaybackState,
   clock: Readonly<PlaybackClock>,
 ): HostCommand[] {
-  const pending = drainPendingNoteOffsForTrack(playback, trackPlayback.trackIndex);
+  const pending = drainPendingNoteOffsForTrack(
+    playback,
+    trackPlayback.trackIndex,
+  );
   if (pending.length > 0) return pending;
   const clip = getPlayingClip(project, trackPlayback);
   if (!clip) return [];
-  const step = getSequenceStep(clip.sequence, clock.playhead % clip.sequence.length);
+  const step = getSequenceStep(
+    clip.sequence,
+    clock.playhead % clip.sequence.length,
+  );
   if (!step?.active) return [];
   return [
     {

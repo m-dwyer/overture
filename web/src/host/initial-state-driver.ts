@@ -19,7 +19,9 @@ export interface InitialStateDriverPort {
   setInterval(callback: () => void, ms: number): unknown;
 }
 
-export function createGlobalInitialStateDriverPort(target: Window & typeof globalThis = window): InitialStateDriverPort {
+export function createGlobalInitialStateDriverPort(
+  target: Window & typeof globalThis = window,
+): InitialStateDriverPort {
   return {
     clearInterval(timer) {
       target.clearInterval(timer as number);
@@ -42,14 +44,19 @@ export function scheduleInitialState(
   port: InitialStateDriverPort = createGlobalInitialStateDriverPort(),
 ): () => void {
   const { trackNumber, view } = initialState;
-  if ((trackNumber == null || trackNumber === 1) && view !== "note") return () => {};
+  if ((trackNumber == null || trackNumber === 1) && view !== "note")
+    return () => {};
   let attempts = 0;
   const timer = port.setInterval(() => {
     attempts++;
     const state = port.readOvertureUiState();
     const settled = state && port.readOvertureRuntime()?.isReady();
     if (!settled && attempts < 40) return;
-    if (state && trackNumber != null && (readSelectedTrackIndex(state) | 0) !== trackNumber - 1) {
+    if (
+      state &&
+      trackNumber != null &&
+      (readSelectedTrackIndex(state) | 0) !== trackNumber - 1
+    ) {
       applyInitialTrack(emu, trackNumber, !!state.sessionView);
     }
     const nextState = port.readOvertureUiState() ?? state;
@@ -59,7 +66,11 @@ export function scheduleInitialState(
   return () => port.clearInterval(timer);
 }
 
-function applyInitialTrack(emu: Emulator, trackNumber: number, sessionView = false): void {
+function applyInitialTrack(
+  emu: Emulator,
+  trackNumber: number,
+  sessionView = false,
+): void {
   const trackIndex = trackNumber - 1;
   if (sessionView) {
     const note = 92 + trackIndex;

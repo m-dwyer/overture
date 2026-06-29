@@ -8,7 +8,10 @@ export interface SelectClipCellContext {
   readonly project: OvertureProject;
 }
 
-export function selectClipCell(context: SelectClipCellContext, coordinate: ClipCellCoordinateInput): OperationResult {
+export function selectClipCell(
+  context: SelectClipCellContext,
+  coordinate: ClipCellCoordinateInput,
+): OperationResult {
   context.project.clipCellAt(coordinate);
   context.control.selectClipCell(coordinate);
   return operationApplied();

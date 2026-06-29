@@ -21,4 +21,9 @@ export {
 } from "../../../overture-next/src/host/move-controls";
 
 /** Track-strip colours, top→bottom (Track 1..4): blue / magenta / orange / green. */
-export const TRACK_COLORS = ["#2840e0", "#ff20c0", "#c85a10", "#30ff50"] as const;
+export const TRACK_COLORS = [
+  "#2840e0",
+  "#ff20c0",
+  "#c85a10",
+  "#30ff50",
+] as const;

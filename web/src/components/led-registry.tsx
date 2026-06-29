@@ -16,7 +16,8 @@ export const LedRegistryProvider = Ctx.Provider;
 
 export function useLedRegistry(): LedRegistry {
   const reg = useContext(Ctx);
-  if (!reg) throw new Error("useLedRegistry must be used within a LedRegistryProvider");
+  if (!reg)
+    throw new Error("useLedRegistry must be used within a LedRegistryProvider");
   return reg;
 }
 

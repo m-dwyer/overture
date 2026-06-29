@@ -44,7 +44,7 @@ jobs:
 
           CHANGED="$(git diff --name-only "$BASE" "$GITHUB_SHA")"
           echo "$CHANGED"
-          if echo "$CHANGED" | grep -Eq '^(\.github/workflows/test\.yml$|web/|overture-next/|mise\.toml$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$)'; then
+          if echo "$CHANGED" | grep -Eq '^(\.github/workflows/test\.yml$|web/|overture-next/|mise\.toml$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|prettier\.config\.mjs$|\.prettierignore$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -67,7 +67,7 @@ jobs:
 
       - name: Install workspace dependencies
         if: steps.changes.outputs.run == 'true'
-        run: pnpm --filter @overture/tool --filter overture-web install --frozen-lockfile
+        run: pnpm --filter @overture/workspace --filter @overture/tool --filter @overture/web install --frozen-lockfile
 
       - name: Verify Overture Next
         if: steps.changes.outputs.run == 'true'

@@ -2,7 +2,14 @@
 // nav button, number keys 1–0 act as Steps 1–10. Pulled out of App.tsx as a plain
 // installer (adds window listeners, returns a disposer) so the mapping is testable
 // without React; App wraps it in a useEffect.
-import { CC, NAV, NOTE_OFF, NOTE_ON, STEP_CC0, type Send } from "../lib/move-controls";
+import {
+  CC,
+  NAV,
+  NOTE_OFF,
+  NOTE_ON,
+  STEP_CC0,
+  type Send,
+} from "../lib/move-controls";
 
 export type KeyboardHeldControl = "shift";
 
@@ -15,10 +22,13 @@ const stepFromCode = (code: string): number | null => {
 const targetIsEditable = (target: EventTarget | null): boolean => {
   const el = target as HTMLElement | null;
   if (!el) return false;
-  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
+  return (
+    el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable
+  );
 };
 
-const isShiftCode = (code: string): boolean => code === "ShiftLeft" || code === "ShiftRight";
+const isShiftCode = (code: string): boolean =>
+  code === "ShiftLeft" || code === "ShiftRight";
 
 interface KeyboardInputOptions {
   onHeldControlChange?(control: KeyboardHeldControl, held: boolean): void;
@@ -26,7 +36,10 @@ interface KeyboardInputOptions {
 
 /** Wire keyboard input to `send`; returns a disposer that releases held keys and
  *  removes the listeners. */
-export function installKeyboardInput(send: Send, options: KeyboardInputOptions = {}): () => void {
+export function installKeyboardInput(
+  send: Send,
+  options: KeyboardInputOptions = {},
+): () => void {
   const held = new Set<string>();
 
   const onDown = (e: KeyboardEvent) => {

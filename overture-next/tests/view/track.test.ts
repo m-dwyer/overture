@@ -16,8 +16,22 @@ describe("Overture Next Track View module", () => {
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
-        { index: 0, active: true, note: 60, velocity: 100, selected: false, playhead: false },
-        { index: 1, active: false, note: 61, velocity: 100, selected: true, playhead: true },
+        {
+          index: 0,
+          active: true,
+          note: 60,
+          velocity: 100,
+          selected: false,
+          playhead: false,
+        },
+        {
+          index: 1,
+          active: false,
+          note: 61,
+          velocity: 100,
+          selected: true,
+          playhead: true,
+        },
       ],
     };
 
@@ -48,8 +62,22 @@ describe("Overture Next Track View module", () => {
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
-        { index: 0, active: true, note: 60, velocity: 100, selected: false, playhead: false },
-        { index: 1, active: false, note: 61, velocity: 100, selected: true, playhead: true },
+        {
+          index: 0,
+          active: true,
+          note: 60,
+          velocity: 100,
+          selected: false,
+          playhead: false,
+        },
+        {
+          index: 1,
+          active: false,
+          note: 61,
+          velocity: 100,
+          selected: true,
+          playhead: true,
+        },
       ],
     };
 

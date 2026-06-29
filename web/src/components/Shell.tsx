@@ -60,11 +60,14 @@ export function Shell({
       el.style.boxShadow = `inset 0 0 9px -2px ${c}, 0 0 14px -4px ${c}`;
       el.style.color = "#f8fafc";
     };
-    const isTrack = (cc: number): boolean => (ROW_CC as readonly number[]).includes(cc);
+    const isTrack = (cc: number): boolean =>
+      (ROW_CC as readonly number[]).includes(cc);
     return {
       setLED(index, color) {
-        if (index >= STEP_CC0 && index <= STEP_CC0 + 15) fill(reg.steps.get(index), color);
-        else if (index >= PAD_NOTE0 && index <= PAD_NOTE0 + 31) fill(reg.pads.get(index), color);
+        if (index >= STEP_CC0 && index <= STEP_CC0 + 15)
+          fill(reg.steps.get(index), color);
+        else if (index >= PAD_NOTE0 && index <= PAD_NOTE0 + 31)
+          fill(reg.pads.get(index), color);
       },
       setButtonLED(cc, color) {
         const el = reg.buttons.get(cc);

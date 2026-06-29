@@ -9,10 +9,10 @@
     "deploy": "scripts/deploy.sh",
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "test": "vitest run",
-    "test:lint-rules": "node scripts/test-state-ownership-rule.mjs && node scripts/test-internal-privacy-rules.mjs && node scripts/check-internal-module-contracts.mjs",
+    "lint:rules": "node scripts/test-state-ownership-rule.mjs && node scripts/test-internal-privacy-rules.mjs && node scripts/check-internal-module-contracts.mjs",
+    "lint:arch": "depcruise -c .dependency-cruiser.cjs src ui",
     "typecheck": "tsc -p tsconfig.json",
-    "depcruise": "depcruise -c .dependency-cruiser.cjs src ui",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:lint-rules && pnpm test && pnpm depcruise"
+    "verify": "pnpm typecheck && pnpm lint && pnpm lint:rules && pnpm test && pnpm lint:arch"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

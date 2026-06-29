@@ -1,5 +1,8 @@
 import type { TrackRoute } from "../domain/project";
-import type { ActiveView, ControlSurfaceContextSnapshot } from "../state/control-surface-context";
+import type {
+  ActiveView,
+  ControlSurfaceContextSnapshot,
+} from "../state/control-surface-context";
 import type { ControlInput } from "./controls/types";
 import type { HostCommand } from "./host-commands";
 

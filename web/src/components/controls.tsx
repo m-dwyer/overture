@@ -8,7 +8,14 @@
 // chords by physically holding Shift while pressing another button, which is
 // impossible with a single mouse pointer - so latched buttons stay held (CC 127)
 // until clicked again (CC 0), letting you click other controls in between.
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode, type Ref } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { CC, NOTE_OFF, NOTE_ON, type Send } from "@/lib/move-controls";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -79,7 +86,11 @@ export function MomentaryButton({
     <button
       ref={refCb}
       aria-pressed={held || heldExternally}
-      className={cn("select-none", (held || heldExternally) && "pressed", className)}
+      className={cn(
+        "select-none",
+        (held || heldExternally) && "pressed",
+        className,
+      )}
       onClick={toggle}
       {...rest}
     >
@@ -130,7 +141,15 @@ interface NoteProps {
 }
 
 /** A note button: note-on (vel) on press, note-off on release. Used by pads + steps. */
-export function NoteButton({ note, vel, send, className, children, refCb, ...rest }: NoteProps) {
+export function NoteButton({
+  note,
+  vel,
+  send,
+  className,
+  children,
+  refCb,
+  ...rest
+}: NoteProps) {
   return (
     <button
       ref={refCb}

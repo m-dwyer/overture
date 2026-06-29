@@ -58,9 +58,11 @@ describe("Overture Next Control Surface Context", () => {
   test("rejects invalid selected Clip Cell and Step values", () => {
     const control = createInitialControlSurfaceContext();
 
-    expect(() => control.selectClipCell({ trackIndex: 8, sceneIndex: 0 })).toThrow(
-      "Invalid Track Index 8; expected integer from 0 to 7",
+    expect(() =>
+      control.selectClipCell({ trackIndex: 8, sceneIndex: 0 }),
+    ).toThrow("Invalid Track Index 8; expected integer from 0 to 7");
+    expect(() => control.selectStep(16)).toThrow(
+      "Invalid Step Index 16; expected integer from 0 to 15",
     );
-    expect(() => control.selectStep(16)).toThrow("Invalid Step Index 16; expected integer from 0 to 15");
   });
 });

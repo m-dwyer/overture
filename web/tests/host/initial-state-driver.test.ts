@@ -1,13 +1,26 @@
 import { describe, expect, test } from "vitest";
-import { CC, NAV, NOTE_OFF, NOTE_ON, ROW_CC } from "../../src/lib/move-controls";
-import { scheduleInitialState, type InitialStateDriverPort, type OvertureUiStateSnapshot } from "../../src/host/initial-state-driver";
+import {
+  CC,
+  NAV,
+  NOTE_OFF,
+  NOTE_ON,
+  ROW_CC,
+} from "../../src/lib/move-controls";
+import {
+  scheduleInitialState,
+  type InitialStateDriverPort,
+  type OvertureUiStateSnapshot,
+} from "../../src/host/initial-state-driver";
 import type { Emulator } from "../../src/host/emulator";
 import { createMockDsp } from "../../src/mock-dsp";
 
 describe("initial-state driver", () => {
   test("selects an initial track through control-surface MIDI after runtime settles", () => {
     const emu = createRecorderEmulator();
-    const port = createManualPort({ selectedTrackIndex: 0, sessionView: false });
+    const port = createManualPort({
+      selectedTrackIndex: 0,
+      sessionView: false,
+    });
 
     scheduleInitialState(emu, { trackNumber: 5, view: null }, port);
     port.fire();
@@ -38,7 +51,9 @@ describe("initial-state driver", () => {
   });
 });
 
-function createManualPort(state: OvertureUiStateSnapshot): InitialStateDriverPort & { cleared: number; fire(): void } {
+function createManualPort(
+  state: OvertureUiStateSnapshot,
+): InitialStateDriverPort & { cleared: number; fire(): void } {
   let callback: (() => void) | null = null;
   return {
     cleared: 0,

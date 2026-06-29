@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { NAV, NOTE_OFF, NOTE_ON, PAD_NOTE0, STEP_CC0 } from "../../../overture-next/src/host/move-controls";
+import {
+  NAV,
+  NOTE_OFF,
+  NOTE_ON,
+  PAD_NOTE0,
+  STEP_CC0,
+} from "../../../overture-next/src/host/move-controls";
 import { OVERTURE_LED_COLOR } from "../../../overture-next/src/ports/led-colors";
 import { createHarness } from "./harness.js";
 
@@ -18,7 +24,11 @@ describe("overture-next emulator integration", () => {
       sessionView: false,
       playing: false,
     });
-    expect(h.snapshot().prints.length + h.snapshot().rects.length + h.snapshot().pixels.length).toBeGreaterThan(0);
+    expect(
+      h.snapshot().prints.length +
+        h.snapshot().rects.length +
+        h.snapshot().pixels.length,
+    ).toBeGreaterThan(0);
     expect(h.rec.litLedCount()).toBeGreaterThan(0);
   });
 
@@ -46,7 +56,9 @@ describe("overture-next emulator integration", () => {
     h.cc(NAV.Shift, 127);
     h.step(1);
 
-    expect([0, 8, 16, 24].map((padIndex) => h.rec.leds.get(PAD_NOTE0 + padIndex))).toEqual([
+    expect(
+      [0, 8, 16, 24].map((padIndex) => h.rec.leds.get(PAD_NOTE0 + padIndex)),
+    ).toEqual([
       OVERTURE_LED_COLOR.hint,
       OVERTURE_LED_COLOR.hint,
       OVERTURE_LED_COLOR.hint,

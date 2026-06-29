@@ -20,8 +20,12 @@ export function createTracks(trackCount = TRACK_COUNT): Track[] {
 }
 
 export function createDefaultTrackRoute(trackIndex: number): TrackRoute {
-  if (trackIndex < DEFAULT_MOVE_ROUTE_TRACK_COUNT) return { kind: "move", moveTrackTarget: trackIndex };
-  return { kind: "schwung", schwungChainIndex: trackIndex - DEFAULT_MOVE_ROUTE_TRACK_COUNT };
+  if (trackIndex < DEFAULT_MOVE_ROUTE_TRACK_COUNT)
+    return { kind: "move", moveTrackTarget: trackIndex };
+  return {
+    kind: "schwung",
+    schwungChainIndex: trackIndex - DEFAULT_MOVE_ROUTE_TRACK_COUNT,
+  };
 }
 
 export function getTrack(tracks: readonly Track[], index: number): Track {

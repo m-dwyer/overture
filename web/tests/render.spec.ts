@@ -14,14 +14,19 @@ import {
   SCHWUNG_SLOT_CHANNEL_FIRST,
   STEP_CC0,
 } from "../../overture-next/src/host/move-controls";
-import { SESSION_SCENE_COLUMNS, SESSION_TRACK_ROWS } from "../../overture-next/src/shared/session-grid";
+import {
+  SESSION_SCENE_COLUMNS,
+  SESSION_TRACK_ROWS,
+} from "../../overture-next/src/shared/session-grid";
 
 const MIDI_PRESS = 127;
 const MIDI_RELEASE = 0;
 const TRACK_5_INDEX = TRACK_BANK_SIZE;
 const TRACK_5_ROW = TRACK_5_INDEX % TRACK_BANK_SIZE;
 const TRACK_5_SCENE_INDEX = 0;
-const TRACK_5_DEFAULT_CLIP_PAD = (SESSION_TRACK_ROWS - 1 - TRACK_5_ROW) * SESSION_SCENE_COLUMNS + TRACK_5_SCENE_INDEX;
+const TRACK_5_DEFAULT_CLIP_PAD =
+  (SESSION_TRACK_ROWS - 1 - TRACK_5_ROW) * SESSION_SCENE_COLUMNS +
+  TRACK_5_SCENE_INDEX;
 const TOGGLED_STEP_INDEX = 5;
 const defaultSequence = createDefaultSequence();
 const DEFAULT_STEP_4_NOTE = defaultSequence.steps[4].note;
@@ -42,7 +47,13 @@ type PageGlobal = typeof globalThis & {
     midiIn(status: number, d1: number, d2: number): void;
     schwung?: {
       diagnostics(): {
-        midi: Array<{ d1: number; d2: number; direction: string; slot: number; status: number }>;
+        midi: Array<{
+          d1: number;
+          d2: number;
+          direction: string;
+          slot: number;
+          status: number;
+        }>;
       };
     };
   };
@@ -55,7 +66,9 @@ type PageGlobal = typeof globalThis & {
 test("emulator boots the real tool UI and renders", async ({ page }) => {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
-  page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
+  page.on("console", (m) => {
+    if (m.type() === "error") consoleErrors.push(m.text());
+  });
   page.on("pageerror", (e) => pageErrors.push(e.message));
 
   await page.goto("/");
@@ -75,18 +88,30 @@ test("emulator boots the real tool UI and renders", async ({ page }) => {
     return n;
   });
   expect(litLeds, "tool should light some LEDs").toBeGreaterThan(0);
-  if (consoleErrors.length) console.log("console errors:\n" + consoleErrors.slice(0, 25).join("\n"));
+  if (consoleErrors.length)
+    console.log("console errors:\n" + consoleErrors.slice(0, 25).join("\n"));
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
 });
 
-test("startup query selects track and note view after init settles", async ({ page }) => {
+test("startup query selects track and note view after init settles", async ({
+  page,
+}) => {
   await page.goto("/?track=5&view=note");
   await waitReady(page);
   await page.waitForFunction((trackIndex) => {
-    const state = (globalThis as {
-      overtureUiState?: { selectedTrackIndex?: number; activeTrack?: number; sessionView?: boolean };
-    }).overtureUiState;
-    return (state?.selectedTrackIndex ?? state?.activeTrack) === trackIndex && state?.sessionView === false;
+    const state = (
+      globalThis as {
+        overtureUiState?: {
+          selectedTrackIndex?: number;
+          activeTrack?: number;
+          sessionView?: boolean;
+        };
+      }
+    ).overtureUiState;
+    return (
+      (state?.selectedTrackIndex ?? state?.activeTrack) === trackIndex &&
+      state?.sessionView === false
+    );
   }, TRACK_5_INDEX);
 });
 
@@ -106,15 +131,24 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
     const g = globalThis as PageGlobal;
     const orig = g.onMidiMessageInternal;
     g.__midi = [];
-    g.onMidiMessageInternal = (d: number[]) => { g.__midi.push([...d]); return orig?.(d); };
+    g.onMidiMessageInternal = (d: number[]) => {
+      g.__midi.push([...d]);
+      return orig?.(d);
+    };
   });
   await page.locator("#shell .step").first().click();
   const midi = await page.evaluate(() => (globalThis as PageGlobal).__midi);
-  expect(midi).toEqual([[NOTE_ON, STEP_CC0, MIDI_PRESS], [NOTE_OFF, STEP_CC0, MIDI_RELEASE]]);
+  expect(midi).toEqual([
+    [NOTE_ON, STEP_CC0, MIDI_PRESS],
+    [NOTE_OFF, STEP_CC0, MIDI_RELEASE],
+  ]);
 
   // (b) Shift+Menu opens the global menu → the OLED must change.
   const mi = (s: number, d1: number, d2: number) =>
-    page.evaluate(([a, b, c]) => (globalThis as PageGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
+    page.evaluate(
+      ([a, b, c]) => (globalThis as PageGlobal).OVT.midiIn(a, b, c),
+      [s, d1, d2],
+    );
   await mi(CC, NAV.Shift, MIDI_PRESS);
   await mi(CC, NAV.Menu, MIDI_PRESS);
   await mi(CC, NAV.Menu, MIDI_RELEASE);
@@ -124,7 +158,10 @@ test("hardware shell emits device MIDI and drives the UI", async ({ page }) => {
 
   const before = await readFile("shot-session.png");
   const after = await readFile("shot-menu.png");
-  expect(Buffer.compare(before, after), "OLED should change when input is received").not.toBe(0);
+  expect(
+    Buffer.compare(before, after),
+    "OLED should change when input is received",
+  ).not.toBe(0);
   expect(pageErrors, pageErrors.join("\n")).toEqual([]);
 });
 
@@ -136,7 +173,10 @@ test("keyboard Shift plus number key sends Shift + Step", async ({ page }) => {
     const g = globalThis as PageGlobal;
     const orig = g.onMidiMessageInternal;
     g.__midi = [];
-    g.onMidiMessageInternal = (d: number[]) => { g.__midi.push([...d]); return orig?.(d); };
+    g.onMidiMessageInternal = (d: number[]) => {
+      g.__midi.push([...d]);
+      return orig?.(d);
+    };
   });
 
   const shiftButton = page.getByLabel("Shift", { exact: true });
@@ -162,7 +202,10 @@ test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
   await waitReady(page);
 
   const mi = (s: number, d1: number, d2: number) =>
-    page.evaluate(([a, b, c]) => (globalThis as PageGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
+    page.evaluate(
+      ([a, b, c]) => (globalThis as PageGlobal).OVT.midiIn(a, b, c),
+      [s, d1, d2],
+    );
 
   await mi(CC, NAV.Shift, MIDI_PRESS);
   await mi(CC, ROW_CC[TRACK_5_ROW], MIDI_PRESS);
@@ -173,7 +216,9 @@ test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
   await mi(CC, NAV.Play, MIDI_PRESS);
   await advanceTicks(page, TICKS_TO_STEP_4);
 
-  const initialMidi = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
+  const initialMidi = await page.evaluate(
+    () => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? [],
+  );
   expect(initialMidi).toContainEqual({
     d1: DEFAULT_STEP_4_NOTE,
     d2: DEFAULT_STEP_VELOCITY,
@@ -185,7 +230,9 @@ test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
   await mi(NOTE_ON, STEP_CC0 + TOGGLED_STEP_INDEX, MIDI_PRESS);
   await advanceTicks(page, TICKS_TO_NEXT_STEP);
 
-  const editedMidi = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
+  const editedMidi = await page.evaluate(
+    () => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? [],
+  );
   expect(editedMidi).toContainEqual({
     d1: DEFAULT_STEP_4_NOTE,
     d2: MIDI_RELEASE,
@@ -201,7 +248,9 @@ test("Track 5 playback reaches the browser Schwung chain", async ({ page }) => {
     status: SCHWUNG_TRACK_5_NOTE_ON,
   });
   await advanceTicks(page, TICKS_TO_NEXT_STEP);
-  const editedMidiAfterGate = await page.evaluate(() => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? []);
+  const editedMidiAfterGate = await page.evaluate(
+    () => (globalThis as PageGlobal).OVT.schwung?.diagnostics().midi ?? [],
+  );
   expect(editedMidiAfterGate).toContainEqual({
     d1: TOGGLED_STEP_NOTE,
     d2: MIDI_RELEASE,

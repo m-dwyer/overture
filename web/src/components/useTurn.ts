@@ -12,18 +12,23 @@ const STEP_PX = 7; // drag distance per detent
 const DEG_PER_TICK = 18; // visual rotation per detent
 const SCROLL_TOUCH_MS = 220; // how long after the last scroll the knob reads "released"
 
-export function useTurn<T extends HTMLElement>(emit: (dir: 1 | -1) => void, onTouch?: (on: boolean) => void) {
+export function useTurn<T extends HTMLElement>(
+  emit: (dir: 1 | -1) => void,
+  onTouch?: (on: boolean) => void,
+) {
   const [angle, setAngle] = useState(0);
   const ref = useRef<T>(null);
   const drag = useRef({ active: false, lastY: 0, acc: 0 });
-  const scrollTouch = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const scrollTouch = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   const tick = useCallback(
     (dir: 1 | -1) => {
       emit(dir);
       setAngle((a) => a + dir * DEG_PER_TICK);
     },
-    [emit]
+    [emit],
   );
 
   const onPointerDown = useCallback(
@@ -33,7 +38,7 @@ export function useTurn<T extends HTMLElement>(emit: (dir: 1 | -1) => void, onTo
       drag.current = { active: true, lastY: e.clientY, acc: 0 };
       onTouch?.(true);
     },
-    [onTouch]
+    [onTouch],
   );
 
   const onPointerMove = useCallback(
@@ -51,7 +56,7 @@ export function useTurn<T extends HTMLElement>(emit: (dir: 1 | -1) => void, onTo
         tick(-1);
       }
     },
-    [tick]
+    [tick],
   );
 
   const end = useCallback(() => {
@@ -82,6 +87,11 @@ export function useTurn<T extends HTMLElement>(emit: (dir: 1 | -1) => void, onTo
   return {
     angle,
     ref,
-    handlers: { onPointerDown, onPointerMove, onPointerUp: end, onPointerCancel: end },
+    handlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp: end,
+      onPointerCancel: end,
+    },
   };
 }

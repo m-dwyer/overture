@@ -12,7 +12,10 @@ export interface AuditionNoteContext {
   readonly project: OvertureProject;
 }
 
-export function auditionNote(context: AuditionNoteContext, command: AuditionNoteCommand): OperationResult {
+export function auditionNote(
+  context: AuditionNoteContext,
+  command: AuditionNoteCommand,
+): OperationResult {
   const route = context.project.trackRoute(command.trackIndex);
   const hostCommand = command.held
     ? {

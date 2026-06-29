@@ -41,6 +41,14 @@ run = "pnpm -C site build"
 description = "Type-check the active Overture tool package and web harness"
 run = "pnpm typecheck"
 
+[tasks.format]
+description = "Format the workspace"
+run = "pnpm format"
+
+[tasks.format-check]
+description = "Check workspace formatting"
+run = "pnpm format:check"
+
 [tasks.verify]
 description = "Current Overture ratchet: active tool package checks + web focused tests"
 run = "pnpm verify"

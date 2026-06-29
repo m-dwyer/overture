@@ -2,7 +2,12 @@ import { describe, expect, test } from "vitest";
 import type { HostCommand } from "../../src/application/types";
 import type { OvertureHostPorts } from "../../src/ports/host-ports";
 import type { ControlSurfacePort } from "../../src/ports/inbound";
-import type { DisplayPort, LedPort, MidiPort, RuntimePort } from "../../src/ports/outbound";
+import type {
+  DisplayPort,
+  LedPort,
+  MidiPort,
+  RuntimePort,
+} from "../../src/ports/outbound";
 import { createOvertureRuntime } from "../../src/runtime/overture-runtime";
 
 describe("Overture Next runtime", () => {
@@ -60,7 +65,12 @@ describe("Overture Next runtime", () => {
     runtime.onUnload();
 
     expect(commandLog).toEqual([
-      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
+      {
+        kind: "track-note-off",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 64,
+      },
     ]);
   });
 
@@ -89,7 +99,12 @@ describe("Overture Next runtime", () => {
         note: 60,
         velocity: 100,
       },
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+      },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -107,7 +122,12 @@ describe("Overture Next runtime", () => {
         note: 60,
         velocity: 100,
       },
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+      },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -115,7 +135,12 @@ describe("Overture Next runtime", () => {
         note: 64,
         velocity: 100,
       },
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 64 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 64,
+      },
     ]);
 
     runtime.render();
@@ -164,7 +189,9 @@ function createRuntimeTestAdapter(
   };
   const controlSurface: ControlSurfacePort = {
     parseMoveInput(data) {
-      return data[0] === 0xb0 && data[1] === 85 && data[2] > 0 ? { kind: "play" } : null;
+      return data[0] === 0xb0 && data[1] === 85 && data[2] > 0
+        ? { kind: "play" }
+        : null;
     },
   };
   const midi: MidiPort = {

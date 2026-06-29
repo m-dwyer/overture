@@ -6,8 +6,14 @@ import type { GuideConfig, Scene, Section } from "./types";
 // cross-links, a table of contents, a controls cheat-sheet, the captured
 // walkthrough sections, then a glossary. This markdown is the canonical document;
 // the standalone HTML guide is rendered from the same string.
-export function buildGuideMarkdown(sections: Section[], scenes: Scene[], cfg: GuideConfig): string {
-  const linkLine = cfg.links.map((l) => `${md.link(l.label, l.href)} — ${l.note}`).join(" · ");
+export function buildGuideMarkdown(
+  sections: Section[],
+  scenes: Scene[],
+  cfg: GuideConfig,
+): string {
+  const linkLine = cfg.links
+    .map((l) => `${md.link(l.label, l.href)} — ${l.note}`)
+    .join(" · ");
 
   const blocks: string[] = [
     md.h1(cfg.title),
@@ -30,8 +36,8 @@ export function buildGuideMarkdown(sections: Section[], scenes: Scene[], cfg: Gu
     md.h2("Controls cheat-sheet"),
     md.table(
       ["Control", "Gesture", "What it does"],
-      cfg.cheatSheet.map((r) => [r.control, r.gesture, r.does])
-    )
+      cfg.cheatSheet.map((r) => [r.control, r.gesture, r.does]),
+    ),
   );
 
   // The captured walkthrough.
@@ -39,7 +45,11 @@ export function buildGuideMarkdown(sections: Section[], scenes: Scene[], cfg: Gu
     blocks.push(md.h2(section.title));
     for (const para of section.body) blocks.push(md.p(para));
     for (const shot of section.shots) {
-      blocks.push(md.h3(shot.title), md.img(shot.title, `assets/${shot.file}`), md.p(shot.caption));
+      blocks.push(
+        md.h3(shot.title),
+        md.img(shot.title, `assets/${shot.file}`),
+        md.p(shot.caption),
+      );
     }
   }
 
@@ -48,15 +58,19 @@ export function buildGuideMarkdown(sections: Section[], scenes: Scene[], cfg: Gu
     md.h2("Glossary"),
     md.table(
       ["Term", "Meaning"],
-      cfg.glossary.map((g) => [g.term, g.def])
-    )
+      cfg.glossary.map((g) => [g.term, g.def]),
+    ),
   );
   if (linkLine) blocks.push("---", md.p(linkLine));
 
   return md.doc(blocks);
 }
 
-export function writeGuide(sections: Section[], scenes: Scene[], cfg: GuideConfig): string {
+export function writeGuide(
+  sections: Section[],
+  scenes: Scene[],
+  cfg: GuideConfig,
+): string {
   const markdown = buildGuideMarkdown(sections, scenes, cfg);
   writeFileSync(cfg.mdPath, markdown, "utf8");
   return markdown;

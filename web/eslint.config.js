@@ -3,12 +3,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   {
-    ignores: [
-      "dist/**",
-      "test-results/**",
-      "coverage/**",
-      "node_modules/**",
-    ],
+    ignores: ["dist/**", "test-results/**", "coverage/**", "node_modules/**"],
   },
   {
     files: ["**/*.{ts,tsx}"],

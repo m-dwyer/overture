@@ -2,7 +2,13 @@
 // it owns the canvas/log/shell refs and the OLED readable⇄exact toggle, and an effect
 // instantiates the browser host harness from the view-owned sinks. The browser
 // binding logic lives in src/host/*; the host core stays untouched.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   createBrowserEmulatorHarness,
   type BrowserEmulatorHarness,
@@ -11,7 +17,10 @@ import {
 import { createGlobalBrowserObservability } from "@/host/browser-observability";
 import { createBrowserFileStore } from "@/host/browser-file-store.js";
 import type { LedSink } from "@/host/sinks.js";
-import { createCanvasDisplaySink, OLED_READABLE_SCALE } from "@/host/canvas-display-sink";
+import {
+  createCanvasDisplaySink,
+  OLED_READABLE_SCALE,
+} from "@/host/canvas-display-sink";
 import { createShellLedSink } from "@/host/shell-led-sink";
 import { installKeyboardInput } from "@/host/keyboard-input";
 import type { Send } from "@/lib/move-controls";
@@ -56,7 +65,8 @@ export function App() {
   const [manualGesture, setManualGesture] = useState("");
   const [manualControls, setManualControls] = useState("");
   const [manualShowing, setManualShowing] = useState("");
-  const [schwungDiagnostics, setSchwungDiagnostics] = useState<BrowserHarnessDiagnostics | null>(null);
+  const [schwungDiagnostics, setSchwungDiagnostics] =
+    useState<BrowserHarnessDiagnostics | null>(null);
   const [heldControls, setHeldControls] = useState<readonly string[]>([]);
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
@@ -73,12 +83,15 @@ export function App() {
       installKeyboardInput(send, {
         onHeldControlChange(control, held) {
           setHeldControls((current) => {
-            if (held) return current.includes(control) ? current : [...current, control];
+            if (held)
+              return current.includes(control)
+                ? current
+                : [...current, control];
             return current.filter((heldControl) => heldControl !== control);
           });
         },
       }),
-    [send]
+    [send],
   );
 
   // The shell hands up its imperative LED controller once its refs are populated.
@@ -88,7 +101,7 @@ export function App() {
       for (const [i, c] of ledsMap) leds.setLED(i, c);
       for (const [cc, c] of buttonLedsMap) leds.setButtonLED(cc, c);
     },
-    [ledsMap, buttonLedsMap]
+    [ledsMap, buttonLedsMap],
   );
 
   useEffect(() => {
@@ -114,7 +127,7 @@ export function App() {
       canvas,
       () => oledModeRef.current.scale,
       () => oledModeRef.current.smooth,
-      observabilityRef.current
+      observabilityRef.current,
     );
     const leds: LedSink = createShellLedSink({
       ledsMap,
@@ -168,7 +181,9 @@ export function App() {
   const legend: { n: number; name: string }[] = (() => {
     try {
       const parsed = JSON.parse(manualControls || "[]") as unknown;
-      return Array.isArray(parsed) ? (parsed as { n: number; name: string }[]) : [];
+      return Array.isArray(parsed)
+        ? (parsed as { n: number; name: string }[])
+        : [];
     } catch {
       return [];
     }
@@ -177,7 +192,13 @@ export function App() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="flex min-h-[100dvh] w-full flex-col gap-3 p-4 font-mono">
-        <h1 className={manualMode ? "sr-only" : "shrink-0 text-center text-xs font-semibold tracking-[0.2em] text-muted"}>
+        <h1
+          className={
+            manualMode
+              ? "sr-only"
+              : "shrink-0 text-center text-xs font-semibold tracking-[0.2em] text-muted"
+          }
+        >
           OVERTURE — EMULATOR
         </h1>
         {/* Centring wrapper fills the viewport; the inner row stays the panel's
@@ -191,9 +212,21 @@ export function App() {
             {/* Screen pinned at the top, log grows to fill so its bottom lines up
                 with the bottom of the panel. */}
             <div className="flex w-[min(92vw,440px)] flex-col items-center gap-2">
-              <OledScreen canvasRef={canvasRef} scale={oledScale} smooth={readable} />
+              <OledScreen
+                canvasRef={canvasRef}
+                scale={oledScale}
+                smooth={readable}
+              />
               <div className="flex w-full items-center justify-between gap-2">
-                <div id="status" ref={statusRef} className={manualMode ? "sr-only" : "min-h-[1.4em] shrink-0 text-xs text-accent"}>
+                <div
+                  id="status"
+                  ref={statusRef}
+                  className={
+                    manualMode
+                      ? "sr-only"
+                      : "min-h-[1.4em] shrink-0 text-xs text-accent"
+                  }
+                >
                   booting…
                 </div>
                 {manualMode ? null : (
@@ -210,7 +243,11 @@ export function App() {
               {/* The log is absolutely positioned inside a flex-filled wrapper so
                   its growing content can never inflate the column (which would
                   otherwise drag the panel taller via items-stretch) — it scrolls. */}
-              <div className={manualMode ? "hidden" : "relative min-h-[180px] w-full flex-1"}>
+              <div
+                className={
+                  manualMode ? "hidden" : "relative min-h-[180px] w-full flex-1"
+                }
+              >
                 <pre
                   id="log"
                   ref={logRef}
@@ -219,13 +256,16 @@ export function App() {
               </div>
             </div>
             <Shell send={send} onReady={onReady} heldControls={heldControls} />
-            {manualMode && (manualGesture || legend.length > 0 || manualShowing) ? (
+            {manualMode &&
+            (manualGesture || legend.length > 0 || manualShowing) ? (
               <div className="order-first w-[min(92vw,940px)] overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
                 {/* Brand strip — guide-neutral: the generated doc supplies its own
                     title (beginner vs reference), so the in-figure banner only
                     carries the product brand, not a documentation label. */}
                 <div className="flex items-center gap-2 border-b border-line bg-panel-2 px-4 py-1.5">
-                  <span className="text-[11px] font-bold tracking-[0.25em] text-accent">OVERTURE</span>
+                  <span className="text-[11px] font-bold tracking-[0.25em] text-accent">
+                    OVERTURE
+                  </span>
                 </div>
                 <div className="px-4 py-3 text-left">
                   {manualGesture ? (
@@ -251,7 +291,9 @@ export function App() {
                   ) : null}
                   {manualShowing ? (
                     <p className="mt-2.5 text-xs leading-snug text-muted">
-                      <span className="font-semibold text-text">Showing:&nbsp;</span>
+                      <span className="font-semibold text-text">
+                        Showing:&nbsp;
+                      </span>
                       {manualShowing}
                     </p>
                   ) : null}

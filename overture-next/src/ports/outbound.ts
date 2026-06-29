@@ -6,7 +6,13 @@ export type SchwungMidiMessage = readonly [number, number, number];
 
 export interface SplashSurface {
   clear(): void;
-  fillRect(x: number, y: number, width: number, height: number, color: number): void;
+  fillRect(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color: number,
+  ): void;
 }
 
 export interface RuntimePort {
@@ -17,7 +23,14 @@ export interface DisplayPort {
   splashSurface: SplashSurface;
   clear(): void;
   print(x: number, y: number, text: string, color: number): void;
-  rect(x: number, y: number, width: number, height: number, color: number, fill: boolean): void;
+  rect(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    color: number,
+    fill: boolean,
+  ): void;
   flush(): void;
 }
 

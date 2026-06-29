@@ -3,17 +3,25 @@ import type { HeldSurfaceControl } from "../../state/control-surface-context";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
 export interface IntentHandlers {
-  setSurfaceControlHeld(control: HeldSurfaceControl, held: boolean): DomainIntentTransaction;
+  setSurfaceControlHeld(
+    control: HeldSurfaceControl,
+    held: boolean,
+  ): DomainIntentTransaction;
   toggleTransport(): DomainIntentTransaction;
   toggleView(): DomainIntentTransaction;
   selectTrack(trackIndex: number): DomainIntentTransaction;
   toggleStep(stepIndex: number): DomainIntentTransaction;
-  auditionNote(command: Extract<DomainIntent, { kind: "audition-note" }>): DomainIntentTransaction;
+  auditionNote(
+    command: Extract<DomainIntent, { kind: "audition-note" }>,
+  ): DomainIntentTransaction;
   selectClipCell(coordinate: ClipCellCoordinateInput): DomainIntentTransaction;
   launchClipCell(coordinate: ClipCellCoordinateInput): DomainIntentTransaction;
 }
 
-export function applyIntent(intent: DomainIntent, handlers: IntentHandlers): DomainIntentTransaction {
+export function applyIntent(
+  intent: DomainIntent,
+  handlers: IntentHandlers,
+): DomainIntentTransaction {
   if (intent.kind === "set-surface-control-held") {
     return handlers.setSurfaceControlHeld(intent.control, intent.held);
   }

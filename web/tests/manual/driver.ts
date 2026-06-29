@@ -78,11 +78,13 @@ type StateBag = Record<string, unknown> | undefined;
 export function makeDriver(page: Page): Driver {
   const pkt = (status: number, d1: number, d2: number) =>
     page.evaluate(
-      ([s, a, b]) => (globalThis as typeof globalThis & { OVT: Ovt }).OVT.midiIn(s, a, b),
-      [status, d1, d2]
+      ([s, a, b]) =>
+        (globalThis as typeof globalThis & { OVT: Ovt }).OVT.midiIn(s, a, b),
+      [status, d1, d2],
     );
 
-  const settle = (ms = 250) => advanceTicks(page, Math.max(1, Math.round(ms / MS_PER_TICK)));
+  const settle = (ms = 250) =>
+    advanceTicks(page, Math.max(1, Math.round(ms / MS_PER_TICK)));
 
   async function boot() {
     await page.goto("/?manual=1");
@@ -125,7 +127,8 @@ export function makeDriver(page: Page): Driver {
   }
 
   async function holdPads(pads: number[]) {
-    for (const pad of pads) await pkt(NOTE_ON, PAD_NOTE0 + (pad - 1), PAD_VELOCITY);
+    for (const pad of pads)
+      await pkt(NOTE_ON, PAD_NOTE0 + (pad - 1), PAD_VELOCITY);
     await settle();
   }
 
@@ -154,7 +157,9 @@ export function makeDriver(page: Page): Driver {
   // Curated read of the live emulator for assertions — never used to navigate.
   async function probe() {
     return page.evaluate(() => {
-      const s = (globalThis as typeof globalThis & { overtureUiState?: StateBag }).overtureUiState;
+      const s = (
+        globalThis as typeof globalThis & { overtureUiState?: StateBag }
+      ).overtureUiState;
       const items = s?.globalMenuItems as Array<{ label?: string }> | undefined;
       const menu = s?.globalMenuState as { selectedIndex: number } | undefined;
       return {
@@ -165,7 +170,9 @@ export function makeDriver(page: Page): Driver {
         menuLabel: items && menu ? items[menu.selectedIndex]?.label : undefined,
         recordArmed: Boolean(s?.recordArmed),
         recordCountingIn: Boolean(s?.recordCountingIn),
-        oled: (globalThis as typeof globalThis & { __OVT_OLED_TEXT?: string }).__OVT_OLED_TEXT ?? "",
+        oled:
+          (globalThis as typeof globalThis & { __OVT_OLED_TEXT?: string })
+            .__OVT_OLED_TEXT ?? "",
       };
     });
   }
@@ -173,7 +180,9 @@ export function makeDriver(page: Page): Driver {
   // --- view state (read-only) -------------------------------------------------
   async function sessionView(): Promise<boolean> {
     return page.evaluate(() => {
-      const state = (globalThis as typeof globalThis & { overtureUiState?: StateBag }).overtureUiState;
+      const state = (
+        globalThis as typeof globalThis & { overtureUiState?: StateBag }
+      ).overtureUiState;
       return Boolean(state?.sessionView);
     });
   }
@@ -182,7 +191,9 @@ export function makeDriver(page: Page): Driver {
   // not change view/track/bank; mirrors the integration harness's snapshot()).
   async function redraw() {
     await page.evaluate(() => {
-      const state = (globalThis as typeof globalThis & { overtureUiState?: StateBag }).overtureUiState;
+      const state = (
+        globalThis as typeof globalThis & { overtureUiState?: StateBag }
+      ).overtureUiState;
       if (state) (state as { screenDirty?: boolean }).screenDirty = true;
     });
     await settle();
@@ -360,11 +371,17 @@ export function makeDriver(page: Page): Driver {
   // current cursor only to compute the detent count — never writes selection).
   async function selectMenuLabel(labels: string[]) {
     const plan = await page.evaluate((wanted) => {
-      const state = (globalThis as typeof globalThis & { overtureUiState?: StateBag }).overtureUiState;
-      const items = state?.globalMenuItems as Array<{ label?: string }> | undefined;
-      const menu = state?.globalMenuState as { selectedIndex: number } | undefined;
+      const state = (
+        globalThis as typeof globalThis & { overtureUiState?: StateBag }
+      ).overtureUiState;
+      const items = state?.globalMenuItems as
+        Array<{ label?: string }> | undefined;
+      const menu = state?.globalMenuState as
+        { selectedIndex: number } | undefined;
       if (!items || !menu) return null;
-      const to = items.findIndex((item) => item.label && wanted.includes(item.label));
+      const to = items.findIndex(
+        (item) => item.label && wanted.includes(item.label),
+      );
       return to >= 0 ? { from: menu.selectedIndex, to } : null;
     }, labels);
     if (!plan) return;

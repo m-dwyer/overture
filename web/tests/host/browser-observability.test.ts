@@ -4,7 +4,7 @@ import { createGlobalBrowserObservability } from "../../src/host/browser-observa
 describe("browser observability", () => {
   test("publishes harness, OLED text, and manual annotation through one global adapter", () => {
     const target = {
-      __OVT_MANUAL_CONTROLS: "[{\"n\":1,\"name\":\"Play\"}]",
+      __OVT_MANUAL_CONTROLS: '[{"n":1,"name":"Play"}]',
       __OVT_MANUAL_GESTURE: "Press Play",
       __OVT_MANUAL_SHOWING: "Transport",
     } as typeof globalThis;
@@ -17,7 +17,7 @@ describe("browser observability", () => {
     expect(target.OVT).toBe(handle);
     expect(target.__OVT_OLED_TEXT).toBe("TRACK 1");
     expect(observability.readManualAnnotation()).toEqual({
-      controls: "[{\"n\":1,\"name\":\"Play\"}]",
+      controls: '[{"n":1,"name":"Play"}]',
       gesture: "Press Play",
       showing: "Transport",
     });

@@ -17,14 +17,27 @@ describe("Overture Next Session View module", () => {
   });
 
   test("derives scene-launch Surface Hints only while Shift is held", () => {
-    expect(sessionView.createSurfaceHints(sessionSnapshot({ heldControls: [] }))).toEqual([]);
-    expect(sessionView.createSurfaceHints(sessionSnapshot({ heldControls: ["shift"] }))).toEqual([
-      { kind: "scene-launch-target", surface: { kind: "session-scene-column", sceneIndex: 7 } },
+    expect(
+      sessionView.createSurfaceHints(sessionSnapshot({ heldControls: [] })),
+    ).toEqual([]);
+    expect(
+      sessionView.createSurfaceHints(
+        sessionSnapshot({ heldControls: ["shift"] }),
+      ),
+    ).toEqual([
+      {
+        kind: "scene-launch-target",
+        surface: { kind: "session-scene-column", sceneIndex: 7 },
+      },
     ]);
   });
 });
 
-function sessionSnapshot({ heldControls }: { heldControls: CoreSnapshot["heldControls"] }): CoreSnapshot {
+function sessionSnapshot({
+  heldControls,
+}: {
+  heldControls: CoreSnapshot["heldControls"];
+}): CoreSnapshot {
   return {
     selectedTrackIndex: 3,
     selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
@@ -36,6 +49,15 @@ function sessionSnapshot({ heldControls }: { heldControls: CoreSnapshot["heldCon
     selectedClipId: null,
     selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
     clipCells: [{ trackIndex: 3, sceneIndex: 7, clipId: null }],
-    steps: [{ index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true }],
+    steps: [
+      {
+        index: 0,
+        active: true,
+        note: 60,
+        velocity: 100,
+        selected: true,
+        playhead: true,
+      },
+    ],
   };
 }

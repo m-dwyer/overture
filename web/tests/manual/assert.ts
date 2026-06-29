@@ -4,11 +4,17 @@ import type { Probe, ShotExpect } from "./types";
 // return every mismatch (empty array = the figure depicts what its caption
 // claims). Collecting ALL mismatches — rather than stopping at the first —
 // makes a drift failure report the whole story in one go.
-export function diffExpect(label: string, want: ShotExpect, got: Probe): string[] {
+export function diffExpect(
+  label: string,
+  want: ShotExpect,
+  got: Probe,
+): string[] {
   const fails: string[] = [];
   const cmp = (name: string, expected: unknown, actual: unknown) => {
     if (expected !== undefined && expected !== actual) {
-      fails.push(`${name}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+      fails.push(
+        `${name}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+      );
     }
   };
 
@@ -24,10 +30,14 @@ export function diffExpect(label: string, want: ShotExpect, got: Probe): string[
   }
 
   if (want.oledIncludes !== undefined) {
-    const needles = Array.isArray(want.oledIncludes) ? want.oledIncludes : [want.oledIncludes];
+    const needles = Array.isArray(want.oledIncludes)
+      ? want.oledIncludes
+      : [want.oledIncludes];
     for (const needle of needles) {
       if (!got.oled.includes(needle)) {
-        fails.push(`oledIncludes: "${needle}" not found in OLED ${JSON.stringify(got.oled)}`);
+        fails.push(
+          `oledIncludes: "${needle}" not found in OLED ${JSON.stringify(got.oled)}`,
+        );
       }
     }
   }

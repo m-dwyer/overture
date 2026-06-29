@@ -71,11 +71,13 @@ const waveformDrift = (frame: number) => {
   }
 
   const u = (frame - settleStart) / settleFrames;
-  const easedAverage = fast + ((slow - fast) * (u * u * u - 0.5 * u * u * u * u)) / u;
+  const easedAverage =
+    fast + ((slow - fast) * (u * u * u - 0.5 * u * u * u * u)) / u;
   return settleStart * fast + (frame - settleStart) * easedAverage;
 };
 
-const oledToScene = (x: number, y: number, z = 0) => new THREE.Vector3(x, H - y, z);
+const oledToScene = (x: number, y: number, z = 0) =>
+  new THREE.Vector3(x, H - y, z);
 
 const shadeColor = (shade: number, alpha = 1) =>
   new THREE.Color(
@@ -99,13 +101,24 @@ const createLineStrip = (
     if (points.length > 1) {
       const prev = points[Math.max(0, index - 1)];
       const next = points[Math.min(points.length - 1, index + 1)];
-      const tangent = new THREE.Vector2(next.x - prev.x, next.y - prev.y).normalize();
+      const tangent = new THREE.Vector2(
+        next.x - prev.x,
+        next.y - prev.y,
+      ).normalize();
       normal = new THREE.Vector2(-tangent.y, tangent.x);
     }
 
     const half = weight * 0.5;
-    vertices.push(point.x + normal.x * half, point.y + normal.y * half, point.z);
-    vertices.push(point.x - normal.x * half, point.y - normal.y * half, point.z);
+    vertices.push(
+      point.x + normal.x * half,
+      point.y + normal.y * half,
+      point.z,
+    );
+    vertices.push(
+      point.x - normal.x * half,
+      point.y - normal.y * half,
+      point.z,
+    );
 
     if (index < points.length - 1) {
       const base = index * 2;
@@ -114,7 +127,10 @@ const createLineStrip = (
   });
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(vertices, 3),
+  );
   geometry.setIndex(indices);
 
   const mesh = new THREE.Mesh(
@@ -140,9 +156,22 @@ const createEllipse = (
   opacity: number,
   z: number,
 ) => {
-  const curve = new THREE.EllipseCurve(cx, H - cy, rx, ry, 0, Math.PI * 2, false, 0);
-  const points = curve.getPoints(72).map((point) => new THREE.Vector3(point.x, point.y, z));
-  const shape = new THREE.Shape(points.map((point) => new THREE.Vector2(point.x, point.y)));
+  const curve = new THREE.EllipseCurve(
+    cx,
+    H - cy,
+    rx,
+    ry,
+    0,
+    Math.PI * 2,
+    false,
+    0,
+  );
+  const points = curve
+    .getPoints(72)
+    .map((point) => new THREE.Vector3(point.x, point.y, z));
+  const shape = new THREE.Shape(
+    points.map((point) => new THREE.Vector2(point.x, point.y)),
+  );
   const geometry = new THREE.ShapeGeometry(shape);
 
   const mesh = new THREE.Mesh(
@@ -167,8 +196,19 @@ const createEllipseStroke = (
   weight: number,
   z: number,
 ) => {
-  const curve = new THREE.EllipseCurve(cx, H - cy, radius, radius, 0, Math.PI * 2, false, 0);
-  const points = curve.getPoints(96).map((point) => new THREE.Vector3(point.x, point.y, z));
+  const curve = new THREE.EllipseCurve(
+    cx,
+    H - cy,
+    radius,
+    radius,
+    0,
+    Math.PI * 2,
+    false,
+    0,
+  );
+  const points = curve
+    .getPoints(96)
+    .map((point) => new THREE.Vector3(point.x, point.y, z));
   return createLineStrip(points, shade, weight, 1);
 };
 
@@ -229,7 +269,9 @@ const drawWaveLayer = (
 
   if (points.length > 1) {
     const curve = new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.5);
-    group.add(createLineStrip(curve.getPoints(points.length * 4), shade, weight, 1));
+    group.add(
+      createLineStrip(curve.getPoints(points.length * 4), shade, weight, 1),
+    );
   }
 };
 
@@ -247,8 +289,34 @@ const drawWaveform = (
   const endX = Math.min(120, right);
   const centerX = 64;
 
-  drawWaveLayer(group, startX, endX, centerX, ringIn, lock, drift, settledAmp + 2, 42, 2.25, 1.7, 3);
-  drawWaveLayer(group, startX, endX, centerX, ringIn, lock, drift, settledAmp, 232, 1, 1, 4);
+  drawWaveLayer(
+    group,
+    startX,
+    endX,
+    centerX,
+    ringIn,
+    lock,
+    drift,
+    settledAmp + 2,
+    42,
+    2.25,
+    1.7,
+    3,
+  );
+  drawWaveLayer(
+    group,
+    startX,
+    endX,
+    centerX,
+    ringIn,
+    lock,
+    drift,
+    settledAmp,
+    232,
+    1,
+    1,
+    4,
+  );
 };
 
 const drawEncoderFocus = (group: THREE.Group, ringIn: number) => {
@@ -272,7 +340,16 @@ const drawEncoderKnob = (
   const outer = lerp(5, 14, ringIn);
 
   group.add(createEllipse(cx, cy, outer + 1, outer + 1, 7 + ringIn * 6, 1, 8));
-  group.add(createEllipseStroke(cx, cy, outer, lerp(42, 235 + lockHit * 14, ringIn), 1.15, 9));
+  group.add(
+    createEllipseStroke(
+      cx,
+      cy,
+      outer,
+      lerp(42, 235 + lockHit * 14, ringIn),
+      1.15,
+      9,
+    ),
+  );
 
   const turn = easeInOutCubic(clamp(mapRange(bootFrame, 12, 30, 0, 1), 0, 1));
   const angle = lerp(-2.35, 0.35, turn) + lockHit * 0.1;
@@ -335,7 +412,9 @@ const animate = (state: WaveformState, time: number) => {
     renderFrame(state);
   }
 
-  state.animationFrame = window.requestAnimationFrame((nextTime) => animate(state, nextTime));
+  state.animationFrame = window.requestAnimationFrame((nextTime) =>
+    animate(state, nextTime),
+  );
 };
 
 const startAnimation = (state: WaveformState) => {
@@ -344,7 +423,9 @@ const startAnimation = (state: WaveformState) => {
   }
 
   state.lastTime = 0;
-  state.animationFrame = window.requestAnimationFrame((time) => animate(state, time));
+  state.animationFrame = window.requestAnimationFrame((time) =>
+    animate(state, time),
+  );
 };
 
 export const initOvertureWaveform = (canvas: HTMLCanvasElement) => {
@@ -359,7 +440,9 @@ export const initOvertureWaveform = (canvas: HTMLCanvasElement) => {
   const camera = new THREE.OrthographicCamera(0, W, H, 0, -100, 100);
   const group = new THREE.Group();
   const activeLayer = new THREE.Group();
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
 
   renderer.setClearColor(0x000000, 0);
   group.scale.set(HERO_SCALE, HERO_SCALE, 1);

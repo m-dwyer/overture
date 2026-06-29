@@ -5,5 +5,8 @@ import type { ControlInput } from "../application/controls/types";
  * core only receives the Overture control inputs it currently understands.
  */
 export interface ControlSurfacePort {
-  parseMoveInput(data: readonly number[], stepCount: number): ControlInput | null;
+  parseMoveInput(
+    data: readonly number[],
+    stepCount: number,
+  ): ControlInput | null;
 }

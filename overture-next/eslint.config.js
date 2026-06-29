@@ -40,7 +40,10 @@ export default tseslint.config(
           owners: [
             { type: "TransportState", allow: ["src/application/transport.ts"] },
             { type: "PlaybackState", allow: ["src/application/playback/**"] },
-            { type: "ControlSurfaceContext", allow: ["src/state/control-surface-context.ts"] },
+            {
+              type: "ControlSurfaceContext",
+              allow: ["src/state/control-surface-context.ts"],
+            },
             { type: "OvertureProject", allow: ["src/state/project.ts"] },
           ],
         },
@@ -48,7 +51,10 @@ export default tseslint.config(
       "overture/state-api-encapsulation": [
         "error",
         {
-          owners: [{ type: "ControlSurfaceContext" }, { type: "TransportState" }],
+          owners: [
+            { type: "ControlSurfaceContext" },
+            { type: "TransportState" },
+          ],
         },
       ],
     },
@@ -64,8 +70,13 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ["../src/**/internal/*", "../../src/**/internal/*", "../../../src/**/internal/*"],
-              message: "Tests should exercise module contracts through public entry points, not internal helpers.",
+              group: [
+                "../src/**/internal/*",
+                "../../src/**/internal/*",
+                "../../../src/**/internal/*",
+              ],
+              message:
+                "Tests should exercise module contracts through public entry points, not internal helpers.",
             },
             {
               group: [
@@ -76,7 +87,11 @@ export default tseslint.config(
               message: "Import Playback through its public module entry point.",
             },
             {
-              group: ["../src/state/project/*", "../../src/state/project/*", "../../../src/state/project/*"],
+              group: [
+                "../src/state/project/*",
+                "../../src/state/project/*",
+                "../../../src/state/project/*",
+              ],
               message: "Import Project through its public module entry point.",
             },
           ],

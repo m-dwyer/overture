@@ -5,6 +5,8 @@ export interface OperationResult {
   hostCommands: HostCommand[];
 }
 
-export function operationApplied(hostCommands: HostCommand[] = []): OperationResult {
+export function operationApplied(
+  hostCommands: HostCommand[] = [],
+): OperationResult {
   return { applied: true, hostCommands };
 }
