@@ -26,7 +26,8 @@ export const scenes: Scene[] = [
         file: "ref-01-surface.png",
         title: "The Overture surface",
         action: "Open Overture",
-        showing: "Startup overview: scene per track, lit pads, side buttons, and step LEDs",
+        showing:
+          "Startup overview: scene per track, lit pads, side buttons, and step LEDs",
         caption:
           "The full panel. Encoders top, pad grid centre, step buttons bottom, track side buttons right of the grid, transport and modifiers in the right cluster. The OLED names the current mode and bank.",
       },
@@ -34,7 +35,8 @@ export const scenes: Scene[] = [
         file: "ref-02-oled.png",
         title: "Reading the OLED",
         action: "Open Overture",
-        showing: "The OLED names the mode, the track or pad in focus, and the active parameter bank",
+        showing:
+          "The OLED names the mode, the track or pad in focus, and the active parameter bank",
         crop: "oled",
         caption:
           "The OLED up close. Full-panel figures show it small, so refer back here: it always names the mode, the focused track/pad, and the active bank.",
@@ -54,7 +56,8 @@ export const scenes: Scene[] = [
         expect: { sessionView: false, activeTrack: 0 },
         title: "Track View",
         action: "Tap Note/Session until Track View is active",
-        showing: "Track View: edit one clip with pads, steps, jog, and encoders",
+        showing:
+          "Track View: edit one clip with pads, steps, jog, and encoders",
         targets: [{ aria: ARIA.noteSession, name: "Note/Session" }],
         drive: (d) => d.enterTrackView(),
         caption:
@@ -65,10 +68,12 @@ export const scenes: Scene[] = [
         expect: { sessionView: true },
         title: "Session View",
         action: "Tap Note/Session to switch to Session View",
-        showing: "Session View: numbers are tracks; letters are the active scene per track",
+        showing:
+          "Session View: numbers are tracks; letters are the active scene per track",
         targets: [{ aria: ARIA.noteSession, name: "Note/Session" }],
         drive: (d) => d.enterSessionView(),
-        caption: "Session View is the clip launcher: the pad grid represents clips across tracks and scene rows.",
+        caption:
+          "Session View is the clip launcher: the pad grid represents clips across tracks and scene rows.",
       },
     ],
   },
@@ -85,20 +90,23 @@ export const scenes: Scene[] = [
         expect: { sessionView: false, activeTrack: 1 },
         title: "Side buttons select tracks",
         action: "Track View: tap side button 2",
-        showing: "Track selection: the active side-button LED marks the current track",
+        showing:
+          "Track selection: the active side-button LED marks the current track",
         targets: [{ aria: ARIA.track(2), name: "Side button 2" }],
         drive: async (d) => {
           await d.enterTrackView();
           await d.selectTrack(2);
         },
-        caption: "Tapping the second side button selects track 2. The active button lights in the track colour; the rest stay dim.",
+        caption:
+          "Tapping the second side button selects track 2. The active button lights in the track colour; the rest stay dim.",
       },
       {
         file: "ref-06-shift-track-select.png",
         expect: { activeTrack: 4 },
         title: "Shift reaches tracks 5-8",
         action: "Hold Shift + tap side button 1",
-        showing: "Upper bank: Shift + side button selects tracks 5-8 on the same four buttons",
+        showing:
+          "Upper bank: Shift + side button selects tracks 5-8 on the same four buttons",
         targets: [
           { aria: ARIA.shift, name: "Shift" },
           { aria: ARIA.track(1), name: "Side button 1" },
@@ -107,7 +115,8 @@ export const scenes: Scene[] = [
           await d.enterTrackView();
           await d.selectTrack(5);
         },
-        caption: "Hold Shift and tap the first side button to select track 5. The four side buttons address 1-4 normally and 5-8 under Shift.",
+        caption:
+          "Hold Shift and tap the first side button to select track 5. The four side buttons address 1-4 normally and 5-8 under Shift.",
       },
     ],
   },
@@ -153,7 +162,8 @@ export const scenes: Scene[] = [
         expect: { sessionView: false, activeTrack: 0 },
         title: "A simple lane pattern",
         action: "Drum track: tap a lane pad, then Steps 1, 5, 9, 13",
-        showing: "A drum lane pattern: lit step buttons are hits on the active lane",
+        showing:
+          "A drum lane pattern: lit step buttons are hits on the active lane",
         targets: [
           { aria: ARIA.pad(1), name: "Drum lane pad" },
           { aria: ARIA.step(1), name: "Hit" },
@@ -168,7 +178,8 @@ export const scenes: Scene[] = [
           await d.tapStep(9);
           await d.tapStep(13);
         },
-        caption: "Four lit steps are a four-on-the-floor hit pattern on the active drum lane. The OLED stays the source of truth for the current lane and edit context.",
+        caption:
+          "Four lit steps are a four-on-the-floor hit pattern on the active drum lane. The OLED stays the source of truth for the current lane and edit context.",
       },
     ],
   },
@@ -185,7 +196,8 @@ export const scenes: Scene[] = [
         expect: { activeTrack: 1 },
         title: "Chord entry",
         action: "Hold three pads, then tap a step",
-        showing: "Chord entry: the held pads are written to the tapped step together",
+        showing:
+          "Chord entry: the held pads are written to the tapped step together",
         targets: [
           { aria: ARIA.pad(1), name: "Chord note" },
           { aria: ARIA.pad(3), name: "Chord note" },
@@ -199,7 +211,8 @@ export const scenes: Scene[] = [
           await d.tapStep(1);
           await d.releasePads([1, 3, 5]);
         },
-        caption: "On a melodic track, holding pads 1, 3 and 5 and tapping step 1 writes all three pitches to that step as a chord.",
+        caption:
+          "On a melodic track, holding pads 1, 3 and 5 and tapping step 1 writes all three pitches to that step as a chord.",
       },
     ],
   },
@@ -218,14 +231,16 @@ export const scenes: Scene[] = [
         expect: { oledIncludes: ["Iter", "Prob", "Ratch"] },
         title: "Hold a step to edit it",
         action: "Place a step, then hold it",
-        showing: "Step Edit: the held step's length, velocity, timing and trig conditions",
+        showing:
+          "Step Edit: the held step's length, velocity, timing and trig conditions",
         targets: [{ aria: ARIA.step(1), name: "Held step" }],
         drive: async (d) => {
           await d.enterTrackView();
           await d.tapStep(1);
           await d.stepEditOpen(1); // left held → captures the Step Edit screen
         },
-        caption: "Holding a placed step opens Step Edit: the encoders now edit that one step. The trig conditions (Iter / Prob / Ratch) live here.",
+        caption:
+          "Holding a placed step opens Step Edit: the encoders now edit that one step. The trig conditions (Iter / Prob / Ratch) live here.",
       },
     ],
   },
@@ -242,7 +257,8 @@ export const scenes: Scene[] = [
         expect: { oledIncludes: ["Leng", "Ratch"] }, // Step Edit screen, length row visible
         title: "Hold step + jog = length",
         action: "Hold a placed step and turn the jog",
-        showing: "Step length: the jog stretches the held step, never changing banks",
+        showing:
+          "Step length: the jog stretches the held step, never changing banks",
         targets: [
           { aria: ARIA.step(1), name: "Held step" },
           { aria: ARIA.jog, name: "Jog" },
@@ -253,7 +269,8 @@ export const scenes: Scene[] = [
           await d.stepEditOpen(1);
           await d.turnJog(2); // step left held so the figure shows the live length edit
         },
-        caption: "With the step held, the jog adjusts its length. Releasing the step returns to the pattern with the parameter bank unchanged.",
+        caption:
+          "With the step held, the jog adjusts its length. Releasing the step returns to the pattern with the parameter bank unchanged.",
       },
     ],
   },
@@ -270,7 +287,8 @@ export const scenes: Scene[] = [
         expect: { activeTrack: 1, activeBank: 2 },
         title: "Bank editing",
         action: "On a melodic track, turn the jog to a bank, then turn K3",
-        showing: "Parameter editing: the OLED rows map to K1-K8 above the pad grid",
+        showing:
+          "Parameter editing: the OLED rows map to K1-K8 above the pad grid",
         targets: [
           { aria: ARIA.jog, name: "Jog" },
           { aria: ARIA.encoder(3), name: "K3" },
@@ -282,7 +300,8 @@ export const scenes: Scene[] = [
           await d.turnJog(2); // CLIP -> NOTE FX -> HARMONY
           await d.turnEncoder(3, 5);
         },
-        caption: "The OLED shows the active bank (here HARMONY) and its eight encoder rows. Turning an encoder updates the matching value; the header strip marks the bank position.",
+        caption:
+          "The OLED shows the active bank (here HARMONY) and its eight encoder rows. Turning an encoder updates the matching value; the header strip marks the bank position.",
       },
       {
         file: "ref-13-bank-oled.png",
@@ -291,7 +310,8 @@ export const scenes: Scene[] = [
         action: "Turn the jog to a bank, then turn K3",
         showing: "Each OLED row is one encoder, in K1-K8 order left to right",
         crop: "oled",
-        caption: "The OLED row order matches K1-K8 left to right — the close-up makes the active bank and its values legible.",
+        caption:
+          "The OLED row order matches K1-K8 left to right — the close-up makes the active bank and its values legible.",
       },
     ],
   },
@@ -310,7 +330,8 @@ export const scenes: Scene[] = [
         expect: { activeTrack: 1, activeBank: 3, oledIncludes: ["Vfb", "Pfb"] },
         title: "An effects bank",
         action: "Turn the jog to an effects bank",
-        showing: "An effects bank (e.g. DELAY / NOTE FX): eight K1-K8 parameters",
+        showing:
+          "An effects bank (e.g. DELAY / NOTE FX): eight K1-K8 parameters",
         crop: "oled",
         targets: [{ aria: ARIA.jog, name: "Jog" }],
         drive: async (d) => {
@@ -319,7 +340,8 @@ export const scenes: Scene[] = [
           await d.selectBank(0); // home to CLIP so the jog count is deterministic
           await d.turnJog(3); // CLIP -> NOTE FX -> HARMONY -> DELAY
         },
-        caption: "Stepping the jog past CLIP reaches the effects banks (here DELAY). Each is eight encoder values; the OLED names the bank so you always know which effect you're editing.",
+        caption:
+          "Stepping the jog past CLIP reaches the effects banks (here DELAY). Each is eight encoder values; the OLED names the bank so you always know which effect you're editing.",
       },
     ],
   },
@@ -408,10 +430,19 @@ export const scenes: Scene[] = [
       },
       {
         file: "ref-19-schwung-presets.png",
-        expect: { activeTrack: 4, oledIncludes: ["Synth Presets", "Driven Bass", "Warm Keys", "Analog Bass"] },
+        expect: {
+          activeTrack: 4,
+          oledIncludes: [
+            "Synth Presets",
+            "Driven Bass",
+            "Warm Keys",
+            "Analog Bass",
+          ],
+        },
         title: "Load user or factory presets",
         action: "Return to Synth, hold Copy + press the jog, then turn the jog",
-        showing: "Preset browser: Overture user presets first, module factory presets after",
+        showing:
+          "Preset browser: Overture user presets first, module factory presets after",
         targets: [
           { aria: ARIA.step(2), name: "Step 2 = Synth" },
           { aria: ARIA.copy, name: "Copy" },
@@ -441,13 +472,15 @@ export const scenes: Scene[] = [
         expect: { sessionView: true },
         title: "Launch a clip",
         action: "Session View: tap a clip pad",
-        showing: "Clip launch: the tapped pad selects/launches that clip and updates its track's scene letter",
+        showing:
+          "Clip launch: the tapped pad selects/launches that clip and updates its track's scene letter",
         targets: [{ aria: ARIA.pad(1), name: "Clip pad" }],
         drive: async (d) => {
           await d.enterSessionView();
           await d.tapPad(1);
         },
-        caption: "Tapping a clip pad launches that clip on its track; the OLED's track scene letter updates to match.",
+        caption:
+          "Tapping a clip pad launches that clip on its track; the OLED's track scene letter updates to match.",
       },
     ],
   },
@@ -463,8 +496,10 @@ export const scenes: Scene[] = [
         file: "ref-17-clip-copy.png",
         expect: { sessionView: true },
         title: "Copy a clip",
-        action: "Hold Copy, tap source clip (COPIED), then — still holding Copy — tap destination",
-        showing: "Clip copy: keep Copy held while you tap source then destination",
+        action:
+          "Hold Copy, tap source clip (COPIED), then — still holding Copy — tap destination",
+        showing:
+          "Clip copy: keep Copy held while you tap source then destination",
         targets: [
           { aria: ARIA.copy, name: "Hold Copy (don't release)" },
           { aria: ARIA.pad(1), name: "Source clip" },
@@ -492,7 +527,8 @@ export const scenes: Scene[] = [
         expect: { recording: true },
         title: "Arm recording",
         action: "Tap Record (no Play needed)",
-        showing: "Transport: Record arms a one-bar count-in, then records automatically",
+        showing:
+          "Transport: Record arms a one-bar count-in, then records automatically",
         targets: [{ aria: ARIA.record, name: "Record" }],
         drive: async (d) => {
           await d.enterTrackView();
@@ -516,7 +552,8 @@ export const scenes: Scene[] = [
         expect: { sessionView: false },
         title: "Page through a clip",
         action: "Tap ‹ or › to change page",
-        showing: "Paging: ‹ › move through a clip's step pages and the loop view",
+        showing:
+          "Paging: ‹ › move through a clip's step pages and the loop view",
         targets: [
           { aria: ARIA.navLeft, name: "Page ‹" },
           { aria: ARIA.navRight, name: "Page ›" },
@@ -525,7 +562,8 @@ export const scenes: Scene[] = [
           await d.enterTrackView();
           await d.pageNav(1);
         },
-        caption: "‹ › page through a long clip's steps. Octave +/- shift the pad octave; the Loop button latches Performance mode for live loops over the pattern.",
+        caption:
+          "‹ › page through a long clip's steps. Octave +/- shift the pad octave; the Loop button latches Performance mode for live loops over the pattern.",
       },
     ],
   },
@@ -548,18 +586,26 @@ export const scenes: Scene[] = [
           { aria: ARIA.noteSession, name: "Note/Session" },
         ],
         drive: (d) => d.openGlobalMenu(),
-        caption: "Shift + Note/Session opens the menu. Turn the jog to move, press the jog to edit or confirm. The first pages focus on the active track.",
+        caption:
+          "Shift + Note/Session opens the menu. Turn the jog to move, press the jog to edit or confirm. The first pages focus on the active track.",
       },
       {
         file: "ref-21-menu-project.png",
         expect: { globalMenuOpen: true },
         title: "Project actions",
         action: "Turn the jog to Save / Load / Export",
-        showing: "Project actions: save and load a session, or export to Ableton",
+        showing:
+          "Project actions: save and load a session, or export to Ableton",
         targets: [{ aria: ARIA.jog, name: "Jog scroll" }],
         // The menu is already open from the previous shot (same scene, no reboot);
         // re-opening here would toggle it shut. Just scroll to the project actions.
-        drive: (d) => d.selectMenuLabel(["Save state", "Load state", "Export to Ableton", "Export"]),
+        drive: (d) =>
+          d.selectMenuLabel([
+            "Save state",
+            "Load state",
+            "Export to Ableton",
+            "Export",
+          ]),
         caption:
           "Scrolling the jog reaches the project actions: save, load, export, and global settings. (Device-only: Export's final write to an Ableton Set happens through the host on hardware.)",
       },

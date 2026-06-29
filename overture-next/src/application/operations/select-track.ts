@@ -7,7 +7,10 @@ export interface SelectTrackContext {
   readonly project: OvertureProject;
 }
 
-export function selectTrack(context: SelectTrackContext, trackIndex: number): OperationResult {
+export function selectTrack(
+  context: SelectTrackContext,
+  trackIndex: number,
+): OperationResult {
   const sceneIndex = context.control.snapshot().selectedClipCell.sceneIndex;
   context.project.clipCellAt({ trackIndex, sceneIndex });
   context.control.selectTrackPreservingScene(trackIndex);

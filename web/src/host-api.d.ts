@@ -8,8 +8,20 @@ export {};
 export interface HostApi {
   // Display (1-bit 128×64 OLED) — color/value 0=black, 1=white
   clear_screen(): void;
-  fill_rect(x: number, y: number, w: number, h: number, value: number | boolean): void;
-  draw_rect(x: number, y: number, w: number, h: number, value: number | boolean): void;
+  fill_rect(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    value: number | boolean,
+  ): void;
+  draw_rect(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    value: number | boolean,
+  ): void;
   set_pixel(x: number, y: number, value: number | boolean): void;
   print(x: number, y: number, text: unknown, color?: number): void;
   text_width(text: unknown): number;
@@ -34,7 +46,11 @@ export interface HostApi {
   // co-run (native-editor delegation)
   shadow_corun_begin(target: number, id: number, keepMask: number): void;
   shadow_corun_end(...args: unknown[]): void;
-  shadow_corun_state(): { target: number; id: number; keep_mask: number } | null;
+  shadow_corun_state(): {
+    target: number;
+    id: number;
+    keep_mask: number;
+  } | null;
   shadow_get_slots(): Array<Record<string, unknown>>;
   shadow_get_param(slot: number, key: string): string | null;
   shadow_set_param(slot: number, key: string, val: string | number): boolean;

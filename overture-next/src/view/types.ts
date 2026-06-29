@@ -44,7 +44,11 @@ export interface PadLedView {
 }
 
 export type ButtonLedView =
-  | { kind: "track-row"; row: number; state: "selected" | "hinted" | "available" }
+  | {
+      kind: "track-row";
+      row: number;
+      state: "selected" | "hinted" | "available";
+    }
   | { kind: "play"; state: "playing" | "stopped" }
   | { kind: "menu"; state: "session" | "track" };
 

@@ -5,35 +5,40 @@ Schwung host + Move hardware**. It lives in `web/` and is the first design loop
 for Overture work.
 
 ## Why this, not the real stack
+
 MoveOriginal is a closed aarch64 binary bound to hardware. The emulator runs the
 active Overture UI and core against browser implementations of the display, LED,
 MIDI, file, and Schwung-chain host surfaces.
 
 ## Real vs mocked
-| Layer | In the emulator |
-|---|---|
-| Tool **UI JS** (`overture-next/ui/ui.js` + `overture-next/src`) | **REAL** — the current replacement scaffold |
-| Tool **DSP** | **mocked/stubbed**; the active tool has no DSP/WASM build yet |
-| Schwung **modules** | **REAL** WASM from the pinned Moveforge submodule |
-| **Display** (OLED) | MOCK → draw 128×64 to an HTML canvas (`clear_screen`/`print`/`draw_rect`/…) |
-| **Pads/steps/knobs/jog/buttons** | MOCK → clickable Move shell → emits the right MIDI into `onMidiMessageInternal` |
-| **LEDs** | MOCK → render pad/step colors from `setLED` |
-| `get_param`/`set_param` | MOCK -> route to the Overture mock DSP surface |
-| **Move's Ableton engines / MIDI inject** | MOCK/stub → routed to the `sendToMove` MIDI sink and logged in the browser |
-| **co-run** (Move device UI / Schwung chain editor) | MOCK → a stub "editor" view; design the *transition*, not the native editor |
-| **OVT console/test harness** | HOST PORT → publishes a browser-only handle for deterministic MIDI injection and tick advancement |
+
+| Layer                                                           | In the emulator                                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Tool **UI JS** (`overture-next/ui/ui.js` + `overture-next/src`) | **REAL** — the current replacement scaffold                                                       |
+| Tool **DSP**                                                    | **mocked/stubbed**; the active tool has no DSP/WASM build yet                                     |
+| Schwung **modules**                                             | **REAL** WASM from the pinned Moveforge submodule                                                 |
+| **Display** (OLED)                                              | MOCK → draw 128×64 to an HTML canvas (`clear_screen`/`print`/`draw_rect`/…)                       |
+| **Pads/steps/knobs/jog/buttons**                                | MOCK → clickable Move shell → emits the right MIDI into `onMidiMessageInternal`                   |
+| **LEDs**                                                        | MOCK → render pad/step colors from `setLED`                                                       |
+| `get_param`/`set_param`                                         | MOCK -> route to the Overture mock DSP surface                                                    |
+| **Move's Ableton engines / MIDI inject**                        | MOCK/stub → routed to the `sendToMove` MIDI sink and logged in the browser                        |
+| **co-run** (Move device UI / Schwung chain editor)              | MOCK → a stub "editor" view; design the _transition_, not the native editor                       |
+| **OVT console/test harness**                                    | HOST PORT → publishes a browser-only handle for deterministic MIDI injection and tick advancement |
 
 **Net:** UI + tool logic are real; only the host/hardware/Move-engine boundary is faked — the right
 fidelity for UX design.
 
 ## Fidelity ladder (start cheap)
+
 1. **Layout tier** — real UI JS + **JS-mock DSP**. Enough to design modes,
    navigation, routing, and sequencing flow. Start here.
 2. **Behavior tier** — add this deliberately when Overture owns a current
    DSP/WASM target.
 
 ## Host-API shim list (the mock surface)
+
 Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Representative set:
+
 - **Lifecycle:** `init`, `tick` (~94 Hz), `onMidiMessageInternal`, `onMidiMessageExternal`.
 - **Display:** `clear_screen`, `print`, `draw_rect`, `fill_rect`, `host_flush_display` → canvas.
 - **LEDs:** `setLED`, `setButtonLED`, `clearAllLEDs` → pad/step grid render (mind the per-tick budget).
@@ -56,11 +61,12 @@ Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Rep
 - **Harness:** `web/src/host/emulator-harness.ts` publishes `globalThis.OVT`
   from a browser-only harness port; Overture itself does not depend on it.
 
-> Replicate the *gotchas* that shape UX where cheap: input coalescing,
+> Replicate the _gotchas_ that shape UX where cheap: input coalescing,
 > `get_param`-null-from-onMidi, and the LED per-tick budget. They affect
 > interaction design, so the mock should behave like the host, not idealised.
 
 ## Moveforge Module Assets
+
 Overture pins Moveforge as a submodule under `moveforge/`. The emulator serves
 module metadata from `moveforge/src/modules/` and browser module WASM from
 `moveforge/web/wasm/`.
@@ -74,11 +80,13 @@ browser Schwung chain. `mise run web-dev`, `mise run web-build`, and
 `mise run build` depend on it.
 
 ## What it can't validate (device-only — don't over-trust)
+
 Real Move-engine sound, device timing/coalescing/jitter, physical MIDI injection
 latency, co-run's real behavior, and the exact LED budget. Use the emulator
 first; confirm these on device when they matter to the change under test.
 
 ## Build / run
+
 The emulator lives in `web/`, but Vite remaps the tool's on-device imports to
 the live replacement tool entrypoint in `overture-next/ui/`.
 

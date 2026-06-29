@@ -39,18 +39,50 @@ class ModuleProcessor extends AudioWorkletProcessor {
       if (typeof this.exports.mf_init === "function") {
         this.mode = "midi_fx";
         this.exports.mf_init();
-        this.keyBuf = new Uint8Array(memory, this.exports.mf_key_buf(), this.exports.mf_key_buf_size());
-        this.valBuf = new Uint8Array(memory, this.exports.mf_val_buf(), this.exports.mf_val_buf_size());
-        this.outBuf = new Uint8Array(memory, this.exports.mf_out_buf_ptr(), this.exports.mf_out_buf_size());
+        this.keyBuf = new Uint8Array(
+          memory,
+          this.exports.mf_key_buf(),
+          this.exports.mf_key_buf_size(),
+        );
+        this.valBuf = new Uint8Array(
+          memory,
+          this.exports.mf_val_buf(),
+          this.exports.mf_val_buf_size(),
+        );
+        this.outBuf = new Uint8Array(
+          memory,
+          this.exports.mf_out_buf_ptr(),
+          this.exports.mf_out_buf_size(),
+        );
       } else if (typeof this.exports.sch_init === "function") {
         this.mode = "audio";
         this.exports.sch_init();
         this.left = new Float32Array(memory, this.exports.sch_left_ptr(), 128);
-        this.right = new Float32Array(memory, this.exports.sch_right_ptr(), 128);
-        this.inLeft = new Float32Array(memory, this.exports.sch_in_left_ptr(), 128);
-        this.inRight = new Float32Array(memory, this.exports.sch_in_right_ptr(), 128);
-        this.keyBuf = new Uint8Array(memory, this.exports.sch_key_buf(), this.exports.sch_key_buf_size());
-        this.valBuf = new Uint8Array(memory, this.exports.sch_val_buf(), this.exports.sch_val_buf_size());
+        this.right = new Float32Array(
+          memory,
+          this.exports.sch_right_ptr(),
+          128,
+        );
+        this.inLeft = new Float32Array(
+          memory,
+          this.exports.sch_in_left_ptr(),
+          128,
+        );
+        this.inRight = new Float32Array(
+          memory,
+          this.exports.sch_in_right_ptr(),
+          128,
+        );
+        this.keyBuf = new Uint8Array(
+          memory,
+          this.exports.sch_key_buf(),
+          this.exports.sch_key_buf_size(),
+        );
+        this.valBuf = new Uint8Array(
+          memory,
+          this.exports.sch_val_buf(),
+          this.exports.sch_val_buf_size(),
+        );
       } else {
         throw new Error("WASM exports neither sch_init nor mf_init");
       }
@@ -59,7 +91,10 @@ class ModuleProcessor extends AudioWorkletProcessor {
       this.queue.splice(0).forEach((message) => this.handle(message));
       this.port.postMessage({ type: "ready", mode: this.mode });
     } catch (error) {
-      this.port.postMessage({ type: "error", message: String(error?.message || error) });
+      this.port.postMessage({
+        type: "error",
+        message: String(error?.message || error),
+      });
     }
   }
 
@@ -104,7 +139,7 @@ class ModuleProcessor extends AudioWorkletProcessor {
         const n = this.exports.mf_process_midi_byte(
           Number(message.status) & 0xff,
           Number(message.d1) & 0x7f,
-          Number(message.d2) & 0x7f
+          Number(message.d2) & 0x7f,
         );
         this.emitOutgoingMidi(n);
       }
@@ -117,7 +152,11 @@ class ModuleProcessor extends AudioWorkletProcessor {
       this.writeCString(this.valBuf, Number(message.value).toFixed(6));
       this.exports.sch_set_param();
     } else if (message.type === "midiIn") {
-      this.exports.sch_midi(Number(message.status) & 0xff, Number(message.d1) & 0x7f, Number(message.d2) & 0x7f);
+      this.exports.sch_midi(
+        Number(message.status) & 0xff,
+        Number(message.d1) & 0x7f,
+        Number(message.d2) & 0x7f,
+      );
     } else if (message.type === "allNotesOff") {
       this.writeCString(this.keyBuf, "all_notes_off");
       this.writeCString(this.valBuf, "1");
@@ -132,7 +171,10 @@ class ModuleProcessor extends AudioWorkletProcessor {
       else this.exports.sch_init();
       this.port.postMessage({ type: "ready", mode: this.mode });
     } catch (error) {
-      this.port.postMessage({ type: "error", message: String(error?.message || error) });
+      this.port.postMessage({
+        type: "error",
+        message: String(error?.message || error),
+      });
     }
   }
 
@@ -157,7 +199,11 @@ class ModuleProcessor extends AudioWorkletProcessor {
     const input = inputs[0];
     if (input && input.length >= 1) {
       this.inLeft.set(input[0].subarray(0, frames));
-      this.inRight.set(input.length > 1 ? input[1].subarray(0, frames) : input[0].subarray(0, frames));
+      this.inRight.set(
+        input.length > 1
+          ? input[1].subarray(0, frames)
+          : input[0].subarray(0, frames),
+      );
     } else {
       this.inLeft.fill(0);
       this.inRight.fill(0);

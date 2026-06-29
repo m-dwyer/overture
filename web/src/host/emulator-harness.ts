@@ -78,6 +78,8 @@ export function createOvtHarnessHandle({
   };
 }
 
-export function createGlobalOvtHarnessPort(target: typeof globalThis = globalThis): EmulatorHarnessPort {
+export function createGlobalOvtHarnessPort(
+  target: typeof globalThis = globalThis,
+): EmulatorHarnessPort {
   return createGlobalBrowserObservability(target);
 }

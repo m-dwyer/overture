@@ -46,7 +46,9 @@ export function clipId(value: string): ClipId {
   return nonEmptyString("Clip ID", value) as ClipId;
 }
 
-export function clipCellCoordinate(input: ClipCellCoordinateInput): ClipCellCoordinate {
+export function clipCellCoordinate(
+  input: ClipCellCoordinateInput,
+): ClipCellCoordinate {
   return {
     trackIndex: trackIndex(input.trackIndex),
     sceneIndex: sceneIndex(input.sceneIndex),

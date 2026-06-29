@@ -17,7 +17,8 @@ export const scenes: Scene[] = [
         file: "01-orientation.png",
         title: "The Overture surface",
         action: "Open Overture",
-        showing: "Startup overview: current scene per track, lit pads, side buttons, and step LEDs",
+        showing:
+          "Startup overview: current scene per track, lit pads, side buttons, and step LEDs",
         caption:
           "Start here: the OLED tells you the current mode and parameter bank. The yellow Loop LED is Overture's live Session Performance latch indicator, not a pressed-control marker.",
       },
@@ -25,7 +26,8 @@ export const scenes: Scene[] = [
         file: "01b-oled-readout.png",
         title: "Reading the OLED",
         action: "Open Overture",
-        showing: "The OLED names the mode, the track or pad in focus, and the active parameter bank",
+        showing:
+          "The OLED names the mode, the track or pad in focus, and the active parameter bank",
         crop: "oled",
         caption:
           "The OLED up close. It always names the current mode, the track or pad in focus, and the active parameter bank — the full-panel shots show it small, so refer back here.",
@@ -45,7 +47,8 @@ export const scenes: Scene[] = [
         expect: { sessionView: false },
         title: "Track View",
         action: "Tap Note/Session until Track View is active",
-        showing: "Track View: edit one clip with pads, steps, jog, and encoders",
+        showing:
+          "Track View: edit one clip with pads, steps, jog, and encoders",
         targets: [{ aria: ARIA.noteSession, name: "Note/Session" }],
         drive: (d) => d.enterTrackView(),
         caption:
@@ -56,10 +59,12 @@ export const scenes: Scene[] = [
         expect: { sessionView: true },
         title: "Session View",
         action: "Tap Note/Session to switch to Session View",
-        showing: "Session View: numbers are tracks; letters are active scenes, so A means scene A is selected",
+        showing:
+          "Session View: numbers are tracks; letters are active scenes, so A means scene A is selected",
         targets: [{ aria: ARIA.noteSession, name: "Note/Session" }],
         drive: (d) => d.enterSessionView(),
-        caption: "Session View is the clip launcher: the pad grid represents clips across tracks and scene rows.",
+        caption:
+          "Session View is the clip launcher: the pad grid represents clips across tracks and scene rows.",
       },
     ],
   },
@@ -76,7 +81,8 @@ export const scenes: Scene[] = [
         expect: { sessionView: false, activeTrack: 0 },
         title: "A simple lane pattern",
         action: "Tap drum pad, then tap Steps 1, 5, 9, 13",
-        showing: "A drum lane pattern: lit step buttons are hits on the active lane",
+        showing:
+          "A drum lane pattern: lit step buttons are hits on the active lane",
         targets: [
           { aria: ARIA.pad(1), name: "Drum lane pad" },
           { aria: ARIA.step(1), name: "Hit" },
@@ -110,7 +116,8 @@ export const scenes: Scene[] = [
         expect: { sessionView: true },
         title: "Focus a clip in Session View",
         action: "Tap a clip pad in Session View",
-        showing: "Track 1 now shows D: the bottom-row clip pad selected scene D",
+        showing:
+          "Track 1 now shows D: the bottom-row clip pad selected scene D",
         targets: [{ aria: ARIA.pad(1), name: "Clip pad" }],
         drive: async (d) => {
           await d.enterSessionView();
@@ -130,7 +137,8 @@ export const scenes: Scene[] = [
           { aria: ARIA.step(1), name: "Clip steps" },
         ],
         drive: (d) => d.enterTrackView(),
-        caption: "Back in Track View, the step row and parameter bank apply to the focused clip.",
+        caption:
+          "Back in Track View, the step row and parameter bank apply to the focused clip.",
       },
     ],
   },
@@ -147,7 +155,8 @@ export const scenes: Scene[] = [
         expect: { sessionView: false, activeTrack: 1 },
         title: "Side buttons select tracks",
         action: "Track View: tap side button 2",
-        showing: "Track selection: side-button LEDs indicate the active track bank",
+        showing:
+          "Track selection: side-button LEDs indicate the active track bank",
         targets: [{ aria: ARIA.track(2), name: "Side button 2" }],
         drive: async (d) => {
           await d.enterTrackView();
@@ -156,7 +165,8 @@ export const scenes: Scene[] = [
           await d.pkt(CC, 42, 0);
           await d.settle();
         },
-        caption: "The active side-button LED shows the selected track. Other side buttons stay dim in their track colors.",
+        caption:
+          "The active side-button LED shows the selected track. Other side buttons stay dim in their track colors.",
       },
       {
         file: "08-shift-track-select.png",
@@ -175,7 +185,8 @@ export const scenes: Scene[] = [
           await d.pkt(CC, 43, 0);
           await d.releaseCc(49);
         },
-        caption: "Hold Shift while selecting a side button to address tracks 5-8.",
+        caption:
+          "Hold Shift while selecting a side button to address tracks 5-8.",
       },
     ],
   },
@@ -191,7 +202,8 @@ export const scenes: Scene[] = [
         file: "09-parameter-bank.png",
         title: "Parameter bank editing",
         action: "Turn jog to a parameter bank, then turn K3",
-        showing: "Parameter editing: the OLED rows map to K1-K8 above the pad grid",
+        showing:
+          "Parameter editing: the OLED rows map to K1-K8 above the pad grid",
         targets: [
           { aria: ARIA.jog, name: "Jog" },
           { aria: ARIA.encoder(3), name: "K3" },
@@ -210,7 +222,8 @@ export const scenes: Scene[] = [
         action: "Turn jog to a parameter bank, then turn K3",
         showing: "Each OLED row is one encoder, in K1-K8 order left to right",
         crop: "oled",
-        caption: "The OLED row order matches K1-K8 left to right. The close-up makes the active bank and its eight values legible.",
+        caption:
+          "The OLED row order matches K1-K8 left to right. The close-up makes the active bank and its eight values legible.",
       },
     ],
   },
@@ -275,16 +288,19 @@ export const scenes: Scene[] = [
           { aria: ARIA.noteSession, name: "Note/Session" },
         ],
         drive: (d) => d.openGlobalMenu(),
-        caption: "Shift + Note/Session opens the menu. The first pages are usually focused on the active track.",
+        caption:
+          "Shift + Note/Session opens the menu. The first pages are usually focused on the active track.",
       },
       {
         file: "11-global-menu-scrolled.png",
         expect: { globalMenuOpen: true },
         title: "Scroll to project actions",
         action: "Rotate jog to Export / Save entries",
-        showing: "Project actions live in the Global section; this guide only shows the entry points",
+        showing:
+          "Project actions live in the Global section; this guide only shows the entry points",
         targets: [{ aria: ARIA.jog, name: "Jog rotate" }],
-        drive: (d) => d.selectMenuLabel(["Save state", "Load state", "Export to Ableton"]),
+        drive: (d) =>
+          d.selectMenuLabel(["Save state", "Load state", "Export to Ableton"]),
         caption:
           "Rotate the jog to reach additional actions such as save, load, export, and global settings.",
       },

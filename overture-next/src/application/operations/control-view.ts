@@ -1,4 +1,7 @@
-import type { ControlSurfaceContext, HeldSurfaceControl } from "../../state/control-surface-context";
+import type {
+  ControlSurfaceContext,
+  HeldSurfaceControl,
+} from "../../state/control-surface-context";
 import { operationApplied, type OperationResult } from "./types";
 
 export interface ControlViewContext {

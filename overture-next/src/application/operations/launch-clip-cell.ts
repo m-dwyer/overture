@@ -13,12 +13,20 @@ export interface LaunchClipCellContext {
   readonly transport: TransportState;
 }
 
-export function launchClipCell(context: LaunchClipCellContext, coordinate: ClipCellCoordinateInput): OperationResult {
+export function launchClipCell(
+  context: LaunchClipCellContext,
+  coordinate: ClipCellCoordinateInput,
+): OperationResult {
   selectClipCell(context, coordinate);
   const cell = context.project.clipCellAt(coordinate);
   const hostCommands = cell.clipId
     ? []
-    : context.playback.stopTrack(context.project, coordinate.trackIndex, context.transport.clock());
-  if (cell.clipId) context.playback.launchClipOnTrack(context.project, coordinate);
+    : context.playback.stopTrack(
+        context.project,
+        coordinate.trackIndex,
+        context.transport.clock(),
+      );
+  if (cell.clipId)
+    context.playback.launchClipOnTrack(context.project, coordinate);
   return operationApplied(hostCommands);
 }

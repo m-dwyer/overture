@@ -2,7 +2,9 @@ import type { CoreSnapshot } from "../application/types";
 import { viewModuleFor } from "./internal/view-modules";
 import type { LedView, OvertureSurfaceView, SurfaceHint } from "./types";
 
-export function createOvertureSurfaceView(snapshot: CoreSnapshot): OvertureSurfaceView {
+export function createOvertureSurfaceView(
+  snapshot: CoreSnapshot,
+): OvertureSurfaceView {
   const viewModule = viewModuleFor(snapshot);
   const surfaceHints = viewModule.createSurfaceHints(snapshot);
   return {
@@ -12,7 +14,10 @@ export function createOvertureSurfaceView(snapshot: CoreSnapshot): OvertureSurfa
   };
 }
 
-function createLedView(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHint[]): LedView {
+function createLedView(
+  snapshot: CoreSnapshot,
+  surfaceHints: readonly SurfaceHint[],
+): LedView {
   return {
     steps: snapshot.steps.map((step) => ({
       step: step.index,
@@ -26,7 +31,10 @@ function createLedView(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHin
         state: trackRowLedState(snapshot, surfaceHints, row),
       })),
       { kind: "play", state: snapshot.playing ? "playing" : "stopped" },
-      { kind: "menu", state: snapshot.activeView === "session" ? "session" : "track" },
+      {
+        kind: "menu",
+        state: snapshot.activeView === "session" ? "session" : "track",
+      },
     ],
   };
 }
@@ -41,5 +49,7 @@ function trackRowLedState(
 }
 
 function hasTrackRowHint(hints: readonly SurfaceHint[], row: number): boolean {
-  return hints.some((hint) => hint.surface.kind === "track-row" && hint.surface.row === row);
+  return hints.some(
+    (hint) => hint.surface.kind === "track-row" && hint.surface.row === row,
+  );
 }

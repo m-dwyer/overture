@@ -22,28 +22,46 @@ type HostFunction = (...args: unknown[]) => unknown;
 type GlobalHost = Record<string, unknown>;
 
 export function moveCommandToPacket(command: HostCommand): MoveMidiPacket {
-  if (command.route.kind !== "move") throw new Error("Cannot convert non-Move command to Move packet");
+  if (command.route.kind !== "move")
+    throw new Error("Cannot convert non-Move command to Move packet");
   const channel = command.route.moveTrackTarget & 0x0f;
   if (command.kind === "track-note-on") {
-    return [(2 << 4) | CIN_NOTE_ON, NOTE_ON | channel, command.note & 0x7f, command.velocity & 0x7f];
+    return [
+      (2 << 4) | CIN_NOTE_ON,
+      NOTE_ON | channel,
+      command.note & 0x7f,
+      command.velocity & 0x7f,
+    ];
   }
   return [(2 << 4) | CIN_NOTE_OFF, NOTE_OFF | channel, command.note & 0x7f, 0];
 }
 
-export function schwungCommandToMessage(command: HostCommand): SchwungMidiMessage {
-  if (command.route.kind !== "schwung") throw new Error("Cannot convert non-Schwung command to Schwung message");
-  const channel = (SCHWUNG_SLOT_CHANNEL_FIRST + command.route.schwungChainIndex) & 0x0f;
-  if (command.kind === "track-note-on") return [NOTE_ON | channel, command.note & 0x7f, command.velocity & 0x7f];
+export function schwungCommandToMessage(
+  command: HostCommand,
+): SchwungMidiMessage {
+  if (command.route.kind !== "schwung")
+    throw new Error("Cannot convert non-Schwung command to Schwung message");
+  const channel =
+    (SCHWUNG_SLOT_CHANNEL_FIRST + command.route.schwungChainIndex) & 0x0f;
+  if (command.kind === "track-note-on")
+    return [NOTE_ON | channel, command.note & 0x7f, command.velocity & 0x7f];
   return [NOTE_OFF | channel, command.note & 0x7f, 0];
 }
 
-export function moveMidiToInput(data: readonly number[], stepCount: number): ControlInput | null {
+export function moveMidiToInput(
+  data: readonly number[],
+  stepCount: number,
+): ControlInput | null {
   const status = (data[0] ?? 0) & 0xf0;
   const d1 = (data[1] ?? 0) | 0;
   const d2 = (data[2] ?? 0) | 0;
 
   if (status === CC) return parseMoveCc(d1, d2);
-  if ((status === NOTE_ON && d2 > 0) || status === NOTE_OFF || (status === NOTE_ON && d2 === 0)) {
+  if (
+    (status === NOTE_ON && d2 > 0) ||
+    status === NOTE_OFF ||
+    (status === NOTE_ON && d2 === 0)
+  ) {
     return parseMoveNote(status, d1, d2, stepCount);
   }
   return null;
@@ -59,17 +77,29 @@ function parseMoveCc(cc: number, value: number): ControlInput | null {
   return null;
 }
 
-function parseMoveNote(status: number, note: number, velocity: number, stepCount: number): ControlInput | null {
+function parseMoveNote(
+  status: number,
+  note: number,
+  velocity: number,
+  stepCount: number,
+): ControlInput | null {
   if (note >= PAD_NOTE0 && note < PAD_NOTE0 + PAD_COUNT) {
     const held = status === NOTE_ON && velocity > 0;
-    return { kind: "pad", held, padIndex: note - PAD_NOTE0, velocity: held ? velocity : 0 };
+    return {
+      kind: "pad",
+      held,
+      padIndex: note - PAD_NOTE0,
+      velocity: held ? velocity : 0,
+    };
   }
   if (status !== NOTE_ON || velocity <= 0) return null;
   if (note < STEP_CC0 || note >= STEP_CC0 + stepCount) return null;
   return { kind: "step", step: note - STEP_CC0 };
 }
 
-export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHostPorts {
+export function createSchwungAdapter(
+  host: GlobalHost = globalThis,
+): OvertureHostPorts {
   function call(name: string, args: unknown[]): unknown {
     const fn = host[name];
     if (typeof fn === "function") return (fn as HostFunction)(...args);
@@ -143,8 +173,14 @@ export function createSchwungAdapter(host: GlobalHost = globalThis): OvertureHos
       },
       commands: {
         execute(command) {
-          if (command.route.kind === "move") hostPorts.outbound.midi.sendMovePacket(moveCommandToPacket(command));
-          else hostPorts.outbound.midi.sendSchwungMessage(schwungCommandToMessage(command));
+          if (command.route.kind === "move")
+            hostPorts.outbound.midi.sendMovePacket(
+              moveCommandToPacket(command),
+            );
+          else
+            hostPorts.outbound.midi.sendSchwungMessage(
+              schwungCommandToMessage(command),
+            );
         },
       },
     },

@@ -5,7 +5,10 @@ import { createDisplayHostApi } from "./shadow-ui-display-host.js";
 import { createDspHostApi, type DspHostApi } from "./shadow-ui-dsp-host.js";
 import { createFileHostApi } from "./shadow-ui-file-host.js";
 import { createLedHostApi } from "./shadow-ui-led-host.js";
-import { createSchwungHostRuntime, type SchwungHostRuntime } from "./schwung-host-runtime.js";
+import {
+  createSchwungHostRuntime,
+  type SchwungHostRuntime,
+} from "./schwung-host-runtime.js";
 import type { DisplaySink, FileStore, LedSink, MidiSink } from "./sinks.js";
 
 type HostGlobalTarget = typeof globalThis & Partial<HostApi>;
@@ -27,7 +30,9 @@ export interface ShadowUiHostRuntime {
   installGlobals(target?: HostGlobalTarget): void;
 }
 
-export async function createShadowUiHostRuntime(options: ShadowUiHostRuntimeOptions): Promise<ShadowUiHostRuntime> {
+export async function createShadowUiHostRuntime(
+  options: ShadowUiHostRuntimeOptions,
+): Promise<ShadowUiHostRuntime> {
   const dspHost = createDspHostApi(options.dsp, options.strict);
   const schwungHost = await createSchwungHostRuntime({
     schwung: options.schwung,

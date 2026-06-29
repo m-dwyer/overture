@@ -7,7 +7,10 @@ export interface SessionGridCoordinate {
   sceneIndex: number;
 }
 
-export function clipCellCoordinateForSessionPad(visibleTrackBank: number, padIndex: number): SessionGridCoordinate {
+export function clipCellCoordinateForSessionPad(
+  visibleTrackBank: number,
+  padIndex: number,
+): SessionGridCoordinate {
   const padRowFromBottom = Math.floor(padIndex / SESSION_SCENE_COLUMNS);
   const row = SESSION_TRACK_ROWS - 1 - padRowFromBottom;
   return {

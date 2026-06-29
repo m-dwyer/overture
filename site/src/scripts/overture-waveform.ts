@@ -7,23 +7,25 @@ const loadWaveform = async (canvas: HTMLCanvasElement) => {
   }
 };
 
-document.querySelectorAll<HTMLCanvasElement>("[data-overture-waveform]").forEach((canvas) => {
-  if (!("IntersectionObserver" in window)) {
-    void loadWaveform(canvas);
-    return;
-  }
-
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (!entry.isIntersecting) {
-        return;
-      }
-
-      observer.disconnect();
+document
+  .querySelectorAll<HTMLCanvasElement>("[data-overture-waveform]")
+  .forEach((canvas) => {
+    if (!("IntersectionObserver" in window)) {
       void loadWaveform(canvas);
-    },
-    { rootMargin: "240px 0px" },
-  );
+      return;
+    }
 
-  observer.observe(canvas);
-});
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        observer.disconnect();
+        void loadWaveform(canvas);
+      },
+      { rootMargin: "240px 0px" },
+    );
+
+    observer.observe(canvas);
+  });

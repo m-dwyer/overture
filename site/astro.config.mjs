@@ -24,11 +24,17 @@ function serveWebEmulator() {
       server.middlewares.use(async (req, res, next) => {
         if (!req.url) return next();
         const url = req.url.split("?")[0];
-        if (url !== "/emulator" && url !== "/emulator/" && !url.startsWith("/emulator/")) return next();
+        if (
+          url !== "/emulator" &&
+          url !== "/emulator/" &&
+          !url.startsWith("/emulator/")
+        )
+          return next();
 
-        const rel = url === "/emulator" || url === "/emulator/"
-          ? "index.html"
-          : decodeURIComponent(url.slice("/emulator/".length));
+        const rel =
+          url === "/emulator" || url === "/emulator/"
+            ? "index.html"
+            : decodeURIComponent(url.slice("/emulator/".length));
         const filePath = resolve(webDist, rel);
         if (!filePath.startsWith(allowedPrefix) && filePath !== webDist) {
           res.statusCode = 403;
@@ -43,7 +49,9 @@ function serveWebEmulator() {
         } catch {
           res.statusCode = 404;
           res.setHeader("Content-Type", "text/plain; charset=utf-8");
-          res.end("Overture emulator assets are not built. Run `mise web-build`, then reload /try/.");
+          res.end(
+            "Overture emulator assets are not built. Run `mise web-build`, then reload /try/.",
+          );
         }
       });
     },
@@ -63,7 +71,9 @@ function copyWebEmulator() {
       try {
         await access(webDist, constants.R_OK);
       } catch {
-        this.error("web/dist not found; run `pnpm -C ../web build` before building the site to publish /emulator/");
+        this.error(
+          "web/dist not found; run `pnpm -C ../web build` before building the site to publish /emulator/",
+        );
         return;
       }
       await cp(webDist, resolve(siteDist, "emulator"), { recursive: true });

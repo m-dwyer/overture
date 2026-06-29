@@ -5,4 +5,7 @@ export interface SplashRenderState {
   splashFrameTick: number;
 }
 
-export function renderSplashScreen(state: SplashRenderState, deps: SplashSurface): void;
+export function renderSplashScreen(
+  state: SplashRenderState,
+  deps: SplashSurface,
+): void;

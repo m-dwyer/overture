@@ -7,8 +7,14 @@ export interface ToggleSelectedStepContext {
   readonly project: OvertureProject;
 }
 
-export function toggleSelectedStep(context: ToggleSelectedStepContext, stepIndex: number): OperationResult {
+export function toggleSelectedStep(
+  context: ToggleSelectedStepContext,
+  stepIndex: number,
+): OperationResult {
   context.control.selectStep(stepIndex);
-  context.project.toggleSequenceStepAt(context.control.snapshot().selectedClipCell, stepIndex);
+  context.project.toggleSequenceStepAt(
+    context.control.snapshot().selectedClipCell,
+    stepIndex,
+  );
   return operationApplied();
 }

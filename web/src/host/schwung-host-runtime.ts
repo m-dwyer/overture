@@ -1,5 +1,12 @@
-import { BrowserSchwungChain, type BrowserSchwungHost, createBrowserSchwungChain } from "../schwung/browser-chain.js";
-import { createSchwungHostApi, type SchwungHostApi } from "./shadow-ui-schwung-host.js";
+import {
+  BrowserSchwungChain,
+  type BrowserSchwungHost,
+  createBrowserSchwungChain,
+} from "../schwung/browser-chain.js";
+import {
+  createSchwungHostApi,
+  type SchwungHostApi,
+} from "./shadow-ui-schwung-host.js";
 import type { MidiSink } from "./sinks.js";
 
 export interface SchwungHostRuntimeOptions {
@@ -14,8 +21,11 @@ export interface SchwungHostRuntime {
   handleHostInternalMidi(status: number, d1: number, d2: number): boolean;
 }
 
-export async function createSchwungHostRuntime(options: SchwungHostRuntimeOptions): Promise<SchwungHostRuntime> {
-  const host = options.schwung ?? await createSchwungHostWithFallback(options.log);
+export async function createSchwungHostRuntime(
+  options: SchwungHostRuntimeOptions,
+): Promise<SchwungHostRuntime> {
+  const host =
+    options.schwung ?? (await createSchwungHostWithFallback(options.log));
   const hostApi = createSchwungHostApi(host, options.midi, options.log);
   return {
     api: hostApi.api,
@@ -24,7 +34,9 @@ export async function createSchwungHostRuntime(options: SchwungHostRuntimeOption
   };
 }
 
-async function createSchwungHostWithFallback(log: (message: string) => void): Promise<BrowserSchwungHost> {
+async function createSchwungHostWithFallback(
+  log: (message: string) => void,
+): Promise<BrowserSchwungHost> {
   try {
     return await createBrowserSchwungChain({ log });
   } catch (error) {

@@ -1,7 +1,11 @@
 import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinateInput, ClipId } from "../../domain/project";
 import type { ProjectPlaybackReadModel } from "../../state/project";
-import { launchPlayingClip, stopAllPlayingClips, stopPlayingClipOnTrack } from "./internal/clips";
+import {
+  launchPlayingClip,
+  stopAllPlayingClips,
+  stopPlayingClipOnTrack,
+} from "./internal/clips";
 import { drainDueNoteOffs, injectPlaybackStep } from "./internal/notes";
 import { createPlaybackState } from "./state";
 import type { PlaybackState } from "./state";
@@ -43,10 +47,20 @@ export class Playback {
    * are emitted every tick; step note injection happens only when the transport
    * advances to a new sequencer step.
    */
-  advanceTick(project: ProjectPlaybackReadModel, tick: Readonly<PlaybackTick>): PlaybackAdvance {
+  advanceTick(
+    project: ProjectPlaybackReadModel,
+    tick: Readonly<PlaybackTick>,
+  ): PlaybackAdvance {
     const hostCommands = drainDueNoteOffs(this.state, tick.tick);
     if (tick.injectedStep !== null) {
-      hostCommands.push(...injectPlaybackStep(project, this.state, tick.injectedStep, tick.tick));
+      hostCommands.push(
+        ...injectPlaybackStep(
+          project,
+          this.state,
+          tick.injectedStep,
+          tick.tick,
+        ),
+      );
     }
     return { injectedStep: tick.injectedStep, hostCommands };
   }
@@ -55,7 +69,10 @@ export class Playback {
    * Emits note commands for the current playhead and schedules matching
    * note-offs. Transport owns the clock; playback owns the emitted note work.
    */
-  injectStep(project: ProjectPlaybackReadModel, clock: Readonly<PlaybackClock>): HostCommand[] {
+  injectStep(
+    project: ProjectPlaybackReadModel,
+    clock: Readonly<PlaybackClock>,
+  ): HostCommand[] {
     return injectPlaybackStep(project, this.state, clock.playhead, clock.tick);
   }
 
@@ -63,7 +80,10 @@ export class Playback {
    * Clears all playing clips and emits any note-off commands needed to silence
    * the currently active playback state.
    */
-  stopAll(project: ProjectPlaybackReadModel, clock: Readonly<PlaybackClock>): HostCommand[] {
+  stopAll(
+    project: ProjectPlaybackReadModel,
+    clock: Readonly<PlaybackClock>,
+  ): HostCommand[] {
     return stopAllPlayingClips(project, this.state, clock);
   }
 
@@ -71,7 +91,11 @@ export class Playback {
    * Stops one Track's playing clip and emits any note-off commands needed to
    * silence that Track.
    */
-  stopTrack(project: ProjectPlaybackReadModel, trackIndex: number, clock: Readonly<PlaybackClock>): HostCommand[] {
+  stopTrack(
+    project: ProjectPlaybackReadModel,
+    trackIndex: number,
+    clock: Readonly<PlaybackClock>,
+  ): HostCommand[] {
     return stopPlayingClipOnTrack(project, this.state, clock, trackIndex);
   }
 
@@ -80,7 +104,10 @@ export class Playback {
    * Cells do not mutate playback; callers that treat empties as stop targets
    * should call `stopTrack`.
    */
-  launchClipOnTrack(project: ProjectPlaybackReadModel, coordinate: ClipCellCoordinateInput): ClipId | null {
+  launchClipOnTrack(
+    project: ProjectPlaybackReadModel,
+    coordinate: ClipCellCoordinateInput,
+  ): ClipId | null {
     return launchPlayingClip(project, this.state, coordinate);
   }
 
@@ -89,7 +116,10 @@ export class Playback {
    * This preserves the current transport-start behavior without letting
    * transport own playing clip focus.
    */
-  launchClipOnTrackIfIdle(project: ProjectPlaybackReadModel, coordinate: ClipCellCoordinateInput): ClipId | null {
+  launchClipOnTrackIfIdle(
+    project: ProjectPlaybackReadModel,
+    coordinate: ClipCellCoordinateInput,
+  ): ClipId | null {
     if (this.state.tracks.some((track) => track.playingClipId)) return null;
     return this.launchClipOnTrack(project, coordinate);
   }

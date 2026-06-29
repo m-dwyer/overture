@@ -12,7 +12,10 @@ import { scenes } from "./manual/scenarios";
 // / emit-html.ts (writers), generate.ts (the shared boot→drive→capture→emit
 // loop). content.ts holds the beginner framing (intro, cheat-sheet, glossary).
 
-test.skip(process.env.MANUAL_GENERATE !== "1", "Run with `pnpm -C web manual:generate`.");
+test.skip(
+  process.env.MANUAL_GENERATE !== "1",
+  "Run with `pnpm -C web manual:generate`.",
+);
 
 test("generate beginner manual figures and markdown", async ({ page }) => {
   test.setTimeout(120_000);

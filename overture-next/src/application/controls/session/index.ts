@@ -16,13 +16,19 @@ export function interpretSessionViewControl(
   if (input.kind === "track-row") {
     return {
       kind: "select-track",
-      trackIndex: selectTrackFromRow(input.row, control.heldControls.includes("shift") ? 1 : 0),
+      trackIndex: selectTrackFromRow(
+        input.row,
+        control.heldControls.includes("shift") ? 1 : 0,
+      ),
     };
   }
   if (input.kind !== "pad") return null;
   if (!input.held) return null;
   return {
     kind: "launch-clip-cell",
-    coordinate: clipCellCoordinateForSessionPad(control.visibleTrackBank, input.padIndex),
+    coordinate: clipCellCoordinateForSessionPad(
+      control.visibleTrackBank,
+      input.padIndex,
+    ),
   };
 }

@@ -1,6 +1,13 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
-import { createInitialControlSurfaceContext, type ControlSurfaceContextSnapshot } from "../state/control-surface-context";
-import { createDefaultProject, type OvertureProject, type ProjectCoreReadModel } from "../state/project";
+import {
+  createInitialControlSurfaceContext,
+  type ControlSurfaceContextSnapshot,
+} from "../state/control-surface-context";
+import {
+  createDefaultProject,
+  type OvertureProject,
+  type ProjectCoreReadModel,
+} from "../state/project";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent, type IntentHandlers } from "./intents/apply-intent";
@@ -16,7 +23,11 @@ import {
   toggleView,
 } from "./operations";
 import { createPlayback, type Playback } from "./playback";
-import { createTransport, type TransportState, type TransportStateSnapshot } from "./transport";
+import {
+  createTransport,
+  type TransportState,
+  type TransportStateSnapshot,
+} from "./transport";
 import type { CoreSnapshot, HostCommand, OvertureCore } from "./types";
 
 export function createOvertureCore(): OvertureCore {
@@ -24,7 +35,12 @@ export function createOvertureCore(): OvertureCore {
   const control = createInitialControlSurfaceContext();
   const transport = createTransport();
   const playback = createPlayback();
-  const intentHandlers = createIntentHandlers({ control, project, playback, transport });
+  const intentHandlers = createIntentHandlers({
+    control,
+    project,
+    playback,
+    transport,
+  });
   const hostCommands: HostCommand[] = [];
 
   function init(): void {}
@@ -78,7 +94,12 @@ interface CoreOwners {
   readonly transport: TransportState;
 }
 
-function createIntentHandlers({ control, project, playback, transport }: CoreOwners): IntentHandlers {
+function createIntentHandlers({
+  control,
+  project,
+  playback,
+  transport,
+}: CoreOwners): IntentHandlers {
   return {
     setSurfaceControlHeld(surfaceControl, held) {
       return setSurfaceControlHeld({ control }, surfaceControl, held);
@@ -149,11 +170,17 @@ function buildCoreSnapshot(
   };
 }
 
-function selectedSequence(project: ProjectCoreReadModel, control: ControlSurfaceContextSnapshot) {
+function selectedSequence(
+  project: ProjectCoreReadModel,
+  control: ControlSurfaceContextSnapshot,
+) {
   return project.sequenceFor(control.selectedClipCell);
 }
 
-function getSelectedSequenceLengthFor(project: ProjectCoreReadModel, control: ControlSurfaceContextSnapshot): number {
+function getSelectedSequenceLengthFor(
+  project: ProjectCoreReadModel,
+  control: ControlSurfaceContextSnapshot,
+): number {
   const sequence = selectedSequence(project, control);
   return sequence?.length ?? DEFAULT_STEP_COUNT;
 }
@@ -164,15 +191,18 @@ function getSnapshotSteps(
   transport: TransportStateSnapshot,
 ) {
   const sequence = selectedSequence(project, control);
-  return Array.from({ length: getSelectedSequenceLengthFor(project, control) }, (_, index) => {
-    const step = sequence ? getSequenceStep(sequence, index) : null;
-    return {
-      index,
-      active: step?.active ?? false,
-      note: step?.note ?? null,
-      velocity: step?.velocity ?? null,
-      selected: index === control.selectedStep,
-      playhead: index === transport.playhead,
-    };
-  });
+  return Array.from(
+    { length: getSelectedSequenceLengthFor(project, control) },
+    (_, index) => {
+      const step = sequence ? getSequenceStep(sequence, index) : null;
+      return {
+        index,
+        active: step?.active ?? false,
+        note: step?.note ?? null,
+        velocity: step?.velocity ?? null,
+        selected: index === control.selectedStep,
+        playhead: index === transport.playhead,
+      };
+    },
+  );
 }

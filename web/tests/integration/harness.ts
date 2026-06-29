@@ -1,6 +1,12 @@
 import { createMockDsp } from "../../src/mock-dsp.js";
 import { createEmulator, type Emulator } from "../../src/host/emulator.js";
-import { memFiles, type DisplaySink, type FileStore, type LedSink, type MidiSink } from "../../src/host/sinks.js";
+import {
+  memFiles,
+  type DisplaySink,
+  type FileStore,
+  type LedSink,
+  type MidiSink,
+} from "../../src/host/sinks.js";
 import { createDefaultTestSchwungChain } from "./schwung-catalog.js";
 
 const BLOCKS_PER_TICK = 4;
@@ -54,7 +60,12 @@ export interface OvertureState {
   sessionView: boolean;
   playing: boolean;
   selectedStep: number;
-  steps: Array<{ index: number; active: boolean; selected: boolean; playhead: boolean }>;
+  steps: Array<{
+    index: number;
+    active: boolean;
+    selected: boolean;
+    playhead: boolean;
+  }>;
   [key: string]: unknown;
 }
 

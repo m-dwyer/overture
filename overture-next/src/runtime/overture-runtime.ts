@@ -24,7 +24,9 @@ export interface OvertureRuntimeDebug {
   readonly core: OvertureCore;
 }
 
-export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRuntime {
+export function createOvertureRuntime(
+  hostPorts: OvertureHostPorts,
+): OvertureRuntime {
   const core = createOvertureCore();
   let splashTicks = 0;
   let splashWasVisible = false;
@@ -50,14 +52,18 @@ export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRun
   }
 
   function onMidiMessage(data: readonly number[]): void {
-    const input = hostPorts.inbound.controlSurface.parseMoveInput(data, core.selectedSequenceLength());
+    const input = hostPorts.inbound.controlSurface.parseMoveInput(
+      data,
+      core.selectedSequenceLength(),
+    );
     if (input) core.dispatchControlInput(input);
     drainCommands();
   }
 
   function onUnload(): void {
     drainCommands();
-    for (const command of core.stopPlayback()) hostPorts.outbound.commands.execute(command);
+    for (const command of core.stopPlayback())
+      hostPorts.outbound.commands.execute(command);
   }
 
   function isBootSplashVisible(): boolean {
@@ -83,7 +89,10 @@ export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRun
     const snapshot = core.snapshot();
     hostPorts.outbound.runtime.publishState(snapshot);
     const view = createOvertureSurfaceView(snapshot);
-    renderScreen(splashTicks > 0 ? getSplashView() : view.screen, hostPorts.outbound.display);
+    renderScreen(
+      splashTicks > 0 ? getSplashView() : view.screen,
+      hostPorts.outbound.display,
+    );
     renderLeds(view.leds, hostPorts.outbound.leds);
   }
 
@@ -96,7 +105,8 @@ export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRun
   }
 
   function drainCommands(): void {
-    for (const command of core.drainHostCommands()) hostPorts.outbound.commands.execute(command);
+    for (const command of core.drainHostCommands())
+      hostPorts.outbound.commands.execute(command);
   }
 
   return {

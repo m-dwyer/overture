@@ -36,11 +36,17 @@ export interface SequenceReadModel {
   readonly steps: readonly Readonly<SequenceStep>[];
 }
 
-export function stepIndex(value: number, stepCount = DEFAULT_STEP_COUNT): StepIndex {
+export function stepIndex(
+  value: number,
+  stepCount = DEFAULT_STEP_COUNT,
+): StepIndex {
   return integerInRange("Step Index", value, stepCount) as StepIndex;
 }
 
-export function parseStepIndex(value: number, stepCount = DEFAULT_STEP_COUNT): StepIndex | null {
+export function parseStepIndex(
+  value: number,
+  stepCount = DEFAULT_STEP_COUNT,
+): StepIndex | null {
   try {
     return stepIndex(value, stepCount);
   } catch {
@@ -48,7 +54,10 @@ export function parseStepIndex(value: number, stepCount = DEFAULT_STEP_COUNT): S
   }
 }
 
-export function createDefaultSequence(stepCount = DEFAULT_STEP_COUNT, gateTicks = 12): Sequence {
+export function createDefaultSequence(
+  stepCount = DEFAULT_STEP_COUNT,
+  gateTicks = 12,
+): Sequence {
   const steps = Array.from({ length: stepCount }, (_, index) => ({
     index: stepIndex(index, stepCount),
     active: index % 4 === 0,
@@ -59,7 +68,10 @@ export function createDefaultSequence(stepCount = DEFAULT_STEP_COUNT, gateTicks 
   return { length: stepCount, steps };
 }
 
-export function getSequenceStep(sequence: SequenceReadModel, index: number): Readonly<SequenceStep> | null {
+export function getSequenceStep(
+  sequence: SequenceReadModel,
+  index: number,
+): Readonly<SequenceStep> | null {
   const parsedIndex = parseStepIndex(index, sequence.steps.length);
   if (parsedIndex === null) return null;
   return sequence.steps[parsedIndex] ?? null;
@@ -77,7 +89,10 @@ export interface SequenceStepToggle {
  * Overture Clip data should do so through the owning OvertureProject boundary
  * instead of assigning into Project-owned storage directly.
  */
-export function sequenceWithToggledStep(sequence: Sequence, index: number): SequenceStepToggle | null {
+export function sequenceWithToggledStep(
+  sequence: Sequence,
+  index: number,
+): SequenceStepToggle | null {
   const parsedIndex = parseStepIndex(index, sequence.steps.length);
   if (parsedIndex === null) return null;
   const step = getSequenceStep(sequence, parsedIndex);
@@ -86,7 +101,9 @@ export function sequenceWithToggledStep(sequence: Sequence, index: number): Sequ
   return {
     sequence: {
       ...sequence,
-      steps: sequence.steps.map((candidate) => (candidate.index === parsedIndex ? toggledStep : candidate)),
+      steps: sequence.steps.map((candidate) =>
+        candidate.index === parsedIndex ? toggledStep : candidate,
+      ),
     },
     step: toggledStep,
   };

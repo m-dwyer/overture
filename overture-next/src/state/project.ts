@@ -1,5 +1,8 @@
 import type { Sequence, SequenceStep } from "../domain/sequence";
-import { createDefaultSequence, sequenceWithToggledStep } from "../domain/sequence";
+import {
+  createDefaultSequence,
+  sequenceWithToggledStep,
+} from "../domain/sequence";
 import {
   clipCellCoordinate,
   clipId,
@@ -147,7 +150,10 @@ export class OvertureProject {
    * Toggles a Step in the Sequence owned by the clip at a valid Clip Cell.
    * Returns null for an Empty Clip Cell, missing clip, or invalid Step index.
    */
-  toggleSequenceStepAt(coordinate: ClipCellCoordinateInput, stepIndex: number): SequenceStepSnapshot | null {
+  toggleSequenceStepAt(
+    coordinate: ClipCellCoordinateInput,
+    stepIndex: number,
+  ): SequenceStepSnapshot | null {
     const cell = this.requireCell(coordinate);
     if (!cell.clipId) return null;
     const clip = this.data.clips[cell.clipId];
@@ -160,7 +166,13 @@ export class OvertureProject {
 
   private requireCell(coordinate: ClipCellCoordinateInput): ClipCell {
     const cell = findClipCell(this.data.clipCells, coordinate);
-    if (!cell) throw new Error("Missing clip cell " + coordinate.trackIndex + ":" + coordinate.sceneIndex);
+    if (!cell)
+      throw new Error(
+        "Missing clip cell " +
+          coordinate.trackIndex +
+          ":" +
+          coordinate.sceneIndex,
+      );
     return cell;
   }
 }
@@ -177,7 +189,9 @@ function snapshotCell(cell: ClipCell): ClipCellSnapshot {
   };
 }
 
-function snapshotClip(clip: OvertureProjectData["clips"][ClipId] | undefined): OvertureClipSnapshot | null {
+function snapshotClip(
+  clip: OvertureProjectData["clips"][ClipId] | undefined,
+): OvertureClipSnapshot | null {
   if (!clip) return null;
   return {
     id: clip.id,
@@ -211,16 +225,27 @@ function createDefaultProjectData(): OvertureProjectData {
     nextClipNumber: 1,
   };
 
-  for (let trackIndexValue = 0; trackIndexValue < TRACK_COUNT; trackIndexValue++) {
+  for (
+    let trackIndexValue = 0;
+    trackIndexValue < TRACK_COUNT;
+    trackIndexValue++
+  ) {
     createClipInCell(data, { trackIndex: trackIndexValue, sceneIndex: 0 });
   }
 
   return data;
 }
 
-function findClipCell(cells: readonly ClipCell[], coordinateInput: ClipCellCoordinateInput): ClipCell | undefined {
+function findClipCell(
+  cells: readonly ClipCell[],
+  coordinateInput: ClipCellCoordinateInput,
+): ClipCell | undefined {
   const coordinate = clipCellCoordinate(coordinateInput);
-  return cells.find((cell) => cell.trackIndex === coordinate.trackIndex && cell.sceneIndex === coordinate.sceneIndex);
+  return cells.find(
+    (cell) =>
+      cell.trackIndex === coordinate.trackIndex &&
+      cell.sceneIndex === coordinate.sceneIndex,
+  );
 }
 
 function createScenes(sceneCount = SCENE_COUNT): OvertureScene[] {
@@ -230,10 +255,21 @@ function createScenes(sceneCount = SCENE_COUNT): OvertureScene[] {
   }));
 }
 
-function createClipCells(trackCount = TRACK_COUNT, sceneCount = SCENE_COUNT): ClipCell[] {
+function createClipCells(
+  trackCount = TRACK_COUNT,
+  sceneCount = SCENE_COUNT,
+): ClipCell[] {
   const clipCells: ClipCell[] = [];
-  for (let sceneIndexValue = 0; sceneIndexValue < sceneCount; sceneIndexValue++) {
-    for (let trackIndexValue = 0; trackIndexValue < trackCount; trackIndexValue++) {
+  for (
+    let sceneIndexValue = 0;
+    sceneIndexValue < sceneCount;
+    sceneIndexValue++
+  ) {
+    for (
+      let trackIndexValue = 0;
+      trackIndexValue < trackCount;
+      trackIndexValue++
+    ) {
       clipCells.push({
         trackIndex: trackIndex(trackIndexValue),
         sceneIndex: sceneIndex(sceneIndexValue),
@@ -244,9 +280,18 @@ function createClipCells(trackCount = TRACK_COUNT, sceneCount = SCENE_COUNT): Cl
   return clipCells;
 }
 
-function createClipInCell(data: OvertureProjectData, coordinate: ClipCellCoordinateInput): OvertureClip {
+function createClipInCell(
+  data: OvertureProjectData,
+  coordinate: ClipCellCoordinateInput,
+): OvertureClip {
   const cell = findClipCell(data.clipCells, coordinate);
-  if (!cell) throw new Error("Missing clip cell " + coordinate.trackIndex + ":" + coordinate.sceneIndex);
+  if (!cell)
+    throw new Error(
+      "Missing clip cell " +
+        coordinate.trackIndex +
+        ":" +
+        coordinate.sceneIndex,
+    );
   const clip = createOvertureClip(clipId("clip-" + data.nextClipNumber));
   data.nextClipNumber++;
   data.clips[clip.id] = clip;

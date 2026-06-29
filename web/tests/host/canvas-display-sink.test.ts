@@ -11,8 +11,10 @@ function recorderCanvas() {
     fillStyle: "",
     font: "",
     textBaseline: "",
-    fillRect: (x: number, y: number, w: number, h: number) => fillRects.push([x, y, w, h]),
-    fillText: (text: string, x: number, y: number) => fillTexts.push({ text, x, y }),
+    fillRect: (x: number, y: number, w: number, h: number) =>
+      fillRects.push([x, y, w, h]),
+    fillText: (text: string, x: number, y: number) =>
+      fillTexts.push({ text, x, y }),
   };
   const stub: unknown = { width: 128, height: 64, getContext: () => ctx };
   return { canvas: stub as HTMLCanvasElement, fillRects, fillTexts };
@@ -22,7 +24,8 @@ function recorderCanvas() {
 function litCells(ch: string): [number, number][] {
   const cells: [number, number][] = [];
   DEVICE_FONT[ch].forEach((bits, row) => {
-    for (let col = 0; col < bits.length; col++) if (bits[col] === "1") cells.push([col, row]);
+    for (let col = 0; col < bits.length; col++)
+      if (bits[col] === "1") cells.push([col, row]);
   });
   return cells;
 }
@@ -30,7 +33,11 @@ function litCells(ch: string): [number, number][] {
 describe("canvas display sink — text rendering", () => {
   it("Exact mode plots the literal device glyph as 1-bit blocks (no fillText)", () => {
     const { canvas, fillRects, fillTexts } = recorderCanvas();
-    const display = createCanvasDisplaySink(canvas, () => 1, () => false);
+    const display = createCanvasDisplaySink(
+      canvas,
+      () => 1,
+      () => false,
+    );
 
     display.print(0, 0, "A", 1);
 
@@ -41,7 +48,11 @@ describe("canvas display sink — text rendering", () => {
 
   it("scales each device pixel into an s×s block at the scaled origin", () => {
     const { canvas, fillRects } = recorderCanvas();
-    const display = createCanvasDisplaySink(canvas, () => 8, () => false);
+    const display = createCanvasDisplaySink(
+      canvas,
+      () => 8,
+      () => false,
+    );
 
     display.print(1, 2, "A", 1); // origin (1,2) → (8,16); blocks are 8×8
 
@@ -53,7 +64,11 @@ describe("canvas display sink — text rendering", () => {
 
   it("advances on the device's fixed 6px grid", () => {
     const { canvas, fillRects } = recorderCanvas();
-    const display = createCanvasDisplaySink(canvas, () => 1, () => false);
+    const display = createCanvasDisplaySink(
+      canvas,
+      () => 1,
+      () => false,
+    );
 
     display.print(0, 0, "AA", 1);
 
@@ -67,7 +82,11 @@ describe("canvas display sink — text rendering", () => {
 
   it("Sharp/readable mode uses the AA system font, one fillText per char", () => {
     const { canvas, fillRects, fillTexts } = recorderCanvas();
-    const display = createCanvasDisplaySink(canvas, () => 8, () => true);
+    const display = createCanvasDisplaySink(
+      canvas,
+      () => 8,
+      () => true,
+    );
 
     display.print(0, 0, "AB", 1);
 
@@ -77,7 +96,11 @@ describe("canvas display sink — text rendering", () => {
 
   it("textWidth matches the firmware's chars × 6", () => {
     const { canvas } = recorderCanvas();
-    const display = createCanvasDisplaySink(canvas, () => 1, () => false);
+    const display = createCanvasDisplaySink(
+      canvas,
+      () => 1,
+      () => false,
+    );
     expect(display.textWidth("ABC")).toBe(18);
   });
 });

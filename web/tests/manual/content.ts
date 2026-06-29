@@ -20,7 +20,11 @@ export interface DocLink {
 // link is intentionally omitted for now — it will return once that manual is
 // also HTML-generated.
 export const links: DocLink[] = [
-  { label: "Overture architecture", href: "../ARCHITECTURE.md", note: "how the active implementation is structured" },
+  {
+    label: "Overture architecture",
+    href: "../ARCHITECTURE.md",
+    note: "how the active implementation is structured",
+  },
 ];
 
 export interface CheatRow {
@@ -30,14 +34,46 @@ export interface CheatRow {
 }
 
 export const cheatSheet: CheatRow[] = [
-  { control: "Note/Session", gesture: "Tap", does: "Toggle Track View and Session View" },
-  { control: "Side buttons 1-4", gesture: "Tap (Track View)", does: "Select track 1-4 — hold Shift for 5-8" },
-  { control: "Pads", gesture: "Tap", does: "Play notes, or pick a drum lane on drum tracks" },
-  { control: "Step 1-16", gesture: "Tap", does: "Place or clear a hit on the active lane" },
-  { control: "Jog wheel", gesture: "Turn", does: "Move through parameter banks" },
-  { control: "K1-K8", gesture: "Turn", does: "Edit the eight values in the visible bank" },
-  { control: "Shift + Step 3", gesture: "Hold + tap", does: "Edit the active track's sound source" },
-  { control: "Shift + Note/Session", gesture: "Hold + tap", does: "Open the Global Menu (save, load, export)" },
+  {
+    control: "Note/Session",
+    gesture: "Tap",
+    does: "Toggle Track View and Session View",
+  },
+  {
+    control: "Side buttons 1-4",
+    gesture: "Tap (Track View)",
+    does: "Select track 1-4 — hold Shift for 5-8",
+  },
+  {
+    control: "Pads",
+    gesture: "Tap",
+    does: "Play notes, or pick a drum lane on drum tracks",
+  },
+  {
+    control: "Step 1-16",
+    gesture: "Tap",
+    does: "Place or clear a hit on the active lane",
+  },
+  {
+    control: "Jog wheel",
+    gesture: "Turn",
+    does: "Move through parameter banks",
+  },
+  {
+    control: "K1-K8",
+    gesture: "Turn",
+    does: "Edit the eight values in the visible bank",
+  },
+  {
+    control: "Shift + Step 3",
+    gesture: "Hold + tap",
+    does: "Edit the active track's sound source",
+  },
+  {
+    control: "Shift + Note/Session",
+    gesture: "Hold + tap",
+    does: "Open the Global Menu (save, load, export)",
+  },
 ];
 
 export interface GlossaryRow {
@@ -46,12 +82,30 @@ export interface GlossaryRow {
 }
 
 export const glossary: GlossaryRow[] = [
-  { term: "Track View", def: "The detailed editor for one clip: pads, steps, jog, and encoders." },
-  { term: "Session View", def: "The clip launcher: the pad grid is clips across tracks and scene rows." },
-  { term: "Scene", def: "A row of clips — one per track — launched together (A, B, C ...)." },
-  { term: "Parameter bank", def: "A page of eight encoder (K1-K8) parameters shown on the OLED." },
-  { term: "Drum lane", def: "One drum voice on a drum track; its 16 steps are edited on the step row." },
-  { term: "Sound page", def: "The route-aware sound editor opened with Shift + Step 3. On Schwung tracks it edits modules and their exposed params from Overture." },
+  {
+    term: "Track View",
+    def: "The detailed editor for one clip: pads, steps, jog, and encoders.",
+  },
+  {
+    term: "Session View",
+    def: "The clip launcher: the pad grid is clips across tracks and scene rows.",
+  },
+  {
+    term: "Scene",
+    def: "A row of clips — one per track — launched together (A, B, C ...).",
+  },
+  {
+    term: "Parameter bank",
+    def: "A page of eight encoder (K1-K8) parameters shown on the OLED.",
+  },
+  {
+    term: "Drum lane",
+    def: "One drum voice on a drum track; its 16 steps are edited on the step row.",
+  },
+  {
+    term: "Sound page",
+    def: "The route-aware sound editor opened with Shift + Step 3. On Schwung tracks it edits modules and their exposed params from Overture.",
+  },
 ];
 
 // The full GuideConfig for the beginner guide — framing + output target in one
@@ -61,7 +115,8 @@ export const beginnerGuide: GuideConfig = {
   brandName: "OVERTURE",
   brandSub: "BEGINNER GUIDE",
   generateCmd: "pnpm -C web manual:generate",
-  editHint: "Edit web/tests/manual/scenarios.ts (walkthrough) and content.ts (intro, cheat-sheet, glossary).",
+  editHint:
+    "Edit web/tests/manual/scenarios.ts (walkthrough) and content.ts (intro, cheat-sheet, glossary).",
   mdPath: GUIDE_PATH,
   htmlPath: HTML_PATH,
   intro,

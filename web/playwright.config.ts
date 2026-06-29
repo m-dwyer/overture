@@ -19,7 +19,10 @@ export default defineConfig({
   // side-by-side expected/actual/diff slider for the visual snapshots — far easier
   // than hunting for PNGs under test-results/. open:"never" keeps it from hijacking
   // the terminal on every run; open it with `mise run screenshot-report`.
-  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+  ],
   use: {
     ...devices["Desktop Chrome"],
     baseURL: `http://localhost:${PORT}`,

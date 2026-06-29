@@ -4,8 +4,20 @@
 
 export interface DisplaySink {
   clearScreen(): void;
-  fillRect(x: number, y: number, w: number, h: number, value: number | boolean): void;
-  drawRect(x: number, y: number, w: number, h: number, value: number | boolean): void;
+  fillRect(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    value: number | boolean,
+  ): void;
+  drawRect(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    value: number | boolean,
+  ): void;
   setPixel(x: number, y: number, value: number | boolean): void;
   print(x: number, y: number, text: string, color: number): void;
   textWidth(text: string): number;
@@ -35,7 +47,10 @@ export function memFiles(): FileStore {
   const m = new Map<string, string>();
   return {
     read: (p) => (m.has(p) ? (m.get(p) as string) : null),
-    write: (p, d) => { m.set(p, String(d)); return 1; },
+    write: (p, d) => {
+      m.set(p, String(d));
+      return 1;
+    },
     exists: (p) => m.has(p),
   };
 }

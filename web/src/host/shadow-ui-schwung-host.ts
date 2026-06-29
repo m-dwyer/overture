@@ -63,9 +63,16 @@ export function createSchwungHostApi(
       shadow_get_param(slot: number, key: string): string | null {
         return schwung.shadowGetParam(slot, key);
       },
-      shadow_set_param(slot: number, key: string, val: string | number): boolean {
+      shadow_set_param(
+        slot: number,
+        key: string,
+        val: string | number,
+      ): boolean {
         const ok = schwung.shadowSetParam(slot, key, val);
-        log("shadow_set_param " + JSON.stringify([slot | 0, key, String(val ?? ""), ok]));
+        log(
+          "shadow_set_param " +
+            JSON.stringify([slot | 0, key, String(val ?? ""), ok]),
+        );
         return ok;
       },
       host_get_volume(): number {
@@ -82,7 +89,8 @@ export function createSchwungHostApi(
       },
     },
     handleHostInternalMidi(status: number, d1: number, d2: number): boolean {
-      if ((status & MIDI_STATUS_TYPE_MASK) !== CC || d1 !== VOLUME_CC) return false;
+      if ((status & MIDI_STATUS_TYPE_MASK) !== CC || d1 !== VOLUME_CC)
+        return false;
       return schwung.handleHostVolumeCc(d2);
     },
   };

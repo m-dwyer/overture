@@ -23,7 +23,11 @@ export function createMockDsp(): Dsp {
     set(key, val) {
       store.set(key, String(val));
     },
-    render() { /* layout tier: no engine */ },
-    setBpm() { /* layout tier: no engine */ },
+    render() {
+      /* layout tier: no engine */
+    },
+    setBpm() {
+      /* layout tier: no engine */
+    },
   };
 }
