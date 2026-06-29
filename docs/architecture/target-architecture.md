@@ -22,7 +22,7 @@ Hardware Input
 
 This is a DDD-flavored modular monolith: durable musical state lives in core
 domain modules, host/runtime edges are adapters, and UI control behavior is
-state-machine-shaped by the active view and Control State.
+state-machine-shaped by the active view and Control Surface Context.
 
 ## Durable Musical Hierarchy
 
@@ -45,10 +45,10 @@ playing state, playhead, or pending note-offs.
 
 ## Transient Owners
 
-Control State owns interaction context: current view/control mode, Track
+Control Surface Context owns interaction context: current view/control mode, Track
 Selection, Selected Clip Cell, selected Step, visible Track Bank, and held
-modifiers. Control interpretation should read `ControlStateSnapshot`, not
-mutation-capable Control State.
+modifiers. Control interpretation should read `ControlSurfaceContextSnapshot`,
+not mutation-capable Control Surface Context.
 
 Transport owns timing and play/stop state. Playback owns playing Clip IDs,
 pending note-offs, and scheduling lifecycle. Cross-state workflows belong in
@@ -65,14 +65,14 @@ context.
 Prefer view-owned interpreters and hint projections when behavior becomes
 view-specific. Avoid growing one central conditional tree for every view.
 
-Surface Hints are read-only projections from Control State, Project read
+Surface Hints are read-only projections from Control Surface Context, Project read
 contracts, and view context. They preview possible Domain Intents for LEDs,
 display, or other surfaces; they are not mutation handles.
 
 ## Read Models and Persistence
 
 Owner-local `snapshot()` methods are read contracts for a single owner, such as
-Control State or Transport.
+Control Surface Context or Transport.
 
 The app-facing core snapshot is a Core Read Model: data for view-model
 derivation, LEDs, display, and debug state. It may combine durable Project data

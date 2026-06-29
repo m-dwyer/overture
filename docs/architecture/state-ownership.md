@@ -8,7 +8,7 @@ mutating another owner's data.
 
 | State Shape | Owner | Notes |
 | --- | --- | --- |
-| `ControlState` | `src/state/control-state.ts` | Owner-object class with `snapshot()` read contract. |
+| `ControlSurfaceContext` | `src/state/control-surface-context.ts` | Owner-object class with `snapshot()` read contract. |
 | `OvertureProject` | `src/state/project.ts` | Project data owner with public lookup and Project-owned mutation APIs. |
 | `TransportState` | `src/application/transport.ts` | Owner-object class with `snapshot()` and `clock()` read contracts. |
 | `PlaybackState` | `src/application/playback/` | Playback lifecycle and note-off scheduling owner. |
@@ -33,8 +33,8 @@ selectClipCell(control, coordinate);
 ```
 
 Read-only consumers should receive snapshots or narrow read contracts. For
-example, control interpretation should read `ControlStateSnapshot` rather than
-holding mutation capability for `ControlState`.
+example, control interpretation should read `ControlSurfaceContextSnapshot`
+rather than holding mutation capability for `ControlSurfaceContext`.
 
 ## Cross-State Workflows
 

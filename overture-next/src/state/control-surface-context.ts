@@ -3,7 +3,7 @@ import { trackBankForTrack } from "./surface-addressing";
 
 export type ActiveView = "track" | "session";
 
-export interface ControlStateSnapshot {
+export interface ControlSurfaceContextSnapshot {
   readonly selectedTrackIndex: number;
   readonly visibleTrackBank: number;
   readonly activeView: ActiveView;
@@ -12,7 +12,7 @@ export interface ControlStateSnapshot {
   readonly selectedClipCell: Readonly<ClipCellCoordinate>;
 }
 
-export class ControlState {
+export class ControlSurfaceContext {
   private selectedTrackIndexValue: number;
   private visibleTrackBankValue: number;
   private activeViewValue: ActiveView;
@@ -29,7 +29,7 @@ export class ControlState {
     this.selectedClipCellValue = { trackIndex: 0, sceneIndex: 0 };
   }
 
-  snapshot(): ControlStateSnapshot {
+  snapshot(): ControlSurfaceContextSnapshot {
     return {
       selectedTrackIndex: this.selectedTrackIndexValue,
       visibleTrackBank: this.visibleTrackBankValue,
@@ -44,12 +44,12 @@ export class ControlState {
     this.shiftHeldValue = held;
   }
 
-  toggleView(): ActiveView {
+  toggleActiveView(): ActiveView {
     this.activeViewValue = this.activeViewValue === "session" ? "track" : "session";
     return this.activeViewValue;
   }
 
-  selectTrack(trackIndex: number): void {
+  selectTrackPreservingScene(trackIndex: number): void {
     this.selectClipCell({ trackIndex, sceneIndex: this.selectedClipCellValue.sceneIndex });
   }
 
@@ -64,6 +64,6 @@ export class ControlState {
   }
 }
 
-export function createInitialControlState(): ControlState {
-  return new ControlState();
+export function createInitialControlSurfaceContext(): ControlSurfaceContext {
+  return new ControlSurfaceContext();
 }

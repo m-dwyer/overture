@@ -17,7 +17,8 @@ what is public, what is private, and which dependencies are allowed?
   deterministic domain transforms. It must not import Session grid geometry,
   state owners, application behavior, or adapters.
 - `overture-next/src/state/` owns mutable state-owner objects such as
-  `ControlState` and `OvertureProject`, plus surface-addressing state helpers.
+  `ControlSurfaceContext` and `OvertureProject`, plus surface-addressing state
+  helpers.
 - `overture-next/src/application/` owns orchestration and application behavior:
   core transactions, control interpretation, domain intent application,
   transport, playback, and host command contracts.
@@ -34,10 +35,11 @@ what is public, what is private, and which dependencies are allowed?
 
 Concrete adapters belong in `src/host/`. The Schwung adapter implements the
 `ControlSurfacePort` inbound boundary by converting raw Move MIDI input into
-typed control input. Application code interprets control input against Control
-State, applies resulting intents to project/transport/control state, and emits
-commands such as `track-note-on` and `track-note-off`; the host adapter converts
-those commands to Move or Schwung MIDI through outbound ports.
+typed control input. Application code interprets control input against
+Control Surface Context, applies resulting intents to project/transport/control
+context, and emits commands such as `track-note-on` and `track-note-off`; the
+host adapter converts those commands to Move or Schwung MIDI through outbound
+ports.
 
 ## Public APIs and Internals
 
@@ -69,7 +71,7 @@ Keep this table current when a boundary changes materially.
 | --- | --- | --- | --- | --- |
 | Session grid geometry | `src/shared/session-grid.ts` | Coordinate helpers | None | dependency-cruiser neutrality rule |
 | Pure musical domain | `src/domain/` | `project.ts`, `track.ts`, `sequence.ts` | None | dependency-cruiser domain purity rules |
-| Control State | `src/state/control-state.ts` | Owner-object class and snapshot contract | None | ESLint state ownership rule |
+| Control Surface Context | `src/state/control-surface-context.ts` | Owner-object class and snapshot contract | None | ESLint state ownership rule |
 | Project state owner | `src/state/project.ts` | Project construction, lookup, and Project-owned mutation APIs | None | ESLint state ownership rule |
 | Surface addressing state helpers | `src/state/surface-addressing.ts` | Track Bank row helpers | None | dependency-cruiser state layer rules |
 | Control input interpretation | `src/application/controls/` | `interpret-control.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |

@@ -1,11 +1,11 @@
-import type { ControlStateSnapshot } from "../../state/control-state";
+import type { ControlSurfaceContextSnapshot } from "../../state/control-surface-context";
 import type { DomainIntent } from "../intents/types";
 import { selectTrackFromRow } from "../../state/surface-addressing";
 import { interpretSessionControl } from "./session";
 import { interpretTrackControl } from "./track";
 import type { ControlInput } from "./types";
 
-export function interpretControl(input: ControlInput, control: ControlStateSnapshot): DomainIntent | null {
+export function interpretControl(input: ControlInput, control: ControlSurfaceContextSnapshot): DomainIntent | null {
   if (input.kind === "shift") return { kind: "set-shift-held", held: input.held };
   if (input.kind === "play") return { kind: "toggle-transport" };
   if (input.kind === "menu") return { kind: "toggle-view" };
@@ -15,7 +15,7 @@ export function interpretControl(input: ControlInput, control: ControlStateSnaps
   return null;
 }
 
-function interpretTrackRow(row: number, control: ControlStateSnapshot): DomainIntent {
+function interpretTrackRow(row: number, control: ControlSurfaceContextSnapshot): DomainIntent {
   return { kind: "select-track", trackIndex: selectTrackFromRow(row, control.shiftHeld ? 1 : 0) };
 }
 
@@ -25,7 +25,7 @@ function interpretStep(step: number): DomainIntent {
 
 function interpretPad(
   input: Extract<ControlInput, { kind: "pad" }>,
-  control: ControlStateSnapshot,
+  control: ControlSurfaceContextSnapshot,
 ): DomainIntent | null {
   if (control.activeView === "session") return interpretSessionControl(input, control);
   return interpretTrackControl(input, control);

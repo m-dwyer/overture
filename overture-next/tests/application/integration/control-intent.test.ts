@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createInitialControlState } from "../../../src/state/control-state";
+import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
 import { interpretControl } from "../../../src/application/controls/interpret-control";
 import { applyIntent } from "../../../src/application/intents/apply-intent";
 import { createPlayback } from "../../../src/application/playback";
@@ -9,8 +9,8 @@ import type { CoreState, HostCommand } from "../../../src/application/types";
 
 describe("Overture Next control-to-intent pipeline", () => {
   test("interprets track rows against the current shift modifier", () => {
-    const lowerBankControl = createInitialControlState();
-    const upperBankControl = createInitialControlState();
+    const lowerBankControl = createInitialControlSurfaceContext();
+    const upperBankControl = createInitialControlSurfaceContext();
     upperBankControl.setShiftHeld(true);
 
     expect(interpretControl({ kind: "track-row", row: 1 }, lowerBankControl.snapshot())).toEqual({
@@ -25,14 +25,14 @@ describe("Overture Next control-to-intent pipeline", () => {
   });
 
   test("interprets Track View central pads as selected-track note audition", () => {
-    expect(interpretControl(padPress(7, 101), createInitialControlState().snapshot())).toEqual({
+    expect(interpretControl(padPress(7, 101), createInitialControlSurfaceContext().snapshot())).toEqual({
       kind: "audition-note",
       held: true,
       note: 67,
       trackIndex: 0,
       velocity: 101,
     });
-    expect(interpretControl(padRelease(7), createInitialControlState().snapshot())).toEqual({
+    expect(interpretControl(padRelease(7), createInitialControlSurfaceContext().snapshot())).toEqual({
       kind: "audition-note",
       held: false,
       note: 67,
@@ -42,9 +42,9 @@ describe("Overture Next control-to-intent pipeline", () => {
   });
 
   test("interprets Session View pads as Clip Cell launch without leaking pad indexes", () => {
-    const control = createInitialControlState();
-    control.selectTrack(4);
-    control.toggleView();
+    const control = createInitialControlSurfaceContext();
+    control.selectTrackPreservingScene(4);
+    control.toggleActiveView();
 
     const intent = interpretControl(padPress(26), control.snapshot());
 
@@ -365,7 +365,7 @@ function padRelease(padIndex: number) {
 
 function createTestCoreState(): CoreState {
   return {
-    control: createInitialControlState(),
+    control: createInitialControlSurfaceContext(),
     transport: createTransport(),
     playback: createPlayback(),
     project: createDefaultProject(),

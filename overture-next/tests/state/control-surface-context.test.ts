@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { createInitialControlState } from "../../src/state/control-state";
+import { createInitialControlSurfaceContext } from "../../src/state/control-surface-context";
 
-describe("Overture Next Control State", () => {
+describe("Overture Next Control Surface Context", () => {
   test("starts in Track View on the first Track and Clip Cell", () => {
-    expect(createInitialControlState().snapshot()).toEqual({
+    expect(createInitialControlSurfaceContext().snapshot()).toEqual({
       selectedTrackIndex: 0,
       visibleTrackBank: 0,
       activeView: "track",
@@ -14,7 +14,7 @@ describe("Overture Next Control State", () => {
   });
 
   test("keeps Track Selection, Selected Clip Cell, and Track Bank aligned", () => {
-    const control = createInitialControlState();
+    const control = createInitialControlSurfaceContext();
 
     control.selectClipCell({ trackIndex: 6, sceneIndex: 3 });
 
@@ -26,10 +26,10 @@ describe("Overture Next Control State", () => {
   });
 
   test("selects a Track while preserving the selected Overture Scene", () => {
-    const control = createInitialControlState();
+    const control = createInitialControlSurfaceContext();
 
     control.selectClipCell({ trackIndex: 0, sceneIndex: 7 });
-    control.selectTrack(5);
+    control.selectTrackPreservingScene(5);
 
     expect(control.snapshot()).toMatchObject({
       selectedTrackIndex: 5,
@@ -38,11 +38,11 @@ describe("Overture Next Control State", () => {
     });
   });
 
-  test("updates modifiers, mode, and selected Step explicitly", () => {
-    const control = createInitialControlState();
+  test("updates modifiers, active view, and selected Step explicitly", () => {
+    const control = createInitialControlSurfaceContext();
 
     control.setShiftHeld(true);
-    expect(control.toggleView()).toBe("session");
+    expect(control.toggleActiveView()).toBe("session");
     control.selectStep(9);
 
     expect(control.snapshot()).toMatchObject({

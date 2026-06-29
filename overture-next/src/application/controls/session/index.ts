@@ -1,4 +1,4 @@
-import type { ControlStateSnapshot } from "../../../state/control-state";
+import type { ControlSurfaceContextSnapshot } from "../../../state/control-surface-context";
 import type { DomainIntent } from "../../intents/types";
 import type { ControlInput } from "../types";
 import { interpretSessionPadInput } from "./internal/pads";
@@ -9,7 +9,7 @@ import { interpretSessionPadInput } from "./internal/pads";
  */
 export function interpretSessionControl(
   input: Extract<ControlInput, { kind: "pad" }>,
-  control: ControlStateSnapshot,
+  control: ControlSurfaceContextSnapshot,
 ): DomainIntent | null {
   return interpretSessionPadInput(input, control);
 }

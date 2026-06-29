@@ -1,4 +1,4 @@
-import type { ControlStateSnapshot } from "../../../state/control-state";
+import type { ControlSurfaceContextSnapshot } from "../../../state/control-surface-context";
 import type { DomainIntent } from "../../intents/types";
 import type { ControlInput } from "../types";
 import { interpretTrackPadInput } from "./internal/pads";
@@ -9,7 +9,7 @@ import { interpretTrackPadInput } from "./internal/pads";
  */
 export function interpretTrackControl(
   input: Extract<ControlInput, { kind: "pad" }>,
-  control: ControlStateSnapshot,
+  control: ControlSurfaceContextSnapshot,
 ): DomainIntent {
   return interpretTrackPadInput(input, control);
 }

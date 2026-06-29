@@ -1,5 +1,5 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
-import { createInitialControlState, type ControlStateSnapshot } from "../state/control-state";
+import { createInitialControlSurfaceContext, type ControlSurfaceContextSnapshot } from "../state/control-surface-context";
 import { createDefaultProject } from "../state/project";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
@@ -11,7 +11,7 @@ import type { CoreSnapshot, CoreState, HostCommand, OvertureCore } from "./types
 export function createOvertureCore(): OvertureCore {
   const project = createDefaultProject();
   const state: CoreState = {
-    control: createInitialControlState(),
+    control: createInitialControlSurfaceContext(),
     transport: createTransport(),
     playback: createPlayback(),
     project,
@@ -56,16 +56,16 @@ export function createOvertureCore(): OvertureCore {
     };
   }
 
-  function selectedSequence(control: ControlStateSnapshot) {
+  function selectedSequence(control: ControlSurfaceContextSnapshot) {
     return state.project.sequenceFor(control.selectedClipCell);
   }
 
-  function getSelectedSequenceLengthFor(control: ControlStateSnapshot): number {
+  function getSelectedSequenceLengthFor(control: ControlSurfaceContextSnapshot): number {
     const sequence = selectedSequence(control);
     return sequence?.length ?? DEFAULT_STEP_COUNT;
   }
 
-  function getSnapshotSteps(control: ControlStateSnapshot, transport: TransportStateSnapshot) {
+  function getSnapshotSteps(control: ControlSurfaceContextSnapshot, transport: TransportStateSnapshot) {
     const sequence = selectedSequence(control);
     return Array.from({ length: getSelectedSequenceLengthFor(control) }, (_, index) => {
       const step = sequence ? getSequenceStep(sequence, index) : null;

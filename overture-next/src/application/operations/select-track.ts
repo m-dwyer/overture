@@ -5,6 +5,6 @@ export function selectTrack(state: CoreState, trackIndex: number): OperationResu
   const sceneIndex = state.control.snapshot().selectedClipCell.sceneIndex;
   state.project.track(trackIndex);
   state.project.clipCellAt({ trackIndex, sceneIndex });
-  state.control.selectTrack(trackIndex);
+  state.control.selectTrackPreservingScene(trackIndex);
   return operationApplied();
 }

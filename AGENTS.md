@@ -55,7 +55,7 @@ the browser-only `OVT` harness port.
 
 The active source layers are `src/shared/` for neutral helpers,
 `src/domain/` for pure musical vocabulary/data/transforms, `src/state/` for
-mutable state owners such as `ControlState` and `OvertureProject`,
+mutable state owners such as `ControlSurfaceContext` and `OvertureProject`,
 `src/application/` for control interpretation, intent application, transport,
 playback, core read models, and host command contracts, then `src/ports/`,
 `src/host/`, `src/view/`, `src/render/`, and `src/runtime/` at the edges.

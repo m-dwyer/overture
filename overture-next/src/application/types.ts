@@ -1,5 +1,5 @@
 import type { TrackRoute } from "../domain/track";
-import type { ActiveView, ControlState, ControlStateSnapshot } from "../state/control-state";
+import type { ActiveView, ControlSurfaceContext, ControlSurfaceContextSnapshot } from "../state/control-surface-context";
 import type { OvertureProject } from "../state/project";
 import type { ControlInput } from "./controls/types";
 import type { HostCommand } from "./host-commands";
@@ -7,7 +7,7 @@ import type { Playback } from "./playback";
 import type { TransportState } from "./transport";
 
 export interface CoreState {
-  control: ControlState;
+  control: ControlSurfaceContext;
   transport: TransportState;
   playback: Playback;
   project: OvertureProject;
@@ -38,7 +38,7 @@ export interface CoreSnapshot {
   selectedStep: number;
   playing: boolean;
   selectedClipId: string | null;
-  selectedClipCell: ControlStateSnapshot["selectedClipCell"];
+  selectedClipCell: ControlSurfaceContextSnapshot["selectedClipCell"];
   clipCells: CoreSnapshotClipCell[];
   steps: CoreSnapshotStep[];
 }

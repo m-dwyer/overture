@@ -7,6 +7,6 @@ export function setShiftHeld(state: CoreState, held: boolean): OperationResult {
 }
 
 export function toggleView(state: CoreState): OperationResult {
-  state.control.toggleView();
+  state.control.toggleActiveView();
   return operationApplied();
 }

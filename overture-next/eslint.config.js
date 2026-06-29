@@ -40,7 +40,7 @@ export default tseslint.config(
           owners: [
             { type: "TransportState", allow: ["src/application/transport.ts"] },
             { type: "PlaybackState", allow: ["src/application/playback/**"] },
-            { type: "ControlState", allow: ["src/state/control-state.ts"] },
+            { type: "ControlSurfaceContext", allow: ["src/state/control-surface-context.ts"] },
             { type: "OvertureProject", allow: ["src/state/project.ts"] },
           ],
         },
@@ -48,7 +48,7 @@ export default tseslint.config(
       "overture/state-api-encapsulation": [
         "error",
         {
-          owners: [{ type: "ControlState" }, { type: "TransportState" }],
+          owners: [{ type: "ControlSurfaceContext" }, { type: "TransportState" }],
         },
       ],
     },
