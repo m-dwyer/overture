@@ -73,6 +73,28 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(hostCommands).toEqual([]);
   });
 
+  test("selecting an upper-bank Clip Cell follows the selected Track Bank without creating clips", () => {
+    const state = createTestCoreState();
+    const hostCommands: HostCommand[] = [];
+    const clipCount = state.project.clipCellSnapshots().filter((cell) => cell.clipId).length;
+
+    expect(
+      applyIntentAndCollect(
+        { kind: "select-clip-cell", coordinate: { trackIndex: 5, sceneIndex: 7 } },
+        state,
+        hostCommands,
+      ),
+    ).toBe(true);
+
+    expect(state.control.snapshot()).toMatchObject({
+      selectedTrackIndex: 5,
+      visibleTrackBank: 1,
+      selectedClipCell: { trackIndex: 5, sceneIndex: 7 },
+    });
+    expect(state.project.clipCellSnapshots().filter((cell) => cell.clipId)).toHaveLength(clipCount);
+    expect(hostCommands).toEqual([]);
+  });
+
   test("applies Clip Cell launch as playback state and explicit UI selection", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
@@ -95,6 +117,27 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(hostCommands).toEqual([]);
   });
 
+  test("launching an occupied upper-bank Clip Cell selects it and starts that Track", () => {
+    const state = createTestCoreState();
+    const hostCommands: HostCommand[] = [];
+
+    expect(
+      applyIntentAndCollect(
+        { kind: "launch-clip-cell", coordinate: { trackIndex: 4, sceneIndex: 0 } },
+        state,
+        hostCommands,
+      ),
+    ).toBe(true);
+
+    expect(state.control.snapshot()).toMatchObject({
+      selectedTrackIndex: 4,
+      visibleTrackBank: 1,
+      selectedClipCell: { trackIndex: 4, sceneIndex: 0 },
+    });
+    expect(state.playback.snapshot().tracks[4].playingClipId).toBe("clip-5");
+    expect(hostCommands).toEqual([]);
+  });
+
   test("starting transport launches the selected clip when present", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
@@ -104,6 +147,34 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(state.playback.snapshot().tracks[0].playingClipId).toBe("clip-1");
     expect(hostCommands).toEqual([
       { kind: "track-note-on", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60, velocity: 100 },
+    ]);
+  });
+
+  test("starting transport does not launch the selected Clip Cell when any Track is already playing", () => {
+    const state = createTestCoreState();
+    const hostCommands: HostCommand[] = [];
+
+    expect(
+      applyIntentAndCollect(
+        { kind: "launch-clip-cell", coordinate: { trackIndex: 2, sceneIndex: 0 } },
+        state,
+        hostCommands,
+      ),
+    ).toBe(true);
+    expect(
+      applyIntentAndCollect(
+        { kind: "select-clip-cell", coordinate: { trackIndex: 0, sceneIndex: 0 } },
+        state,
+        hostCommands,
+      ),
+    ).toBe(true);
+    expect(applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands)).toBe(true);
+
+    expect(state.transport.snapshot().playing).toBe(true);
+    expect(state.playback.snapshot().tracks[0].playingClipId).toBeNull();
+    expect(state.playback.snapshot().tracks[2].playingClipId).toBe("clip-3");
+    expect(hostCommands).toEqual([
+      { kind: "track-note-on", route: { kind: "move", moveTrackTarget: 2 }, trackIndex: 2, note: 60, velocity: 100 },
     ]);
   });
 
