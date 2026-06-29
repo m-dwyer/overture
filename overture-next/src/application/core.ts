@@ -1,6 +1,6 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
 import { createInitialControlSurfaceContext, type ControlSurfaceContextSnapshot } from "../state/control-surface-context";
-import { createDefaultProject } from "../state/project";
+import { createDefaultProject, type ProjectCoreReadModel } from "../state/project";
 import { interpretControl } from "./controls/interpret-control";
 import type { ControlInput } from "./controls/types";
 import { applyIntent } from "./intents/apply-intent";
@@ -39,45 +39,7 @@ export function createOvertureCore(): OvertureCore {
   function getSnapshot(): CoreSnapshot {
     const control = state.control.snapshot();
     const transport = state.transport.snapshot();
-    const selectedClipCell = control.selectedClipCell;
-    const selectedCell = state.project.clipCellAt(selectedClipCell);
-    return {
-      selectedTrackIndex: control.selectedTrackIndex,
-      selectedTrackRoute: state.project.trackRoute(control.selectedTrackIndex),
-      visibleTrackBank: control.visibleTrackBank,
-      activeView: control.activeView,
-      shiftHeld: control.shiftHeld,
-      selectedStep: control.selectedStep,
-      playing: transport.playing,
-      selectedClipId: selectedCell.clipId,
-      selectedClipCell: { ...selectedClipCell },
-      clipCells: state.project.clipCellSnapshots(),
-      steps: getSnapshotSteps(control, transport),
-    };
-  }
-
-  function selectedSequence(control: ControlSurfaceContextSnapshot) {
-    return state.project.sequenceFor(control.selectedClipCell);
-  }
-
-  function getSelectedSequenceLengthFor(control: ControlSurfaceContextSnapshot): number {
-    const sequence = selectedSequence(control);
-    return sequence?.length ?? DEFAULT_STEP_COUNT;
-  }
-
-  function getSnapshotSteps(control: ControlSurfaceContextSnapshot, transport: TransportStateSnapshot) {
-    const sequence = selectedSequence(control);
-    return Array.from({ length: getSelectedSequenceLengthFor(control) }, (_, index) => {
-      const step = sequence ? getSequenceStep(sequence, index) : null;
-      return {
-        index,
-        active: step?.active ?? false,
-        note: step?.note ?? null,
-        velocity: step?.velocity ?? null,
-        selected: index === control.selectedStep,
-        playhead: index === transport.playhead,
-      };
-    });
+    return buildCoreSnapshot(state.project, control, transport);
   }
 
   function drainHostCommands(): HostCommand[] {
@@ -90,8 +52,58 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function getSelectedSequenceLength(): number {
-    return getSelectedSequenceLengthFor(state.control.snapshot());
+    return getSelectedSequenceLengthFor(state.project, state.control.snapshot());
   }
 
   return { init, tick, applyInput, getSnapshot, getSelectedSequenceLength, drainHostCommands, stopPlayback };
+}
+
+function buildCoreSnapshot(
+  project: ProjectCoreReadModel,
+  control: ControlSurfaceContextSnapshot,
+  transport: TransportStateSnapshot,
+): CoreSnapshot {
+  const selectedClipCell = control.selectedClipCell;
+  const selectedCell = project.clipCellAt(selectedClipCell);
+  return {
+    selectedTrackIndex: control.selectedTrackIndex,
+    selectedTrackRoute: project.trackRoute(control.selectedTrackIndex),
+    visibleTrackBank: control.visibleTrackBank,
+    activeView: control.activeView,
+    shiftHeld: control.shiftHeld,
+    selectedStep: control.selectedStep,
+    playing: transport.playing,
+    selectedClipId: selectedCell.clipId,
+    selectedClipCell: { ...selectedClipCell },
+    clipCells: project.clipCellSnapshots(),
+    steps: getSnapshotSteps(project, control, transport),
+  };
+}
+
+function selectedSequence(project: ProjectCoreReadModel, control: ControlSurfaceContextSnapshot) {
+  return project.sequenceFor(control.selectedClipCell);
+}
+
+function getSelectedSequenceLengthFor(project: ProjectCoreReadModel, control: ControlSurfaceContextSnapshot): number {
+  const sequence = selectedSequence(project, control);
+  return sequence?.length ?? DEFAULT_STEP_COUNT;
+}
+
+function getSnapshotSteps(
+  project: ProjectCoreReadModel,
+  control: ControlSurfaceContextSnapshot,
+  transport: TransportStateSnapshot,
+) {
+  const sequence = selectedSequence(project, control);
+  return Array.from({ length: getSelectedSequenceLengthFor(project, control) }, (_, index) => {
+    const step = sequence ? getSequenceStep(sequence, index) : null;
+    return {
+      index,
+      active: step?.active ?? false,
+      note: step?.note ?? null,
+      velocity: step?.velocity ?? null,
+      selected: index === control.selectedStep,
+      playhead: index === transport.playhead,
+    };
+  });
 }

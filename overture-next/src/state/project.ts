@@ -53,6 +53,14 @@ export interface ProjectPlaybackReadModel {
   trackRoute(trackIndexValue: number): TrackRoute;
 }
 
+/** Read-only Project contract for core snapshot/read-model projection. */
+export interface ProjectCoreReadModel {
+  clipCellAt(coordinate: ClipCellCoordinateInput): ClipCellSnapshot;
+  sequenceFor(coordinate: ClipCellCoordinateInput): SequenceSnapshot | null;
+  clipCellSnapshots(): readonly ClipCellSnapshot[];
+  trackRoute(trackIndexValue: number): TrackRoute;
+}
+
 /**
  * The OvertureProject state owner: durable owner of Tracks, Overture Scenes,
  * Clip Cells, and Overture Clips. It keeps occupancy and identity state private
