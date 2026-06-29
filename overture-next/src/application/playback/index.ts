@@ -30,8 +30,12 @@ export interface PlaybackSnapshot {
 export class Playback {
   private readonly state: PlaybackState;
 
-  constructor(state: PlaybackState) {
-    this.state = state;
+  private constructor() {
+    this.state = createPlaybackState();
+  }
+
+  static create(): Playback {
+    return new Playback();
   }
 
   /**
@@ -103,5 +107,5 @@ export class Playback {
 }
 
 export function createPlayback(): Playback {
-  return new Playback(createPlaybackState());
+  return Playback.create();
 }
