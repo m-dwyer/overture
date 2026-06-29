@@ -8,8 +8,12 @@ describe("Overture Next playback", () => {
     const playback = createPlayback();
 
     expect(
-      playback.launchClipOnTrack(project, { trackIndex: 2, sceneIndex: 0 }),
-    ).toBe("clip-3");
+      playback.requestClipToggle(
+        project,
+        { trackIndex: 2, sceneIndex: 0 },
+        stoppedTiming(),
+      ),
+    ).toEqual([]);
 
     expect(playback.snapshot().tracks[2]).toMatchObject({
       playingClipId: "clip-3",
@@ -17,23 +21,42 @@ describe("Overture Next playback", () => {
     });
   });
 
-  test("leaves playing clip focus unchanged when asked to launch an empty Clip Cell", () => {
+  test("stops Track playback when toggling an empty Clip Cell", () => {
     const project = createDefaultProject();
     const playback = createPlayback();
 
-    playback.launchClipOnTrack(project, { trackIndex: 4, sceneIndex: 0 });
+    playback.requestClipToggle(
+      project,
+      { trackIndex: 4, sceneIndex: 0 },
+      stoppedTiming(),
+    );
 
     expect(
-      playback.launchClipOnTrack(project, { trackIndex: 4, sceneIndex: 7 }),
-    ).toBeNull();
-    expect(playback.snapshot().tracks[4].playingClipId).toBe("clip-5");
+      playback.requestClipToggle(
+        project,
+        { trackIndex: 4, sceneIndex: 7 },
+        stoppedTiming(),
+      ),
+    ).toEqual([
+      {
+        kind: "track-note-off",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 60,
+      },
+    ]);
+    expect(playback.snapshot().tracks[4].playingClipId).toBeNull();
   });
 
   test("injects note commands for active steps in playing clips", () => {
     const project = createDefaultProject();
     const playback = createPlayback();
 
-    playback.launchClipOnTrack(project, { trackIndex: 2, sceneIndex: 0 });
+    playback.requestClipToggle(
+      project,
+      { trackIndex: 2, sceneIndex: 0 },
+      stoppedTiming(),
+    );
 
     expect(playback.injectStep(project, { playhead: 0, tick: 0 })).toEqual([
       {
@@ -50,7 +73,11 @@ describe("Overture Next playback", () => {
     const project = createDefaultProject();
     const playback = createPlayback();
 
-    playback.launchClipOnTrack(project, { trackIndex: 2, sceneIndex: 0 });
+    playback.requestClipToggle(
+      project,
+      { trackIndex: 2, sceneIndex: 0 },
+      stoppedTiming(),
+    );
     playback.injectStep(project, { playhead: 0, tick: 0 });
 
     for (let tick = 1; tick < 12; tick++) {
@@ -76,7 +103,11 @@ describe("Overture Next playback", () => {
     const project = createDefaultProject();
     const playback = createPlayback();
 
-    playback.launchClipOnTrack(project, { trackIndex: 1, sceneIndex: 0 });
+    playback.requestClipToggle(
+      project,
+      { trackIndex: 1, sceneIndex: 0 },
+      stoppedTiming(),
+    );
 
     expect(playback.stopAll(project, { playhead: 4, tick: 0 })).toEqual([
       {
@@ -100,9 +131,18 @@ describe("Overture Next playback", () => {
     const project = createDefaultProject();
     const playback = createPlayback();
 
-    playback.launchClipOnTrack(project, { trackIndex: 4, sceneIndex: 0 });
+    playback.requestClipToggle(
+      project,
+      { trackIndex: 4, sceneIndex: 0 },
+      stoppedTiming(),
+    );
 
-    expect(playback.stopTrack(project, 4, { playhead: 4, tick: 0 })).toEqual([
+    expect(
+      playback.requestTrackStop(project, 4, {
+        running: false,
+        clock: { playhead: 4, tick: 0 },
+      }),
+    ).toEqual([
       {
         kind: "track-note-off",
         route: { kind: "schwung", schwungChainIndex: 0 },
@@ -113,3 +153,10 @@ describe("Overture Next playback", () => {
     expect(playback.snapshot().tracks[4].playingClipId).toBeNull();
   });
 });
+
+function stoppedTiming() {
+  return {
+    running: false,
+    clock: { playhead: 0, tick: 0 },
+  };
+}

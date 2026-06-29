@@ -1,18 +1,18 @@
 import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinateInput, ClipId } from "../../domain/project";
-import type { ProjectPlaybackReadModel } from "../../state/project";
+import { getSequenceStep } from "../../domain/sequence";
+import type {
+  ProjectCoreReadModel,
+  ProjectPlaybackReadModel,
+} from "../../state/project";
 import {
-  applyQueuedTrackChanges,
-  launchPlayingClip,
-  queuePlayingClip,
-  queueStopPlayingClipOnTrack,
-  silenceAllPlayingClips,
-  stopAllPlayingClips,
-  stopPlayingClipOnTrack,
-} from "./internal/clips";
-import { drainDueNoteOffs, injectPlaybackStep } from "./internal/notes";
-import { createPlaybackState } from "./state";
-import type { PlaybackState } from "./state";
+  createNoteGateScheduler,
+  type NoteGateScheduler,
+} from "./internal/note-gate-scheduler";
+import {
+  createTrackPlaybackRegistry,
+  type TrackPlaybackRegistry,
+} from "./internal/track-playback-registry";
 import type { PlaybackClock, PlaybackTick } from "./types";
 
 export interface PlaybackAdvance {
@@ -31,16 +31,23 @@ export interface PlaybackSnapshot {
   readonly tracks: readonly TrackPlaybackSnapshot[];
 }
 
+export interface PlaybackTiming {
+  readonly running: boolean;
+  readonly clock: Readonly<PlaybackClock>;
+}
+
 /**
  * Owns playback-side clip focus and note-off scheduling, separate from durable
  * Project data and Transport timing. Reads the Project through its read
  * contracts to resolve playing clips and routes, but never mutates it.
  */
 export class Playback {
-  private readonly state: PlaybackState;
+  private readonly tracks: TrackPlaybackRegistry;
+  private readonly noteGates: NoteGateScheduler;
 
   private constructor() {
-    this.state = createPlaybackState();
+    this.tracks = createTrackPlaybackRegistry();
+    this.noteGates = createNoteGateScheduler();
   }
 
   static create(): Playback {
@@ -56,21 +63,23 @@ export class Playback {
     project: ProjectPlaybackReadModel,
     tick: Readonly<PlaybackTick>,
   ): PlaybackAdvance {
-    const hostCommands = drainDueNoteOffs(this.state, tick.tick);
+    const hostCommands = this.noteGates.drainDue(tick.tick);
     if (tick.injectedStep !== null) {
+      const clock = {
+        playhead: tick.injectedStep,
+        tick: tick.tick,
+      };
+      for (const track of this.tracks.tracksWithQueuedChanges()) {
+        hostCommands.push(
+          ...this.silenceTrack(project, track.trackIndex, clock),
+        );
+        this.tracks.applyQueuedChange(track.trackIndex);
+      }
       hostCommands.push(
-        ...applyQueuedTrackChanges(project, this.state, {
+        ...this.injectStep(project, {
           playhead: tick.injectedStep,
           tick: tick.tick,
         }),
-      );
-      hostCommands.push(
-        ...injectPlaybackStep(
-          project,
-          this.state,
-          tick.injectedStep,
-          tick.tick,
-        ),
       );
     }
     return { injectedStep: tick.injectedStep, hostCommands };
@@ -84,7 +93,32 @@ export class Playback {
     project: ProjectPlaybackReadModel,
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
-    return injectPlaybackStep(project, this.state, clock.playhead, clock.tick);
+    const hostCommands: HostCommand[] = [];
+    for (const trackPlayback of this.tracks.playingTracks()) {
+      if (!trackPlayback.playingClipId) continue;
+      const clip = project.clipById(trackPlayback.playingClipId);
+      if (!clip) continue;
+      const sequenceStep = getSequenceStep(
+        clip.sequence,
+        clock.playhead % clip.sequence.length,
+      );
+      if (!sequenceStep?.active) continue;
+      const route = project.trackRoute(trackPlayback.trackIndex);
+      hostCommands.push({
+        kind: "track-note-on",
+        route,
+        trackIndex: trackPlayback.trackIndex,
+        note: sequenceStep.note,
+        velocity: sequenceStep.velocity,
+      });
+      this.noteGates.schedule({
+        dueTick: clock.tick + Math.max(1, sequenceStep.gateTicks),
+        emittedTarget: route,
+        trackIndex: trackPlayback.trackIndex,
+        note: sequenceStep.note,
+      });
+    }
+    return hostCommands;
   }
 
   /**
@@ -95,7 +129,12 @@ export class Playback {
     project: ProjectPlaybackReadModel,
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
-    return stopAllPlayingClips(project, this.state, clock);
+    const hostCommands: HostCommand[] = [];
+    for (const track of this.tracks.snapshot().tracks) {
+      hostCommands.push(...this.silenceTrack(project, track.trackIndex, clock));
+    }
+    this.tracks.stopAll();
+    return hostCommands;
   }
 
   /**
@@ -106,61 +145,93 @@ export class Playback {
     project: ProjectPlaybackReadModel,
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
-    return silenceAllPlayingClips(project, this.state, clock);
+    const hostCommands: HostCommand[] = [];
+    for (const track of this.tracks.snapshot().tracks) {
+      hostCommands.push(...this.silenceTrack(project, track.trackIndex, clock));
+    }
+    this.tracks.clearQueuedChanges();
+    return hostCommands;
   }
 
   /**
-   * Stops one Track's playing clip and emits any note-off commands needed to
-   * silence that Track.
+   * Requests a Clip Cell activation toggle. Playback owns whether that request
+   * launches immediately, stops immediately, or queues a launch-boundary change.
    */
-  stopTrack(
+  requestClipToggle(
+    project: ProjectPlaybackReadModel,
+    coordinate: ClipCellCoordinateInput,
+    timing: Readonly<PlaybackTiming>,
+  ): HostCommand[] {
+    const cell = project.clipCellAt(coordinate);
+    if (!cell.clipId)
+      return this.requestTrackStop(project, coordinate.trackIndex, timing);
+    if (timing.running) {
+      this.tracks.queueToggle(coordinate.trackIndex, cell.clipId);
+      return [];
+    }
+    const result = this.tracks.toggleNow(coordinate.trackIndex, cell.clipId);
+    if (result.kind === "stopped")
+      return this.silenceTrack(project, coordinate.trackIndex, timing.clock);
+    return [];
+  }
+
+  /**
+   * Requests one Track to stop. Running transport queues the stop at the next
+   * launch boundary; stopped transport clears immediately and silences the Track.
+   */
+  requestTrackStop(
     project: ProjectPlaybackReadModel,
     trackIndex: number,
-    clock: Readonly<PlaybackClock>,
+    timing: Readonly<PlaybackTiming>,
   ): HostCommand[] {
-    return stopPlayingClipOnTrack(project, this.state, clock, trackIndex);
+    if (timing.running) {
+      this.tracks.queueStop(trackIndex);
+      return [];
+    }
+    const hostCommands = this.silenceTrack(project, trackIndex, timing.clock);
+    this.tracks.stop(trackIndex);
+    return hostCommands;
   }
 
   /**
-   * Launches the clip occupying a Clip Cell on that cell's Track. Empty Clip
-   * Cells do not mutate playback; callers that treat empties as stop targets
-   * should call `stopTrack`.
+   * Seeds Scene 1 Clips as the initial playback focus for a new runtime session.
    */
-  launchClipOnTrack(
-    project: ProjectPlaybackReadModel,
-    coordinate: ClipCellCoordinateInput,
-  ): ClipId | null {
-    return launchPlayingClip(project, this.state, coordinate);
-  }
-
-  /**
-   * Queues the clip occupying a Clip Cell to start on that cell's Track at the
-   * next launch boundary.
-   */
-  queueClipOnTrack(
-    project: ProjectPlaybackReadModel,
-    coordinate: ClipCellCoordinateInput,
-  ): ClipId | null {
-    return queuePlayingClip(project, this.state, coordinate);
-  }
-
-  /**
-   * Queues one Track to stop at the next launch boundary.
-   */
-  queueStopTrack(trackIndex: number): void {
-    queueStopPlayingClipOnTrack(this.state, trackIndex);
+  seedDefaultScene(project: ProjectCoreReadModel): void {
+    for (const cell of project.clipCellSnapshots()) {
+      if (cell.sceneIndex !== 0 || !cell.clipId) continue;
+      this.tracks.launch(cell.trackIndex, cell.clipId);
+    }
   }
 
   /** Per-track playing/queued clip focus for read-only projections. */
   snapshot(): PlaybackSnapshot {
-    return {
-      tracks: this.state.tracks.map((track) => ({
-        trackIndex: track.trackIndex,
-        playingClipId: track.playingClipId,
-        queuedClipId: track.queuedClipId,
-        queuedStop: track.queuedStop,
-      })),
-    };
+    return this.tracks.snapshot();
+  }
+
+  private silenceTrack(
+    project: ProjectPlaybackReadModel,
+    trackIndex: number,
+    clock: Readonly<PlaybackClock>,
+  ): HostCommand[] {
+    const pending = this.noteGates.drainTrack(trackIndex);
+    if (pending.length > 0) return pending;
+    const playingClipId = this.tracks.playingClipIdForTrack(trackIndex);
+    if (!playingClipId) return [];
+    const clip = project.clipById(playingClipId);
+    if (!clip) return [];
+    const step = getSequenceStep(
+      clip.sequence,
+      clock.playhead % clip.sequence.length,
+    );
+    if (!step?.active) return [];
+    return [
+      {
+        kind: "track-note-off",
+        route: project.trackRoute(trackIndex),
+        trackIndex,
+        note: step.note,
+      },
+    ];
   }
 }
 
