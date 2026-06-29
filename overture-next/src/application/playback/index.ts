@@ -1,5 +1,5 @@
 import type { HostCommand } from "../host-commands";
-import type { ClipCellCoordinate, ClipId } from "../../domain/project";
+import type { ClipCellCoordinateInput, ClipId } from "../../domain/project";
 import type { OvertureProject } from "../../state/project";
 import { launchPlayingClip, stopAllPlayingClips, stopPlayingClipOnTrack } from "./internal/clips";
 import { drainDueNoteOffs, injectPlaybackStep } from "./internal/notes";
@@ -52,7 +52,7 @@ export class Playback {
    * track is playing a clip, playback starts from the selected clip cell when
    * that cell contains a clip.
    */
-  start(project: OvertureProject, selectedClipCell: ClipCellCoordinate, clock: Readonly<PlaybackClock>): HostCommand[] {
+  start(project: OvertureProject, selectedClipCell: ClipCellCoordinateInput, clock: Readonly<PlaybackClock>): HostCommand[] {
     this.launchSelectedClipIfIdle(project, selectedClipCell);
     return injectPlaybackStep(project, this.state, clock.playhead, clock.tick);
   }
@@ -72,7 +72,7 @@ export class Playback {
    */
   launchClipCell(
     project: OvertureProject,
-    coordinate: ClipCellCoordinate,
+    coordinate: ClipCellCoordinateInput,
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
     const cell = project.clipCellAt(coordinate);
@@ -92,7 +92,7 @@ export class Playback {
     };
   }
 
-  private launchSelectedClipIfIdle(project: OvertureProject, selectedClipCell: ClipCellCoordinate): void {
+  private launchSelectedClipIfIdle(project: OvertureProject, selectedClipCell: ClipCellCoordinateInput): void {
     if (this.state.tracks.some((track) => track.playingClipId)) return;
     const cell = project.clipCellAt(selectedClipCell);
     if (cell.clipId) launchPlayingClip(project, this.state, selectedClipCell);

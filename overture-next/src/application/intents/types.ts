@@ -1,5 +1,5 @@
 import type { HostCommand } from "../host-commands";
-import type { ClipCellCoordinate } from "../../domain/project";
+import type { ClipCellCoordinateInput } from "../../domain/project";
 
 export type DomainIntent =
   | { kind: "set-shift-held"; held: boolean }
@@ -8,8 +8,8 @@ export type DomainIntent =
   | { kind: "select-track"; trackIndex: number }
   | { kind: "toggle-step"; stepIndex: number }
   | { kind: "audition-note"; held: boolean; note: number; trackIndex: number; velocity: number }
-  | { kind: "select-clip-cell"; coordinate: ClipCellCoordinate }
-  | { kind: "launch-clip-cell"; coordinate: ClipCellCoordinate };
+  | { kind: "select-clip-cell"; coordinate: ClipCellCoordinateInput }
+  | { kind: "launch-clip-cell"; coordinate: ClipCellCoordinateInput };
 
 export interface DomainIntentTransaction {
   applied: boolean;

@@ -342,7 +342,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     const hostCommands: HostCommand[] = [];
 
     expect(() => applyIntentAndCollect({ kind: "select-track", trackIndex: 99 }, state, hostCommands)).toThrow(
-      "Missing track 99",
+      "Invalid Track Index 99; expected integer from 0 to 7",
     );
     expect(() =>
       applyIntentAndCollect(
@@ -350,7 +350,7 @@ describe("Overture Next control-to-intent pipeline", () => {
         state,
         hostCommands,
       ),
-    ).toThrow("Missing clip cell 0:99");
+    ).toThrow("Invalid Scene Index 99; expected integer from 0 to 7");
     expect(hostCommands).toEqual([]);
   });
 });

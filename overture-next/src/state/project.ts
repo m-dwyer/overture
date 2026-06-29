@@ -6,16 +6,18 @@ import {
   createDefaultProjectData,
   findClipCell,
   type ClipCell,
-  type ClipCellCoordinate,
+  type ClipCellCoordinateInput,
   type ClipId,
   type OvertureClip,
   type OvertureProjectData,
   type SceneIndex,
   type TrackIndex,
+  trackIndex,
 } from "../domain/project";
 
 export type {
   ClipCellCoordinate,
+  ClipCellCoordinateInput,
   ClipId,
   OvertureClip,
   SceneIndex,
@@ -42,19 +44,19 @@ export class OvertureProject {
   }
 
   /** Read-only occupancy at a coordinate. Throws when the coordinate is off-grid. */
-  clipCellAt(coordinate: ClipCellCoordinate): ClipCellSnapshot {
+  clipCellAt(coordinate: ClipCellCoordinateInput): ClipCellSnapshot {
     return snapshotCell(this.requireCell(coordinate));
   }
 
   /** The Overture Clip occupying a coordinate, or null for an Empty Clip Cell. */
-  clipFor(coordinate: ClipCellCoordinate): OvertureClip | null {
+  clipFor(coordinate: ClipCellCoordinateInput): OvertureClip | null {
     const cell = this.requireCell(coordinate);
     if (!cell.clipId) return null;
     return this.data.clips[cell.clipId] ?? null;
   }
 
   /** The Sequence owned by the clip at a coordinate, or null for an Empty Clip Cell. */
-  sequenceFor(coordinate: ClipCellCoordinate): Sequence | null {
+  sequenceFor(coordinate: ClipCellCoordinateInput): Sequence | null {
     return this.clipFor(coordinate)?.sequence ?? null;
   }
 
@@ -69,16 +71,16 @@ export class OvertureProject {
   }
 
   /** The Track at an index. Throws when the index is out of range. */
-  track(trackIndex: TrackIndex): Track {
-    return getTrack(this.data.tracks, trackIndex);
+  track(trackIndexValue: number): Track {
+    return getTrack(this.data.tracks, trackIndex(trackIndexValue));
   }
 
   /** A copy of the Track Route, so callers cannot mutate Project-owned route state. */
-  trackRoute(trackIndex: TrackIndex): TrackRoute {
-    return { ...getTrack(this.data.tracks, trackIndex).route };
+  trackRoute(trackIndexValue: number): TrackRoute {
+    return { ...getTrack(this.data.tracks, trackIndex(trackIndexValue)).route };
   }
 
-  toggleSequenceStepAt(coordinate: ClipCellCoordinate, stepIndex: number): SequenceStep | null {
+  toggleSequenceStepAt(coordinate: ClipCellCoordinateInput, stepIndex: number): SequenceStep | null {
     const clip = this.clipFor(coordinate);
     if (!clip) return null;
     const result = sequenceWithToggledStep(clip.sequence, stepIndex);
@@ -87,7 +89,7 @@ export class OvertureProject {
     return result.step;
   }
 
-  private requireCell(coordinate: ClipCellCoordinate): ClipCell {
+  private requireCell(coordinate: ClipCellCoordinateInput): ClipCell {
     const cell = findClipCell(this.data.clipCells, coordinate);
     if (!cell) throw new Error("Missing clip cell " + coordinate.trackIndex + ":" + coordinate.sceneIndex);
     return cell;

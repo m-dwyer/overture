@@ -1,4 +1,5 @@
-import type { ClipCellCoordinate } from "../domain/project";
+import { clipCellCoordinate, type ClipCellCoordinate, type ClipCellCoordinateInput } from "../domain/project";
+import { stepIndex, type StepIndex } from "../domain/sequence";
 import { trackBankForTrack } from "./surface-addressing";
 
 export type ActiveView = "track" | "session";
@@ -17,7 +18,7 @@ export class ControlSurfaceContext {
   private visibleTrackBankValue: number;
   private activeViewValue: ActiveView;
   private shiftHeldValue: boolean;
-  private selectedStepValue: number;
+  private selectedStepValue: StepIndex;
   private selectedClipCellValue: ClipCellCoordinate;
 
   constructor() {
@@ -25,8 +26,8 @@ export class ControlSurfaceContext {
     this.visibleTrackBankValue = 0;
     this.activeViewValue = "track";
     this.shiftHeldValue = false;
-    this.selectedStepValue = 0;
-    this.selectedClipCellValue = { trackIndex: 0, sceneIndex: 0 };
+    this.selectedStepValue = stepIndex(0);
+    this.selectedClipCellValue = clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 });
   }
 
   snapshot(): ControlSurfaceContextSnapshot {
@@ -53,14 +54,15 @@ export class ControlSurfaceContext {
     this.selectClipCell({ trackIndex, sceneIndex: this.selectedClipCellValue.sceneIndex });
   }
 
-  selectClipCell(coordinate: ClipCellCoordinate): void {
+  selectClipCell(coordinateInput: ClipCellCoordinateInput): void {
+    const coordinate = clipCellCoordinate(coordinateInput);
     this.selectedClipCellValue = { ...coordinate };
     this.selectedTrackIndexValue = coordinate.trackIndex;
     this.visibleTrackBankValue = trackBankForTrack(coordinate.trackIndex);
   }
 
-  selectStep(stepIndex: number): void {
-    this.selectedStepValue = stepIndex;
+  selectStep(stepIndexValue: number): void {
+    this.selectedStepValue = stepIndex(stepIndexValue);
   }
 }
 

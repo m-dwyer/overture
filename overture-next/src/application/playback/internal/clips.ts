@@ -1,5 +1,5 @@
 import type { HostCommand } from "../../host-commands";
-import type { ClipCellCoordinate, ClipId } from "../../../domain/project";
+import type { ClipCellCoordinateInput, ClipId } from "../../../domain/project";
 import { getSequenceStep } from "../../../domain/sequence";
 import type { OvertureProject } from "../../../state/project";
 import type { PlaybackState, TrackPlaybackState } from "../state";
@@ -11,7 +11,7 @@ import { getTrackPlayback } from "./tracks";
 export function launchPlayingClip(
   project: OvertureProject,
   playback: PlaybackState,
-  coordinate: ClipCellCoordinate,
+  coordinate: ClipCellCoordinateInput,
 ): ClipId | null {
   const cell = project.clipCellAt(coordinate);
   const track = getTrackPlayback(playback, coordinate.trackIndex);

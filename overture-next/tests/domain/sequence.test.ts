@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createDefaultSequence, sequenceWithToggledStep } from "../../src/domain/sequence";
+import { createDefaultSequence, parseStepIndex, sequenceWithToggledStep, stepIndex } from "../../src/domain/sequence";
 
 describe("Sequence editing", () => {
   test("toggles Steps through the public Sequence API", () => {
@@ -18,5 +18,11 @@ describe("Sequence editing", () => {
     const sequence = createDefaultSequence();
 
     expect(sequenceWithToggledStep(sequence, 99)).toBeNull();
+  });
+
+  test("brands and parses Step Indexes", () => {
+    expect(stepIndex(15)).toBe(15);
+    expect(parseStepIndex(99)).toBeNull();
+    expect(() => stepIndex(16)).toThrow("Invalid Step Index 16; expected integer from 0 to 15");
   });
 });
