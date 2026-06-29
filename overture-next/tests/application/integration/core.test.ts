@@ -1,9 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { createOvertureCore } from "../../../src/application/core";
 import type { CoreSnapshot } from "../../../src/application/types";
-import { CLIP_CELL_COUNT, SCENE_COUNT } from "../../../src/domain/project";
+import { CLIP_CELL_COUNT, SCENE_COUNT, TRACK_COUNT, createTracks } from "../../../src/domain/project";
 import { createDefaultSequence } from "../../../src/domain/sequence";
-import { TRACK_COUNT, createTracks } from "../../../src/domain/track";
 import { createDefaultProject } from "../../../src/state/project";
 
 describe("Overture Next core", () => {

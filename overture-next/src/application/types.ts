@@ -1,4 +1,4 @@
-import type { TrackRoute } from "../domain/track";
+import type { TrackRoute } from "../domain/project";
 import type { ActiveView, ControlSurfaceContext, ControlSurfaceContextSnapshot } from "../state/control-surface-context";
 import type { OvertureProject } from "../state/project";
 import type { ControlInput } from "./controls/types";

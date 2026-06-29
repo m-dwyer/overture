@@ -1,4 +1,4 @@
-import { TRACK_COUNT } from "../track";
+import { TRACK_COUNT } from "./track";
 import { integerInRange, nonEmptyString, type Branded } from "../value-objects";
 
 export type TrackIndex = Branded<number, "TrackIndex">;

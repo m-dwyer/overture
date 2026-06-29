@@ -1,4 +1,4 @@
-import type { TrackRoute } from "../domain/track";
+import type { TrackRoute } from "../domain/project";
 
 interface TrackHostCommand {
   route: TrackRoute;

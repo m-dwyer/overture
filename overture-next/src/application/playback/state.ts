@@ -1,6 +1,5 @@
 import type { HostCommand } from "../host-commands";
-import type { ClipId } from "../../domain/project";
-import { TRACK_COUNT } from "../../domain/track";
+import { TRACK_COUNT, type ClipId } from "../../domain/project";
 
 /**
  * Per-track playback focus.

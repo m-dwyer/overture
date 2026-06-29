@@ -1,17 +1,20 @@
 import type { Sequence, SequenceStep } from "../domain/sequence";
 import { createDefaultSequence, sequenceWithToggledStep } from "../domain/sequence";
-import { createTracks, getTrack, TRACK_COUNT, type Track } from "../domain/track";
-import type { TrackRoute } from "../domain/track";
 import {
   clipCellCoordinate,
   clipId,
   type ClipCellCoordinateInput,
   type ClipId,
+  createTracks,
+  getTrack,
   SCENE_COUNT,
   type SceneIndex,
   sceneIndex,
+  type Track,
+  TRACK_COUNT,
   type TrackIndex,
   trackIndex,
+  type TrackRoute,
 } from "../domain/project";
 
 export type {
