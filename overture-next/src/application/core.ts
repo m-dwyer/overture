@@ -35,7 +35,7 @@ export function createOvertureCore(): OvertureCore {
   const control = createInitialControlSurfaceContext();
   const transport = createTransport();
   const playback = createPlayback();
-  seedDefaultScenePlayback(project, playback);
+  playback.seedDefaultScene(project);
   const intentHandlers = createIntentHandlers({
     control,
     project,
@@ -151,19 +151,6 @@ function createIntentHandlers({
       );
     },
   };
-}
-
-function seedDefaultScenePlayback(
-  project: OvertureProject,
-  playback: Playback,
-): void {
-  for (const cell of project.clipCellSnapshots()) {
-    if (cell.sceneIndex !== 0 || !cell.clipId) continue;
-    playback.launchClipOnTrack(project, {
-      trackIndex: cell.trackIndex,
-      sceneIndex: cell.sceneIndex,
-    });
-  }
 }
 
 function buildCoreSnapshot(
