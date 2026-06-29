@@ -1,12 +1,16 @@
-import type { ControlSurfaceContext } from "../../state/control-surface-context";
+import type { ControlSurfaceContext, HeldSurfaceControl } from "../../state/control-surface-context";
 import { operationApplied, type OperationResult } from "./types";
 
 export interface ControlViewContext {
   readonly control: ControlSurfaceContext;
 }
 
-export function setShiftHeld(context: ControlViewContext, held: boolean): OperationResult {
-  context.control.setShiftHeld(held);
+export function setSurfaceControlHeld(
+  context: ControlViewContext,
+  control: HeldSurfaceControl,
+  held: boolean,
+): OperationResult {
+  context.control.setSurfaceControlHeld(control, held);
   return operationApplied();
 }
 

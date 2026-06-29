@@ -7,7 +7,7 @@ describe("Overture Next Control Surface Context", () => {
       selectedTrackIndex: 0,
       visibleTrackBank: 0,
       activeView: "track",
-      shiftHeld: false,
+      heldControls: [],
       selectedStep: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
     });
@@ -38,18 +38,21 @@ describe("Overture Next Control Surface Context", () => {
     });
   });
 
-  test("updates modifiers, active view, and selected Step explicitly", () => {
+  test("updates held physical controls, active view, and selected Step explicitly", () => {
     const control = createInitialControlSurfaceContext();
 
-    control.setShiftHeld(true);
+    control.setSurfaceControlHeld("shift", true);
     expect(control.toggleActiveView()).toBe("session");
     control.selectStep(9);
 
     expect(control.snapshot()).toMatchObject({
-      shiftHeld: true,
+      heldControls: ["shift"],
       activeView: "session",
       selectedStep: 9,
     });
+
+    control.setSurfaceControlHeld("shift", false);
+    expect(control.snapshot().heldControls).toEqual([]);
   });
 
   test("rejects invalid selected Clip Cell and Step values", () => {

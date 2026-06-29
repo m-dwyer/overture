@@ -167,7 +167,7 @@ describe("Overture Next Schwung adapter", () => {
       selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
       visibleTrackBank: 0,
       activeView: "session",
-      shiftHeld: false,
+      heldControls: [],
       selectedStep: 0,
       playing: false,
       selectedClipId: null,

@@ -9,7 +9,7 @@ import {
   launchClipCell,
   selectClipCell,
   selectTrack,
-  setShiftHeld,
+  setSurfaceControlHeld,
   startTransport,
   stopTransport,
   toggleSelectedStep,
@@ -80,8 +80,8 @@ interface CoreOwners {
 
 function createIntentHandlers({ control, project, playback, transport }: CoreOwners): IntentHandlers {
   return {
-    setShiftHeld(held) {
-      return setShiftHeld({ control }, held);
+    setSurfaceControlHeld(surfaceControl, held) {
+      return setSurfaceControlHeld({ control }, surfaceControl, held);
     },
     toggleTransport() {
       if (transport.isPlaying()) {
@@ -139,7 +139,7 @@ function buildCoreSnapshot(
     selectedTrackRoute: project.trackRoute(control.selectedTrackIndex),
     visibleTrackBank: control.visibleTrackBank,
     activeView: control.activeView,
-    shiftHeld: control.shiftHeld,
+    heldControls: control.heldControls,
     selectedStep: control.selectedStep,
     playing: transport.playing,
     selectedClipId: selectedCell.clipId,

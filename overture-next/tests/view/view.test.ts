@@ -9,7 +9,7 @@ describe("Overture Next view projection", () => {
       selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
       visibleTrackBank: 1,
       activeView: "track",
-      shiftHeld: false,
+      heldControls: [],
       selectedStep: 1,
       playing: true,
       selectedClipId: "clip-6",
@@ -49,13 +49,45 @@ describe("Overture Next view projection", () => {
     expect(view.leds.pads.every((pad) => pad.state === "off")).toBe(true);
   });
 
+  test("derives Track View track-row button hints while Shift is held", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 5,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
+      visibleTrackBank: 1,
+      activeView: "track",
+      heldControls: ["shift"],
+      selectedStep: 1,
+      playing: true,
+      selectedClipId: "clip-6",
+      selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
+      steps: [
+        { index: 0, active: true, note: 60, velocity: 100, selected: false, playhead: false },
+        { index: 1, active: false, note: 61, velocity: 100, selected: true, playhead: true },
+      ],
+    };
+
+    const view = createOvertureSurfaceView(snapshot);
+
+    expect(view.surfaceHints).toEqual([
+      { kind: "track-bank-target", surface: { kind: "track-row", row: 0 } },
+      { kind: "track-bank-target", surface: { kind: "track-row", row: 1 } },
+      { kind: "track-bank-target", surface: { kind: "track-row", row: 2 } },
+      { kind: "track-bank-target", surface: { kind: "track-row", row: 3 } },
+    ]);
+    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 0, state: "hinted" });
+    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 1, state: "selected" });
+    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 2, state: "hinted" });
+    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 3, state: "hinted" });
+  });
+
   test("derives a Session View screen and pad LEDs from selected Clip Cell state", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 3,
       selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
       visibleTrackBank: 0,
       activeView: "session",
-      shiftHeld: false,
+      heldControls: [],
       selectedStep: 0,
       playing: false,
       selectedClipId: null,
@@ -92,7 +124,7 @@ describe("Overture Next view projection", () => {
       selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
       visibleTrackBank: 0,
       activeView: "session",
-      shiftHeld: true,
+      heldControls: ["shift"],
       selectedStep: 0,
       playing: false,
       selectedClipId: null,

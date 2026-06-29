@@ -7,7 +7,7 @@ import {
   launchClipCell,
   selectClipCell,
   selectTrack,
-  setShiftHeld,
+  setSurfaceControlHeld,
   startTransport,
   stopTransport,
   toggleSelectedStep,
@@ -29,7 +29,7 @@ describe("Overture Next control-to-intent pipeline", () => {
   test("interprets track rows against the current shift modifier", () => {
     const lowerBankControl = createInitialControlSurfaceContext();
     const upperBankControl = createInitialControlSurfaceContext();
-    upperBankControl.setShiftHeld(true);
+    upperBankControl.setSurfaceControlHeld("shift", true);
 
     expect(interpretControl({ kind: "track-row", row: 1 }, lowerBankControl.snapshot())).toEqual({
       kind: "select-track",
@@ -355,14 +355,16 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(hostCommands).toEqual([]);
   });
 
-  test("applies shift state without changing selection or host commands", () => {
+  test("applies held physical control state without changing selection or host commands", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
-    expect(applyIntentAndCollect({ kind: "set-shift-held", held: true }, state, hostCommands)).toBe(true);
+    expect(
+      applyIntentAndCollect({ kind: "set-surface-control-held", control: "shift", held: true }, state, hostCommands),
+    ).toBe(true);
 
     expect(state.control.snapshot()).toMatchObject({
-      shiftHeld: true,
+      heldControls: ["shift"],
       selectedTrackIndex: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
     });
@@ -423,8 +425,8 @@ function applyIntentAndCollect(
 
 function createIntentHandlers(state: TestCoreState): IntentHandlers {
   return {
-    setShiftHeld(held) {
-      return setShiftHeld({ control: state.control }, held);
+    setSurfaceControlHeld(control, held) {
+      return setSurfaceControlHeld({ control: state.control }, control, held);
     },
     toggleTransport() {
       if (state.transport.isPlaying()) {

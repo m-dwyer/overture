@@ -1,8 +1,9 @@
 import type { ClipCellCoordinateInput } from "../../domain/project";
+import type { HeldSurfaceControl } from "../../state/control-surface-context";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
 export interface IntentHandlers {
-  setShiftHeld(held: boolean): DomainIntentTransaction;
+  setSurfaceControlHeld(control: HeldSurfaceControl, held: boolean): DomainIntentTransaction;
   toggleTransport(): DomainIntentTransaction;
   toggleView(): DomainIntentTransaction;
   selectTrack(trackIndex: number): DomainIntentTransaction;
@@ -13,8 +14,8 @@ export interface IntentHandlers {
 }
 
 export function applyIntent(intent: DomainIntent, handlers: IntentHandlers): DomainIntentTransaction {
-  if (intent.kind === "set-shift-held") {
-    return handlers.setShiftHeld(intent.held);
+  if (intent.kind === "set-surface-control-held") {
+    return handlers.setSurfaceControlHeld(intent.control, intent.held);
   }
   if (intent.kind === "toggle-transport") {
     return handlers.toggleTransport();

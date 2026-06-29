@@ -3,12 +3,13 @@ import { stepIndex, type StepIndex } from "../domain/sequence";
 import { trackBankForTrack } from "./surface-addressing";
 
 export type ActiveView = "track" | "session";
+export type HeldSurfaceControl = "shift";
 
 export interface ControlSurfaceContextSnapshot {
   readonly selectedTrackIndex: number;
   readonly visibleTrackBank: number;
   readonly activeView: ActiveView;
-  readonly shiftHeld: boolean;
+  readonly heldControls: readonly HeldSurfaceControl[];
   readonly selectedStep: number;
   readonly selectedClipCell: Readonly<ClipCellCoordinate>;
 }
@@ -17,7 +18,7 @@ export class ControlSurfaceContext {
   private selectedTrackIndexValue: number;
   private visibleTrackBankValue: number;
   private activeViewValue: ActiveView;
-  private shiftHeldValue: boolean;
+  private readonly heldControlsValue: Set<HeldSurfaceControl>;
   private selectedStepValue: StepIndex;
   private selectedClipCellValue: ClipCellCoordinate;
 
@@ -25,7 +26,7 @@ export class ControlSurfaceContext {
     this.selectedTrackIndexValue = 0;
     this.visibleTrackBankValue = 0;
     this.activeViewValue = "track";
-    this.shiftHeldValue = false;
+    this.heldControlsValue = new Set();
     this.selectedStepValue = stepIndex(0);
     this.selectedClipCellValue = clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 });
   }
@@ -35,14 +36,15 @@ export class ControlSurfaceContext {
       selectedTrackIndex: this.selectedTrackIndexValue,
       visibleTrackBank: this.visibleTrackBankValue,
       activeView: this.activeViewValue,
-      shiftHeld: this.shiftHeldValue,
+      heldControls: [...this.heldControlsValue],
       selectedStep: this.selectedStepValue,
       selectedClipCell: { ...this.selectedClipCellValue },
     };
   }
 
-  setShiftHeld(held: boolean): void {
-    this.shiftHeldValue = held;
+  setSurfaceControlHeld(control: HeldSurfaceControl, held: boolean): void {
+    if (held) this.heldControlsValue.add(control);
+    else this.heldControlsValue.delete(control);
   }
 
   toggleActiveView(): ActiveView {

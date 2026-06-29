@@ -1,8 +1,9 @@
 import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinateInput } from "../../domain/project";
+import type { HeldSurfaceControl } from "../../state/control-surface-context";
 
 export type DomainIntent =
-  | { kind: "set-shift-held"; held: boolean }
+  | { kind: "set-surface-control-held"; control: HeldSurfaceControl; held: boolean }
   | { kind: "toggle-transport" }
   | { kind: "toggle-view" }
   | { kind: "select-track"; trackIndex: number }

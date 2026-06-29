@@ -10,12 +10,15 @@ const TRACK_PAD_NOTE_BASE = 60;
  * Pad presses and releases both produce audition Domain Intents so note-off can
  * be emitted.
  */
-export function interpretTrackControl(
+export function interpretTrackViewControl(
   input: ControlInput,
   control: ControlSurfaceContextSnapshot,
 ): DomainIntent | null {
   if (input.kind === "track-row") {
-    return { kind: "select-track", trackIndex: selectTrackFromRow(input.row, control.shiftHeld ? 1 : 0) };
+    return {
+      kind: "select-track",
+      trackIndex: selectTrackFromRow(input.row, control.heldControls.includes("shift") ? 1 : 0),
+    };
   }
   if (input.kind === "step") return { kind: "toggle-step", stepIndex: input.step };
   if (input.kind !== "pad") return null;

@@ -23,7 +23,7 @@ export interface CoreSnapshot {
   selectedTrackRoute: TrackRoute;
   visibleTrackBank: number;
   activeView: ActiveView;
-  shiftHeld: boolean;
+  heldControls: ControlSurfaceContextSnapshot["heldControls"];
   selectedStep: number;
   playing: boolean;
   selectedClipId: string | null;

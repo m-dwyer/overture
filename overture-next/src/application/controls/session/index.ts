@@ -9,12 +9,15 @@ import type { ControlInput } from "../types";
  * Pad presses launch Clip Cells; pad releases and Step buttons do not produce
  * Domain Intents in this view.
  */
-export function interpretSessionControl(
+export function interpretSessionViewControl(
   input: ControlInput,
   control: ControlSurfaceContextSnapshot,
 ): DomainIntent | null {
   if (input.kind === "track-row") {
-    return { kind: "select-track", trackIndex: selectTrackFromRow(input.row, control.shiftHeld ? 1 : 0) };
+    return {
+      kind: "select-track",
+      trackIndex: selectTrackFromRow(input.row, control.heldControls.includes("shift") ? 1 : 0),
+    };
   }
   if (input.kind !== "pad") return null;
   if (!input.held) return null;
