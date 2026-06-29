@@ -140,6 +140,10 @@ export class OvertureProject {
     return { ...getTrack(this.data.tracks, trackIndex(trackIndexValue)).route };
   }
 
+  /**
+   * Toggles a Step in the Sequence owned by the clip at a valid Clip Cell.
+   * Returns null for an Empty Clip Cell, missing clip, or invalid Step index.
+   */
   toggleSequenceStepAt(coordinate: ClipCellCoordinateInput, stepIndex: number): SequenceStepSnapshot | null {
     const cell = this.requireCell(coordinate);
     if (!cell.clipId) return null;
