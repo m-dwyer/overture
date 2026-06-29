@@ -4,12 +4,8 @@
 // and the test harness are just different bindings of the same core.
 import type { Dsp } from "../dsp.js";
 import { type DisplaySink, type LedSink, type MidiSink, type FileStore, memFiles } from "./sinks.js";
-import { BrowserSchwungChain, type BrowserSchwungHost, createBrowserSchwungChain } from "../schwung/browser-chain.js";
-import { createDisplayHostApi } from "./shadow-ui-display-host.js";
-import { createDspHostApi } from "./shadow-ui-dsp-host.js";
-import { createFileHostApi } from "./shadow-ui-file-host.js";
-import { createLedHostApi } from "./shadow-ui-led-host.js";
-import { createSchwungHostApi } from "./shadow-ui-schwung-host.js";
+import type { BrowserSchwungHost } from "../schwung/browser-chain.js";
+import { createShadowUiHostRuntime } from "./shadow-ui-host-runtime.js";
 
 export interface EmulatorOptions {
   dsp: Dsp;
@@ -38,30 +34,18 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
   const strict = opts.strict ?? false;
   const log = opts.log ?? (() => {});
   const files = opts.files ?? memFiles();
-  const midi: MidiSink = opts.midi ?? { inject: () => {}, toChain: () => {} };
-  let schwung: BrowserSchwungHost;
-  if (opts.schwung) {
-    schwung = opts.schwung;
-  } else {
-    try {
-      schwung = await createBrowserSchwungChain({ log });
-    } catch (error) {
-      log("schwung catalog load failed: " + ((error as Error)?.message || error));
-      schwung = new BrowserSchwungChain({ modules: [] }, { log, audioEngine: null });
-    }
-  }
-
-  const dspHost = createDspHostApi(dsp, strict);
-  const schwungHost = createSchwungHostApi(schwung, midi, log);
-
-  Object.assign(
-    globalThis,
-    createDisplayHostApi(display),
-    createLedHostApi(leds),
-    dspHost.api,
-    createFileHostApi(files),
-    schwungHost.api,
-  );
+  const midi: MidiSink = opts.midi ?? { sendToMove: () => {}, sendToSchwungChain: () => {} };
+  const hostRuntime = await createShadowUiHostRuntime({
+    display,
+    dsp,
+    files,
+    leds,
+    log,
+    midi,
+    schwung: opts.schwung,
+    strict,
+  });
+  hostRuntime.installGlobals();
 
   // Load the real tool UI. The literal lets Vite's remap plugin (and vitest)
   // rewrite the on-device path to overture-next/ui/ui.js; `as string` tells TS
@@ -76,13 +60,13 @@ export async function createEmulator(opts: EmulatorOptions): Promise<Emulator> {
       // boundary. Writes queued before the tick become DSP truth at tick start;
       // writes emitted by tick() are coalesced together and closed at tick end so
       // the existing render-before-tick harness step observes post-tick truth.
-      if (strict) dspHost.flushSetParams();
+      if (strict) hostRuntime.dspHost.flushSetParams();
       globalThis.tick?.();
-      if (strict) dspHost.flushSetParams();
+      if (strict) hostRuntime.dspHost.flushSetParams();
     },
     renderBlocks(n: number) { for (let i = 0; i < n; i++) dsp.render(); },
     sendInternal(status, d1, d2) {
-      if (schwungHost.handleHostInternalMidi(status, d1, d2)) return;
+      if (hostRuntime.schwungHost.handleHostInternalMidi(status, d1, d2)) return;
       globalThis.onMidiMessageInternal?.([status, d1, d2]);
     },
     sendExternal(status, d1, d2) { globalThis.onMidiMessageExternal?.([status, d1, d2]); },

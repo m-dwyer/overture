@@ -20,8 +20,8 @@ export interface LedSink {
 }
 
 export interface MidiSink {
-  inject(pkt: number[]): void; // move_midi_inject_to_move (cable-routed to Move)
-  toChain(args: unknown[]): void; // shadow_send_midi_to_dsp
+  sendToMove(packet: number[]): void;
+  sendToSchwungChain(message: unknown[]): void;
 }
 
 export interface FileStore {

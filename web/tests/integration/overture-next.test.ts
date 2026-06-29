@@ -72,5 +72,14 @@ describe("overture-next emulator integration", () => {
     expect(h.state().selectedTrackIndex).toBe(4);
     expect(h.rec.schwungMidi).toContainEqual([[NOTE_ON | 4, 60, 99]]);
     expect(h.rec.schwungMidi).toContainEqual([[NOTE_OFF | 4, 60, 0]]);
+
+    h.cc(NAV.Shift, 127);
+    h.pressCc(40);
+    h.cc(NAV.Shift, 0);
+    h.tapNote(PAD_NOTE0, 88);
+
+    expect(h.state().selectedTrackIndex).toBe(7);
+    expect(h.rec.schwungMidi).toContainEqual([[NOTE_ON | 7, 60, 88]]);
+    expect(h.rec.schwungMidi).toContainEqual([[NOTE_OFF | 7, 60, 0]]);
   });
 });

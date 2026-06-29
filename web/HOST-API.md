@@ -41,6 +41,11 @@ Call counts are from a static scan of `ui/*` (rough frequency → priority):
 - `move_midi_inject_to_move([type,status,d1,d2])`  (18) — cable-routed inject to Move tracks
 - `shadow_send_midi_to_dsp(...)`  (3) — shares the set_param delivery channel (coalesces!)
 
+Overture decides the route before calling these APIs. `TrackRoute.kind === "move"`
+lands in `move_midi_inject_to_move`; `TrackRoute.kind === "schwung"` lands in
+`shadow_send_midi_to_dsp`. The web emulator only binds those host calls to named
+MIDI sinks; browser logs decode Move packets as `send_to_move chN [...]`.
+
 **co-run (native-editor delegation)** — layout-tier: stub editor view
 - `shadow_corun_begin(target, id, keep_mask)`
 - `shadow_corun_end()`

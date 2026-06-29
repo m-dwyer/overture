@@ -65,8 +65,8 @@ function createBrowserHostPorts(options: BrowserHostPortOptions): BrowserHostPor
     leds: options.leds,
     log: options.log,
     midi: {
-      inject: (packet) => options.log("inject_to_move " + JSON.stringify(packet)),
-      toChain: (args) => options.log("send_midi_to_dsp " + JSON.stringify(args)),
+      sendToMove: (packet) => options.log(formatMoveMidiPacketLog(packet)),
+      sendToSchwungChain: (message) => options.log("send_midi_to_dsp " + JSON.stringify(message)),
     },
     setStatus: options.setStatus,
     schwung: {
@@ -170,4 +170,10 @@ function shouldPrimeSchwungAudio(status: number, data1: number, data2: number): 
   if (message === CC) return data1 === NAV.Play && data2 > 0;
   if (message !== NOTE_ON || data2 <= 0) return false;
   return data1 >= PAD_NOTE0 && data1 < PAD_NOTE0 + PAD_COUNT;
+}
+
+function formatMoveMidiPacketLog(packet: readonly number[]): string {
+  const status = packet[1] ?? 0;
+  const midiChannel = (status & 0x0f) + 1;
+  return "send_to_move ch" + midiChannel + " " + JSON.stringify(packet);
 }

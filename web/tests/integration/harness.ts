@@ -1,7 +1,7 @@
 import { createMockDsp } from "../../src/mock-dsp.js";
 import { createEmulator, type Emulator } from "../../src/host/emulator.js";
-import { memFiles, type DisplaySink, type FileStore, type LedSink } from "../../src/host/sinks.js";
-import { createHeadlessSchwungChain } from "./schwung-catalog.js";
+import { memFiles, type DisplaySink, type FileStore, type LedSink, type MidiSink } from "../../src/host/sinks.js";
+import { createDefaultTestSchwungChain } from "./schwung-catalog.js";
 
 const BLOCKS_PER_TICK = 4;
 
@@ -144,21 +144,14 @@ function createRecorder(): Recorder {
 export async function createHarness(): Promise<Harness> {
   const rec = createRecorder();
   const files = memFiles();
-  const schwung = await createHeadlessSchwungChain();
+  const schwung = await createDefaultTestSchwungChain();
   const emu = await createEmulator({
     dsp: createMockDsp(),
     display: rec.display,
     leds: rec.ledSink,
     files,
     schwung,
-    midi: {
-      inject(packet) {
-        rec.moveMidi.push([...packet]);
-      },
-      toChain(args) {
-        rec.schwungMidi.push([...args]);
-      },
-    },
+    midi: createRecordingMidiSink(rec),
   });
 
   emu.init();
@@ -208,6 +201,17 @@ export async function createHarness(): Promise<Harness> {
         rects: rec.rects.slice(),
         pixels: rec.pixels.slice(),
       };
+    },
+  };
+}
+
+function createRecordingMidiSink(rec: Recorder): MidiSink {
+  return {
+    sendToMove(packet) {
+      rec.moveMidi.push([...packet]);
+    },
+    sendToSchwungChain(message) {
+      rec.schwungMidi.push([...message]);
     },
   };
 }

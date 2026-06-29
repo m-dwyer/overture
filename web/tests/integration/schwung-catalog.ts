@@ -1,20 +1,21 @@
 import { BrowserSchwungChain } from "../../src/schwung/browser-chain.js";
 import type { RawParam, SchwungCatalog } from "../../src/schwung/module-metadata.js";
 
-export async function createHeadlessSchwungChain(): Promise<BrowserSchwungChain> {
-  const chain = new BrowserSchwungChain(makeHeadlessCatalog(), { audioEngine: null });
+export async function createDefaultTestSchwungChain(): Promise<BrowserSchwungChain> {
+  const chain = new BrowserSchwungChain(makeTestSchwungCatalog(), { audioEngine: null });
   chain.shadowSetParam(0, "midi_fx1:module", "arp");
   chain.shadowSetParam(0, "fx1:module", "freeverb");
+  // Match normal browser behavior: slots 1-4 keep their default synths. Only
+  // clear optional MIDI/audio FX on slots where tests do not need them.
   for (let slot = 1; slot < 4; slot++) {
     chain.shadowSetParam(slot, "midi_fx1:module", "");
-    chain.shadowSetParam(slot, "synth:module", "");
     chain.shadowSetParam(slot, "fx1:module", "");
     chain.shadowSetParam(slot, "fx2:module", "");
   }
   return chain;
 }
 
-function makeHeadlessCatalog(): SchwungCatalog {
+function makeTestSchwungCatalog(): SchwungCatalog {
   return {
     modules: [
       module("arp", "Arpeggiator", "midi_fx", []),

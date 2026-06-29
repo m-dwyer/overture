@@ -19,7 +19,7 @@ MIDI, file, and Schwung-chain host surfaces.
 | **Pads/steps/knobs/jog/buttons** | MOCK → clickable Move shell → emits the right MIDI into `onMidiMessageInternal` |
 | **LEDs** | MOCK → render pad/step colors from `setLED` |
 | `get_param`/`set_param` | MOCK -> route to the Overture mock DSP surface |
-| **Move's Ableton engines / MIDI inject** | MOCK/stub (placeholder + local synth or silence) |
+| **Move's Ableton engines / MIDI inject** | MOCK/stub → routed to the `sendToMove` MIDI sink and logged in the browser |
 | **co-run** (Move device UI / Schwung chain editor) | MOCK → a stub "editor" view; design the *transition*, not the native editor |
 | **OVT console/test harness** | HOST PORT → publishes a browser-only handle for deterministic MIDI injection and tick advancement |
 
@@ -38,13 +38,21 @@ Mirror Schwung's `shadow_ui` JS API (confirm against `schwung/docs/API.md`). Rep
 - **Display:** `clear_screen`, `print`, `draw_rect`, `fill_rect`, `host_flush_display` → canvas.
 - **LEDs:** `setLED`, `setButtonLED`, `clearAllLEDs` → pad/step grid render (mind the per-tick budget).
 - **Params:** `host_module_get_param`, `host_module_set_param` -> mock DSP routing.
-- **MIDI:** `move_midi_inject_to_move([type,status,d1,d2])`, `host_module_send_midi`,
-  `shadow_send_midi_to_dsp` → stub/log/local synth.
+- **MIDI:** `move_midi_inject_to_move([type,status,d1,d2])` → `sendToMove`;
+  `shadow_send_midi_to_dsp` → `sendToSchwungChain` and the browser Schwung chain.
 - **co-run:** `shadow_corun_begin/end/state` (+ the gated `typeof` checks) → stub editor view.
 - **Browser composition:** `web/src/host/browser-emulator-harness.ts` owns
-  the browser host port bundle, Schwung host-port creation, the real Overture
-  tool boot, tick-loop lifecycle, initial state scheduling, and the shell's
-  inbound MIDI send boundary.
+  the browser host port bundle, browser/manual Schwung chain selection, the
+  real Overture tool boot, tick-loop lifecycle, initial state scheduling, and
+  the shell's inbound MIDI send boundary.
+- **Host globals:** `web/src/host/emulator.ts` loads the real tool UI after
+  `web/src/host/shadow-ui-host-runtime.ts` installs the `shadow_ui` host
+  globals. The tool calls these APIs as bare globals on device, so the emulator
+  still installs them on `globalThis`; the mutation is isolated behind
+  `installGlobals(...)` and can target another object in tests.
+- **Schwung host runtime:** `web/src/host/schwung-host-runtime.ts` owns browser
+  Schwung chain creation/fallback and exposes the Schwung-specific host API
+  shim used by the broader host runtime.
 - **Harness:** `web/src/host/emulator-harness.ts` publishes `globalThis.OVT`
   from a browser-only harness port; Overture itself does not depend on it.
 
