@@ -17,7 +17,15 @@ import { PadGrid } from "./PadGrid";
 import { StepRow } from "./StepRow";
 import { TrackStrip } from "./TrackStrip";
 
-export function Shell({ send, onReady }: { send: Send; onReady: (leds: LedSink) => void }) {
+export function Shell({
+  send,
+  onReady,
+  heldControls = [],
+}: {
+  send: Send;
+  onReady: (leds: LedSink) => void;
+  heldControls?: readonly string[];
+}) {
   const reg = useRef<LedRegistry>({
     steps: new Map(),
     pads: new Map(),
@@ -111,7 +119,7 @@ export function Shell({ send, onReady }: { send: Send; onReady: (leds: LedSink) 
 
         {/* right controls: icon cluster (top) / octave-nav cross (bottom) */}
         <div className="col-start-4 row-start-2 row-end-4 flex flex-col items-center justify-between gap-4">
-          <RightCluster send={send} />
+          <RightCluster send={send} heldControls={heldControls} />
           <DPad send={send} />
         </div>
 

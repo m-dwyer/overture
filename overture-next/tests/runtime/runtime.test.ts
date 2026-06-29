@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { HostCommand } from "../../src/core/types";
+import type { HostCommand } from "../../src/application/types";
 import type { OvertureHostPorts } from "../../src/ports/host-ports";
 import type { ControlSurfacePort } from "../../src/ports/inbound";
 import type { DisplayPort, LedPort, MidiPort, RuntimePort } from "../../src/ports/outbound";
@@ -14,7 +14,7 @@ describe("Overture Next runtime", () => {
 
     runtime.init();
 
-    expect(runtime.core.getSnapshot().selectedTrackIndex).toBe(0);
+    expect(runtime.debug.core.snapshot().selectedTrackIndex).toBe(0);
     expect(runtime.isReady()).toBe(false);
     expect(runtime.isBootSplashVisible()).toBe(true);
     expect(frames[0]).not.toContain("print:OVERTURE NEXT");
@@ -36,7 +36,7 @@ describe("Overture Next runtime", () => {
 
     runtime.onMidiMessage([0xb0, 85, 127]);
 
-    expect(runtime.core.getSnapshot().playing).toBe(true);
+    expect(runtime.debug.core.snapshot().playing).toBe(true);
   });
 
   test("unload emits route-safe note-off commands for active Schwung playback", () => {
@@ -47,13 +47,13 @@ describe("Overture Next runtime", () => {
     const runtime = createOvertureRuntime(adapter);
     runtime.init();
 
-    runtime.core.applyInput({ kind: "shift", held: true });
-    runtime.core.applyInput({ kind: "track-row", row: 0 });
-    runtime.core.applyInput({ kind: "shift", held: false });
-    runtime.core.applyInput({ kind: "menu" });
-    runtime.core.applyInput(padPress(24));
-    runtime.core.applyInput({ kind: "menu" });
-    runtime.core.applyInput({ kind: "play" });
+    runtime.debug.core.dispatchControlInput({ kind: "shift", held: true });
+    runtime.debug.core.dispatchControlInput({ kind: "track-row", row: 0 });
+    runtime.debug.core.dispatchControlInput({ kind: "shift", held: false });
+    runtime.debug.core.dispatchControlInput({ kind: "menu" });
+    runtime.debug.core.dispatchControlInput(padPress(24));
+    runtime.debug.core.dispatchControlInput({ kind: "menu" });
+    runtime.debug.core.dispatchControlInput({ kind: "play" });
     for (let i = 0; i < 48; i++) runtime.tick();
     commandLog.length = 0;
 
@@ -73,10 +73,10 @@ describe("Overture Next runtime", () => {
     runtime.init();
     const renderedFrameCount = frames.length;
 
-    runtime.core.applyInput({ kind: "menu" });
-    runtime.core.applyInput(padPress(24));
-    runtime.core.applyInput({ kind: "menu" });
-    runtime.core.applyInput({ kind: "play" });
+    runtime.debug.core.dispatchControlInput({ kind: "menu" });
+    runtime.debug.core.dispatchControlInput(padPress(24));
+    runtime.debug.core.dispatchControlInput({ kind: "menu" });
+    runtime.debug.core.dispatchControlInput({ kind: "play" });
 
     for (let i = 0; i < 48; i++) runtime.tickPlayback();
 

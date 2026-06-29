@@ -8,10 +8,10 @@ mutating another owner's data.
 
 | State Shape | Owner | Notes |
 | --- | --- | --- |
-| `ControlState` | `src/core/control-state.ts` | Owner-object class with `snapshot()` read contract. |
-| `TransportState` | `src/core/transport.ts` | Owner-object class with `snapshot()` and `clock()` read contracts. |
-| `PlaybackState` | `src/core/playback/` | Playback lifecycle and note-off scheduling owner. |
-| `OvertureProject` | `src/core/project/` | Project data owner and public lookup surface. |
+| `ControlSurfaceContext` | `src/state/control-surface-context.ts` | Owner-object class with `snapshot()` read contract. |
+| `OvertureProject` | `src/state/project.ts` | Project data owner with public lookup and Project-owned mutation APIs. |
+| `TransportState` | `src/application/transport.ts` | Owner-object class with `snapshot()` and `clock()` read contracts. |
+| `PlaybackState` | `src/application/playback/` | Playback lifecycle and note-off scheduling owner. |
 
 ## Preferred Pattern for Newly Adopted Owners
 
@@ -33,8 +33,8 @@ selectClipCell(control, coordinate);
 ```
 
 Read-only consumers should receive snapshots or narrow read contracts. For
-example, control interpretation should read `ControlStateSnapshot` rather than
-holding mutation capability for `ControlState`.
+example, control interpretation should read `ControlSurfaceContextSnapshot`
+rather than holding mutation capability for `ControlSurfaceContext`.
 
 ## Cross-State Workflows
 
@@ -46,8 +46,7 @@ Acceptable orchestration:
 
 ```ts
 state.control.selectStep(stepIndex);
-const clip = getClipForCell(state.project, state.control.snapshot().selectedClipCell);
-if (clip) toggleSequenceStep(clip.sequence, stepIndex);
+state.project.toggleSequenceStepAt(state.control.snapshot().selectedClipCell, stepIndex);
 ```
 
 Avoid:
@@ -57,11 +56,28 @@ state.control.selectedStep = stepIndex;
 state.playback.pendingNoteOffs.push(noteOff);
 ```
 
+Workflow orchestration should avoid passing broad composition objects into
+lower-level workflows. Prefer narrow context objects or explicit parameters
+that match the workflow's required authority.
+
+Prefer:
+
+```ts
+runWorkflow({ durableOwner, interactionOwner }, command);
+```
+
+Avoid:
+
+```ts
+runWorkflow(applicationState, command);
+```
+
 ## Public Contracts
 
 Use public contracts that match caller authority:
 
 - mutation-capable orchestration receives owner objects or public owner APIs
+- application operations receive narrow workflow contexts, not broad core state
 - read-only modules receive snapshots or narrow read contracts
 - host/render/view code should not receive mutable domain state when a snapshot
   or view model is sufficient

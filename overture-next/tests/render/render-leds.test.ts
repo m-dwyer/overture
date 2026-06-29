@@ -14,7 +14,7 @@ describe("Overture Next LED rendering", () => {
         { step: 1, state: "playhead" },
         { step: 2, state: "off" },
       ],
-      clipCellPads: [
+      pads: [
         { padIndex: 7, state: "selected" },
         { padIndex: 15, state: "hinted" },
         { padIndex: 24, state: "occupied" },

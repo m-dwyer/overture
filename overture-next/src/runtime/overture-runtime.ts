@@ -1,5 +1,5 @@
-import { createOvertureCore } from "../core/core";
-import type { OvertureCore } from "../core/types";
+import { createOvertureCore } from "../application/core";
+import type { OvertureCore } from "../application/types";
 import type { OvertureHostPorts } from "../ports/host-ports";
 import { renderLeds } from "../render/render-leds";
 import { renderScreen } from "../render/render-screen";
@@ -9,7 +9,6 @@ import { createOvertureSurfaceView } from "../view";
 const BOOT_SPLASH_TICKS = 48;
 
 export interface OvertureRuntime {
-  readonly core: OvertureCore;
   init(): void;
   tickPlayback(): void;
   render(): void;
@@ -18,6 +17,11 @@ export interface OvertureRuntime {
   onUnload(): void;
   isReady(): boolean;
   isBootSplashVisible(): boolean;
+  readonly debug: OvertureRuntimeDebug;
+}
+
+export interface OvertureRuntimeDebug {
+  readonly core: OvertureCore;
 }
 
 export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRuntime {
@@ -41,13 +45,13 @@ export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRun
 
   function tickPlayback(): void {
     advanceSplash();
-    core.tick();
+    core.advancePlaybackTick();
     drainCommands();
   }
 
   function onMidiMessage(data: readonly number[]): void {
-    const input = hostPorts.inbound.controlSurface.parseMoveInput(data, core.getSelectedSequenceLength());
-    if (input) core.applyInput(input);
+    const input = hostPorts.inbound.controlSurface.parseMoveInput(data, core.selectedSequenceLength());
+    if (input) core.dispatchControlInput(input);
     drainCommands();
   }
 
@@ -76,7 +80,7 @@ export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRun
   }
 
   function render(): void {
-    const snapshot = core.getSnapshot();
+    const snapshot = core.snapshot();
     hostPorts.outbound.runtime.publishState(snapshot);
     const view = createOvertureSurfaceView(snapshot);
     renderScreen(splashTicks > 0 ? getSplashView() : view.screen, hostPorts.outbound.display);
@@ -95,5 +99,15 @@ export function createOvertureRuntime(hostPorts: OvertureHostPorts): OvertureRun
     for (const command of core.drainHostCommands()) hostPorts.outbound.commands.execute(command);
   }
 
-  return { core, init, tickPlayback, render, tick, onMidiMessage, onUnload, isReady, isBootSplashVisible };
+  return {
+    init,
+    tickPlayback,
+    render,
+    tick,
+    onMidiMessage,
+    onUnload,
+    isReady,
+    isBootSplashVisible,
+    debug: { core },
+  };
 }

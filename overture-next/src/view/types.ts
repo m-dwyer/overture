@@ -29,14 +29,16 @@ export type SurfaceRegion =
   | { kind: "session-scene-column"; sceneIndex: number }
   | { kind: "track-row"; row: number };
 
-export type SurfaceHint = { kind: "scene-launch-target"; surface: SurfaceRegion };
+export type SurfaceHint =
+  | { kind: "scene-launch-target"; surface: SurfaceRegion }
+  | { kind: "track-bank-target"; surface: SurfaceRegion };
 
 export interface StepLedView {
   step: number;
   state: "playhead" | "active" | "off";
 }
 
-export interface ClipCellPadLedView {
+export interface PadLedView {
   padIndex: number;
   state: "selected" | "hinted" | "occupied" | "empty" | "off";
 }
@@ -48,7 +50,7 @@ export type ButtonLedView =
 
 export interface LedView {
   steps: StepLedView[];
-  clipCellPads: ClipCellPadLedView[];
+  pads: PadLedView[];
   buttons: ButtonLedView[];
 }
 

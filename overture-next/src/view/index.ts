@@ -1,3 +1,2 @@
-export { createLedView, createOvertureSurfaceView, createScreenView } from "./overture-view";
-export { createSurfaceHints, hasSessionSceneColumnHint, hasTrackRowHint } from "./surface-hints";
+export { createOvertureSurfaceView } from "./overture-view";
 export type * from "./types";

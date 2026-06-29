@@ -1,10 +1,10 @@
 import { describe, expect, test } from "vitest";
-import type { CoreSnapshot } from "../../src/core/types";
+import type { CoreSnapshot } from "../../src/application/types";
 import { sessionView } from "../../src/view/session";
 
 describe("Overture Next Session View module", () => {
   test("derives Session View screen data from the selected Clip Cell", () => {
-    const snapshot = sessionSnapshot({ shiftHeld: false });
+    const snapshot = sessionSnapshot({ heldControls: [] });
 
     expect(sessionView.createScreenView(snapshot)).toEqual({
       kind: "session",
@@ -17,20 +17,20 @@ describe("Overture Next Session View module", () => {
   });
 
   test("derives scene-launch Surface Hints only while Shift is held", () => {
-    expect(sessionView.createSurfaceHints(sessionSnapshot({ shiftHeld: false }))).toEqual([]);
-    expect(sessionView.createSurfaceHints(sessionSnapshot({ shiftHeld: true }))).toEqual([
+    expect(sessionView.createSurfaceHints(sessionSnapshot({ heldControls: [] }))).toEqual([]);
+    expect(sessionView.createSurfaceHints(sessionSnapshot({ heldControls: ["shift"] }))).toEqual([
       { kind: "scene-launch-target", surface: { kind: "session-scene-column", sceneIndex: 7 } },
     ]);
   });
 });
 
-function sessionSnapshot({ shiftHeld }: { shiftHeld: boolean }): CoreSnapshot {
+function sessionSnapshot({ heldControls }: { heldControls: CoreSnapshot["heldControls"] }): CoreSnapshot {
   return {
     selectedTrackIndex: 3,
     selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
     visibleTrackBank: 0,
-    controlMode: "session",
-    shiftHeld,
+    activeView: "session",
+    heldControls,
     selectedStep: 0,
     playing: false,
     selectedClipId: null,

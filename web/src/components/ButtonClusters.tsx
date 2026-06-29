@@ -43,6 +43,7 @@ interface Ctl {
   className?: string;
   tooltip?: string;
   latch?: boolean;
+  held?: boolean;
   altHold?: boolean;
 }
 
@@ -53,6 +54,7 @@ function IconButton({ ctl, send, size = 16 }: { ctl: Ctl; send: Send; size?: num
       cc={ctl.cc}
       send={send}
       latch={ctl.latch}
+      heldExternally={ctl.held}
       altHold={ctl.altHold}
       tooltip={ctl.tooltip ?? ctl.label}
       aria-label={ctl.label}
@@ -146,11 +148,15 @@ const RIGHT: Ctl[] = [
   },
 ];
 
-export function RightCluster({ send }: { send: Send }) {
+export function RightCluster({ send, heldControls = [] }: { send: Send; heldControls?: readonly string[] }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {RIGHT.map((c) => (
-        <IconButton key={c.cc} ctl={c} send={send} />
+        <IconButton
+          key={c.cc}
+          ctl={{ ...c, held: c.cc === NAV.Shift && heldControls.includes("shift") }}
+          send={send}
+        />
       ))}
     </div>
   );

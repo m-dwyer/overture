@@ -20,7 +20,10 @@ The active Overture implementation is `overture-next/`.
 
 - `overture-next/ui/ui.js` is the Schwung compatibility shell.
 - `overture-next/src/runtime/` orchestrates init, ticks, control-surface input dispatch, command draining, and rendering through host port contracts.
-- `overture-next/src/core/` owns project state, transport, control interpretation, playback, and host commands.
+- `overture-next/src/shared/` owns neutral shared helpers such as Session grid geometry.
+- `overture-next/src/domain/` owns pure musical vocabulary, data shapes, and deterministic domain transforms.
+- `overture-next/src/state/` owns mutable state-owner objects such as `ControlSurfaceContext` and `OvertureProject`.
+- `overture-next/src/application/` owns core transactions, control interpretation, intent application, transport, playback, read models, and host command contracts.
 - `overture-next/src/host/` owns Schwung and Move translation.
 - `overture-next/src/ports/` owns typed inbound/outbound boundary contracts and the `OvertureHostPorts` runtime composition.
 - `overture-next/src/view/` owns view-model data contracts.

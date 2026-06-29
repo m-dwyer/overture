@@ -68,28 +68,28 @@ ruleTester.run("state-ownership", stateOwnership, {
 ruleTester.run("state-api-encapsulation", stateApiEncapsulation, {
   valid: [
     {
-      filename: "rule-tests/control-state.ts",
+      filename: "rule-tests/control-surface-context.ts",
       code: `
-        class ControlState {
+        class ControlSurfaceContext {
           selectStep(stepIndex: number): void {}
         }
-        export function createControlState(): ControlState {
-          return new ControlState();
+        export function createControlSurfaceContext(): ControlSurfaceContext {
+          return new ControlSurfaceContext();
         }
       `,
-      options: [{ owners: [{ type: "ControlState" }] }],
+      options: [{ owners: [{ type: "ControlSurfaceContext" }] }],
     },
     {
       filename: "rule-tests/interpret-control.ts",
       code: `
-        interface ControlStateSnapshot {
+        interface ControlSurfaceContextSnapshot {
           selectedStep: number;
         }
-        export function selectedStep(snapshot: ControlStateSnapshot): number {
+        export function selectedStep(snapshot: ControlSurfaceContextSnapshot): number {
           return snapshot.selectedStep;
         }
       `,
-      options: [{ owners: [{ type: "ControlState" }] }],
+      options: [{ owners: [{ type: "ControlSurfaceContext" }] }],
     },
     {
       filename: "rule-tests/transport.ts",
@@ -106,29 +106,29 @@ ruleTester.run("state-api-encapsulation", stateApiEncapsulation, {
   ],
   invalid: [
     {
-      filename: "rule-tests/control-state.ts",
+      filename: "rule-tests/control-surface-context.ts",
       code: `
-        class ControlState {
+        class ControlSurfaceContext {
           selectStep(stepIndex: number): void {}
         }
-        export function selectStep(control: ControlState, stepIndex: number): void {
+        export function selectStep(control: ControlSurfaceContext, stepIndex: number): void {
           control.selectStep(stepIndex);
         }
       `,
-      options: [{ owners: [{ type: "ControlState" }] }],
+      options: [{ owners: [{ type: "ControlSurfaceContext" }] }],
       errors: [{ messageId: "exportedOwnedStateParameter" }],
     },
     {
-      filename: "rule-tests/control-state.ts",
+      filename: "rule-tests/control-surface-context.ts",
       code: `
-        class ControlState {
+        class ControlSurfaceContext {
           selectStep(stepIndex: number): void {}
         }
-        export const selectStep = (control: ControlState, stepIndex: number): void => {
+        export const selectStep = (control: ControlSurfaceContext, stepIndex: number): void => {
           control.selectStep(stepIndex);
         };
       `,
-      options: [{ owners: [{ type: "ControlState" }] }],
+      options: [{ owners: [{ type: "ControlSurfaceContext" }] }],
       errors: [{ messageId: "exportedOwnedStateParameter" }],
     },
     {

@@ -38,17 +38,17 @@ export default tseslint.config(
         "error",
         {
           owners: [
-            { type: "TransportState", allow: ["src/core/transport.ts"] },
-            { type: "PlaybackState", allow: ["src/core/playback/**"] },
-            { type: "ControlState", allow: ["src/core/control-state.ts"] },
-            { type: "OvertureProject", allow: ["src/core/project/**"] },
+            { type: "TransportState", allow: ["src/application/transport.ts"] },
+            { type: "PlaybackState", allow: ["src/application/playback/**"] },
+            { type: "ControlSurfaceContext", allow: ["src/state/control-surface-context.ts"] },
+            { type: "OvertureProject", allow: ["src/state/project.ts"] },
           ],
         },
       ],
       "overture/state-api-encapsulation": [
         "error",
         {
-          owners: [{ type: "ControlState" }, { type: "TransportState" }],
+          owners: [{ type: "ControlSurfaceContext" }, { type: "TransportState" }],
         },
       ],
     },
@@ -68,11 +68,15 @@ export default tseslint.config(
               message: "Tests should exercise module contracts through public entry points, not internal helpers.",
             },
             {
-              group: ["../src/core/playback/*", "../../src/core/playback/*", "../../../src/core/playback/*"],
+              group: [
+                "../src/application/playback/*",
+                "../../src/application/playback/*",
+                "../../../src/application/playback/*",
+              ],
               message: "Import Playback through its public module entry point.",
             },
             {
-              group: ["../src/core/project/*", "../../src/core/project/*", "../../../src/core/project/*"],
+              group: ["../src/state/project/*", "../../src/state/project/*", "../../../src/state/project/*"],
               message: "Import Project through its public module entry point.",
             },
           ],

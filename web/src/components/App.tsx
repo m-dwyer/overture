@@ -57,6 +57,7 @@ export function App() {
   const [manualControls, setManualControls] = useState("");
   const [manualShowing, setManualShowing] = useState("");
   const [schwungDiagnostics, setSchwungDiagnostics] = useState<BrowserHarnessDiagnostics | null>(null);
+  const [heldControls, setHeldControls] = useState<readonly string[]>([]);
 
   // Records of LEDs the tool sets (for OVT + replay into the shell once it mounts).
   const ledsMap = useRef(new Map<number, number>()).current;
@@ -67,7 +68,18 @@ export function App() {
     harnessRef.current?.send(s, d1, d2);
   }, []);
 
-  useEffect(() => installKeyboardInput(send), [send]);
+  useEffect(
+    () =>
+      installKeyboardInput(send, {
+        onHeldControlChange(control, held) {
+          setHeldControls((current) => {
+            if (held) return current.includes(control) ? current : [...current, control];
+            return current.filter((heldControl) => heldControl !== control);
+          });
+        },
+      }),
+    [send]
+  );
 
   // The shell hands up its imperative LED controller once its refs are populated.
   const onReady = useCallback(
@@ -206,7 +218,7 @@ export function App() {
                 />
               </div>
             </div>
-            <Shell send={send} onReady={onReady} />
+            <Shell send={send} onReady={onReady} heldControls={heldControls} />
             {manualMode && (manualGesture || legend.length > 0 || manualShowing) ? (
               <div className="order-first w-[min(92vw,940px)] overflow-hidden rounded-lg border border-line bg-panel shadow-xl">
                 {/* Brand strip — guide-neutral: the generated doc supplies its own

@@ -4,6 +4,8 @@
 // without React; App wraps it in a useEffect.
 import { CC, NAV, NOTE_OFF, NOTE_ON, STEP_CC0, type Send } from "../lib/move-controls";
 
+export type KeyboardHeldControl = "shift";
+
 const stepFromCode = (code: string): number | null => {
   if (/^Digit[1-9]$/.test(code)) return Number(code.slice(5));
   if (code === "Digit0") return 10;
@@ -16,16 +18,26 @@ const targetIsEditable = (target: EventTarget | null): boolean => {
   return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
 };
 
+const isShiftCode = (code: string): boolean => code === "ShiftLeft" || code === "ShiftRight";
+
+interface KeyboardInputOptions {
+  onHeldControlChange?(control: KeyboardHeldControl, held: boolean): void;
+}
+
 /** Wire keyboard input to `send`; returns a disposer that releases held keys and
  *  removes the listeners. */
-export function installKeyboardInput(send: Send): () => void {
+export function installKeyboardInput(send: Send, options: KeyboardInputOptions = {}): () => void {
   const held = new Set<string>();
 
   const onDown = (e: KeyboardEvent) => {
     if (targetIsEditable(e.target) || e.repeat || held.has(e.code)) return;
-    if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+    if (isShiftCode(e.code)) {
+      const shiftAlreadyHeld = held.has("ShiftLeft") || held.has("ShiftRight");
       held.add(e.code);
-      send(CC, NAV.Shift, 127);
+      if (!shiftAlreadyHeld) {
+        options.onHeldControlChange?.("shift", true);
+        send(CC, NAV.Shift, 127);
+      }
       return;
     }
     const step = stepFromCode(e.code);
@@ -37,8 +49,11 @@ export function installKeyboardInput(send: Send): () => void {
   };
   const onUp = (e: KeyboardEvent) => {
     if (!held.delete(e.code)) return;
-    if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
-      send(CC, NAV.Shift, 0);
+    if (isShiftCode(e.code)) {
+      if (!held.has("ShiftLeft") && !held.has("ShiftRight")) {
+        send(CC, NAV.Shift, 0);
+        options.onHeldControlChange?.("shift", false);
+      }
       return;
     }
     const step = stepFromCode(e.code);
@@ -50,8 +65,11 @@ export function installKeyboardInput(send: Send): () => void {
   const releaseAll = () => {
     for (const code of Array.from(held)) {
       held.delete(code);
-      if (code === "ShiftLeft" || code === "ShiftRight") {
-        send(CC, NAV.Shift, 0);
+      if (isShiftCode(code)) {
+        if (!held.has("ShiftLeft") && !held.has("ShiftRight")) {
+          send(CC, NAV.Shift, 0);
+          options.onHeldControlChange?.("shift", false);
+        }
         continue;
       }
       const step = stepFromCode(code);
