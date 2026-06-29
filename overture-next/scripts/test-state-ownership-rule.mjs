@@ -29,7 +29,13 @@ ruleTester.run("state-ownership", stateOwnership, {
           transport.playing = false;
         }
       `,
-      options: [{ owners: [{ type: "TransportState", allow: ["rule-tests/transport.ts"] }] }],
+      options: [
+        {
+          owners: [
+            { type: "TransportState", allow: ["rule-tests/transport.ts"] },
+          ],
+        },
+      ],
     },
   ],
   invalid: [
@@ -43,7 +49,13 @@ ruleTester.run("state-ownership", stateOwnership, {
           transport.playing = false;
         }
       `,
-      options: [{ owners: [{ type: "TransportState", allow: ["rule-tests/transport.ts"] }] }],
+      options: [
+        {
+          owners: [
+            { type: "TransportState", allow: ["rule-tests/transport.ts"] },
+          ],
+        },
+      ],
       errors: [{ messageId: "ownedStateMutation" }],
     },
     {
@@ -59,7 +71,13 @@ ruleTester.run("state-ownership", stateOwnership, {
           playback.pendingNoteOffs.push({ dueTick: 1 });
         }
       `,
-      options: [{ owners: [{ type: "PlaybackState", allow: ["rule-tests/playback/**"] }] }],
+      options: [
+        {
+          owners: [
+            { type: "PlaybackState", allow: ["rule-tests/playback/**"] },
+          ],
+        },
+      ],
       errors: [{ messageId: "ownedStateMutation" }],
     },
   ],

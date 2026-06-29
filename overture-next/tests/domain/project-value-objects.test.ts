@@ -13,7 +13,10 @@ describe("Project value objects", () => {
     expect(trackIndex(0)).toBe(0);
     expect(sceneIndex(7)).toBe(7);
     expect(clipId("clip-1")).toBe("clip-1");
-    expect(clipCellCoordinate({ trackIndex: 3, sceneIndex: 2 })).toEqual({ trackIndex: 3, sceneIndex: 2 });
+    expect(clipCellCoordinate({ trackIndex: 3, sceneIndex: 2 })).toEqual({
+      trackIndex: 3,
+      sceneIndex: 2,
+    });
   });
 
   test("parses invalid Track and Scene Indexes as null", () => {
@@ -22,11 +25,17 @@ describe("Project value objects", () => {
   });
 
   test("rejects invalid Project value objects with domain-specific messages", () => {
-    expect(() => trackIndex(8)).toThrow("Invalid Track Index 8; expected integer from 0 to 7");
-    expect(() => sceneIndex(8)).toThrow("Invalid Scene Index 8; expected integer from 0 to 7");
+    expect(() => trackIndex(8)).toThrow(
+      "Invalid Track Index 8; expected integer from 0 to 7",
+    );
+    expect(() => sceneIndex(8)).toThrow(
+      "Invalid Scene Index 8; expected integer from 0 to 7",
+    );
     expect(() => clipCellCoordinate({ trackIndex: 1, sceneIndex: 8 })).toThrow(
       "Invalid Scene Index 8; expected integer from 0 to 7",
     );
-    expect(() => clipId("")).toThrow("Invalid Clip ID; expected non-empty string");
+    expect(() => clipId("")).toThrow(
+      "Invalid Clip ID; expected non-empty string",
+    );
   });
 });

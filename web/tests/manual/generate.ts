@@ -6,7 +6,14 @@ import { makeDriver } from "./driver";
 import { writeGuide } from "./emit-markdown";
 import { writeGuideHtml } from "./emit-html";
 import { ASSET_DIR } from "./paths";
-import type { Driver, GuideConfig, Scene, Section, Shot, ShotSpec } from "./types";
+import type {
+  Driver,
+  GuideConfig,
+  Scene,
+  Section,
+  Shot,
+  ShotSpec,
+} from "./types";
 
 // Assert a shot's declared expectation against the live emulator. A failure here
 // means a gesture no longer reaches the state the figure + caption depict — the
@@ -15,7 +22,10 @@ async function assertShot(d: Driver, shot: ShotSpec): Promise<void> {
   if (!shot.expect) return;
   const probe = await d.probe();
   const fails = diffExpect(shot.file, shot.expect, probe);
-  expect(fails, `manual figure drift — regenerate or fix the gesture/caption`).toEqual([]);
+  expect(
+    fails,
+    `manual figure drift — regenerate or fix the gesture/caption`,
+  ).toEqual([]);
 }
 
 // Shared generator used by both manual specs: boot the emulator once per scene,
@@ -26,7 +36,11 @@ async function assertShot(d: Driver, shot: ShotSpec): Promise<void> {
 // We deliberately do NOT wipe OUT_DIR/ASSET_DIR: the two guides share
 // docs/generated/assets and use disjoint filename prefixes, so a wholesale clean
 // would delete the other guide's figures. Each run just overwrites its own files.
-export async function generateGuide(page: Page, scenes: Scene[], cfg: GuideConfig): Promise<void> {
+export async function generateGuide(
+  page: Page,
+  scenes: Scene[],
+  cfg: GuideConfig,
+): Promise<void> {
   mkdirSync(ASSET_DIR, { recursive: true });
 
   const d = makeDriver(page);

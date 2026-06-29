@@ -12,7 +12,10 @@ import { scenes } from "./manual/reference";
 // Content lives in tests/manual/reference.ts (walkthrough) and
 // reference-content.ts (intro, cheat-sheet, glossary).
 
-test.skip(process.env.REFERENCE_GENERATE !== "1", "Run with `pnpm -C web reference:generate`.");
+test.skip(
+  process.env.REFERENCE_GENERATE !== "1",
+  "Run with `pnpm -C web reference:generate`.",
+);
 
 test("generate full Overture reference manual", async ({ page }) => {
   test.setTimeout(360_000); // ~21 scenes of boot+drive+capture

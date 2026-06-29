@@ -10,7 +10,8 @@ import type { GuideConfig, Scene } from "./types";
 // Styled standalone HTML build of the guide. Markdown is the canonical document;
 // this writer only renders that markdown and wraps it in the Overture page shell.
 
-const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const STYLE = `
   :root {
@@ -70,10 +71,14 @@ const renderMarkdown = async (markdown: string): Promise<string> =>
       .use(remarkRehype)
       .use(rehypeSlug)
       .use(rehypeStringify)
-      .process(markdown)
+      .process(markdown),
   );
 
-export async function writeGuideHtml(markdown: string, scenes: Scene[], cfg: GuideConfig): Promise<void> {
+export async function writeGuideHtml(
+  markdown: string,
+  scenes: Scene[],
+  cfg: GuideConfig,
+): Promise<void> {
   const toc = [
     { href: "#controls-cheat-sheet", label: "Controls cheat-sheet" },
     ...scenes.map((s) => ({ href: `#${s.slug}`, label: s.title })),

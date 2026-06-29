@@ -1,8 +1,23 @@
-import { CC, NAV, NOTE_ON, PAD_COUNT, PAD_NOTE0, type Send } from "../lib/move-controls";
-import { type BrowserSchwungDiagnostics, type BrowserSchwungHost, createBrowserSchwungChain } from "../schwung/browser-chain";
+import {
+  CC,
+  NAV,
+  NOTE_ON,
+  PAD_COUNT,
+  PAD_NOTE0,
+  type Send,
+} from "../lib/move-controls";
+import {
+  type BrowserSchwungDiagnostics,
+  type BrowserSchwungHost,
+  createBrowserSchwungChain,
+} from "../schwung/browser-chain";
 import { createManualSchwungChain } from "../schwung/manual-catalog";
 import { createEmulator, type Emulator } from "./emulator";
-import { createGlobalOvtHarnessPort, createOvtHarnessHandle, type EmulatorHarnessPort } from "./emulator-harness";
+import {
+  createGlobalOvtHarnessPort,
+  createOvtHarnessHandle,
+  type EmulatorHarnessPort,
+} from "./emulator-harness";
 import { pickDsp, startTickLoop } from "./emulator-runtime";
 import { scheduleInitialState } from "./initial-state-driver";
 import type { DisplaySink, FileStore, LedSink, MidiSink } from "./sinks";
@@ -56,7 +71,9 @@ export interface BrowserEmulatorHarness {
   resetSchwungAudio(): void;
 }
 
-function createBrowserHostPorts(options: BrowserHostPortOptions): BrowserHostPorts {
+function createBrowserHostPorts(
+  options: BrowserHostPortOptions,
+): BrowserHostPorts {
   return {
     display: options.display,
     files: options.files,
@@ -65,8 +82,10 @@ function createBrowserHostPorts(options: BrowserHostPortOptions): BrowserHostPor
     leds: options.leds,
     log: options.log,
     midi: {
-      inject: (packet) => options.log("inject_to_move " + JSON.stringify(packet)),
-      toChain: (args) => options.log("send_midi_to_dsp " + JSON.stringify(args)),
+      inject: (packet) =>
+        options.log("inject_to_move " + JSON.stringify(packet)),
+      toChain: (args) =>
+        options.log("send_midi_to_dsp " + JSON.stringify(args)),
     },
     setStatus: options.setStatus,
     schwung: {
@@ -83,7 +102,9 @@ function createBrowserHostPorts(options: BrowserHostPortOptions): BrowserHostPor
   };
 }
 
-export function createBrowserEmulatorHarness(options: BrowserEmulatorHarnessOptions): BrowserEmulatorHarness {
+export function createBrowserEmulatorHarness(
+  options: BrowserEmulatorHarnessOptions,
+): BrowserEmulatorHarness {
   const ports = createBrowserHostPorts(options.host);
   let emu: Emulator | null = null;
   let schwung: BrowserSchwungHost | null = null;
@@ -92,7 +113,8 @@ export function createBrowserEmulatorHarness(options: BrowserEmulatorHarnessOpti
   let cancelled = false;
 
   const send: Send = (status, data1, data2) => {
-    if (shouldPrimeSchwungAudio(status, data1, data2)) schwung?.primeAudioEngine();
+    if (shouldPrimeSchwungAudio(status, data1, data2))
+      schwung?.primeAudioEngine();
     emu?.sendInternal(status, data1, data2);
   };
 
@@ -165,7 +187,11 @@ export function createBrowserEmulatorHarness(options: BrowserEmulatorHarnessOpti
   return { send, start, stop, resetSchwungAudio };
 }
 
-function shouldPrimeSchwungAudio(status: number, data1: number, data2: number): boolean {
+function shouldPrimeSchwungAudio(
+  status: number,
+  data1: number,
+  data2: number,
+): boolean {
   const message = status & 0xf0;
   if (message === CC) return data1 === NAV.Play && data2 > 0;
   if (message !== NOTE_ON || data2 <= 0) return false;

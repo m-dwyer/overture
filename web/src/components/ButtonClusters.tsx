@@ -47,7 +47,15 @@ interface Ctl {
   altHold?: boolean;
 }
 
-function IconButton({ ctl, send, size = 16 }: { ctl: Ctl; send: Send; size?: number }) {
+function IconButton({
+  ctl,
+  send,
+  size = 16,
+}: {
+  ctl: Ctl;
+  send: Send;
+  size?: number;
+}) {
   const reg = useLedRegistry();
   return (
     <MomentaryButton
@@ -83,7 +91,12 @@ export function BackMenu({ send }: { send: Send }) {
 
 const TRANSPORT: Ctl[] = [
   { cc: NAV.Play, label: "Play", Icon: Play, className: "h-12 w-12 text-text" },
-  { cc: NAV.Rec, label: "Record", Icon: Circle, className: "h-12 w-12 text-[#ff2020]" },
+  {
+    cc: NAV.Rec,
+    label: "Record",
+    Icon: Circle,
+    className: "h-12 w-12 text-[#ff2020]",
+  },
 ];
 
 export function Transport({ send }: { send: Send }) {
@@ -107,7 +120,8 @@ const RIGHT: Ctl[] = [
     label: "Capture",
     Icon: Camera,
     altHold: true,
-    tooltip: "Capture - hold Alt and click to pin for a chord; Alt-click again to release",
+    tooltip:
+      "Capture - hold Alt and click to pin for a chord; Alt-click again to release",
   },
   { cc: NAV.Sample, label: "Sampling", Icon: Mic },
   {
@@ -115,28 +129,32 @@ const RIGHT: Ctl[] = [
     label: "Loop",
     Icon: Repeat,
     altHold: true,
-    tooltip: "Loop - hold Alt and click to pin for a chord; Alt-click again to release",
+    tooltip:
+      "Loop - hold Alt and click to pin for a chord; Alt-click again to release",
   },
   {
     cc: NAV.Mute,
     label: "Mute",
     Icon: VolumeX,
     altHold: true,
-    tooltip: "Mute - hold Alt and click to pin for a chord; Alt-click again to release",
+    tooltip:
+      "Mute - hold Alt and click to pin for a chord; Alt-click again to release",
   },
   {
     cc: NAV.Delete,
     label: "Delete",
     Icon: Trash2,
     altHold: true,
-    tooltip: "Delete - hold Alt and click to pin for a chord; Alt-click again to release",
+    tooltip:
+      "Delete - hold Alt and click to pin for a chord; Alt-click again to release",
   },
   {
     cc: NAV.Copy,
     label: "Copy",
     Icon: Copy,
     altHold: true,
-    tooltip: "Copy - hold Alt and click to pin for a chord; Alt-click again to release",
+    tooltip:
+      "Copy - hold Alt and click to pin for a chord; Alt-click again to release",
   },
   { cc: NAV.Undo, label: "Undo", Icon: Undo2 },
   {
@@ -144,17 +162,27 @@ const RIGHT: Ctl[] = [
     label: "Shift",
     Icon: ArrowBigUp,
     latch: true,
-    tooltip: "Shift — click to hold, click again to release (then click another button to chord)",
+    tooltip:
+      "Shift — click to hold, click again to release (then click another button to chord)",
   },
 ];
 
-export function RightCluster({ send, heldControls = [] }: { send: Send; heldControls?: readonly string[] }) {
+export function RightCluster({
+  send,
+  heldControls = [],
+}: {
+  send: Send;
+  heldControls?: readonly string[];
+}) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {RIGHT.map((c) => (
         <IconButton
           key={c.cc}
-          ctl={{ ...c, held: c.cc === NAV.Shift && heldControls.includes("shift") }}
+          ctl={{
+            ...c,
+            held: c.cc === NAV.Shift && heldControls.includes("shift"),
+          }}
           send={send}
         />
       ))}
@@ -166,10 +194,30 @@ export function RightCluster({ send, heldControls = [] }: { send: Send; heldCont
 // (Up/Down), navigate-loop ‹ › horizontal (Left/Right), centre empty. Smaller
 // buttons than the cluster so the cross stays compact.
 const DP = "h-8 w-8";
-const OCT_UP: Ctl = { cc: NAV.Up, label: "Octave Up / Transpose", Icon: Plus, className: DP };
-const OCT_DOWN: Ctl = { cc: NAV.Down, label: "Octave Down / Transpose", Icon: Minus, className: DP };
-const NAV_LEFT: Ctl = { cc: NAV.Left, label: "Navigate ‹ / Nudge", Icon: ChevronLeft, className: DP };
-const NAV_RIGHT: Ctl = { cc: NAV.Right, label: "Navigate › / Nudge", Icon: ChevronRight, className: DP };
+const OCT_UP: Ctl = {
+  cc: NAV.Up,
+  label: "Octave Up / Transpose",
+  Icon: Plus,
+  className: DP,
+};
+const OCT_DOWN: Ctl = {
+  cc: NAV.Down,
+  label: "Octave Down / Transpose",
+  Icon: Minus,
+  className: DP,
+};
+const NAV_LEFT: Ctl = {
+  cc: NAV.Left,
+  label: "Navigate ‹ / Nudge",
+  Icon: ChevronLeft,
+  className: DP,
+};
+const NAV_RIGHT: Ctl = {
+  cc: NAV.Right,
+  label: "Navigate › / Nudge",
+  Icon: ChevronRight,
+  className: DP,
+};
 
 export function DPad({ send }: { send: Send }) {
   // Column gap a touch larger than the row gap so the cross reads marginally wider

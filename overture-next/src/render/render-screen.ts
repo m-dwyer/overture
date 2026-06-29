@@ -2,12 +2,18 @@ import { renderSplashScreen } from "./ui_splash.mjs";
 import type { DisplayPort } from "../ports/outbound";
 import type { RenderableScreenView } from "./types";
 
-export function renderScreen(view: RenderableScreenView, display: DisplayPort): void {
+export function renderScreen(
+  view: RenderableScreenView,
+  display: DisplayPort,
+): void {
   if (view.kind === "splash") {
-    renderSplashScreen({
-      splashWasVisible: view.splashWasVisible,
-      splashFrameTick: view.splashFrameTick,
-    }, display.splashSurface);
+    renderSplashScreen(
+      {
+        splashWasVisible: view.splashWasVisible,
+        splashFrameTick: view.splashFrameTick,
+      },
+      display.splashSurface,
+    );
     display.flush();
     return;
   }
@@ -25,19 +31,37 @@ export function renderScreen(view: RenderableScreenView, display: DisplayPort): 
   display.flush();
 }
 
-function renderTrackScreen(view: Extract<RenderableScreenView, { kind: "track" }>, display: DisplayPort): void {
+function renderTrackScreen(
+  view: Extract<RenderableScreenView, { kind: "track" }>,
+  display: DisplayPort,
+): void {
   display.print(0, 22, "Clean core spike", 1);
   for (const step of view.steps) {
     const x = 2 + step.index * 7;
     const h = step.active ? 7 : 3;
     const y = 54 - h;
-    display.rect(x, y, 5, h, step.playhead ? 1 : step.active ? 1 : 0, step.active || step.playhead);
+    display.rect(
+      x,
+      y,
+      5,
+      h,
+      step.playhead ? 1 : step.active ? 1 : 0,
+      step.active || step.playhead,
+    );
   }
   display.print(0, 56, "Step " + (view.selectedStep + 1), 1);
 }
 
-function renderSessionScreen(view: Extract<RenderableScreenView, { kind: "session" }>, display: DisplayPort): void {
+function renderSessionScreen(
+  view: Extract<RenderableScreenView, { kind: "session" }>,
+  display: DisplayPort,
+): void {
   display.print(0, 22, "Clip Cell", 1);
   display.print(0, 34, "Scene " + (view.selectedSceneIndex + 1), 1);
-  display.print(0, 46, view.selectedClipId ? "Clip " + view.selectedClipId : "Empty Cell", 1);
+  display.print(
+    0,
+    46,
+    view.selectedClipId ? "Clip " + view.selectedClipId : "Empty Cell",
+    1,
+  );
 }

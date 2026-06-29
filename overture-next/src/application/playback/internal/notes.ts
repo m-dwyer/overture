@@ -14,7 +14,10 @@ export function injectPlaybackStep(
   for (const trackPlayback of playback.tracks) {
     const clip = getPlayingClip(project, trackPlayback);
     if (!clip) continue;
-    const sequenceStep = getSequenceStep(clip.sequence, step % clip.sequence.length);
+    const sequenceStep = getSequenceStep(
+      clip.sequence,
+      step % clip.sequence.length,
+    );
     if (!sequenceStep?.active) continue;
     const route = project.trackRoute(trackPlayback.trackIndex);
     hostCommands.push({
@@ -34,7 +37,10 @@ export function injectPlaybackStep(
   return hostCommands;
 }
 
-export function drainDueNoteOffs(playback: PlaybackState, tick: number): HostCommand[] {
+export function drainDueNoteOffs(
+  playback: PlaybackState,
+  tick: number,
+): HostCommand[] {
   const due: ScheduledNoteOff[] = [];
   const pending: ScheduledNoteOff[] = [];
   for (const noteOff of playback.pendingNoteOffs) {
@@ -42,10 +48,18 @@ export function drainDueNoteOffs(playback: PlaybackState, tick: number): HostCom
     else pending.push(noteOff);
   }
   playback.pendingNoteOffs = pending;
-  return due.map(({ route, trackIndex, note }) => ({ kind: "track-note-off", route, trackIndex, note }));
+  return due.map(({ route, trackIndex, note }) => ({
+    kind: "track-note-off",
+    route,
+    trackIndex,
+    note,
+  }));
 }
 
-export function drainPendingNoteOffsForTrack(playback: PlaybackState, trackIndex: number): HostCommand[] {
+export function drainPendingNoteOffsForTrack(
+  playback: PlaybackState,
+  trackIndex: number,
+): HostCommand[] {
   const drained: ScheduledNoteOff[] = [];
   const kept: ScheduledNoteOff[] = [];
   for (const noteOff of playback.pendingNoteOffs) {

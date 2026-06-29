@@ -11,5 +11,7 @@ export function selectTrackFromRow(row: number, bankIndex: number): number {
 }
 
 export function visibleTrackRowsForBank(bankIndex: number): number[] {
-  return Array.from({ length: TRACK_BANK_SIZE }, (_, row) => selectTrackFromRow(row, bankIndex));
+  return Array.from({ length: TRACK_BANK_SIZE }, (_, row) =>
+    selectTrackFromRow(row, bankIndex),
+  );
 }

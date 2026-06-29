@@ -89,12 +89,15 @@ export class TransportState {
   advance(stepCount: number): TransportTick {
     if (!this.playingValue) return { injectedStep: null, tick: this.tickValue };
     this.tickValue++;
-    if (this.tickValue % this.ticksPerStepValue !== 0) return { injectedStep: null, tick: this.tickValue };
+    if (this.tickValue % this.ticksPerStepValue !== 0)
+      return { injectedStep: null, tick: this.tickValue };
     this.playheadValue = (this.playheadValue + 1) % stepCount;
     return { injectedStep: this.playheadValue, tick: this.tickValue };
   }
 }
 
-export function createTransport(ticksPerStep = DEFAULT_TICKS_PER_STEP): TransportState {
+export function createTransport(
+  ticksPerStep = DEFAULT_TICKS_PER_STEP,
+): TransportState {
   return new TransportState(ticksPerStep);
 }

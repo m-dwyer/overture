@@ -1,4 +1,14 @@
-const mutatingArrayMethods = new Set(["copyWithin", "fill", "pop", "push", "reverse", "shift", "sort", "splice", "unshift"]);
+const mutatingArrayMethods = new Set([
+  "copyWithin",
+  "fill",
+  "pop",
+  "push",
+  "reverse",
+  "shift",
+  "sort",
+  "splice",
+  "unshift",
+]);
 
 const defaultOptions = {
   owners: [],
@@ -8,7 +18,8 @@ export default {
   meta: {
     type: "problem",
     docs: {
-      description: "Require owned state shapes to be mutated only by their owning module.",
+      description:
+        "Require owned state shapes to be mutated only by their owning module.",
     },
     schema: [
       {
@@ -36,7 +47,8 @@ export default {
     messages: {
       ownedStateMutation:
         "{{typeName}} is owned by {{allowedPaths}}. Mutate it through that module's public verbs instead.",
-      missingTypeInfo: "The state ownership rule requires typed parser services.",
+      missingTypeInfo:
+        "The state ownership rule requires typed parser services.",
     },
   },
   create(context) {
@@ -98,7 +110,8 @@ export default {
         checkMutationTarget(node.argument, node.argument);
       },
       UnaryExpression(node) {
-        if (node.operator === "delete") checkMutationTarget(node.argument, node.argument);
+        if (node.operator === "delete")
+          checkMutationTarget(node.argument, node.argument);
       },
       CallExpression(node) {
         const callee = unwrapChainExpression(node.callee);
@@ -142,7 +155,10 @@ function normalizePath(path) {
 
 function isAllowedPath(filePath, allowedPaths) {
   return allowedPaths.some((allowedPath) => {
-    if (allowedPath.endsWith("/**")) return filePath.includes("/" + allowedPath.slice(0, -3) + "/");
-    return filePath.endsWith("/" + allowedPath) || filePath.endsWith(allowedPath);
+    if (allowedPath.endsWith("/**"))
+      return filePath.includes("/" + allowedPath.slice(0, -3) + "/");
+    return (
+      filePath.endsWith("/" + allowedPath) || filePath.endsWith(allowedPath)
+    );
   });
 }

@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { createMockDsp } from "../../src/mock-dsp";
 import type { Emulator } from "../../src/host/emulator";
-import { createGlobalOvtHarnessPort, createOvtHarnessHandle } from "../../src/host/emulator-harness";
+import {
+  createGlobalOvtHarnessPort,
+  createOvtHarnessHandle,
+} from "../../src/host/emulator-harness";
 
 describe("emulator harness port", () => {
   test("publishes and clears the global OVT harness handle", () => {

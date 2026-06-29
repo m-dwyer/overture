@@ -17,13 +17,22 @@ export interface StopTransportContext {
   readonly transport: TransportState;
 }
 
-export function startTransport(context: StartTransportContext): OperationResult {
+export function startTransport(
+  context: StartTransportContext,
+): OperationResult {
   context.transport.start();
-  context.playback.launchClipOnTrackIfIdle(context.project, context.control.snapshot().selectedClipCell);
-  return operationApplied(context.playback.injectStep(context.project, context.transport.clock()));
+  context.playback.launchClipOnTrackIfIdle(
+    context.project,
+    context.control.snapshot().selectedClipCell,
+  );
+  return operationApplied(
+    context.playback.injectStep(context.project, context.transport.clock()),
+  );
 }
 
 export function stopTransport(context: StopTransportContext): OperationResult {
   context.transport.stop();
-  return operationApplied(context.playback.stopAll(context.project, context.transport.clock()));
+  return operationApplied(
+    context.playback.stopAll(context.project, context.transport.clock()),
+  );
 }

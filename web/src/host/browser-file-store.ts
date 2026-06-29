@@ -9,9 +9,18 @@ const MANIFEST_PATH = "/data/UserData/overture/sound_presets/manifest.json";
 
 const FIXTURES = new Map<string, string>([
   [MANIFEST_PATH, manifestJson],
-  ["/data/UserData/overture/sound_presets/example-aurora-bright-lead.json", brightLeadJson],
-  ["/data/UserData/overture/sound_presets/example-aurora-driven-bass.json", drivenBassJson],
-  ["/data/UserData/overture/sound_presets/example-aurora-soft-pad.json", softPadJson],
+  [
+    "/data/UserData/overture/sound_presets/example-aurora-bright-lead.json",
+    brightLeadJson,
+  ],
+  [
+    "/data/UserData/overture/sound_presets/example-aurora-driven-bass.json",
+    drivenBassJson,
+  ],
+  [
+    "/data/UserData/overture/sound_presets/example-aurora-soft-pad.json",
+    softPadJson,
+  ],
 ]);
 
 function storageKey(path: string): string {
@@ -22,16 +31,24 @@ function parseManifest(raw: string | null): Array<Record<string, unknown>> {
   if (!raw) return [];
   try {
     const obj = JSON.parse(raw) as { presets?: unknown };
-    return Array.isArray(obj.presets) ? obj.presets as Array<Record<string, unknown>> : [];
+    return Array.isArray(obj.presets)
+      ? (obj.presets as Array<Record<string, unknown>>)
+      : [];
   } catch {
     return [];
   }
 }
 
-function mergedManifest(localRaw: string | null, fixtureRaw: string | null): string {
+function mergedManifest(
+  localRaw: string | null,
+  fixtureRaw: string | null,
+): string {
   const presets: Array<Record<string, unknown>> = [];
   const seen = new Set<string>();
-  for (const entry of [...parseManifest(localRaw), ...parseManifest(fixtureRaw)]) {
+  for (const entry of [
+    ...parseManifest(localRaw),
+    ...parseManifest(fixtureRaw),
+  ]) {
     const id = String(entry.id || "");
     if (!id || seen.has(id)) continue;
     presets.push(entry);
@@ -44,7 +61,8 @@ export function createBrowserFileStore(storage: Storage): FileStore {
   return {
     read(path) {
       const local = storage.getItem(storageKey(path));
-      if (path === MANIFEST_PATH) return mergedManifest(local, FIXTURES.get(path) ?? null);
+      if (path === MANIFEST_PATH)
+        return mergedManifest(local, FIXTURES.get(path) ?? null);
       return local ?? FIXTURES.get(path) ?? null;
     },
     write(path, data) {

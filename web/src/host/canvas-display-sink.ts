@@ -1,7 +1,10 @@
 // The OLED display sink: binds the emulator's 1-bit draw ops to a 2D canvas. Pulled
 // out of App.tsx so the device-pixel render path is a plain, unit-testable module
 // with no React. value 0 = black (BG), nonzero = white (FG) — monochrome Move OLED.
-import { createGlobalBrowserObservability, type BrowserObservabilityPort } from "./browser-observability";
+import {
+  createGlobalBrowserObservability,
+  type BrowserObservabilityPort,
+} from "./browser-observability";
 import type { DisplaySink } from "./sinks";
 import { DEVICE_FONT } from "./device-font";
 
@@ -36,7 +39,10 @@ export function createCanvasDisplaySink(
   canvas: HTMLCanvasElement,
   getScale: () => number,
   getSmooth: () => boolean,
-  observability: Pick<BrowserObservabilityPort, "publishOledText"> = createGlobalBrowserObservability(),
+  observability: Pick<
+    BrowserObservabilityPort,
+    "publishOledText"
+  > = createGlobalBrowserObservability(),
 ): DisplaySink {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("createCanvasDisplaySink: 2D context unavailable");
@@ -62,7 +68,12 @@ export function createCanvasDisplaySink(
     fillRect(x, y, w, h, v) {
       const s = getScale();
       ctx.fillStyle = shade(v);
-      ctx.fillRect((x | 0) * s, (y | 0) * s, Math.max(0, w | 0) * s, Math.max(0, h | 0) * s);
+      ctx.fillRect(
+        (x | 0) * s,
+        (y | 0) * s,
+        Math.max(0, w | 0) * s,
+        Math.max(0, h | 0) * s,
+      );
     },
     drawRect(x, y, w, h, v) {
       const s = getScale();
@@ -93,7 +104,8 @@ export function createCanvasDisplaySink(
         // "Sharp"/readable: anti-aliased system font, supersampled — legible on screen.
         ctx.font = `${FONT_PX * s}px ${FONT_FAMILY}`;
         ctx.textBaseline = "top";
-        for (let i = 0; i < str.length; i++) ctx.fillText(str[i], baseX + i * CHAR_W * s, baseY);
+        for (let i = 0; i < str.length; i++)
+          ctx.fillText(str[i], baseX + i * CHAR_W * s, baseY);
       } else {
         // "Exact": the literal device 5×7 glyphs as 1-bit s×s blocks. No fillText, no
         // anti-aliasing → byte-stable and pixel-identical to the hardware OLED.
@@ -104,7 +116,8 @@ export function createCanvasDisplaySink(
           for (let row = 0; row < rows.length; row++) {
             const bits = rows[row];
             for (let col = 0; col < bits.length; col++) {
-              if (bits[col] === "1") ctx.fillRect(cx + col * s, baseY + row * s, s, s);
+              if (bits[col] === "1")
+                ctx.fillRect(cx + col * s, baseY + row * s, s, s);
             }
           }
         }

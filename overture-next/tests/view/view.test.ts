@@ -16,9 +16,30 @@ describe("Overture Next view projection", () => {
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
-        { index: 0, active: true, note: 60, velocity: 100, selected: false, playhead: false },
-        { index: 1, active: false, note: 61, velocity: 100, selected: true, playhead: true },
-        { index: 2, active: false, note: 62, velocity: 100, selected: false, playhead: false },
+        {
+          index: 0,
+          active: true,
+          note: 60,
+          velocity: 100,
+          selected: false,
+          playhead: false,
+        },
+        {
+          index: 1,
+          active: false,
+          note: 61,
+          velocity: 100,
+          selected: true,
+          playhead: true,
+        },
+        {
+          index: 2,
+          active: false,
+          note: 62,
+          velocity: 100,
+          selected: false,
+          playhead: false,
+        },
       ],
     };
 
@@ -32,7 +53,8 @@ describe("Overture Next view projection", () => {
       playing: true,
       selectedStep: 1,
     });
-    if (view.screen.kind !== "track") throw new Error("Expected Track View screen");
+    if (view.screen.kind !== "track")
+      throw new Error("Expected Track View screen");
     expect(view.screen.steps).toEqual([
       { index: 0, active: true, selected: false, playhead: false },
       { index: 1, active: false, selected: true, playhead: true },
@@ -43,7 +65,11 @@ describe("Overture Next view projection", () => {
       { step: 1, state: "playhead" },
       { step: 2, state: "off" },
     ]);
-    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 1, state: "selected" });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 1,
+      state: "selected",
+    });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", state: "track" });
     expect(view.leds.pads).toHaveLength(32);
     expect(view.leds.pads.every((pad) => pad.state === "off")).toBe(true);
@@ -62,8 +88,22 @@ describe("Overture Next view projection", () => {
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
-        { index: 0, active: true, note: 60, velocity: 100, selected: false, playhead: false },
-        { index: 1, active: false, note: 61, velocity: 100, selected: true, playhead: true },
+        {
+          index: 0,
+          active: true,
+          note: 60,
+          velocity: 100,
+          selected: false,
+          playhead: false,
+        },
+        {
+          index: 1,
+          active: false,
+          note: 61,
+          velocity: 100,
+          selected: true,
+          playhead: true,
+        },
       ],
     };
 
@@ -75,10 +115,26 @@ describe("Overture Next view projection", () => {
       { kind: "track-bank-target", surface: { kind: "track-row", row: 2 } },
       { kind: "track-bank-target", surface: { kind: "track-row", row: 3 } },
     ]);
-    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 0, state: "hinted" });
-    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 1, state: "selected" });
-    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 2, state: "hinted" });
-    expect(view.leds.buttons).toContainEqual({ kind: "track-row", row: 3, state: "hinted" });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 0,
+      state: "hinted",
+    });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 1,
+      state: "selected",
+    });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 2,
+      state: "hinted",
+    });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 3,
+      state: "hinted",
+    });
   });
 
   test("derives a Session View screen and pad LEDs from selected Clip Cell state", () => {
@@ -97,7 +153,14 @@ describe("Overture Next view projection", () => {
         { trackIndex: 3, sceneIndex: 7, clipId: null },
       ],
       steps: [
-        { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
+        {
+          index: 0,
+          active: true,
+          note: 60,
+          velocity: 100,
+          selected: true,
+          playhead: true,
+        },
       ],
     };
 
@@ -115,7 +178,10 @@ describe("Overture Next view projection", () => {
     expect(view.leds.pads).toContainEqual({ padIndex: 24, state: "occupied" });
     expect(view.leds.pads).toContainEqual({ padIndex: 7, state: "selected" });
     expect(view.leds.pads).toContainEqual({ padIndex: 8, state: "empty" });
-    expect(view.leds.buttons).toContainEqual({ kind: "menu", state: "session" });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "menu",
+      state: "session",
+    });
   });
 
   test("derives Surface Hints for the selected Session View scene while Shift is held", () => {
@@ -134,14 +200,24 @@ describe("Overture Next view projection", () => {
         { trackIndex: 3, sceneIndex: 7, clipId: null },
       ],
       steps: [
-        { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
+        {
+          index: 0,
+          active: true,
+          note: 60,
+          velocity: 100,
+          selected: true,
+          playhead: true,
+        },
       ],
     };
 
     const view = createOvertureSurfaceView(snapshot);
 
     expect(view.surfaceHints).toEqual([
-      { kind: "scene-launch-target", surface: { kind: "session-scene-column", sceneIndex: 7 } },
+      {
+        kind: "scene-launch-target",
+        surface: { kind: "session-scene-column", sceneIndex: 7 },
+      },
     ]);
     expect(view.leds.pads.filter((pad) => pad.state === "hinted")).toEqual([
       { padIndex: 7, state: "hinted" },

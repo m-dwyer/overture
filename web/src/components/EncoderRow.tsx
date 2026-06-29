@@ -25,8 +25,14 @@ function Encoder({ idx, send }: { idx: number; send: Send }) {
   const cc = KNOB_CC0 + idx;
   const touch = KNOB_TOUCH0 + idx;
   const reg = useLedRegistry();
-  const emit = useCallback((dir: 1 | -1) => send(CC, cc, dir > 0 ? 1 : 127), [cc, send]);
-  const onTouch = useCallback((on: boolean) => send(NOTE_ON, touch, on ? 127 : 0), [touch, send]);
+  const emit = useCallback(
+    (dir: 1 | -1) => send(CC, cc, dir > 0 ? 1 : 127),
+    [cc, send],
+  );
+  const onTouch = useCallback(
+    (on: boolean) => send(NOTE_ON, touch, on ? 127 : 0),
+    [touch, send],
+  );
   const { angle, ref, handlers } = useTurn<HTMLButtonElement>(emit, onTouch);
 
   return (
@@ -41,7 +47,9 @@ function Encoder({ idx, send }: { idx: number; send: Send }) {
             {...handlers}
           />
         </TooltipTrigger>
-        <TooltipContent>Encoder {idx + 1} — drag up/down or scroll to turn</TooltipContent>
+        <TooltipContent>
+          Encoder {idx + 1} — drag up/down or scroll to turn
+        </TooltipContent>
       </Tooltip>
       <span
         ref={ledRef(reg.buttons, cc)}
@@ -66,8 +74,14 @@ export function EncoderRow({ send }: { send: Send }) {
 }
 
 export function VolumeKnob({ send }: { send: Send }) {
-  const emit = useCallback((dir: 1 | -1) => send(CC, VOLUME_CC, dir > 0 ? 1 : 127), [send]);
-  const onTouch = useCallback((on: boolean) => send(NOTE_ON, MASTER_TOUCH, on ? 127 : 0), [send]);
+  const emit = useCallback(
+    (dir: 1 | -1) => send(CC, VOLUME_CC, dir > 0 ? 1 : 127),
+    [send],
+  );
+  const onTouch = useCallback(
+    (on: boolean) => send(NOTE_ON, MASTER_TOUCH, on ? 127 : 0),
+    [send],
+  );
   const { angle, ref, handlers } = useTurn<HTMLButtonElement>(emit, onTouch);
 
   return (

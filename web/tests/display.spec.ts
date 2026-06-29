@@ -20,7 +20,10 @@ type DisplayPageGlobal = typeof globalThis & {
 type Page = import("@playwright/test").Page;
 
 const mi = (page: Page, s: number, d1: number, d2: number) =>
-  page.evaluate(([a, b, c]) => (globalThis as DisplayPageGlobal).OVT.midiIn(a, b, c), [s, d1, d2]);
+  page.evaluate(
+    ([a, b, c]) => (globalThis as DisplayPageGlobal).OVT.midiIn(a, b, c),
+    [s, d1, d2],
+  );
 
 // momentary CC press (down+up)
 const tap = async (page: Page, cc: number) => {
@@ -35,8 +38,10 @@ const step = async (page: Page, n: number) => {
 const shiftDown = (page: Page) => mi(page, 0xb0, 49, 127);
 const shiftUp = (page: Page) => mi(page, 0xb0, 49, 0);
 const jog = (page: Page, dir: 1 | -1) => mi(page, 0xb0, 14, dir > 0 ? 1 : 127);
-const encoderTouch = (page: Page, idx: number, on: boolean) => mi(page, on ? 0x90 : 0x80, idx, on ? 127 : 0);
-const encoderTurn = (page: Page, idx: number, dir: 1 | -1) => mi(page, 0xb0, 71 + idx, dir > 0 ? 1 : 127);
+const encoderTouch = (page: Page, idx: number, on: boolean) =>
+  mi(page, on ? 0x90 : 0x80, idx, on ? 127 : 0);
+const encoderTurn = (page: Page, idx: number, dir: 1 | -1) =>
+  mi(page, 0xb0, 71 + idx, dir > 0 ? 1 : 127);
 
 const uiState = (page: Page) =>
   page.evaluate(() => {
@@ -61,7 +66,9 @@ async function snap(page: Page, name: string) {
   // Flush the redraw for whatever input this scene injected, deterministically, then
   // lock the frame. advanceTicks runs in-stack so the capture can't race the loop.
   await advanceTicks(page, 4);
-  await expect(page.locator("#oled")).toHaveScreenshot(`${name}.png`, { maxDiffPixelRatio: 0.02 });
+  await expect(page.locator("#oled")).toHaveScreenshot(`${name}.png`, {
+    maxDiffPixelRatio: 0.02,
+  });
 }
 async function enterTrackView(page: Page) {
   if ((await uiState(page)).sessionView) {
@@ -209,7 +216,8 @@ test("drum parameter page sweep", async ({ page }) => {
 
 // OLED readable/exact toggle: default supersamples the 128×64 buffer (readable),
 // the toggle flips to 1:1 device pixels, and the choice persists across reloads.
-const oledWidth = (page: Page) => page.locator("#oled").evaluate((el) => (el as HTMLCanvasElement).width);
+const oledWidth = (page: Page) =>
+  page.locator("#oled").evaluate((el) => (el as HTMLCanvasElement).width);
 
 test("oled readable default + exact toggle persists", async ({ page }) => {
   // This only exercises the readable⇄exact width preference (localStorage + ?exact),

@@ -11,11 +11,15 @@ const failures = [];
 
 for (const internalModule of modules) {
   if (!internalModule.hasIndex) {
-    failures.push(`${internalModule.ownerPrefix} has internal/ but no index.ts public entry point`);
+    failures.push(
+      `${internalModule.ownerPrefix} has internal/ but no index.ts public entry point`,
+    );
   }
 
   if (!hasMatchingTest(internalModule.ownerPath)) {
-    failures.push(`${internalModule.ownerPrefix} has internal/ but no matching tests/${internalModule.ownerPath} test`);
+    failures.push(
+      `${internalModule.ownerPrefix} has internal/ but no matching tests/${internalModule.ownerPath} test`,
+    );
   }
 }
 

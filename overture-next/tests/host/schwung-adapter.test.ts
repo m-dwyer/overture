@@ -6,7 +6,14 @@ import {
   moveMidiToInput,
   schwungCommandToMessage,
 } from "../../src/host/schwung-adapter";
-import { KNOB_CC0, KNOB_TOUCH0, NAV, NOTE_ON, CC, JOG_TOUCH } from "../../src/host/move-controls";
+import {
+  KNOB_CC0,
+  KNOB_TOUCH0,
+  NAV,
+  NOTE_ON,
+  CC,
+  JOG_TOUCH,
+} from "../../src/host/move-controls";
 import { installSchwungRuntime } from "../../src/host/schwung-runtime";
 
 const moveRoute = { kind: "move" as const, moveTrackTarget: 2 };
@@ -16,14 +23,46 @@ describe("Overture Next Schwung adapter", () => {
   test("converts Move CC and note input to control input", () => {
     expect(moveMidiToInput([0xb0, 85, 127], 16)).toEqual({ kind: "play" });
     expect(moveMidiToInput([0xb0, 50, 127], 16)).toEqual({ kind: "menu" });
-    expect(moveMidiToInput([0xb0, 49, 127], 16)).toEqual({ kind: "shift", held: true });
-    expect(moveMidiToInput([0xb0, 49, 0], 16)).toEqual({ kind: "shift", held: false });
-    expect(moveMidiToInput([0xb0, 42, 127], 16)).toEqual({ kind: "track-row", row: 1 });
-    expect(moveMidiToInput([0x90, 17, 100], 16)).toEqual({ kind: "step", step: 1 });
-    expect(moveMidiToInput([0x90, 68, 110], 16)).toEqual({ kind: "pad", held: true, padIndex: 0, velocity: 110 });
-    expect(moveMidiToInput([0x90, 99, 110], 16)).toEqual({ kind: "pad", held: true, padIndex: 31, velocity: 110 });
-    expect(moveMidiToInput([0x80, 68, 0], 16)).toEqual({ kind: "pad", held: false, padIndex: 0, velocity: 0 });
-    expect(moveMidiToInput([0x90, 68, 0], 16)).toEqual({ kind: "pad", held: false, padIndex: 0, velocity: 0 });
+    expect(moveMidiToInput([0xb0, 49, 127], 16)).toEqual({
+      kind: "shift",
+      held: true,
+    });
+    expect(moveMidiToInput([0xb0, 49, 0], 16)).toEqual({
+      kind: "shift",
+      held: false,
+    });
+    expect(moveMidiToInput([0xb0, 42, 127], 16)).toEqual({
+      kind: "track-row",
+      row: 1,
+    });
+    expect(moveMidiToInput([0x90, 17, 100], 16)).toEqual({
+      kind: "step",
+      step: 1,
+    });
+    expect(moveMidiToInput([0x90, 68, 110], 16)).toEqual({
+      kind: "pad",
+      held: true,
+      padIndex: 0,
+      velocity: 110,
+    });
+    expect(moveMidiToInput([0x90, 99, 110], 16)).toEqual({
+      kind: "pad",
+      held: true,
+      padIndex: 31,
+      velocity: 110,
+    });
+    expect(moveMidiToInput([0x80, 68, 0], 16)).toEqual({
+      kind: "pad",
+      held: false,
+      padIndex: 0,
+      velocity: 0,
+    });
+    expect(moveMidiToInput([0x90, 68, 0], 16)).toEqual({
+      kind: "pad",
+      held: false,
+      padIndex: 0,
+      velocity: 0,
+    });
   });
 
   test("ignores unhandled or released Move input before it reaches core", () => {
@@ -53,7 +92,8 @@ describe("Overture Next Schwung adapter", () => {
       NAV.JogRotate,
       KNOB_CC0,
     ];
-    for (const cc of unsupportedCc) expect(moveMidiToInput([CC, cc, 127], 16)).toBeNull();
+    for (const cc of unsupportedCc)
+      expect(moveMidiToInput([CC, cc, 127], 16)).toBeNull();
 
     for (let touch = KNOB_TOUCH0; touch < KNOB_TOUCH0 + 8; touch++) {
       expect(moveMidiToInput([NOTE_ON, touch, 127], 16)).toBeNull();
@@ -62,18 +102,23 @@ describe("Overture Next Schwung adapter", () => {
   });
 
   test("converts domain note commands to Move USB-MIDI packets", () => {
-    expect(moveCommandToPacket({ kind: "track-note-on", route: moveRoute, trackIndex: 2, note: 64, velocity: 101 })).toEqual([
-      0x29,
-      0x92,
-      64,
-      101,
-    ]);
-    expect(moveCommandToPacket({ kind: "track-note-off", route: moveRoute, trackIndex: 2, note: 64 })).toEqual([
-      0x28,
-      0x82,
-      64,
-      0,
-    ]);
+    expect(
+      moveCommandToPacket({
+        kind: "track-note-on",
+        route: moveRoute,
+        trackIndex: 2,
+        note: 64,
+        velocity: 101,
+      }),
+    ).toEqual([0x29, 0x92, 64, 101]);
+    expect(
+      moveCommandToPacket({
+        kind: "track-note-off",
+        route: moveRoute,
+        trackIndex: 2,
+        note: 64,
+      }),
+    ).toEqual([0x28, 0x82, 64, 0]);
   });
 
   test("uses route targets and masks packet fields to the MIDI ranges used by Move", () => {
@@ -85,23 +130,27 @@ describe("Overture Next Schwung adapter", () => {
         note: 200,
         velocity: 255,
       }),
-    ).toEqual([
-      0x29,
-      0x92,
-      72,
-      127,
-    ]);
+    ).toEqual([0x29, 0x92, 72, 127]);
   });
 
   test("converts Schwung-routed note commands to slot MIDI messages", () => {
     expect(
-      schwungCommandToMessage({ kind: "track-note-on", route: schwungRoute, trackIndex: 4, note: 60, velocity: 90 }),
+      schwungCommandToMessage({
+        kind: "track-note-on",
+        route: schwungRoute,
+        trackIndex: 4,
+        note: 60,
+        velocity: 90,
+      }),
     ).toEqual([0x94, 60, 90]);
-    expect(schwungCommandToMessage({ kind: "track-note-off", route: schwungRoute, trackIndex: 4, note: 60 })).toEqual([
-      0x84,
-      60,
-      0,
-    ]);
+    expect(
+      schwungCommandToMessage({
+        kind: "track-note-off",
+        route: schwungRoute,
+        trackIndex: 4,
+        note: 60,
+      }),
+    ).toEqual([0x84, 60, 0]);
   });
 
   test("executes routed domain commands through the matching MIDI host path", () => {
@@ -124,7 +173,13 @@ describe("Overture Next Schwung adapter", () => {
       note: 60,
       velocity: 90,
     });
-    adapter.outbound.commands.execute({ kind: "track-note-on", route: schwungRoute, trackIndex: 4, note: 60, velocity: 90 });
+    adapter.outbound.commands.execute({
+      kind: "track-note-on",
+      route: schwungRoute,
+      trackIndex: 4,
+      note: 60,
+      velocity: 90,
+    });
 
     expect(packets).toEqual([[0x29, 0x91, 60, 90]]);
     expect(schwungMessages).toEqual([[0x94, 60, 90]]);
@@ -174,7 +229,14 @@ describe("Overture Next Schwung adapter", () => {
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
       clipCells: [{ trackIndex: 3, sceneIndex: 7, clipId: null }],
       steps: [
-        { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
+        {
+          index: 0,
+          active: true,
+          note: 60,
+          velocity: 100,
+          selected: true,
+          playhead: true,
+        },
       ],
     };
 
@@ -198,8 +260,10 @@ describe("Overture Next Schwung adapter", () => {
       {
         init: () => calls.push("init"),
         tick: () => calls.push("tick"),
-        onMidiMessageInternal: (data) => calls.push("internal:" + data.join(",")),
-        onMidiMessageExternal: (data) => calls.push("external:" + data.join(",")),
+        onMidiMessageInternal: (data) =>
+          calls.push("internal:" + data.join(",")),
+        onMidiMessageExternal: (data) =>
+          calls.push("external:" + data.join(",")),
         onUnload: () => calls.push("unload"),
       },
       { overtureDebug: { marker: true } },
@@ -213,6 +277,12 @@ describe("Overture Next Schwung adapter", () => {
     (host.onUnload as () => void)();
 
     expect(host.overtureDebug).toEqual({ marker: true });
-    expect(calls).toEqual(["init", "tick", "internal:144,60,100", "external:", "unload"]);
+    expect(calls).toEqual([
+      "init",
+      "tick",
+      "internal:144,60,100",
+      "external:",
+      "unload",
+    ]);
   });
 });

@@ -3,7 +3,9 @@ const path = require("node:path");
 
 function createInternalPrivacyRules({ rootDir, sourceDir }) {
   return discoverInternalModules({ rootDir, sourceDir })
-    .map((internalModule) => createInternalPrivacyRule(internalModule, sourceDir))
+    .map((internalModule) =>
+      createInternalPrivacyRule(internalModule, sourceDir),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -11,7 +13,9 @@ function createPublicApiRules({ rootDir, sourceDir }) {
   const internalModules = discoverInternalModules({ rootDir, sourceDir });
   return internalModules
     .filter((internalModule) => internalModule.hasIndex)
-    .map((internalModule) => createPublicApiRule(internalModule, internalModules))
+    .map((internalModule) =>
+      createPublicApiRule(internalModule, internalModules),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -24,7 +28,9 @@ function discoverInternalModules({ rootDir, sourceDir }) {
       ownerDir,
       ownerPath,
       ownerPrefix: ownerPath ? `${sourceDir}/${ownerPath}/` : `${sourceDir}/`,
-      internalPrefix: ownerPath ? `${sourceDir}/${ownerPath}/internal/` : `${sourceDir}/internal/`,
+      internalPrefix: ownerPath
+        ? `${sourceDir}/${ownerPath}/internal/`
+        : `${sourceDir}/internal/`,
       hasIndex: fs.existsSync(path.join(ownerDir, "index.ts")),
     };
   });
@@ -52,7 +58,9 @@ function discoverInternalDirectories(rootDir) {
 
 function createInternalPrivacyRule({ ownerPath, ownerPrefix, internalPrefix }) {
   return {
-    name: ownerPath ? `${ownerPath.replaceAll("/", "-")}-internals-stay-private` : "source-internals-stay-private",
+    name: ownerPath
+      ? `${ownerPath.replaceAll("/", "-")}-internals-stay-private`
+      : "source-internals-stay-private",
     severity: "error",
     comment: `The ${internalPrefix} directory is private to ${ownerPrefix}.`,
     from: { pathNot: `^${escapeRegExp(ownerPrefix)}` },
@@ -62,10 +70,15 @@ function createInternalPrivacyRule({ ownerPath, ownerPrefix, internalPrefix }) {
 
 function createPublicApiRule(internalModule, internalModules) {
   const { ownerPath, ownerPrefix } = internalModule;
-  const allowedPublicEntries = ["index.ts", ...nestedPublicEntryPaths(internalModule, internalModules)];
+  const allowedPublicEntries = [
+    "index.ts",
+    ...nestedPublicEntryPaths(internalModule, internalModules),
+  ];
   const allowedPattern = allowedPublicEntries.map(escapeRegExp).join("|");
   return {
-    name: ownerPath ? `${ownerPath.replaceAll("/", "-")}-public-api-only` : "source-public-api-only",
+    name: ownerPath
+      ? `${ownerPath.replaceAll("/", "-")}-public-api-only`
+      : "source-public-api-only",
     severity: "error",
     comment: `Code outside ${ownerPrefix} imports its public entry point, not implementation files.`,
     from: { pathNot: `^${escapeRegExp(ownerPrefix)}` },
@@ -74,7 +87,9 @@ function createPublicApiRule(internalModule, internalModules) {
 }
 
 function nestedPublicEntryPaths(internalModule, internalModules) {
-  const nestedPrefix = internalModule.ownerPath ? `${internalModule.ownerPath}/` : "";
+  const nestedPrefix = internalModule.ownerPath
+    ? `${internalModule.ownerPath}/`
+    : "";
   return internalModules
     .filter(
       (candidate) =>
@@ -82,7 +97,10 @@ function nestedPublicEntryPaths(internalModule, internalModules) {
         candidate.ownerPath.startsWith(nestedPrefix) &&
         candidate.ownerPath !== internalModule.ownerPath,
     )
-    .map((candidate) => `${candidate.ownerPath.slice(nestedPrefix.length)}/index.ts`);
+    .map(
+      (candidate) =>
+        `${candidate.ownerPath.slice(nestedPrefix.length)}/index.ts`,
+    );
 }
 
 function toPosix(filePath) {
@@ -93,9 +111,22 @@ function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-module.exports = { createInternalPrivacyRules, createPublicApiRules, discoverInternalModules };
+module.exports = {
+  createInternalPrivacyRules,
+  createPublicApiRules,
+  discoverInternalModules,
+};
 
 if (require.main === module) {
   const options = { rootDir: path.join(__dirname, ".."), sourceDir: "src" };
-  console.log(JSON.stringify([...createInternalPrivacyRules(options), ...createPublicApiRules(options)], null, 2));
+  console.log(
+    JSON.stringify(
+      [
+        ...createInternalPrivacyRules(options),
+        ...createPublicApiRules(options),
+      ],
+      null,
+      2,
+    ),
+  );
 }

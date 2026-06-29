@@ -17,9 +17,13 @@ const TOOL_UI = resolve(here, "../overture-next/ui");
 // fall back to the sibling dev checkout. Override with SCHWUNG_SRC=/abs/path.
 const SCHWUNG_SHARED =
   process.env.SCHWUNG_SRC ||
-  [resolve(here, "../schwung/src/shared"), resolve(here, "../../schwung/src/shared")].find(existsSync) ||
+  [
+    resolve(here, "../schwung/src/shared"),
+    resolve(here, "../../schwung/src/shared"),
+  ].find(existsSync) ||
   resolve(here, "../../schwung/src/shared");
-const MOVEFORGE_ROOT = process.env.MOVEFORGE_ROOT || resolve(here, "../moveforge");
+const MOVEFORGE_ROOT =
+  process.env.MOVEFORGE_ROOT || resolve(here, "../moveforge");
 
 const ON_DEVICE_SHARED = "/data/UserData/schwung/shared/";
 const ON_DEVICE_OVERTURE = "/data/UserData/schwung/modules/tools/overture/";
@@ -40,14 +44,21 @@ function moveDeviceImports() {
 }
 
 export default defineConfig({
-  base: process.env.OVERTURE_WEB_BASE || (process.env.NODE_ENV === "production" ? "./" : "/"),
+  base:
+    process.env.OVERTURE_WEB_BASE ||
+    (process.env.NODE_ENV === "production" ? "./" : "/"),
   root: here,
   define: {
     OVERTURE_DEBUG_LOG: "false",
   },
   // react() handles JSX + Fast Refresh; moveDeviceImports keeps enforce:"pre" so it
   // still wins on the tool's absolute on-device import specifiers.
-  plugins: [react(), moveDeviceImports(), serveMoveforgeAssets(), copyMoveforgeAssets()],
+  plugins: [
+    react(),
+    moveDeviceImports(),
+    serveMoveforgeAssets(),
+    copyMoveforgeAssets(),
+  ],
   resolve: {
     alias: {
       "@": resolve(here, "src"),
@@ -120,7 +131,9 @@ function copyMoveforgeAssets(): Plugin {
           wasmCount++;
         }
       } catch (error) {
-        missing.push(`Moveforge WASM directory ${wasmSrc}: ${(error as Error).message}`);
+        missing.push(
+          `Moveforge WASM directory ${wasmSrc}: ${(error as Error).message}`,
+        );
       }
       if (wasmCount === 0) missing.push("copied 0 Moveforge .wasm files");
 
@@ -129,25 +142,43 @@ function copyMoveforgeAssets(): Plugin {
       await mkdir(modulesOut, { recursive: true });
       let moduleIds: string[] = [];
       try {
-        const indexBytes = await readFile(join(modulesSrc, "index.json"), "utf8");
-        await copyFile(join(modulesSrc, "index.json"), join(modulesOut, "index.json"));
-        const index = JSON.parse(indexBytes) as { modules?: Array<{ id?: unknown }> };
-        moduleIds = (index.modules ?? []).map((entry) => String(entry.id ?? "")).filter(Boolean);
+        const indexBytes = await readFile(
+          join(modulesSrc, "index.json"),
+          "utf8",
+        );
+        await copyFile(
+          join(modulesSrc, "index.json"),
+          join(modulesOut, "index.json"),
+        );
+        const index = JSON.parse(indexBytes) as {
+          modules?: Array<{ id?: unknown }>;
+        };
+        moduleIds = (index.modules ?? [])
+          .map((entry) => String(entry.id ?? ""))
+          .filter(Boolean);
       } catch (error) {
-        missing.push(`Moveforge module index ${join(modulesSrc, "index.json")}: ${(error as Error).message}`);
+        missing.push(
+          `Moveforge module index ${join(modulesSrc, "index.json")}: ${(error as Error).message}`,
+        );
       }
       try {
-        for (const entry of await readdir(modulesSrc, { withFileTypes: true })) {
+        for (const entry of await readdir(modulesSrc, {
+          withFileTypes: true,
+        })) {
           if (!entry.isDirectory() || entry.name.startsWith("_")) continue;
           const srcDir = join(modulesSrc, entry.name);
           const dstDir = join(modulesOut, entry.name);
           await mkdir(dstDir, { recursive: true });
           for (const file of ["module.json", "presets.json", "metadata.json"]) {
-            await copyFile(join(srcDir, file), join(dstDir, file)).catch(() => {});
+            await copyFile(join(srcDir, file), join(dstDir, file)).catch(
+              () => {},
+            );
           }
         }
       } catch (error) {
-        missing.push(`Moveforge module metadata under ${modulesSrc}: ${(error as Error).message}`);
+        missing.push(
+          `Moveforge module metadata under ${modulesSrc}: ${(error as Error).message}`,
+        );
       }
       for (const moduleId of moduleIds) {
         await access(join(modulesOut, moduleId, "module.json")).catch(() => {
@@ -158,7 +189,9 @@ function copyMoveforgeAssets(): Plugin {
         });
       }
       if (missing.length > 0) {
-        this.error(`Moveforge assets are incomplete. Set MOVEFORGE_ROOT to a checkout with built web WASM.\n- ${missing.join("\n- ")}`);
+        this.error(
+          `Moveforge assets are incomplete. Set MOVEFORGE_ROOT to a checkout with built web WASM.\n- ${missing.join("\n- ")}`,
+        );
       }
     },
   };

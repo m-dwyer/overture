@@ -1,5 +1,11 @@
 import type { ControlSurfacePort } from "./inbound";
-import type { DisplayPort, HostCommandPort, LedPort, MidiPort, RuntimePort } from "./outbound";
+import type {
+  DisplayPort,
+  HostCommandPort,
+  LedPort,
+  MidiPort,
+  RuntimePort,
+} from "./outbound";
 
 export interface OvertureInboundPorts {
   controlSurface: ControlSurfacePort;

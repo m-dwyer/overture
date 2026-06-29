@@ -6,7 +6,8 @@ export default {
   meta: {
     type: "problem",
     docs: {
-      description: "Prevent public APIs from accepting owned state objects as mutation targets.",
+      description:
+        "Prevent public APIs from accepting owned state objects as mutation targets.",
     },
     schema: [
       {
@@ -30,7 +31,8 @@ export default {
     messages: {
       exportedOwnedStateParameter:
         "{{typeName}} is an owned state object. Expose domain methods, snapshots, or narrow read contracts instead of exported functions that accept it as a parameter.",
-      missingTypeInfo: "The state API encapsulation rule requires typed parser services.",
+      missingTypeInfo:
+        "The state API encapsulation rule requires typed parser services.",
     },
   },
   create(context) {
@@ -63,7 +65,10 @@ export default {
     function checkExportedVariableDeclaration(node) {
       for (const declaration of node.declarations) {
         const init = declaration.init;
-        if (init?.type === "ArrowFunctionExpression" || init?.type === "FunctionExpression") {
+        if (
+          init?.type === "ArrowFunctionExpression" ||
+          init?.type === "FunctionExpression"
+        ) {
           checkExportedFunction(init);
         }
       }
@@ -79,8 +84,10 @@ export default {
 
     return {
       ExportNamedDeclaration(node) {
-        if (node.declaration?.type === "FunctionDeclaration") checkExportedFunction(node.declaration);
-        if (node.declaration?.type === "VariableDeclaration") checkExportedVariableDeclaration(node.declaration);
+        if (node.declaration?.type === "FunctionDeclaration")
+          checkExportedFunction(node.declaration);
+        if (node.declaration?.type === "VariableDeclaration")
+          checkExportedVariableDeclaration(node.declaration);
       },
     };
   },

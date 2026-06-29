@@ -12,7 +12,11 @@ export interface ShellLedSinkDeps {
   getShell: () => LedSink | null;
 }
 
-export function createShellLedSink({ ledsMap, buttonLedsMap, getShell }: ShellLedSinkDeps): LedSink {
+export function createShellLedSink({
+  ledsMap,
+  buttonLedsMap,
+  getShell,
+}: ShellLedSinkDeps): LedSink {
   return {
     setLED(i, c) {
       ledsMap.set(i, c);
@@ -26,7 +30,8 @@ export function createShellLedSink({ ledsMap, buttonLedsMap, getShell }: ShellLe
       setLedPaletteEntryRGB(index, r, g, b);
       const shell = getShell();
       for (const [i, c] of ledsMap) if (c === index) shell?.setLED(i, c);
-      for (const [cc, c] of buttonLedsMap) if (c === index) shell?.setButtonLED(cc, c);
+      for (const [cc, c] of buttonLedsMap)
+        if (c === index) shell?.setButtonLED(cc, c);
     },
     clearAll() {
       ledsMap.clear();

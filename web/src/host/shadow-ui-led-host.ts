@@ -1,19 +1,31 @@
 import type { HostApi } from "../host-api.js";
 import type { LedSink } from "./sinks.js";
 
-type LedHostApi = Pick<HostApi, "setLED" | "setButtonLED" | "clearAllLEDs" | "move_midi_internal_send">;
+type LedHostApi = Pick<
+  HostApi,
+  "setLED" | "setButtonLED" | "clearAllLEDs" | "move_midi_internal_send"
+>;
 
 function usbMidiSysexBytes(packet: number[]): number[] {
   const bytes: number[] = [];
   for (let i = 0; i < packet.length; i += 4) {
     const cin = packet[i] & 0x0f;
-    const count = cin === 0x05 ? 1 : cin === 0x06 ? 2 : cin === 0x07 || cin === 0x04 ? 3 : 0;
+    const count =
+      cin === 0x05
+        ? 1
+        : cin === 0x06
+          ? 2
+          : cin === 0x07 || cin === 0x04
+            ? 3
+            : 0;
     for (let j = 0; j < count; j++) bytes.push(packet[i + 1 + j] ?? 0);
   }
   return bytes;
 }
 
-function parsePaletteEntry(packet: number[]): { index: number; r: number; g: number; b: number } | null {
+function parsePaletteEntry(
+  packet: number[],
+): { index: number; r: number; g: number; b: number } | null {
   const bytes = usbMidiSysexBytes(packet);
   if (
     bytes.length < 17 ||
@@ -24,7 +36,8 @@ function parsePaletteEntry(packet: number[]): { index: number; r: number; g: num
     bytes[4] !== 0x01 ||
     bytes[5] !== 0x01 ||
     bytes[6] !== 0x03
-  ) return null;
+  )
+    return null;
   return {
     index: bytes[7] & 0x7f,
     r: Math.min(255, (bytes[8] & 0x7f) | ((bytes[9] & 0x7f) << 7)),
@@ -47,7 +60,12 @@ export function createLedHostApi(leds: LedSink): LedHostApi {
     move_midi_internal_send(packet: number[]): void {
       const palette = parsePaletteEntry(packet);
       if (palette) {
-        leds.setPaletteEntryRGB?.(palette.index, palette.r, palette.g, palette.b);
+        leds.setPaletteEntryRGB?.(
+          palette.index,
+          palette.r,
+          palette.g,
+          palette.b,
+        );
         return;
       }
       const status = (packet[1] ?? 0) & 0xf0;

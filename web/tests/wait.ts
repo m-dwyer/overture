@@ -30,5 +30,8 @@ export function waitReady(page: Page): Promise<unknown> {
 // read against real constants. Keep the post-gesture default below the hold-promotion
 // threshold so a still-held button can't accidentally promote.
 export async function advanceTicks(page: Page, ticks = 3): Promise<void> {
-  await page.evaluate((n) => (globalThis as OvtGlobal).OVT!.advanceTicks(n), ticks);
+  await page.evaluate(
+    (n) => (globalThis as OvtGlobal).OVT!.advanceTicks(n),
+    ticks,
+  );
 }

@@ -8,31 +8,31 @@
 // chassis, but still grouped by the firmware palette indices Overture emits.
 const NAMED: Record<number, string> = {
   0: "", // Off — caller reverts to the element's unlit background
-  3: "#f4f4f5",   // Bright
-  4: "#4b5563",   // Overture dim/unselected
-  7: "#ffd84d",   // VividYellow
-  8: "#63ef8a",   // BrightGreen
-  12: "#7c8490",  // Overture available
-  14: "#55f0e8",  // Cyan
-  16: "#6f8dff",  // RoyalBlue
-  21: "#ff70d8",  // HotMagenta
-  25: "#ff7fad",  // BrightPink
-  28: "#ffad63",  // BurntOrange
-  29: "#f0c341",  // Mustard
-  32: "#4bc06f",  // DeepGreen
-  36: "#d9dde2",  // LED_STEP_ACTIVE
-  44: "#ffd84d",  // Overture hint
-  47: "#72c7ff",  // SkyBlue
-  48: "#8b949e",  // Overture active/occupied
-  49: "#555e69",  // beat-marker grey
-  50: "#7c8490",  // OOB grey
-  65: "#ff6262",  // DeepRed
-  66: "#8c3030",  // VeryDarkRed
-  78: "#9a9638",  // DarkOlive
-  86: "#3d8d52",  // dim forest
-  93: "#5266d8",  // DeepBlue
-  95: "#5570d8",  // DarkBlue
-  96: "#354684",  // dim navy
+  3: "#f4f4f5", // Bright
+  4: "#4b5563", // Overture dim/unselected
+  7: "#ffd84d", // VividYellow
+  8: "#63ef8a", // BrightGreen
+  12: "#7c8490", // Overture available
+  14: "#55f0e8", // Cyan
+  16: "#6f8dff", // RoyalBlue
+  21: "#ff70d8", // HotMagenta
+  25: "#ff7fad", // BrightPink
+  28: "#ffad63", // BurntOrange
+  29: "#f0c341", // Mustard
+  32: "#4bc06f", // DeepGreen
+  36: "#d9dde2", // LED_STEP_ACTIVE
+  44: "#ffd84d", // Overture hint
+  47: "#72c7ff", // SkyBlue
+  48: "#8b949e", // Overture active/occupied
+  49: "#555e69", // beat-marker grey
+  50: "#7c8490", // OOB grey
+  65: "#ff6262", // DeepRed
+  66: "#8c3030", // VeryDarkRed
+  78: "#9a9638", // DarkOlive
+  86: "#3d8d52", // dim forest
+  93: "#5266d8", // DeepBlue
+  95: "#5570d8", // DarkBlue
+  96: "#354684", // dim navy
   101: "#9a7cff", // PurpleBlue
   109: "#c454a5", // DeepMagenta
   114: "#a74768", // DeepWine
@@ -59,7 +59,12 @@ function toHex(value: number): string {
   return n.toString(16).padStart(2, "0");
 }
 
-export function setLedPaletteEntryRGB(index: number, r: number, g: number, b: number): void {
+export function setLedPaletteEntryRGB(
+  index: number,
+  r: number,
+  g: number,
+  b: number,
+): void {
   if (!isRuntimePaletteEntry(index)) return;
   dynamic.set(index, `#${toHex(r)}${toHex(g)}${toHex(b)}`);
 }

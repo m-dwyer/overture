@@ -6,7 +6,10 @@ import type { PadLedView, ScreenView, SurfaceHint } from "../types";
 interface ViewModule {
   createScreenView(snapshot: CoreSnapshot): ScreenView;
   createSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[];
-  createPadLeds(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHint[]): PadLedView[];
+  createPadLeds(
+    snapshot: CoreSnapshot,
+    surfaceHints: readonly SurfaceHint[],
+  ): PadLedView[];
 }
 
 export function viewModuleFor(snapshot: CoreSnapshot): ViewModule {

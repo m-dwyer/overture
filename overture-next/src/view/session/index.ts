@@ -11,7 +11,10 @@ export const sessionView = {
   createSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[] {
     return createSessionSurfaceHints(snapshot);
   },
-  createPadLeds(snapshot: CoreSnapshot, surfaceHints: readonly SurfaceHint[]): PadLedView[] {
+  createPadLeds(
+    snapshot: CoreSnapshot,
+    surfaceHints: readonly SurfaceHint[],
+  ): PadLedView[] {
     return createSessionPadLeds(snapshot, surfaceHints);
   },
 };

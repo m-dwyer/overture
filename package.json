@@ -1,10 +1,16 @@
 {
-  "name": "overture",
+  "name": "@overture/workspace",
   "private": true,
   "version": "0.0.0",
   "packageManager": "pnpm@10.33.2",
   "scripts": {
-    "typecheck": "pnpm -C overture-next typecheck && pnpm -C web typecheck",
-    "verify": "pnpm -C overture-next verify && pnpm -C web verify"
+    "format": "prettier --write --ignore-unknown package.json pnpm-workspace.yaml prettier.config.mjs overture-next web site",
+    "format:check": "prettier --check --ignore-unknown package.json pnpm-workspace.yaml prettier.config.mjs overture-next web site",
+    "typecheck": "pnpm --filter @overture/tool typecheck && pnpm --filter @overture/web typecheck",
+    "verify": "pnpm format:check && pnpm --filter @overture/tool verify && pnpm --filter @overture/web verify"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.3",
+    "prettier-plugin-astro": "^0.14.1"
   }
 }

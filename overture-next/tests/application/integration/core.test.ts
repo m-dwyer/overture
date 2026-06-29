@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 import { createOvertureCore } from "../../../src/application/core";
 import type { CoreSnapshot } from "../../../src/application/types";
-import { CLIP_CELL_COUNT, SCENE_COUNT, TRACK_COUNT, createTracks } from "../../../src/domain/project";
+import {
+  CLIP_CELL_COUNT,
+  SCENE_COUNT,
+  TRACK_COUNT,
+  createTracks,
+} from "../../../src/domain/project";
 import { createDefaultSequence } from "../../../src/domain/sequence";
 import { createDefaultProject } from "../../../src/state/project";
 
@@ -26,8 +31,12 @@ describe("Overture Next core", () => {
 
     const cells = project.clipCellSnapshots();
     expect(cells).toHaveLength(CLIP_CELL_COUNT);
-    expect(new Set(cells.map((cell) => cell.trackIndex)).size).toBe(TRACK_COUNT);
-    expect(new Set(cells.map((cell) => cell.sceneIndex)).size).toBe(SCENE_COUNT);
+    expect(new Set(cells.map((cell) => cell.trackIndex)).size).toBe(
+      TRACK_COUNT,
+    );
+    expect(new Set(cells.map((cell) => cell.sceneIndex)).size).toBe(
+      SCENE_COUNT,
+    );
     expect(project.clipCellAt({ trackIndex: 7, sceneIndex: 7 })).toMatchObject({
       trackIndex: 7,
       sceneIndex: 7,
@@ -38,8 +47,16 @@ describe("Overture Next core", () => {
   test("applies the default route template to structural tracks", () => {
     const tracks = createTracks();
 
-    expect(tracks[0]).toMatchObject({ index: 0, name: "Track 1", route: { kind: "move", moveTrackTarget: 0 } });
-    expect(tracks[3]).toMatchObject({ index: 3, name: "Track 4", route: { kind: "move", moveTrackTarget: 3 } });
+    expect(tracks[0]).toMatchObject({
+      index: 0,
+      name: "Track 1",
+      route: { kind: "move", moveTrackTarget: 0 },
+    });
+    expect(tracks[3]).toMatchObject({
+      index: 3,
+      name: "Track 4",
+      route: { kind: "move", moveTrackTarget: 3 },
+    });
     expect(tracks[4]).toMatchObject({
       index: 4,
       name: "Track 5",
@@ -61,7 +78,9 @@ describe("Overture Next core", () => {
 
     expect(core.dispatchControlInput({ kind: "shift", held: true })).toBe(true);
     expect(core.dispatchControlInput({ kind: "track-row", row: 1 })).toBe(true);
-    expect(core.dispatchControlInput({ kind: "shift", held: false })).toBe(true);
+    expect(core.dispatchControlInput({ kind: "shift", held: false })).toBe(
+      true,
+    );
     expect(core.snapshot()).toMatchObject({
       selectedTrackIndex: 5,
       visibleTrackBank: 1,
@@ -70,7 +89,10 @@ describe("Overture Next core", () => {
 
     expect(core.snapshot().steps[1].active).toBe(false);
     expect(core.dispatchControlInput({ kind: "step", step: 1 })).toBe(true);
-    expect(core.snapshot().steps[1]).toMatchObject({ selected: true, active: true });
+    expect(core.snapshot().steps[1]).toMatchObject({
+      selected: true,
+      active: true,
+    });
   });
 
   test("uses shift as the upper track bank modifier for side buttons", () => {
@@ -145,7 +167,12 @@ describe("Overture Next core", () => {
     ]);
     expect(core.dispatchControlInput(padRelease(7))).toBe(true);
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 67 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 67,
+      },
     ]);
 
     expect(core.snapshot().selectedClipCell).toEqual(selectedBefore);
@@ -166,7 +193,12 @@ describe("Overture Next core", () => {
 
     expect(getSnapshotPlayhead(core.snapshot())).toBe(1);
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+      },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -177,7 +209,12 @@ describe("Overture Next core", () => {
     ]);
     for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 61 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 61,
+      },
     ]);
     expect(core.drainHostCommands()).toEqual([]);
   });
@@ -190,14 +227,22 @@ describe("Overture Next core", () => {
     core.dispatchControlInput(padPress(16));
     core.dispatchControlInput({ kind: "menu" });
     core.dispatchControlInput({ kind: "track-row", row: 0 });
-    expect(core.snapshot().selectedClipCell).toEqual({ trackIndex: 0, sceneIndex: 0 });
+    expect(core.snapshot().selectedClipCell).toEqual({
+      trackIndex: 0,
+      sceneIndex: 0,
+    });
 
     core.dispatchControlInput({ kind: "play" });
     core.drainHostCommands();
     for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 1 },
+        trackIndex: 1,
+        note: 60,
+      },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 1 },
@@ -208,7 +253,12 @@ describe("Overture Next core", () => {
     ]);
     for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 1 }, trackIndex: 1, note: 64 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 1 },
+        trackIndex: 1,
+        note: 64,
+      },
     ]);
   });
 
@@ -268,17 +318,60 @@ describe("Overture Next core", () => {
 
     const snapshot = core.snapshot();
     expect(snapshot.steps.slice(0, 5)).toEqual([
-      { index: 0, active: true, note: 60, velocity: 100, selected: true, playhead: true },
-      { index: 1, active: false, note: 61, velocity: 100, selected: false, playhead: false },
-      { index: 2, active: false, note: 62, velocity: 100, selected: false, playhead: false },
-      { index: 3, active: false, note: 63, velocity: 100, selected: false, playhead: false },
-      { index: 4, active: true, note: 64, velocity: 100, selected: false, playhead: false },
+      {
+        index: 0,
+        active: true,
+        note: 60,
+        velocity: 100,
+        selected: true,
+        playhead: true,
+      },
+      {
+        index: 1,
+        active: false,
+        note: 61,
+        velocity: 100,
+        selected: false,
+        playhead: false,
+      },
+      {
+        index: 2,
+        active: false,
+        note: 62,
+        velocity: 100,
+        selected: false,
+        playhead: false,
+      },
+      {
+        index: 3,
+        active: false,
+        note: 63,
+        velocity: 100,
+        selected: false,
+        playhead: false,
+      },
+      {
+        index: 4,
+        active: true,
+        note: 64,
+        velocity: 100,
+        selected: false,
+        playhead: false,
+      },
     ]);
     expect(snapshot.selectedTrackIndex).toBe(0);
-    expect(snapshot.clipCells.find((cell) => cell.trackIndex === 0 && cell.sceneIndex === 0)).toMatchObject({
+    expect(
+      snapshot.clipCells.find(
+        (cell) => cell.trackIndex === 0 && cell.sceneIndex === 0,
+      ),
+    ).toMatchObject({
       clipId: "clip-1",
     });
-    expect(snapshot.clipCells.find((cell) => cell.trackIndex === 0 && cell.sceneIndex === 7)).toMatchObject({
+    expect(
+      snapshot.clipCells.find(
+        (cell) => cell.trackIndex === 0 && cell.sceneIndex === 7,
+      ),
+    ).toMatchObject({
       clipId: null,
     });
   });
@@ -287,8 +380,18 @@ describe("Overture Next core", () => {
     const sequence = createDefaultSequence();
 
     expect(sequence.length).toBe(16);
-    expect(sequence.steps[0]).toMatchObject({ index: 0, active: true, note: 60, velocity: 100 });
-    expect(sequence.steps[1]).toMatchObject({ index: 1, active: false, note: 61, velocity: 100 });
+    expect(sequence.steps[0]).toMatchObject({
+      index: 0,
+      active: true,
+      note: 60,
+      velocity: 100,
+    });
+    expect(sequence.steps[1]).toMatchObject({
+      index: 1,
+      active: false,
+      note: 61,
+      velocity: 100,
+    });
     expect(sequence.steps[4].active).toBe(true);
   });
 
@@ -303,17 +406,26 @@ describe("Overture Next core", () => {
 
     project.toggleSequenceStepAt({ trackIndex: 0, sceneIndex: 0 }, 1);
 
-    expect(project.clipFor({ trackIndex: 0, sceneIndex: 0 })?.sequence.steps[1].active).toBe(true);
+    expect(
+      project.clipFor({ trackIndex: 0, sceneIndex: 0 })?.sequence.steps[1]
+        .active,
+    ).toBe(true);
     expect(secondClip.sequence.steps[1].active).toBe(false);
   });
 
   test("selects an empty clip cell without creating an Overture Clip", () => {
     const project = createDefaultProject();
-    const occupied = project.clipCellSnapshots().filter((cell) => cell.clipId).length;
+    const occupied = project
+      .clipCellSnapshots()
+      .filter((cell) => cell.clipId).length;
 
     expect(project.clipFor({ trackIndex: 0, sceneIndex: 7 })).toBeNull();
-    expect(project.clipCellSnapshots().filter((cell) => cell.clipId)).toHaveLength(occupied);
-    expect(project.clipCellAt({ trackIndex: 0, sceneIndex: 7 }).clipId).toBeNull();
+    expect(
+      project.clipCellSnapshots().filter((cell) => cell.clipId),
+    ).toHaveLength(occupied);
+    expect(
+      project.clipCellAt({ trackIndex: 0, sceneIndex: 7 }).clipId,
+    ).toBeNull();
   });
 
   test("wraps the transport playhead through the default playback timeline", () => {
@@ -339,7 +451,12 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+      },
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 0 },
@@ -350,7 +467,12 @@ describe("Overture Next core", () => {
     ]);
     for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 64 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 64,
+      },
     ]);
   });
 
@@ -377,7 +499,12 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 60,
+      },
       {
         kind: "track-note-on",
         route: { kind: "schwung", schwungChainIndex: 0 },
@@ -390,7 +517,12 @@ describe("Overture Next core", () => {
     core.drainHostCommands();
     for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 64 },
+      {
+        kind: "track-note-off",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 64,
+      },
       {
         kind: "track-note-on",
         route: { kind: "schwung", schwungChainIndex: 0 },
@@ -401,7 +533,12 @@ describe("Overture Next core", () => {
     ]);
     for (let i = 0; i < 12; i++) core.advancePlaybackTick();
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 65 },
+      {
+        kind: "track-note-off",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 65,
+      },
     ]);
   });
 
@@ -422,7 +559,12 @@ describe("Overture Next core", () => {
 
     core.dispatchControlInput({ kind: "play" });
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "move", moveTrackTarget: 0 }, trackIndex: 0, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "move", moveTrackTarget: 0 },
+        trackIndex: 0,
+        note: 60,
+      },
     ]);
 
     core.dispatchControlInput({ kind: "shift", held: true });
@@ -474,7 +616,12 @@ describe("Overture Next core", () => {
     for (let i = 0; i < 48; i++) core.advancePlaybackTick();
 
     expect(core.drainHostCommands()).toEqual([
-      { kind: "track-note-off", route: { kind: "schwung", schwungChainIndex: 0 }, trackIndex: 4, note: 60 },
+      {
+        kind: "track-note-off",
+        route: { kind: "schwung", schwungChainIndex: 0 },
+        trackIndex: 4,
+        note: 60,
+      },
       {
         kind: "track-note-on",
         route: { kind: "schwung", schwungChainIndex: 0 },

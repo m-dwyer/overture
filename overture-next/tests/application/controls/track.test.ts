@@ -7,7 +7,12 @@ describe("Overture Next Track control interpretation", () => {
     const control = createInitialControlSurfaceContext();
     control.selectTrackPreservingScene(5);
 
-    expect(interpretTrackViewControl({ kind: "pad", held: true, padIndex: 7, velocity: 101 }, control.snapshot())).toEqual({
+    expect(
+      interpretTrackViewControl(
+        { kind: "pad", held: true, padIndex: 7, velocity: 101 },
+        control.snapshot(),
+      ),
+    ).toEqual({
       kind: "audition-note",
       held: true,
       note: 67,
@@ -20,7 +25,12 @@ describe("Overture Next Track control interpretation", () => {
     const control = createInitialControlSurfaceContext();
     control.selectTrackPreservingScene(5);
 
-    expect(interpretTrackViewControl({ kind: "pad", held: false, padIndex: 7, velocity: 0 }, control.snapshot())).toEqual({
+    expect(
+      interpretTrackViewControl(
+        { kind: "pad", held: false, padIndex: 7, velocity: 0 },
+        control.snapshot(),
+      ),
+    ).toEqual({
       kind: "audition-note",
       held: false,
       note: 67,
@@ -33,11 +43,18 @@ describe("Overture Next Track control interpretation", () => {
     const control = createInitialControlSurfaceContext();
     control.setSurfaceControlHeld("shift", true);
 
-    expect(interpretTrackViewControl({ kind: "track-row", row: 1 }, control.snapshot())).toEqual({
+    expect(
+      interpretTrackViewControl(
+        { kind: "track-row", row: 1 },
+        control.snapshot(),
+      ),
+    ).toEqual({
       kind: "select-track",
       trackIndex: 5,
     });
-    expect(interpretTrackViewControl({ kind: "step", step: 1 }, control.snapshot())).toEqual({
+    expect(
+      interpretTrackViewControl({ kind: "step", step: 1 }, control.snapshot()),
+    ).toEqual({
       kind: "toggle-step",
       stepIndex: 1,
     });

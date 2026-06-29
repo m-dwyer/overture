@@ -13,7 +13,9 @@ export interface BrowserObservabilityPort {
   readManualAnnotation(): ManualAnnotation;
 }
 
-export function createGlobalBrowserObservability(target: typeof globalThis = globalThis): BrowserObservabilityPort {
+export function createGlobalBrowserObservability(
+  target: typeof globalThis = globalThis,
+): BrowserObservabilityPort {
   return {
     clear() {
       target.OVT = undefined;

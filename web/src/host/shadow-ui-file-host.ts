@@ -3,7 +3,11 @@ import type { FileStore } from "./sinks.js";
 
 type FileHostApi = Pick<
   HostApi,
-  "host_write_file" | "host_read_file" | "host_file_exists" | "host_ensure_dir" | "host_remove_dir"
+  | "host_write_file"
+  | "host_read_file"
+  | "host_file_exists"
+  | "host_ensure_dir"
+  | "host_remove_dir"
 >;
 
 export function createFileHostApi(files: FileStore): FileHostApi {
