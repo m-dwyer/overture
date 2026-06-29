@@ -1,4 +1,5 @@
 import type { CoreState, HostCommand } from "../types";
+import { launchClipCell, selectClipCell } from "../workflows";
 import type { DomainIntent, DomainIntentTransaction } from "./types";
 
 export function applyIntent(intent: DomainIntent, state: CoreState): DomainIntentTransaction {
@@ -50,22 +51,14 @@ export function applyIntent(intent: DomainIntent, state: CoreState): DomainInten
     return applied([hostCommand]);
   }
   if (intent.kind === "select-clip-cell") {
-    selectValidatedClipCell(state, intent.coordinate);
-    return applied();
+    return selectClipCell(state, intent.coordinate);
   }
   if (intent.kind === "launch-clip-cell") {
-    selectValidatedClipCell(state, intent.coordinate);
-    return applied(state.playback.launchClipCell(state.project, intent.coordinate, state.transport.clock()));
+    return launchClipCell(state, intent.coordinate);
   }
   return { applied: false, hostCommands: [] };
 }
 
 function applied(hostCommands: HostCommand[] = []): DomainIntentTransaction {
   return { applied: true, hostCommands };
-}
-
-function selectValidatedClipCell(state: CoreState, coordinate: { trackIndex: number; sceneIndex: number }): void {
-  state.project.track(coordinate.trackIndex);
-  state.project.clipCellAt(coordinate);
-  state.control.selectClipCell(coordinate);
 }
