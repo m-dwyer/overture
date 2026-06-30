@@ -1,26 +1,18 @@
+import type { TransportClock, TransportTick } from "./transport-timing";
+
 export const DEFAULT_TICKS_PER_STEP = 12;
 
-export interface TransportStateSnapshot {
+export interface TransportSnapshot {
   readonly playing: boolean;
   readonly tick: number;
   readonly playhead: number;
   readonly ticksPerStep: number;
 }
 
-export interface TransportClock {
-  readonly playhead: number;
-  readonly tick: number;
-}
-
-export interface TransportTick {
-  readonly injectedStep: number | null;
-  readonly tick: number;
-}
-
 /**
  * Owns transport timing and exposes snapshots/read contracts for other core modules.
  */
-export class TransportState {
+export class Transport {
   private playingValue: boolean;
   private tickValue: number;
   private playheadValue: number;
@@ -36,7 +28,7 @@ export class TransportState {
   /**
    * Returns the complete immutable transport timing snapshot for UI derivation.
    */
-  snapshot(): TransportStateSnapshot {
+  snapshot(): TransportSnapshot {
     return {
       playing: this.playingValue,
       tick: this.tickValue,
@@ -98,6 +90,8 @@ export class TransportState {
 
 export function createTransport(
   ticksPerStep = DEFAULT_TICKS_PER_STEP,
-): TransportState {
-  return new TransportState(ticksPerStep);
+): Transport {
+  return new Transport(ticksPerStep);
 }
+
+export type { TransportClock, TransportTick } from "./transport-timing";

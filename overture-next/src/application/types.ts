@@ -52,5 +52,5 @@ export interface OvertureCore {
   snapshot(): CoreSnapshot;
   selectedSequenceLength(): number;
   drainHostCommands(): HostCommand[];
-  stopPlayback(): HostCommand[];
+  stopPlayback(): void;
 }

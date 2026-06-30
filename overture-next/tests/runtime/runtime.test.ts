@@ -52,6 +52,7 @@ describe("Overture Next runtime", () => {
     const runtime = createOvertureRuntime(adapter);
     runtime.init();
     runtime.debug.core.stopPlayback();
+    runtime.debug.core.drainHostCommands();
     commandLog.length = 0;
 
     runtime.debug.core.dispatchControlInput({ kind: "shift", held: true });
@@ -83,6 +84,7 @@ describe("Overture Next runtime", () => {
     const runtime = createOvertureRuntime(adapter);
     runtime.init();
     runtime.debug.core.stopPlayback();
+    runtime.debug.core.drainHostCommands();
     commands.length = 0;
     const renderedFrameCount = frames.length;
 

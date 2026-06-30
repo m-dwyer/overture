@@ -13,7 +13,7 @@ import {
   createTrackLaunchScheduler,
   type TrackLaunchScheduler,
 } from "./internal/track-launch-scheduler";
-import type { PlaybackClock, PlaybackTick } from "./types";
+import type { TransportClock, TransportTick } from "../transport-timing";
 
 export interface PlaybackAdvance {
   injectedStep: number | null;
@@ -33,7 +33,7 @@ export interface PlaybackSnapshot {
 
 export interface PlaybackTiming {
   readonly running: boolean;
-  readonly clock: Readonly<PlaybackClock>;
+  readonly clock: Readonly<TransportClock>;
 }
 
 /**
@@ -59,9 +59,9 @@ export class Playback {
    * are emitted every tick; step note injection happens only when the transport
    * advances to a new sequencer step.
    */
-  advanceTick(
+  processTransportTick(
     project: ProjectPlaybackReadModel,
-    tick: Readonly<PlaybackTick>,
+    tick: Readonly<TransportTick>,
   ): PlaybackAdvance {
     const hostCommands = this.noteGates.drainDue(tick.tick);
     if (tick.injectedStep !== null) {
@@ -76,7 +76,7 @@ export class Playback {
         this.trackLaunches.applyQueuedChange(track.trackIndex);
       }
       hostCommands.push(
-        ...this.injectStep(project, {
+        ...this.startAt(project, {
           playhead: tick.injectedStep,
           tick: tick.tick,
         }),
@@ -89,9 +89,9 @@ export class Playback {
    * Emits note commands for the current playhead and schedules matching
    * note-offs. Transport owns the clock; playback owns the emitted note work.
    */
-  injectStep(
+  startAt(
     project: ProjectPlaybackReadModel,
-    clock: Readonly<PlaybackClock>,
+    clock: Readonly<TransportClock>,
   ): HostCommand[] {
     const hostCommands: HostCommand[] = [];
     for (const trackPlayback of this.trackLaunches.playingTracks()) {
@@ -127,7 +127,7 @@ export class Playback {
    */
   stopAll(
     project: ProjectPlaybackReadModel,
-    clock: Readonly<PlaybackClock>,
+    clock: Readonly<TransportClock>,
   ): HostCommand[] {
     const hostCommands: HostCommand[] = [];
     for (const track of this.trackLaunches.snapshot().tracks) {
@@ -141,9 +141,9 @@ export class Playback {
    * Emits note-off commands needed to stop current sound while preserving
    * Playback-owned playing Clip focus for transport resume.
    */
-  silenceAll(
+  pauseAt(
     project: ProjectPlaybackReadModel,
-    clock: Readonly<PlaybackClock>,
+    clock: Readonly<TransportClock>,
   ): HostCommand[] {
     const hostCommands: HostCommand[] = [];
     for (const track of this.trackLaunches.snapshot().tracks) {
@@ -214,7 +214,7 @@ export class Playback {
   private silenceTrack(
     project: ProjectPlaybackReadModel,
     trackIndex: number,
-    clock: Readonly<PlaybackClock>,
+    clock: Readonly<TransportClock>,
   ): HostCommand[] {
     const pending = this.noteGates.drainTrack(trackIndex);
     if (pending.length > 0) return pending;

@@ -62,8 +62,8 @@ export function createOvertureRuntime(
 
   function onUnload(): void {
     drainCommands();
-    for (const command of core.stopPlayback())
-      hostPorts.outbound.commands.execute(command);
+    core.stopPlayback();
+    drainCommands();
   }
 
   function isBootSplashVisible(): boolean {

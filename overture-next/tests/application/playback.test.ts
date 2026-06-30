@@ -48,7 +48,7 @@ describe("Overture Next playback", () => {
     expect(playback.snapshot().tracks[4].playingClipId).toBeNull();
   });
 
-  test("injects note commands for active steps in playing clips", () => {
+  test("starts playback at active steps in playing clips", () => {
     const project = createDefaultProject();
     const playback = createPlayback();
 
@@ -58,7 +58,7 @@ describe("Overture Next playback", () => {
       stoppedTiming(),
     );
 
-    expect(playback.injectStep(project, { playhead: 0, tick: 0 })).toEqual([
+    expect(playback.startAt(project, { playhead: 0, tick: 0 })).toEqual([
       {
         kind: "track-note-on",
         route: { kind: "move", moveTrackTarget: 2 },
@@ -78,16 +78,16 @@ describe("Overture Next playback", () => {
       { trackIndex: 2, sceneIndex: 0 },
       stoppedTiming(),
     );
-    playback.injectStep(project, { playhead: 0, tick: 0 });
+    playback.startAt(project, { playhead: 0, tick: 0 });
 
     for (let tick = 1; tick < 12; tick++) {
       expect(
-        playback.advanceTick(project, { injectedStep: null, tick })
+        playback.processTransportTick(project, { injectedStep: null, tick })
           .hostCommands,
       ).toEqual([]);
     }
     expect(
-      playback.advanceTick(project, { injectedStep: null, tick: 12 })
+      playback.processTransportTick(project, { injectedStep: null, tick: 12 })
         .hostCommands,
     ).toEqual([
       {
@@ -99,7 +99,7 @@ describe("Overture Next playback", () => {
     ]);
   });
 
-  test("emits stop note commands for active playing clip steps", () => {
+  test("stops all playback and clears playing clip focus", () => {
     const project = createDefaultProject();
     const playback = createPlayback();
 

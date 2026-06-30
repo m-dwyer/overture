@@ -2,7 +2,7 @@ import type { ClipCellCoordinateInput } from "../../domain/project";
 import type { ControlSurfaceContext } from "../../state/control-surface-context";
 import type { OvertureProject } from "../../state/project";
 import type { Playback } from "../playback";
-import type { TransportState } from "../transport";
+import type { Transport } from "../transport";
 import { selectClipCell } from "./select-clip-cell";
 import { operationApplied, type OperationResult } from "./types";
 
@@ -10,7 +10,7 @@ export interface LaunchClipCellContext {
   readonly control: ControlSurfaceContext;
   readonly project: OvertureProject;
   readonly playback: Playback;
-  readonly transport: TransportState;
+  readonly transport: Transport;
 }
 
 export function launchClipCell(

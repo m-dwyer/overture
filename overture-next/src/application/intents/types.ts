@@ -8,7 +8,7 @@ export type DomainIntent =
       control: HeldSurfaceControl;
       held: boolean;
     }
-  | { kind: "toggle-transport" }
+  | { kind: "toggle-transport-playback" }
   | { kind: "toggle-view" }
   | { kind: "select-track"; trackIndex: number }
   | { kind: "toggle-step"; stepIndex: number }

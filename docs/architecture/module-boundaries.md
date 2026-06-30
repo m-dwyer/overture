@@ -36,11 +36,13 @@ what is public, what is private, and which dependencies are allowed?
 Concrete adapters belong in `src/host/`. The Schwung adapter implements the
 `ControlSurfacePort` inbound boundary by converting raw Move MIDI input into
 typed control input. Application code interprets control input against Control
-Surface Context. The core composition root wires Domain Intent handlers to
-workflow operations with narrow owner contexts. Those operations coordinate
-Project, Control Surface Context, Transport, and Playback, and emit commands
-such as `track-note-on` and `track-note-off`; the host adapter converts those
-commands to Move or Schwung MIDI through outbound ports.
+Surface Context. The core facade owns application owner composition and the
+command outbox, while focused application modules apply Domain Intents,
+coordinate playback workflow, and derive the Core Read Model. Workflow
+operations use narrow owner contexts to coordinate Project, Control Surface
+Context, Transport, and Playback, and emit commands such as `track-note-on` and
+`track-note-off`; the host adapter converts those commands to Move or Schwung
+MIDI through outbound ports.
 
 ## Public APIs and Internals
 
@@ -76,10 +78,11 @@ Keep this table current when a boundary changes materially.
 | Project state owner | `src/state/project.ts` | Project construction, lookup, and Project-owned mutation APIs | None | ESLint state ownership rule |
 | Surface addressing state helpers | `src/state/surface-addressing.ts` | Track Bank row helpers | None | dependency-cruiser state layer rules |
 | Control input interpretation | `src/application/controls/` | `interpret-control.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
-| Domain intent dispatch | `src/application/intents/` | `apply-intent.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
-| Transport state owner | `src/application/transport.ts` | Owner-object class and timing read contracts | None | ESLint state ownership rule |
+| Domain intent dispatch | `src/application/intents/` | `apply-core-intent.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
+| Transport state owner | `src/application/transport.ts`, `src/application/transport-timing.ts` | Owner-object class and timing read contracts | None | ESLint state ownership rule |
 | Playback state and lifecycle | `src/application/playback/` | `playback/index.ts` | `playback/internal/` | dependency-cruiser public/internal rules |
-| Application core and read model | `src/application/core.ts`, `src/application/types.ts` | Core factory, `CoreSnapshot`, `OvertureCore` | Private owner composition and read-model helpers in `core.ts` | dependency-cruiser application layer rules |
+| Application core facade and read model | `src/application/core.ts`, `src/application/types.ts`, `src/application/core-owners.ts`, `src/application/core-read-model.ts` | Core factory, owner composition, `CoreSnapshot`, `OvertureCore`, read-model projection | Core facade command outbox in `core.ts`; projection helpers in `core-read-model.ts` | dependency-cruiser application layer rules |
+| Application transport/playback coordination | `src/application/transport-playback.ts` | Transport tick and playback stop coordination | Playback scheduling internals in `src/application/playback/internal/` | dependency-cruiser application layer rules |
 | Host translation | `src/host/` | Host adapter and host types | Adapter-local helpers | dependency-cruiser host boundary rules |
 | Runtime-host boundary contracts | `src/ports/` | `inbound.ts`, `outbound.ts`, `host-ports.ts` | None | dependency-cruiser ports/runtime rules |
 | View models | `src/view/` | `view/index.ts`, `view/<view>/index.ts` | `view/internal/`, `view/<view>/internal/` | dependency-cruiser view/public/internal rules |
