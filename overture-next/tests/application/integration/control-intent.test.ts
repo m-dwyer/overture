@@ -11,9 +11,8 @@ import {
   selectClipCell,
   selectTrack,
   setSurfaceControlHeld,
-  startTransport,
-  stopTransport,
   toggleSelectedStep,
+  toggleTransport as toggleTransportOperation,
   toggleView,
 } from "../../../src/application/operations";
 import { createPlayback } from "../../../src/application/playback";
@@ -709,14 +708,7 @@ function createIntentHandlers(state: TestCoreState): IntentHandlers {
       return setSurfaceControlHeld({ control: state.control }, control, held);
     },
     toggleTransport() {
-      if (state.transport.isPlaying()) {
-        return stopTransport({
-          project: state.project,
-          playback: state.playback,
-          transport: state.transport,
-        });
-      }
-      return startTransport({
+      return toggleTransportOperation({
         project: state.project,
         playback: state.playback,
         transport: state.transport,
