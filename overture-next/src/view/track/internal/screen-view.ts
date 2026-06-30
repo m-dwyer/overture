@@ -49,5 +49,7 @@ function createTrackScreenPageView(
       "Chain " + (snapshot.selectedTrackRoute.schwungChainIndex + 1),
     synthModuleId: chain?.synthModule?.id ?? null,
     synthModuleName: chain?.synthModule?.name ?? null,
+    synthParameters:
+      chain?.synthModule?.parameters.map((parameter) => parameter.name) ?? [],
   };
 }

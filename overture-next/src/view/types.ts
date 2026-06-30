@@ -24,6 +24,7 @@ export type TrackScreenPageView =
       chainName: string;
       synthModuleId: string | null;
       synthModuleName: string | null;
+      synthParameters: readonly string[];
     }
   | {
       kind: "sound";

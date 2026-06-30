@@ -32,6 +32,12 @@ export interface CoreSnapshotPlaybackTrack {
 export interface SchwungModuleReadModel {
   id: string;
   name: string;
+  parameters: readonly SchwungParameterReadModel[];
+}
+
+export interface SchwungParameterReadModel {
+  id: string;
+  name: string;
 }
 
 export interface SchwungChainReadModel {

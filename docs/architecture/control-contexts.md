@@ -93,6 +93,12 @@ Project data, or host/module capabilities. `ControlSurfaceContext` should
 remember the current interaction context; concrete page metadata should live
 with the feature that owns it.
 
+The current Track View Sound page reads Schwung synth module and root parameter
+metadata through a typed host read port when the selected Track is
+Schwung-routed. That metadata is a projection for display only: parameter
+values, module selection, editing state, and persistence remain outside
+`ControlSurfaceContext` until concrete workflows require them.
+
 ## Persistence
 
 Persist restorable interaction context separately from durable Project data. A
