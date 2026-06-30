@@ -10,9 +10,9 @@ import {
   type NoteGateScheduler,
 } from "./internal/note-gate-scheduler";
 import {
-  createTrackPlaybackRegistry,
-  type TrackPlaybackRegistry,
-} from "./internal/track-playback-registry";
+  createTrackLaunchScheduler,
+  type TrackLaunchScheduler,
+} from "./internal/track-launch-scheduler";
 import type { PlaybackClock, PlaybackTick } from "./types";
 
 export interface PlaybackAdvance {
@@ -42,11 +42,11 @@ export interface PlaybackTiming {
  * contracts to resolve playing clips and routes, but never mutates it.
  */
 export class Playback {
-  private readonly tracks: TrackPlaybackRegistry;
+  private readonly trackLaunches: TrackLaunchScheduler;
   private readonly noteGates: NoteGateScheduler;
 
   private constructor() {
-    this.tracks = createTrackPlaybackRegistry();
+    this.trackLaunches = createTrackLaunchScheduler();
     this.noteGates = createNoteGateScheduler();
   }
 
@@ -69,11 +69,11 @@ export class Playback {
         playhead: tick.injectedStep,
         tick: tick.tick,
       };
-      for (const track of this.tracks.tracksWithQueuedChanges()) {
+      for (const track of this.trackLaunches.tracksWithQueuedChanges()) {
         hostCommands.push(
           ...this.silenceTrack(project, track.trackIndex, clock),
         );
-        this.tracks.applyQueuedChange(track.trackIndex);
+        this.trackLaunches.applyQueuedChange(track.trackIndex);
       }
       hostCommands.push(
         ...this.injectStep(project, {
@@ -94,7 +94,7 @@ export class Playback {
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
     const hostCommands: HostCommand[] = [];
-    for (const trackPlayback of this.tracks.playingTracks()) {
+    for (const trackPlayback of this.trackLaunches.playingTracks()) {
       if (!trackPlayback.playingClipId) continue;
       const clip = project.clipById(trackPlayback.playingClipId);
       if (!clip) continue;
@@ -130,10 +130,10 @@ export class Playback {
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
     const hostCommands: HostCommand[] = [];
-    for (const track of this.tracks.snapshot().tracks) {
+    for (const track of this.trackLaunches.snapshot().tracks) {
       hostCommands.push(...this.silenceTrack(project, track.trackIndex, clock));
     }
-    this.tracks.stopAll();
+    this.trackLaunches.stopAll();
     return hostCommands;
   }
 
@@ -146,10 +146,10 @@ export class Playback {
     clock: Readonly<PlaybackClock>,
   ): HostCommand[] {
     const hostCommands: HostCommand[] = [];
-    for (const track of this.tracks.snapshot().tracks) {
+    for (const track of this.trackLaunches.snapshot().tracks) {
       hostCommands.push(...this.silenceTrack(project, track.trackIndex, clock));
     }
-    this.tracks.clearQueuedChanges();
+    this.trackLaunches.clearQueuedChanges();
     return hostCommands;
   }
 
@@ -166,10 +166,13 @@ export class Playback {
     if (!cell.clipId)
       return this.requestTrackStop(project, coordinate.trackIndex, timing);
     if (timing.running) {
-      this.tracks.queueToggle(coordinate.trackIndex, cell.clipId);
+      this.trackLaunches.queueToggle(coordinate.trackIndex, cell.clipId);
       return [];
     }
-    const result = this.tracks.toggleNow(coordinate.trackIndex, cell.clipId);
+    const result = this.trackLaunches.toggleNow(
+      coordinate.trackIndex,
+      cell.clipId,
+    );
     if (result.kind === "stopped")
       return this.silenceTrack(project, coordinate.trackIndex, timing.clock);
     return [];
@@ -185,11 +188,11 @@ export class Playback {
     timing: Readonly<PlaybackTiming>,
   ): HostCommand[] {
     if (timing.running) {
-      this.tracks.queueStop(trackIndex);
+      this.trackLaunches.queueStop(trackIndex);
       return [];
     }
     const hostCommands = this.silenceTrack(project, trackIndex, timing.clock);
-    this.tracks.stop(trackIndex);
+    this.trackLaunches.stopNow(trackIndex);
     return hostCommands;
   }
 
@@ -199,13 +202,13 @@ export class Playback {
   seedDefaultScene(project: ProjectCoreReadModel): void {
     for (const cell of project.clipCellSnapshots()) {
       if (cell.sceneIndex !== 0 || !cell.clipId) continue;
-      this.tracks.launch(cell.trackIndex, cell.clipId);
+      this.trackLaunches.launchNow(cell.trackIndex, cell.clipId);
     }
   }
 
   /** Per-track playing/queued clip focus for read-only projections. */
   snapshot(): PlaybackSnapshot {
-    return this.tracks.snapshot();
+    return this.trackLaunches.snapshot();
   }
 
   private silenceTrack(
@@ -215,7 +218,7 @@ export class Playback {
   ): HostCommand[] {
     const pending = this.noteGates.drainTrack(trackIndex);
     if (pending.length > 0) return pending;
-    const playingClipId = this.tracks.playingClipIdForTrack(trackIndex);
+    const playingClipId = this.trackLaunches.playingClipIdForTrack(trackIndex);
     if (!playingClipId) return [];
     const clip = project.clipById(playingClipId);
     if (!clip) return [];
