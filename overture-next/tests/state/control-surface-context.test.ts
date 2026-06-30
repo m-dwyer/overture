@@ -10,6 +10,12 @@ describe("Overture Next Control Surface Context", () => {
       heldControls: [],
       selectedStep: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: "default",
+        selectedParameterIdByPage: {
+          default: "default",
+        },
+      },
     });
   });
 
@@ -55,7 +61,39 @@ describe("Overture Next Control Surface Context", () => {
     expect(control.snapshot().heldControls).toEqual([]);
   });
 
-  test("rejects invalid selected Clip Cell and Step values", () => {
+  test("keeps Track View parameter selection per selected page", () => {
+    const control = createInitialControlSurfaceContext();
+
+    control.selectTrackViewPage("synth");
+    control.selectTrackViewPageParameter("cutoff");
+    control.selectTrackViewPage("fx");
+    control.selectTrackViewPageParameter("mix");
+    control.selectTrackViewPage("synth");
+
+    expect(control.snapshot().trackView).toEqual({
+      selectedPageId: "synth",
+      selectedParameterIdByPage: {
+        default: "default",
+        synth: "cutoff",
+        fx: "mix",
+      },
+    });
+  });
+
+  test("copies Track View page context into snapshots", () => {
+    const control = createInitialControlSurfaceContext();
+    const snapshot = control.snapshot();
+
+    (
+      snapshot.trackView.selectedParameterIdByPage as Record<string, string>
+    ).default = "mutated";
+
+    expect(control.snapshot().trackView.selectedParameterIdByPage.default).toBe(
+      "default",
+    );
+  });
+
+  test("rejects invalid selected Clip Cell, Step, and Track View page values", () => {
     const control = createInitialControlSurfaceContext();
 
     expect(() =>
@@ -63,6 +101,12 @@ describe("Overture Next Control Surface Context", () => {
     ).toThrow("Invalid Track Index 8; expected integer from 0 to 7");
     expect(() => control.selectStep(16)).toThrow(
       "Invalid Step Index 16; expected integer from 0 to 15",
+    );
+    expect(() => control.selectTrackViewPage("")).toThrow(
+      "Invalid Root View Page ID; expected non-empty string",
+    );
+    expect(() => control.selectTrackViewPageParameter("")).toThrow(
+      "Invalid Parameter ID; expected non-empty string",
     );
   });
 });
