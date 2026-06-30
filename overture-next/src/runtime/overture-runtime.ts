@@ -1,5 +1,10 @@
 import { createOvertureCore } from "../application/core";
-import type { OvertureCore } from "../application/types";
+import type {
+  CoreSnapshot,
+  OvertureCore,
+  SurfaceHostReadModel,
+} from "../application/types";
+import { TRACK_VIEW_SOUND_PAGE_ID } from "../state/control-surface-context";
 import type { OvertureHostPorts } from "../ports/host-ports";
 import { renderLeds } from "../render/render-leds";
 import { renderScreen } from "../render/render-screen";
@@ -88,7 +93,10 @@ export function createOvertureRuntime(
   function render(): void {
     const snapshot = core.snapshot();
     hostPorts.outbound.runtime.publishState(snapshot);
-    const view = createOvertureSurfaceView(snapshot);
+    const view = createOvertureSurfaceView(
+      snapshot,
+      createSurfaceHostReadModel(snapshot),
+    );
     renderScreen(
       splashTicks > 0 ? getSplashView() : view.screen,
       hostPorts.outbound.display,
@@ -107,6 +115,23 @@ export function createOvertureRuntime(
   function drainCommands(): void {
     for (const command of core.drainHostCommands())
       hostPorts.outbound.commands.execute(command);
+  }
+
+  function createSurfaceHostReadModel(
+    snapshot: CoreSnapshot,
+  ): SurfaceHostReadModel {
+    if (
+      snapshot.activeView !== "track" ||
+      snapshot.trackView.selectedPageId !== TRACK_VIEW_SOUND_PAGE_ID ||
+      snapshot.selectedTrackRoute.kind !== "schwung"
+    )
+      return {};
+    return {
+      selectedSchwungChain:
+        hostPorts.outbound.schwungChains?.readChain(
+          snapshot.selectedTrackRoute.schwungChainIndex,
+        ) ?? null,
+    };
   }
 
   return {

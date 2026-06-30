@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
+import {
+  createInitialControlSurfaceContext,
+  DEFAULT_TRACK_VIEW_PAGE_ID,
+  TRACK_VIEW_SOUND_PAGE_ID,
+} from "../../../src/state/control-surface-context";
 import { interpretControl } from "../../../src/application/controls/interpret-control";
 import { applyCoreIntent } from "../../../src/application/intents/apply-core-intent";
 import type {
@@ -97,6 +101,46 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(interpretControl({ kind: "play" }, control.snapshot())).toEqual({
       kind: "toggle-transport-playback",
     });
+  });
+
+  test("toggles the Track View Sound page from Shift plus Step 3", () => {
+    const state = createTestCoreState();
+    const hostCommands: HostCommand[] = [];
+
+    state.control.toggleActiveView();
+    state.control.setSurfaceControlHeld("shift", true);
+
+    const intent = interpretControl(
+      { kind: "step", step: 2 },
+      state.control.snapshot(),
+    );
+
+    expect(intent).toEqual({
+      kind: "select-track-view-page",
+      pageId: TRACK_VIEW_SOUND_PAGE_ID,
+    });
+    if (!intent) throw new Error("Expected Sound page intent");
+    expect(applyIntentAndCollect(intent, state, hostCommands)).toBe(true);
+    expect(state.control.snapshot().trackView.selectedPageId).toBe(
+      TRACK_VIEW_SOUND_PAGE_ID,
+    );
+    expect(hostCommands).toEqual([]);
+
+    const closeIntent = interpretControl(
+      { kind: "step", step: 2 },
+      state.control.snapshot(),
+    );
+
+    expect(closeIntent).toEqual({
+      kind: "select-track-view-page",
+      pageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+    });
+    if (!closeIntent) throw new Error("Expected default page intent");
+    expect(applyIntentAndCollect(closeIntent, state, hostCommands)).toBe(true);
+    expect(state.control.snapshot().trackView.selectedPageId).toBe(
+      DEFAULT_TRACK_VIEW_PAGE_ID,
+    );
+    expect(hostCommands).toEqual([]);
   });
 
   test("applies clip-cell selection without creating clips", () => {

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
 import type { CoreSnapshot } from "../../src/application/types";
+import {
+  DEFAULT_TRACK_VIEW_PAGE_ID,
+  TRACK_VIEW_SOUND_PAGE_ID,
+} from "../../src/state/control-surface-context";
 import { trackView } from "../../src/view/track";
 
 describe("Overture Next Track View module", () => {
@@ -14,6 +18,10 @@ describe("Overture Next Track View module", () => {
       playing: true,
       selectedClipId: "clip-6",
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
         {
@@ -42,6 +50,7 @@ describe("Overture Next Track View module", () => {
       selectedTrackIndex: 5,
       playing: true,
       selectedStep: 1,
+      trackPage: { kind: "sequence" },
       steps: [
         { index: 0, active: true, selected: false, playhead: false },
         { index: 1, active: false, selected: true, playhead: true },
@@ -60,6 +69,10 @@ describe("Overture Next Track View module", () => {
       playing: true,
       selectedClipId: "clip-6",
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
         {
@@ -87,5 +100,74 @@ describe("Overture Next Track View module", () => {
       { kind: "track-bank-target", surface: { kind: "track-row", row: 2 } },
       { kind: "track-bank-target", surface: { kind: "track-row", row: 3 } },
     ]);
+  });
+
+  test("derives a Schwung Sound page from selected Track View page and host reads", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 5,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
+      visibleTrackBank: 1,
+      activeView: "track",
+      heldControls: [],
+      selectedStep: 1,
+      playing: true,
+      selectedClipId: "clip-6",
+      selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: TRACK_VIEW_SOUND_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
+      clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
+      steps: [],
+    };
+
+    expect(
+      trackView.createScreenView(snapshot, {
+        selectedSchwungChain: {
+          chainIndex: 1,
+          name: "Slot2",
+          synthModule: { id: "westfold", name: "Westfold" },
+        },
+      }),
+    ).toMatchObject({
+      kind: "track",
+      trackPage: {
+        kind: "sound",
+        route: "schwung",
+        chainIndex: 1,
+        chainName: "Slot2",
+        synthModuleId: "westfold",
+        synthModuleName: "Westfold",
+      },
+    });
+  });
+
+  test("derives a conservative Move Sound page placeholder", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 1,
+      selectedTrackRoute: { kind: "move", moveTrackTarget: 1 },
+      visibleTrackBank: 0,
+      activeView: "track",
+      heldControls: [],
+      selectedStep: 1,
+      playing: false,
+      selectedClipId: "clip-2",
+      selectedClipCell: { trackIndex: 1, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: TRACK_VIEW_SOUND_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
+      clipCells: [{ trackIndex: 1, sceneIndex: 0, clipId: "clip-2" }],
+      steps: [],
+    };
+
+    expect(trackView.createScreenView(snapshot)).toMatchObject({
+      kind: "track",
+      trackPage: {
+        kind: "sound",
+        route: "move",
+        moveTrackTarget: 1,
+      },
+    });
   });
 });

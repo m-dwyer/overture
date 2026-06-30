@@ -25,6 +25,36 @@ describe("Overture Next screen rendering", () => {
     expect(calls).not.toContain("print:Step 1");
     expect(calls).not.toContain("rect");
   });
+
+  test("renders Track View Sound page chain and synth data", () => {
+    const calls: string[] = [];
+    const display = createDisplayRecorder(calls);
+    const view: ScreenView = {
+      kind: "track",
+      title: "OVERTURE NEXT",
+      selectedTrackIndex: 5,
+      playing: false,
+      selectedStep: 0,
+      trackPage: {
+        kind: "sound",
+        route: "schwung",
+        chainIndex: 1,
+        chainName: "Slot2",
+        synthModuleId: "westfold",
+        synthModuleName: "Westfold",
+      },
+      steps: [],
+    };
+
+    renderScreen(view, display);
+
+    expect(calls).toContain("print:TRACK");
+    expect(calls).toContain("print:Sound");
+    expect(calls).toContain("print:Slot2");
+    expect(calls).toContain("print:Synth Westfold");
+    expect(calls).not.toContain("print:Step 1");
+    expect(calls).not.toContain("rect");
+  });
 });
 
 function createDisplayRecorder(calls: string[]): DisplayPort {

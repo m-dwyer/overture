@@ -29,7 +29,8 @@ export interface ControlSurfaceContextSnapshot {
   readonly trackView: TrackViewControlContextSnapshot;
 }
 
-const DEFAULT_TRACK_VIEW_PAGE_ID = rootViewPageId("default");
+export const DEFAULT_TRACK_VIEW_PAGE_ID = rootViewPageId("default");
+export const TRACK_VIEW_SOUND_PAGE_ID = rootViewPageId("sound");
 const DEFAULT_TRACK_VIEW_PARAMETER_ID = parameterId("default");
 
 export class ControlSurfaceContext {

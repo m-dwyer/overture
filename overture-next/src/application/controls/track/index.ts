@@ -1,9 +1,14 @@
-import type { ControlSurfaceContextSnapshot } from "../../../state/control-surface-context";
+import {
+  DEFAULT_TRACK_VIEW_PAGE_ID,
+  TRACK_VIEW_SOUND_PAGE_ID,
+  type ControlSurfaceContextSnapshot,
+} from "../../../state/control-surface-context";
 import { selectTrackFromRow } from "../../../state/surface-addressing";
 import type { DomainIntent } from "../../intents/types";
 import type { ControlInput } from "../types";
 
 const TRACK_PAD_NOTE_BASE = 60;
+const SOUND_PAGE_STEP_INDEX = 2;
 
 /**
  * Interprets control input in Track View context.
@@ -23,8 +28,20 @@ export function interpretTrackViewControl(
       ),
     };
   }
-  if (input.kind === "step")
+  if (input.kind === "step") {
+    if (
+      control.heldControls.includes("shift") &&
+      input.step === SOUND_PAGE_STEP_INDEX
+    )
+      return {
+        kind: "select-track-view-page",
+        pageId:
+          control.trackView.selectedPageId === TRACK_VIEW_SOUND_PAGE_ID
+            ? DEFAULT_TRACK_VIEW_PAGE_ID
+            : TRACK_VIEW_SOUND_PAGE_ID,
+      };
     return { kind: "toggle-step", stepIndex: input.step };
+  }
   if (input.kind !== "pad") return null;
   return {
     kind: "audition-note",

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { CoreSnapshot } from "../../src/application/types";
+import { DEFAULT_TRACK_VIEW_PAGE_ID } from "../../src/state/control-surface-context";
 import { sessionView } from "../../src/view/session";
 
 describe("Overture Next Session View module", () => {
@@ -48,6 +49,10 @@ function sessionSnapshot({
     playing: false,
     selectedClipId: null,
     selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+    trackView: {
+      selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+      selectedParameterIdByPage: {},
+    },
     clipCells: [{ trackIndex: 3, sceneIndex: 7, clipId: null }],
     steps: [
       {

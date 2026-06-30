@@ -1,15 +1,16 @@
-import type { CoreSnapshot } from "../application/types";
+import type { CoreSnapshot, SurfaceHostReadModel } from "../application/types";
 import { viewModuleFor } from "./internal/view-modules";
 import type { LedView, OvertureSurfaceView, SurfaceHint } from "./types";
 
 export function createOvertureSurfaceView(
   snapshot: CoreSnapshot,
+  hostReadModel: SurfaceHostReadModel = {},
 ): OvertureSurfaceView {
   const viewModule = viewModuleFor(snapshot);
   const surfaceHints = viewModule.createSurfaceHints(snapshot);
   return {
     surfaceHints,
-    screen: viewModule.createScreenView(snapshot),
+    screen: viewModule.createScreenView(snapshot, hostReadModel),
     leds: createLedView(snapshot, surfaceHints),
   };
 }

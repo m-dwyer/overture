@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { CoreSnapshot } from "../../src/application/types";
+import { DEFAULT_TRACK_VIEW_PAGE_ID } from "../../src/state/control-surface-context";
 import { createOvertureSurfaceView } from "../../src/view";
 
 describe("Overture Next view projection", () => {
@@ -14,6 +15,10 @@ describe("Overture Next view projection", () => {
       playing: true,
       selectedClipId: "clip-6",
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
         {
@@ -52,6 +57,7 @@ describe("Overture Next view projection", () => {
       selectedTrackIndex: 5,
       playing: true,
       selectedStep: 1,
+      trackPage: { kind: "sequence" },
     });
     if (view.screen.kind !== "track")
       throw new Error("Expected Track View screen");
@@ -86,6 +92,10 @@ describe("Overture Next view projection", () => {
       playing: true,
       selectedClipId: "clip-6",
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       steps: [
         {
@@ -148,6 +158,10 @@ describe("Overture Next view projection", () => {
       playing: false,
       selectedClipId: null,
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
       clipCells: [
         { trackIndex: 0, sceneIndex: 0, clipId: "clip-1" },
         { trackIndex: 1, sceneIndex: 0, clipId: "clip-2" },
@@ -222,6 +236,10 @@ describe("Overture Next view projection", () => {
       playing: false,
       selectedClipId: null,
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
       clipCells: [
         { trackIndex: 0, sceneIndex: 0, clipId: "clip-1" },
         { trackIndex: 3, sceneIndex: 7, clipId: null },

@@ -1,6 +1,10 @@
 import type { ControlInput } from "../application/controls/types";
 import type { HostCommand } from "../application/host-commands";
-import type { CoreSnapshot } from "../application/types";
+import type {
+  CoreSnapshot,
+  SchwungChainReadModel,
+  SchwungModuleReadModel,
+} from "../application/types";
 import { assertNever } from "../shared/assert-never";
 import {
   CC,
@@ -204,7 +208,65 @@ export function createSchwungAdapter(
           }
         },
       },
+      schwungChains: {
+        readChain(chainIndex) {
+          return readSchwungChain(call, chainIndex);
+        },
+      },
     },
   };
   return hostPorts;
+}
+
+function readSchwungChain(
+  call: (name: string, args: unknown[]) => unknown,
+  chainIndex: number,
+): SchwungChainReadModel | null {
+  const normalizedChainIndex = chainIndex | 0;
+  const slots = recordArray(call("shadow_get_slots", []));
+  const slot =
+    slots.find((item) => Number(item.index) === normalizedChainIndex) ??
+    slots[normalizedChainIndex];
+  if (!slot) return null;
+
+  const synthModuleId =
+    stringValue(
+      call("shadow_get_param", [normalizedChainIndex, "synth_module"]),
+    ) ??
+    stringValue(
+      call("shadow_get_param", [normalizedChainIndex, "synth:module"]),
+    );
+  return {
+    chainIndex: normalizedChainIndex,
+    name:
+      stringValue(slot.name) ??
+      stringValue(slot.id) ??
+      "Chain " + (normalizedChainIndex + 1),
+    synthModule: synthModuleId ? readSchwungModule(call, synthModuleId) : null,
+  };
+}
+
+function readSchwungModule(
+  call: (name: string, args: unknown[]) => unknown,
+  moduleId: string,
+): SchwungModuleReadModel {
+  const modules = recordArray(call("host_list_modules", []));
+  const module = modules.find((item) => stringValue(item.id) === moduleId);
+  return {
+    id: moduleId,
+    name: stringValue(module?.name) ?? moduleId,
+  };
+}
+
+function recordArray(value: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isRecord);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
