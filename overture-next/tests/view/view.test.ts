@@ -78,7 +78,7 @@ describe("Overture Next view projection", () => {
     });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", state: "track" });
     expect(view.leds.pads).toHaveLength(32);
-    expect(view.leds.pads.every((pad) => pad.state === "off")).toBe(true);
+    expect(view.leds.pads.every((pad) => pad.state === "playable")).toBe(true);
   });
 
   test("derives Track View track-row button hints while Shift is held", () => {

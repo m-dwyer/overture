@@ -65,6 +65,7 @@ export interface PadLedView {
     | "selected"
     | "hinted"
     | "occupied"
+    | "playable"
     | "empty"
     | "off";
 }

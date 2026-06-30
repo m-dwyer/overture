@@ -16,6 +16,7 @@ const PAD_COLORS = {
   selected: OVERTURE_LED_COLOR.selected,
   hinted: OVERTURE_LED_COLOR.hint,
   occupied: OVERTURE_LED_COLOR.active,
+  playable: OVERTURE_LED_COLOR.dim,
   empty: OVERTURE_LED_COLOR.dim,
   off: OVERTURE_LED_COLOR.off,
 } as const;

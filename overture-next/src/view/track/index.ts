@@ -29,7 +29,7 @@ export const trackView = {
           active.trackIndex === snapshot.selectedTrackIndex &&
           active.note === note,
       );
-      return { padIndex, state: sounding ? "playing" : "off" };
+      return { padIndex, state: sounding ? "playing" : "playable" };
     });
   },
 };
