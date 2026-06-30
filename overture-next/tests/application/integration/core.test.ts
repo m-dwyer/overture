@@ -628,6 +628,7 @@ function createCoreWithClearedPlayback() {
   const core = createOvertureCore();
   core.init();
   core.stopPlayback();
+  core.drainHostCommands();
   return core;
 }
 

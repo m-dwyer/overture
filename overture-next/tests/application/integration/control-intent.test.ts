@@ -1,24 +1,16 @@
 import { describe, expect, test } from "vitest";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
 import { interpretControl } from "../../../src/application/controls/interpret-control";
-import {
-  applyIntent,
-  type IntentHandlers,
-} from "../../../src/application/intents/apply-intent";
-import {
-  auditionNote,
-  launchClipCell,
-  selectClipCell,
-  selectTrack,
-  setSurfaceControlHeld,
-  toggleSelectedStep,
-  toggleTransport as toggleTransportOperation,
-  toggleView,
-} from "../../../src/application/operations";
+import { applyCoreIntent } from "../../../src/application/intents/apply-core-intent";
+import type {
+  DomainIntent,
+  DomainIntentTransaction,
+} from "../../../src/application/intents/types";
 import { createPlayback } from "../../../src/application/playback";
 import { createDefaultProject } from "../../../src/state/project";
 import { createTransport } from "../../../src/application/transport";
 import type { HostCommand } from "../../../src/application/types";
+import type { ClipCellCoordinateInput } from "../../../src/domain/project";
 
 interface TestCoreState {
   readonly control: ReturnType<typeof createInitialControlSurfaceContext>;
@@ -103,7 +95,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       stepIndex: 1,
     });
     expect(interpretControl({ kind: "play" }, control.snapshot())).toEqual({
-      kind: "toggle-transport",
+      kind: "toggle-transport-playback",
     });
   });
 
@@ -216,7 +208,11 @@ describe("Overture Next control-to-intent pipeline", () => {
     const hostCommands: HostCommand[] = [];
 
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     expect(state.transport.snapshot().playing).toBe(true);
     expect(state.playback.snapshot().tracks[0].playingClipId).toBeNull();
@@ -242,7 +238,11 @@ describe("Overture Next control-to-intent pipeline", () => {
       ),
     ).toBe(true);
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
 
     expect(state.transport.snapshot().playing).toBe(true);
@@ -268,7 +268,11 @@ describe("Overture Next control-to-intent pipeline", () => {
       sceneIndex: 0,
     });
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     hostCommands.length = 0;
 
@@ -284,7 +288,10 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
     expect(hostCommands).toEqual([]);
 
-    state.playback.advanceTick(state.project, { injectedStep: 1, tick: 12 });
+    state.playback.processTransportTick(state.project, {
+      injectedStep: 1,
+      tick: 12,
+    });
 
     expect(state.playback.snapshot().tracks[6]).toMatchObject({
       playingClipId: "clip-7",
@@ -302,7 +309,11 @@ describe("Overture Next control-to-intent pipeline", () => {
       sceneIndex: 0,
     });
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     hostCommands.length = 0;
 
@@ -318,7 +329,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
     expect(hostCommands).toEqual([]);
 
-    const advance = state.playback.advanceTick(state.project, {
+    const advance = state.playback.processTransportTick(state.project, {
       injectedStep: 1,
       tick: 12,
     });
@@ -347,7 +358,11 @@ describe("Overture Next control-to-intent pipeline", () => {
       sceneIndex: 0,
     });
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     hostCommands.length = 0;
     expect(
@@ -361,10 +376,18 @@ describe("Overture Next control-to-intent pipeline", () => {
       ),
     ).toBe(true);
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
 
     expect(state.playback.snapshot().tracks[6].playingClipId).toBeNull();
@@ -386,27 +409,35 @@ describe("Overture Next control-to-intent pipeline", () => {
     ]);
   });
 
-  test("applies transport toggle without selected-track note-off when no clips are playing", () => {
+  test("pauses transport playback without selected-track note-off when no clips are playing", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
     state.control.selectClipCell({ trackIndex: 0, sceneIndex: 7 });
 
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     expect(state.transport.snapshot().playing).toBe(true);
     expect(state.playback.snapshot().tracks[0].playingClipId).toBeNull();
     expect(hostCommands).toEqual([]);
 
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     expect(state.transport.snapshot().playing).toBe(false);
     expect(hostCommands).toEqual([]);
   });
 
-  test("stopping transport emits note-off for playing clips, not the selected Clip Cell", () => {
+  test("pausing transport playback emits note-off for playing clips, not the selected Clip Cell", () => {
     const state = createTestCoreState();
     const hostCommands: HostCommand[] = [];
 
@@ -425,11 +456,19 @@ describe("Overture Next control-to-intent pipeline", () => {
       ),
     ).toBe(true);
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     hostCommands.length = 0;
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
 
     expect(hostCommands).toEqual([
@@ -451,11 +490,19 @@ describe("Overture Next control-to-intent pipeline", () => {
       sceneIndex: 0,
     });
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
     hostCommands.length = 0;
     expect(
-      applyIntentAndCollect({ kind: "toggle-transport" }, state, hostCommands),
+      applyIntentAndCollect(
+        { kind: "toggle-transport-playback" },
+        state,
+        hostCommands,
+      ),
     ).toBe(true);
 
     expect(hostCommands).toEqual([
@@ -520,7 +567,9 @@ describe("Overture Next control-to-intent pipeline", () => {
       applied: true,
       hostCommands: [],
     });
-    expect(applyIntentWithState({ kind: "toggle-transport" }, state)).toEqual({
+    expect(
+      applyIntentWithState({ kind: "toggle-transport-playback" }, state),
+    ).toEqual({
       applied: true,
       hostCommands: [
         {
@@ -533,7 +582,9 @@ describe("Overture Next control-to-intent pipeline", () => {
       ],
     });
 
-    expect(applyIntentWithState({ kind: "toggle-transport" }, state)).toEqual({
+    expect(
+      applyIntentWithState({ kind: "toggle-transport-playback" }, state),
+    ).toEqual({
       applied: true,
       hostCommands: [
         {
@@ -660,14 +711,14 @@ function createTestCoreState(): TestCoreState {
 }
 
 function applyIntentWithState(
-  intent: Parameters<typeof applyIntent>[0],
+  intent: DomainIntent,
   state: TestCoreState,
-): ReturnType<typeof applyIntent> {
-  return applyIntent(intent, createIntentHandlers(state));
+): DomainIntentTransaction {
+  return applyCoreIntent(intent, state);
 }
 
 function applyIntentAndCollect(
-  intent: Parameters<typeof applyIntent>[0],
+  intent: DomainIntent,
   state: TestCoreState,
   hostCommands: HostCommand[],
 ): boolean {
@@ -679,7 +730,7 @@ function applyIntentAndCollect(
 function activateClipCellViaLaunchIntent(
   state: TestCoreState,
   hostCommands: HostCommand[],
-  coordinate: Parameters<typeof launchClipCell>[1],
+  coordinate: ClipCellCoordinateInput,
 ): void {
   const selected = state.control.snapshot().selectedClipCell;
   const alreadySelected =
@@ -700,54 +751,4 @@ function activateClipCellViaLaunchIntent(
       hostCommands,
     ),
   ).toBe(true);
-}
-
-function createIntentHandlers(state: TestCoreState): IntentHandlers {
-  return {
-    setSurfaceControlHeld(control, held) {
-      return setSurfaceControlHeld({ control: state.control }, control, held);
-    },
-    toggleTransport() {
-      return toggleTransportOperation({
-        project: state.project,
-        playback: state.playback,
-        transport: state.transport,
-      });
-    },
-    toggleView() {
-      return toggleView({ control: state.control });
-    },
-    selectTrack(trackIndex) {
-      return selectTrack(
-        { control: state.control, project: state.project },
-        trackIndex,
-      );
-    },
-    toggleStep(stepIndex) {
-      return toggleSelectedStep(
-        { control: state.control, project: state.project },
-        stepIndex,
-      );
-    },
-    auditionNote(command) {
-      return auditionNote({ project: state.project }, command);
-    },
-    selectClipCell(coordinate) {
-      return selectClipCell(
-        { control: state.control, project: state.project },
-        coordinate,
-      );
-    },
-    launchClipCell(coordinate) {
-      return launchClipCell(
-        {
-          control: state.control,
-          project: state.project,
-          playback: state.playback,
-          transport: state.transport,
-        },
-        coordinate,
-      );
-    },
-  };
 }

@@ -20,7 +20,7 @@ function interpretGlobalControl(input: ControlInput): DomainIntent | null {
       control: "shift",
       held: input.held,
     };
-  if (input.kind === "play") return { kind: "toggle-transport" };
+  if (input.kind === "play") return { kind: "toggle-transport-playback" };
   if (input.kind === "menu") return { kind: "toggle-view" };
   return null;
 }
