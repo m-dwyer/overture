@@ -4,10 +4,20 @@ import {
   type ClipCellCoordinateInput,
 } from "../domain/project";
 import { stepIndex, type StepIndex } from "../domain/sequence";
+import { nonEmptyString, type Branded } from "../domain/value-objects";
 import { trackBankForTrack } from "./surface-addressing";
 
 export type ActiveView = "track" | "session";
 export type HeldSurfaceControl = "shift";
+export type RootViewPageId = Branded<string, "RootViewPageId">;
+export type ParameterId = Branded<string, "ParameterId">;
+
+export interface TrackViewControlContextSnapshot {
+  readonly selectedPageId: RootViewPageId;
+  readonly selectedParameterIdByPage: Readonly<
+    Record<RootViewPageId, ParameterId>
+  >;
+}
 
 export interface ControlSurfaceContextSnapshot {
   readonly selectedTrackIndex: number;
@@ -16,7 +26,11 @@ export interface ControlSurfaceContextSnapshot {
   readonly heldControls: readonly HeldSurfaceControl[];
   readonly selectedStep: number;
   readonly selectedClipCell: Readonly<ClipCellCoordinate>;
+  readonly trackView: TrackViewControlContextSnapshot;
 }
+
+const DEFAULT_TRACK_VIEW_PAGE_ID = rootViewPageId("default");
+const DEFAULT_TRACK_VIEW_PARAMETER_ID = parameterId("default");
 
 export class ControlSurfaceContext {
   private selectedTrackIndexValue: number;
@@ -25,6 +39,11 @@ export class ControlSurfaceContext {
   private readonly heldControlsValue: Set<HeldSurfaceControl>;
   private selectedStepValue: StepIndex;
   private selectedClipCellValue: ClipCellCoordinate;
+  private selectedTrackViewPageIdValue: RootViewPageId;
+  private readonly selectedTrackViewParameterIdByPageValue: Record<
+    RootViewPageId,
+    ParameterId
+  >;
 
   constructor() {
     this.selectedTrackIndexValue = 0;
@@ -36,6 +55,10 @@ export class ControlSurfaceContext {
       trackIndex: 0,
       sceneIndex: 0,
     });
+    this.selectedTrackViewPageIdValue = DEFAULT_TRACK_VIEW_PAGE_ID;
+    this.selectedTrackViewParameterIdByPageValue = {
+      [DEFAULT_TRACK_VIEW_PAGE_ID]: DEFAULT_TRACK_VIEW_PARAMETER_ID,
+    };
   }
 
   snapshot(): ControlSurfaceContextSnapshot {
@@ -46,6 +69,12 @@ export class ControlSurfaceContext {
       heldControls: [...this.heldControlsValue],
       selectedStep: this.selectedStepValue,
       selectedClipCell: { ...this.selectedClipCellValue },
+      trackView: {
+        selectedPageId: this.selectedTrackViewPageIdValue,
+        selectedParameterIdByPage: {
+          ...this.selectedTrackViewParameterIdByPageValue,
+        },
+      },
     };
   }
 
@@ -77,8 +106,31 @@ export class ControlSurfaceContext {
   selectStep(stepIndexValue: number): void {
     this.selectedStepValue = stepIndex(stepIndexValue);
   }
+
+  selectTrackViewPage(pageIdValue: string): void {
+    const pageId = rootViewPageId(pageIdValue);
+    this.selectedTrackViewPageIdValue = pageId;
+    if (!this.selectedTrackViewParameterIdByPageValue[pageId]) {
+      this.selectedTrackViewParameterIdByPageValue[pageId] =
+        DEFAULT_TRACK_VIEW_PARAMETER_ID;
+    }
+  }
+
+  selectTrackViewPageParameter(parameterIdValue: string): void {
+    this.selectedTrackViewParameterIdByPageValue[
+      this.selectedTrackViewPageIdValue
+    ] = parameterId(parameterIdValue);
+  }
 }
 
 export function createInitialControlSurfaceContext(): ControlSurfaceContext {
   return new ControlSurfaceContext();
+}
+
+function rootViewPageId(value: string): RootViewPageId {
+  return nonEmptyString("Root View Page ID", value) as RootViewPageId;
+}
+
+function parameterId(value: string): ParameterId {
+  return nonEmptyString("Parameter ID", value) as ParameterId;
 }
