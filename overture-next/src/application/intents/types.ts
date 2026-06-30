@@ -1,6 +1,9 @@
 import type { HostCommand } from "../host-commands";
 import type { ClipCellCoordinateInput } from "../../domain/project";
-import type { HeldSurfaceControl } from "../../state/control-surface-context";
+import type {
+  HeldSurfaceControl,
+  RootViewPageId,
+} from "../../state/control-surface-context";
 
 export type DomainIntent =
   | {
@@ -10,6 +13,7 @@ export type DomainIntent =
     }
   | { kind: "toggle-transport-playback" }
   | { kind: "toggle-view" }
+  | { kind: "select-track-view-page"; pageId: RootViewPageId }
   | { kind: "select-track"; trackIndex: number }
   | { kind: "toggle-step"; stepIndex: number }
   | {

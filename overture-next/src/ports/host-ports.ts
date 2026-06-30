@@ -5,6 +5,7 @@ import type {
   LedPort,
   MidiPort,
   RuntimePort,
+  SchwungChainReadPort,
 } from "./outbound";
 
 export interface OvertureInboundPorts {
@@ -17,6 +18,7 @@ export interface OvertureOutboundPorts {
   leds: LedPort;
   midi: MidiPort;
   commands: HostCommandPort;
+  schwungChains?: SchwungChainReadPort;
 }
 
 export interface OvertureHostPorts {

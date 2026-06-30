@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
+import {
+  createInitialControlSurfaceContext,
+  DEFAULT_TRACK_VIEW_PAGE_ID,
+  TRACK_VIEW_SOUND_PAGE_ID,
+} from "../../../src/state/control-surface-context";
 import { interpretTrackViewControl } from "../../../src/application/controls/track";
 
 describe("Overture Next Track control interpretation", () => {
@@ -57,6 +61,27 @@ describe("Overture Next Track control interpretation", () => {
     ).toEqual({
       kind: "toggle-step",
       stepIndex: 1,
+    });
+  });
+
+  test("interprets Shift plus Step 3 as Sound page toggle", () => {
+    const control = createInitialControlSurfaceContext();
+    control.setSurfaceControlHeld("shift", true);
+
+    expect(
+      interpretTrackViewControl({ kind: "step", step: 2 }, control.snapshot()),
+    ).toEqual({
+      kind: "select-track-view-page",
+      pageId: TRACK_VIEW_SOUND_PAGE_ID,
+    });
+
+    control.selectTrackViewPage("sound");
+
+    expect(
+      interpretTrackViewControl({ kind: "step", step: 2 }, control.snapshot()),
+    ).toEqual({
+      kind: "select-track-view-page",
+      pageId: DEFAULT_TRACK_VIEW_PAGE_ID,
     });
   });
 });

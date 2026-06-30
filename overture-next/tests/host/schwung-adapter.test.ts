@@ -6,6 +6,7 @@ import {
   moveMidiToInput,
   schwungCommandToMessage,
 } from "../../src/host/schwung-adapter";
+import { DEFAULT_TRACK_VIEW_PAGE_ID } from "../../src/state/control-surface-context";
 import {
   KNOB_CC0,
   KNOB_TOUCH0,
@@ -227,6 +228,10 @@ describe("Overture Next Schwung adapter", () => {
       playing: false,
       selectedClipId: null,
       selectedClipCell: { trackIndex: 3, sceneIndex: 7 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
       clipCells: [{ trackIndex: 3, sceneIndex: 7, clipId: null }],
       steps: [
         {
@@ -250,6 +255,36 @@ describe("Overture Next Schwung adapter", () => {
     });
     expect(host.overtureUiState).not.toHaveProperty("control");
     expect(host.overtureUiState).not.toHaveProperty("project");
+  });
+
+  test("reads selected Schwung chain and synth module through typed host port", () => {
+    const host = {
+      shadow_get_slots() {
+        return [
+          { index: 0, name: "Slot1" },
+          { index: 1, name: "Slot2" },
+        ];
+      },
+      shadow_get_param(slot: number, key: string) {
+        return slot === 1 && key === "synth_module" ? "westfold" : null;
+      },
+      host_list_modules() {
+        return [
+          {
+            component_type: "sound_generator",
+            id: "westfold",
+            name: "Westfold",
+          },
+        ];
+      },
+    } as Record<string, unknown>;
+    const adapter = createSchwungAdapter(host);
+
+    expect(adapter.outbound.schwungChains?.readChain(1)).toEqual({
+      chainIndex: 1,
+      name: "Slot2",
+      synthModule: { id: "westfold", name: "Westfold" },
+    });
   });
 
   test("keeps Schwung global entrypoint installation in host runtime code", () => {

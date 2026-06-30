@@ -41,6 +41,11 @@ function renderTrackScreen(
   view: Extract<RenderableScreenView, { kind: "track" }>,
   display: DisplayPort,
 ): void {
+  if (view.trackPage.kind === "sound") {
+    renderTrackSoundScreen(view.trackPage, display);
+    return;
+  }
+
   display.print(0, 22, "Clean core spike", 1);
   for (const step of view.steps) {
     const x = 2 + step.index * 7;
@@ -56,6 +61,29 @@ function renderTrackScreen(
     );
   }
   display.print(0, 56, "Step " + (view.selectedStep + 1), 1);
+}
+
+function renderTrackSoundScreen(
+  page: Extract<
+    Extract<RenderableScreenView, { kind: "track" }>["trackPage"],
+    { kind: "sound" }
+  >,
+  display: DisplayPort,
+): void {
+  display.print(0, 22, "Sound", 1);
+  if (page.route === "move") {
+    display.print(0, 34, "Move Track " + (page.moveTrackTarget + 1), 1);
+    display.print(0, 46, "Use Move Sound", 1);
+    return;
+  }
+
+  display.print(0, 34, page.chainName, 1);
+  display.print(
+    0,
+    46,
+    page.synthModuleName ? "Synth " + page.synthModuleName : "Synth Empty",
+    1,
+  );
 }
 
 function renderSessionScreen(

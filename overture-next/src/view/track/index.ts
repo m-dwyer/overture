@@ -1,12 +1,18 @@
-import type { CoreSnapshot } from "../../application/types";
+import type {
+  CoreSnapshot,
+  SurfaceHostReadModel,
+} from "../../application/types";
 import { SESSION_PAD_COUNT } from "../../shared/session-grid";
 import type { PadLedView, ScreenView, SurfaceHint } from "../types";
 import { createTrackScreenView } from "./internal/screen-view";
 import { createTrackSurfaceHints } from "./internal/surface-hints";
 
 export const trackView = {
-  createScreenView(snapshot: CoreSnapshot): ScreenView {
-    return createTrackScreenView(snapshot);
+  createScreenView(
+    snapshot: CoreSnapshot,
+    hostReadModel?: SurfaceHostReadModel,
+  ): ScreenView {
+    return createTrackScreenView(snapshot, hostReadModel);
   },
   createSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[] {
     return createTrackSurfaceHints(snapshot);

@@ -11,8 +11,25 @@ export interface TrackScreenView {
   selectedTrackIndex: number;
   playing: boolean;
   selectedStep: number;
+  trackPage: TrackScreenPageView;
   steps: StepView[];
 }
+
+export type TrackScreenPageView =
+  | { kind: "sequence" }
+  | {
+      kind: "sound";
+      route: "schwung";
+      chainIndex: number;
+      chainName: string;
+      synthModuleId: string | null;
+      synthModuleName: string | null;
+    }
+  | {
+      kind: "sound";
+      route: "move";
+      moveTrackTarget: number;
+    };
 
 export interface SessionScreenView {
   kind: "session";

@@ -17,6 +17,7 @@ describe("Overture Next core read model", () => {
     expect(snapshot).toMatchObject({
       selectedTrackIndex: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
+      trackView: { selectedPageId: "default" },
       selectedClipId: "clip-1",
       selectedStep: 4,
       playing: false,

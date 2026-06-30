@@ -4,6 +4,7 @@ import {
   auditionNote,
   launchClipCell,
   selectClipCell,
+  selectTrackViewPage,
   selectTrack,
   setSurfaceControlHeld,
   toggleSelectedStep,
@@ -31,6 +32,8 @@ export function applyCoreIntent(
       });
     case "toggle-view":
       return toggleView({ control: owners.control });
+    case "select-track-view-page":
+      return selectTrackViewPage({ control: owners.control }, intent.pageId);
     case "select-track":
       return selectTrack(
         { control: owners.control, project: owners.project },
