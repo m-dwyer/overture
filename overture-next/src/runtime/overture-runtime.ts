@@ -1,9 +1,6 @@
 import { createOvertureCore } from "../application/core";
-import type {
-  CoreSnapshot,
-  OvertureCore,
-  SurfaceHostReadModel,
-} from "../application/types";
+import type { CoreSnapshot, OvertureCore } from "../application/types";
+import type { SurfaceHostReadModel } from "../ports/surface-host-read-model";
 import { TRACK_VIEW_SOUND_PAGE_ID } from "../state/control-surface-context";
 import type { OvertureHostPorts } from "../ports/host-ports";
 import { renderLeds } from "../render/render-leds";

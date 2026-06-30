@@ -28,7 +28,9 @@ what is public, what is private, and which dependencies are allowed?
 - `overture-next/src/ports/` owns typed boundary contracts between runtime,
   host, display, LEDs, MIDI, and command execution. `inbound.ts` names
   hardware/control input contracts, `outbound.ts` names host surfaces Overture
-  drives, and `host-ports.ts` composes those contracts for the runtime.
+  drives, `surface-host-read-model.ts` names read-only host metadata available
+  to view projection, and `host-ports.ts` composes those contracts for the
+  runtime.
 - `overture-next/src/view/` owns view-model data contracts.
 - `overture-next/src/render/` is presentational. It renders view models through
   display/LED ports and must not own domain or host policy.
@@ -84,7 +86,7 @@ Keep this table current when a boundary changes materially.
 | Application core facade and read model | `src/application/core.ts`, `src/application/types.ts`, `src/application/core-owners.ts`, `src/application/core-read-model.ts` | Core factory, owner composition, `CoreSnapshot`, `OvertureCore`, read-model projection | Core facade command outbox in `core.ts`; projection helpers in `core-read-model.ts` | dependency-cruiser application layer rules |
 | Application transport/playback coordination | `src/application/transport-playback.ts` | Transport tick and playback stop coordination | Playback scheduling internals in `src/application/playback/internal/` | dependency-cruiser application layer rules |
 | Host translation | `src/host/` | Host adapter and host types | Adapter-local helpers | dependency-cruiser host boundary rules |
-| Runtime-host boundary contracts | `src/ports/` | `inbound.ts`, `outbound.ts`, `host-ports.ts` | None | dependency-cruiser ports/runtime rules |
+| Runtime-host boundary contracts | `src/ports/` | `inbound.ts`, `outbound.ts`, `surface-host-read-model.ts`, `host-ports.ts` | None | dependency-cruiser ports/runtime rules |
 | View models | `src/view/` | `view/index.ts`, `view/<view>/index.ts` | `view/internal/`, `view/<view>/internal/` | dependency-cruiser view/public/internal rules |
 | Rendering | `src/render/` | Screen/LED renderers | Local private helpers | dependency-cruiser render rules |
 

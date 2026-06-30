@@ -1,7 +1,5 @@
-import type {
-  CoreSnapshot,
-  SurfaceHostReadModel,
-} from "../../../application/types";
+import type { CoreSnapshot } from "../../../application/types";
+import type { SurfaceHostReadModel } from "../../../ports/surface-host-read-model";
 import { TRACK_VIEW_SOUND_PAGE_ID } from "../../../state/control-surface-context";
 import type { ScreenView, TrackScreenPageView } from "../../types";
 

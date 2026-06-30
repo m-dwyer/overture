@@ -25,7 +25,8 @@ The dependency-cruiser rules are the architecture import ratchet:
   renderers.
 - renderers stay presentational.
 - runtime orchestrates through ports and does not import host modules.
-- view types stay neutral.
+- view types stay neutral, while view projection may consume narrow read-only
+  surface host contracts from ports.
 - port types stay contracts.
 - every `src/**/internal/` folder is private to its nearest parent module.
   The dependency-cruiser config discovers these folders and generates the
