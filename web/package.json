@@ -13,7 +13,7 @@
     "verify": "pnpm typecheck && pnpm test:node",
     "test:node": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test tests/render.spec.ts tests/inputs.spec.ts",
+    "test:e2e": "playwright test tests/render.spec.ts tests/inputs.spec.ts tests/display.spec.ts",
     "test:e2e:reference": "playwright test",
     "manual:generate": "MANUAL_GENERATE=1 playwright test tests/manual-shots.spec.ts",
     "reference:generate": "REFERENCE_GENERATE=1 playwright test tests/manual-reference.spec.ts",

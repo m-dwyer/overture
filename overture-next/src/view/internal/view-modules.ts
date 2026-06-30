@@ -1,7 +1,5 @@
-import type {
-  CoreSnapshot,
-  SurfaceHostReadModel,
-} from "../../application/types";
+import type { CoreSnapshot } from "../../application/types";
+import type { SurfaceHostReadModel } from "../../ports/surface-host-read-model";
 import { sessionView } from "../session";
 import { trackView } from "../track";
 import type { PadLedView, ScreenView, SurfaceHint } from "../types";

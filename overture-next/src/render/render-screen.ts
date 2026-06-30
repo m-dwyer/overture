@@ -20,6 +20,12 @@ export function renderScreen(
   }
 
   display.clear();
+  if (view.kind === "track" && view.trackPage.kind === "sound") {
+    renderTrackSoundScreen(view, display);
+    display.flush();
+    return;
+  }
+
   display.print(0, 0, view.title, 1);
   display.print(0, 10, view.playing ? "PLAY" : "STOP", 1);
   display.print(42, 10, "T" + (view.selectedTrackIndex + 1), 1);
@@ -41,11 +47,6 @@ function renderTrackScreen(
   view: Extract<RenderableScreenView, { kind: "track" }>,
   display: DisplayPort,
 ): void {
-  if (view.trackPage.kind === "sound") {
-    renderTrackSoundScreen(view.trackPage, display);
-    return;
-  }
-
   display.print(0, 22, "Clean core spike", 1);
   for (const step of view.steps) {
     const x = 2 + step.index * 7;
@@ -64,26 +65,41 @@ function renderTrackScreen(
 }
 
 function renderTrackSoundScreen(
-  page: Extract<
-    Extract<RenderableScreenView, { kind: "track" }>["trackPage"],
-    { kind: "sound" }
-  >,
+  view: Extract<RenderableScreenView, { kind: "track" }>,
   display: DisplayPort,
 ): void {
-  display.print(0, 22, "Sound", 1);
+  const page = view.trackPage;
+  if (page.kind !== "sound") return;
+
+  display.print(0, 0, "Sound T" + (view.selectedTrackIndex + 1), 1);
   if (page.route === "move") {
-    display.print(0, 34, "Move Track " + (page.moveTrackTarget + 1), 1);
-    display.print(0, 46, "Use Move Sound", 1);
+    display.print(0, 14, "Move Track " + (page.moveTrackTarget + 1), 1);
+    display.print(0, 28, "Use Move Sound", 1);
     return;
   }
 
-  display.print(0, 34, page.chainName, 1);
+  display.print(0, 14, page.chainName, 1);
   display.print(
     0,
-    46,
-    page.synthModuleName ? "Synth " + page.synthModuleName : "Synth Empty",
+    28,
+    clipScreenText(
+      page.synthModuleName ? "Synth " + page.synthModuleName : "Synth Empty",
+    ),
     1,
   );
+  if (page.synthParameters.length > 0) {
+    display.print(0, 42, "Params", 1);
+    display.print(
+      0,
+      54,
+      clipScreenText(page.synthParameters.slice(0, 2).join(" ")),
+      1,
+    );
+  }
+}
+
+function clipScreenText(text: string): string {
+  return text.length <= 16 ? text : text.slice(0, 15) + ".";
 }
 
 function renderSessionScreen(

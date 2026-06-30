@@ -266,7 +266,25 @@ describe("Overture Next Schwung adapter", () => {
         ];
       },
       shadow_get_param(slot: number, key: string) {
-        return slot === 1 && key === "synth_module" ? "westfold" : null;
+        if (slot !== 1) return null;
+        if (key === "synth_module") return "westfold";
+        if (key === "synth:chain_params")
+          return JSON.stringify([
+            { key: "gain", name: "Gain" },
+            { key: "tone", name: "Tone" },
+          ]);
+        if (key === "synth:ui_hierarchy")
+          return JSON.stringify({
+            levels: {
+              root: {
+                knobs: [
+                  { key: "tone", name: "Tone" },
+                  { key: "gain", name: "Gain" },
+                ],
+              },
+            },
+          });
+        return null;
       },
       host_list_modules() {
         return [
@@ -283,7 +301,14 @@ describe("Overture Next Schwung adapter", () => {
     expect(adapter.outbound.schwungChains?.readChain(1)).toEqual({
       chainIndex: 1,
       name: "Slot2",
-      synthModule: { id: "westfold", name: "Westfold" },
+      synthModule: {
+        id: "westfold",
+        name: "Westfold",
+        parameters: [
+          { id: "tone", name: "Tone" },
+          { id: "gain", name: "Gain" },
+        ],
+      },
     });
   });
 

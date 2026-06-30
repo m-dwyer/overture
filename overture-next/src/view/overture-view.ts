@@ -1,4 +1,5 @@
-import type { CoreSnapshot, SurfaceHostReadModel } from "../application/types";
+import type { CoreSnapshot } from "../application/types";
+import type { SurfaceHostReadModel } from "../ports/surface-host-read-model";
 import { viewModuleFor } from "./internal/view-modules";
 import type { LedView, OvertureSurfaceView, SurfaceHint } from "./types";
 

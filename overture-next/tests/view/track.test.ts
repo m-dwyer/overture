@@ -126,7 +126,14 @@ describe("Overture Next Track View module", () => {
         selectedSchwungChain: {
           chainIndex: 1,
           name: "Slot2",
-          synthModule: { id: "westfold", name: "Westfold" },
+          synthModule: {
+            id: "westfold",
+            name: "Westfold",
+            parameters: [
+              { id: "gain", name: "Gain" },
+              { id: "tone", name: "Tone" },
+            ],
+          },
         },
       }),
     ).toMatchObject({
@@ -138,6 +145,7 @@ describe("Overture Next Track View module", () => {
         chainName: "Slot2",
         synthModuleId: "westfold",
         synthModuleName: "Westfold",
+        synthParameters: ["Gain", "Tone"],
       },
     });
   });

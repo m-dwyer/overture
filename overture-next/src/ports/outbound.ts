@@ -1,5 +1,5 @@
 import type { HostCommand } from "../application/host-commands";
-import type { CoreSnapshot, SchwungChainReadModel } from "../application/types";
+import type { CoreSnapshot } from "../application/types";
 
 export type MoveMidiPacket = readonly [number, number, number, number];
 export type SchwungMidiMessage = readonly [number, number, number];
@@ -51,6 +51,4 @@ export interface MidiPort {
   sendSchwungMessage(message: SchwungMidiMessage): void;
 }
 
-export interface SchwungChainReadPort {
-  readChain(chainIndex: number): SchwungChainReadModel | null;
-}
+export type { SchwungChainReadPort } from "./surface-host-read-model";

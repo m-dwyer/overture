@@ -90,6 +90,13 @@ an Overture module:
 - preserve or improve its ownership boundary
 - prefer public module APIs over deep/internal imports
 - avoid adding new `doThing(state, ...)` APIs for owned mutable state
+- match the module shape to ownership: use pure functions for pure transforms
+  and projections; use a class or closure-backed owner when a concept owns
+  mutable state, lifecycle, host capability probing, caching, mutation
+  authority, or invariants
+- avoid grab-bag files of loosely related functions; when touched code starts
+  accumulating responsibilities, name the owned concept and deepen that module
+  only if it concentrates real policy or authority
 - add or tighten ratchets only after the boundary is true
 
 For feature work, deliver the behavior first, then check whether touched code

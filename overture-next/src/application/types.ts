@@ -29,21 +29,6 @@ export interface CoreSnapshotPlaybackTrack {
   queuedStop: boolean;
 }
 
-export interface SchwungModuleReadModel {
-  id: string;
-  name: string;
-}
-
-export interface SchwungChainReadModel {
-  chainIndex: number;
-  name: string;
-  synthModule: SchwungModuleReadModel | null;
-}
-
-export interface SurfaceHostReadModel {
-  selectedSchwungChain?: SchwungChainReadModel | null;
-}
-
 export interface CoreSnapshot {
   selectedTrackIndex: number;
   selectedTrackRoute: TrackRoute;

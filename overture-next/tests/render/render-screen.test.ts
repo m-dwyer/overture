@@ -42,16 +42,21 @@ describe("Overture Next screen rendering", () => {
         chainName: "Slot2",
         synthModuleId: "westfold",
         synthModuleName: "Westfold",
+        synthParameters: ["Gain", "Tone", "Drive", "Attack"],
       },
       steps: [],
     };
 
     renderScreen(view, display);
 
-    expect(calls).toContain("print:TRACK");
-    expect(calls).toContain("print:Sound");
+    expect(calls).toContain("print:Sound T6");
     expect(calls).toContain("print:Slot2");
     expect(calls).toContain("print:Synth Westfold");
+    expect(calls).toContain("print:Params");
+    expect(calls).toContain("print:Gain Tone");
+    expect(calls).not.toContain("print:OVERTURE NEXT");
+    expect(calls).not.toContain("print:STOP");
+    expect(calls).not.toContain("print:TRACK");
     expect(calls).not.toContain("print:Step 1");
     expect(calls).not.toContain("rect");
   });

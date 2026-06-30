@@ -178,10 +178,10 @@ module.exports = {
       name: "view-stays-on-snapshot-contracts",
       severity: "error",
       comment:
-        "View derives semantic models from application snapshot contracts, not application behavior or host/runtime/render integration.",
+        "View derives semantic models from application snapshots and narrow surface host read contracts, not application behavior or host/runtime/render integration.",
       from: { path: "^src/view/" },
       to: {
-        path: "^(src/(application/(?!types\\.ts$)|host|ports|render|runtime)/|ui/)",
+        path: "^(src/(application/(?!types\\.ts$)|host|ports/(?!surface-host-read-model\\.ts$)|render|runtime)/|ui/)",
       },
     },
     {

@@ -1,7 +1,5 @@
-import type {
-  CoreSnapshot,
-  SurfaceHostReadModel,
-} from "../../../application/types";
+import type { CoreSnapshot } from "../../../application/types";
+import type { SurfaceHostReadModel } from "../../../ports/surface-host-read-model";
 import { TRACK_VIEW_SOUND_PAGE_ID } from "../../../state/control-surface-context";
 import type { ScreenView, TrackScreenPageView } from "../../types";
 
@@ -49,5 +47,7 @@ function createTrackScreenPageView(
       "Chain " + (snapshot.selectedTrackRoute.schwungChainIndex + 1),
     synthModuleId: chain?.synthModule?.id ?? null,
     synthModuleName: chain?.synthModule?.name ?? null,
+    synthParameters:
+      chain?.synthModule?.parameters.map((parameter) => parameter.name) ?? [],
   };
 }
