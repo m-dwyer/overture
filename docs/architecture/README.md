@@ -10,9 +10,11 @@ architecture, boundaries, state ownership, or verification policy.
 1. `CONTEXT.md` names the domain concepts, workflows, and invariants.
 2. `docs/ARCHITECTURE.md` summarizes the active source tree.
 3. `target-architecture.md` describes the feature-first direction of travel.
-4. `module-boundaries.md` maps layers and module entry points.
-5. `state-ownership.md` describes mutable state owners and read contracts.
-6. `ratchets.md` explains when and how to enforce adopted boundaries.
+4. `control-contexts.md` describes root views, future pages, overlays, and
+   restorable interaction context.
+5. `module-boundaries.md` maps layers and module entry points.
+6. `state-ownership.md` describes mutable state owners and read contracts.
+7. `ratchets.md` explains when and how to enforce adopted boundaries.
 
 ## CONTEXT to Ratchets Workflow
 
@@ -35,15 +37,15 @@ Use this process for both new and existing codebases:
 
 Use the ladder to make progress without broad rewrites:
 
-| Level | Boundary Maturity |
-| --- | --- |
-| 0 | Code exists, but ownership is informal. |
-| 1 | The domain concept is named in `CONTEXT.md`. |
-| 2 | The owning module or layer is identified. |
-| 3 | A public API or entry point exists. |
-| 4 | Private helpers live behind `internal/` or equivalent module privacy. |
-| 5 | Mutable state is encapsulated behind owner methods or public verbs. |
-| 6 | Dependency-cruiser, ESLint, or tests prevent regression. |
+| Level | Boundary Maturity                                                     |
+| ----- | --------------------------------------------------------------------- |
+| 0     | Code exists, but ownership is informal.                               |
+| 1     | The domain concept is named in `CONTEXT.md`.                          |
+| 2     | The owning module or layer is identified.                             |
+| 3     | A public API or entry point exists.                                   |
+| 4     | Private helpers live behind `internal/` or equivalent module privacy. |
+| 5     | Mutable state is encapsulated behind owner methods or public verbs.   |
+| 6     | Dependency-cruiser, ESLint, or tests prevent regression.              |
 
 Do not force every module to level 6 up front. Raise the maturity of touched
 modules as the need becomes concrete.
