@@ -1,5 +1,6 @@
 import { renderSplashScreen } from "./ui_splash.mjs";
 import type { DisplayPort } from "../ports/outbound";
+import { assertNever } from "../shared/assert-never";
 import type { RenderableScreenView } from "./types";
 
 export function renderScreen(
@@ -23,10 +24,15 @@ export function renderScreen(
   display.print(0, 10, view.playing ? "PLAY" : "STOP", 1);
   display.print(42, 10, "T" + (view.selectedTrackIndex + 1), 1);
   display.print(72, 10, view.kind === "session" ? "SESSION" : "TRACK", 1);
-  if (view.kind === "session") {
-    renderSessionScreen(view, display);
-  } else {
-    renderTrackScreen(view, display);
+  switch (view.kind) {
+    case "session":
+      renderSessionScreen(view, display);
+      break;
+    case "track":
+      renderTrackScreen(view, display);
+      break;
+    default:
+      assertNever(view);
   }
   display.flush();
 }

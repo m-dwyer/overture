@@ -1,6 +1,7 @@
 import type { ControlInput } from "../application/controls/types";
 import type { HostCommand } from "../application/host-commands";
 import type { CoreSnapshot } from "../application/types";
+import { assertNever } from "../shared/assert-never";
 import {
   CC,
   NAV,
@@ -25,15 +26,24 @@ export function moveCommandToPacket(command: HostCommand): MoveMidiPacket {
   if (command.route.kind !== "move")
     throw new Error("Cannot convert non-Move command to Move packet");
   const channel = command.route.moveTrackTarget & 0x0f;
-  if (command.kind === "track-note-on") {
-    return [
-      (2 << 4) | CIN_NOTE_ON,
-      NOTE_ON | channel,
-      command.note & 0x7f,
-      command.velocity & 0x7f,
-    ];
+  switch (command.kind) {
+    case "track-note-on":
+      return [
+        (2 << 4) | CIN_NOTE_ON,
+        NOTE_ON | channel,
+        command.note & 0x7f,
+        command.velocity & 0x7f,
+      ];
+    case "track-note-off":
+      return [
+        (2 << 4) | CIN_NOTE_OFF,
+        NOTE_OFF | channel,
+        command.note & 0x7f,
+        0,
+      ];
+    default:
+      return assertNever(command);
   }
-  return [(2 << 4) | CIN_NOTE_OFF, NOTE_OFF | channel, command.note & 0x7f, 0];
 }
 
 export function schwungCommandToMessage(
@@ -43,9 +53,14 @@ export function schwungCommandToMessage(
     throw new Error("Cannot convert non-Schwung command to Schwung message");
   const channel =
     (SCHWUNG_SLOT_CHANNEL_FIRST + command.route.schwungChainIndex) & 0x0f;
-  if (command.kind === "track-note-on")
-    return [NOTE_ON | channel, command.note & 0x7f, command.velocity & 0x7f];
-  return [NOTE_OFF | channel, command.note & 0x7f, 0];
+  switch (command.kind) {
+    case "track-note-on":
+      return [NOTE_ON | channel, command.note & 0x7f, command.velocity & 0x7f];
+    case "track-note-off":
+      return [NOTE_OFF | channel, command.note & 0x7f, 0];
+    default:
+      return assertNever(command);
+  }
 }
 
 export function moveMidiToInput(
@@ -173,14 +188,20 @@ export function createSchwungAdapter(
       },
       commands: {
         execute(command) {
-          if (command.route.kind === "move")
-            hostPorts.outbound.midi.sendMovePacket(
-              moveCommandToPacket(command),
-            );
-          else
-            hostPorts.outbound.midi.sendSchwungMessage(
-              schwungCommandToMessage(command),
-            );
+          switch (command.route.kind) {
+            case "move":
+              hostPorts.outbound.midi.sendMovePacket(
+                moveCommandToPacket(command),
+              );
+              return;
+            case "schwung":
+              hostPorts.outbound.midi.sendSchwungMessage(
+                schwungCommandToMessage(command),
+              );
+              return;
+            default:
+              assertNever(command.route);
+          }
         },
       },
     },

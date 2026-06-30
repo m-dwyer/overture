@@ -1,5 +1,6 @@
 import type { LedPort } from "../ports/outbound";
 import { OVERTURE_LED_COLOR } from "../ports/led-colors";
+import { assertNever } from "../shared/assert-never";
 import type { LedView } from "../view";
 
 const STEP_COLORS = {
@@ -43,10 +44,18 @@ export function renderLeds(view: LedView, leds: LedPort): void {
     leds.setPadLed(pad.padIndex, PAD_COLORS[pad.state]);
   }
   for (const button of view.buttons) {
-    if (button.kind === "track-row")
-      leds.setTrackRowLed(button.row, TRACK_ROW_COLORS[button.state]);
-    else if (button.kind === "play")
-      leds.setPlayLed(PLAY_BUTTON_COLORS[button.state]);
-    else leds.setMenuLed(MENU_BUTTON_COLORS[button.state]);
+    switch (button.kind) {
+      case "track-row":
+        leds.setTrackRowLed(button.row, TRACK_ROW_COLORS[button.state]);
+        break;
+      case "play":
+        leds.setPlayLed(PLAY_BUTTON_COLORS[button.state]);
+        break;
+      case "menu":
+        leds.setMenuLed(MENU_BUTTON_COLORS[button.state]);
+        break;
+      default:
+        assertNever(button);
+    }
   }
 }
