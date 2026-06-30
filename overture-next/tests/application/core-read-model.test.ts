@@ -50,7 +50,11 @@ describe("Overture Next core read model", () => {
 
     const snapshot = buildCoreSnapshot(owners);
 
-    expect(snapshot.activeNotes).toContainEqual({ trackIndex: 0, note: 60 });
+    expect(snapshot.activeNotes).toContainEqual({
+      trackIndex: 0,
+      note: 60,
+      velocity: 100,
+    });
   });
 
   test("uses default inactive steps for an empty selected Clip Cell", () => {

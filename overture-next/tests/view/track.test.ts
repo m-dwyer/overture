@@ -119,8 +119,8 @@ describe("Overture Next Track View module", () => {
       },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
       activeNotes: [
-        { trackIndex: 5, note: 62 }, // selected Track -> pad 2 lit
-        { trackIndex: 4, note: 60 }, // other Track -> no pad lit
+        { trackIndex: 5, note: 62, velocity: 100 }, // selected Track -> pad 2 lit
+        { trackIndex: 4, note: 60, velocity: 100 }, // other Track -> no pad lit
       ],
       steps: [],
     };
@@ -145,7 +145,7 @@ describe("Overture Next Track View module", () => {
       playing: false,
       selectedClipId: "clip-6",
       selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
-      heldPads: [3],
+      heldPads: [{ padIndex: 3, velocity: 100 }],
       trackView: {
         selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
         selectedParameterIdByPage: {},

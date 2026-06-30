@@ -19,7 +19,9 @@ export function auditionNote(
   context: AuditionNoteContext,
   command: AuditionNoteCommand,
 ): OperationResult {
-  context.control.setPadHeld(command.padIndex, command.held);
+  if (command.held)
+    context.control.pressPad(command.padIndex, command.velocity);
+  else context.control.releasePad(command.padIndex);
   const route = context.project.trackRoute(command.trackIndex);
   const hostCommand = command.held
     ? {

@@ -120,6 +120,7 @@ export class Playback {
         emittedTarget: route,
         trackIndex: trackPlayback.trackIndex,
         note: sequenceStep.note,
+        velocity: sequenceStep.velocity,
       });
     }
     return hostCommands;

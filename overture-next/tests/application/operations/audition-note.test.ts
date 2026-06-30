@@ -13,7 +13,9 @@ describe("Overture Next audition note operation", () => {
       { held: true, padIndex: 5, note: 65, trackIndex: 0, velocity: 100 },
     );
 
-    expect(control.snapshot().heldPads).toEqual([5]);
+    expect(control.snapshot().heldPads).toEqual([
+      { padIndex: 5, velocity: 100 },
+    ]);
     expect(result.hostCommands).toEqual([
       {
         kind: "track-note-on",

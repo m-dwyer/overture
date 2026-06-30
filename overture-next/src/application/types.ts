@@ -32,6 +32,7 @@ export interface CoreSnapshotPlaybackTrack {
 export interface CoreSnapshotActiveNote {
   trackIndex: number;
   note: number;
+  velocity: number;
 }
 
 export interface CoreSnapshot {

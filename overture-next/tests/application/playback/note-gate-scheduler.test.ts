@@ -10,12 +10,14 @@ describe("Note gate scheduler", () => {
       emittedTarget: { kind: "move", moveTrackTarget: 1 },
       trackIndex: 1,
       note: 60,
+      velocity: 100,
     });
     scheduler.schedule({
       dueTick: 24,
       emittedTarget: { kind: "schwung", schwungChainIndex: 0 },
       trackIndex: 4,
       note: 64,
+      velocity: 80,
     });
 
     expect(scheduler.drainDue(11)).toEqual([]);
@@ -37,7 +39,7 @@ describe("Note gate scheduler", () => {
     ]);
   });
 
-  test("reports sounding notes without draining them", () => {
+  test("reports sounding notes with their velocity without draining them", () => {
     const scheduler = createNoteGateScheduler();
 
     scheduler.schedule({
@@ -45,22 +47,26 @@ describe("Note gate scheduler", () => {
       emittedTarget: { kind: "move", moveTrackTarget: 1 },
       trackIndex: 1,
       note: 60,
+      velocity: 100,
     });
     scheduler.schedule({
       dueTick: 24,
       emittedTarget: { kind: "schwung", schwungChainIndex: 0 },
       trackIndex: 4,
       note: 64,
+      velocity: 80,
     });
 
     expect(scheduler.activeNotes()).toEqual([
-      { trackIndex: 1, note: 60 },
-      { trackIndex: 4, note: 64 },
+      { trackIndex: 1, note: 60, velocity: 100 },
+      { trackIndex: 4, note: 64, velocity: 80 },
     ]);
 
     scheduler.drainDue(12);
 
-    expect(scheduler.activeNotes()).toEqual([{ trackIndex: 4, note: 64 }]);
+    expect(scheduler.activeNotes()).toEqual([
+      { trackIndex: 4, note: 64, velocity: 80 },
+    ]);
   });
 
   test("drains only one Track without disturbing other pending note-offs", () => {
@@ -71,12 +77,14 @@ describe("Note gate scheduler", () => {
       emittedTarget: { kind: "move", moveTrackTarget: 0 },
       trackIndex: 0,
       note: 60,
+      velocity: 100,
     });
     scheduler.schedule({
       dueTick: 12,
       emittedTarget: { kind: "move", moveTrackTarget: 1 },
       trackIndex: 1,
       note: 61,
+      velocity: 90,
     });
 
     expect(scheduler.drainTrack(0)).toEqual([

@@ -23,12 +23,17 @@ describe("Overture Next Control Surface Context", () => {
   test("tracks held pads as transient surface state", () => {
     const control = createInitialControlSurfaceContext();
 
-    control.setPadHeld(7, true);
-    control.setPadHeld(3, true);
-    expect(control.snapshot().heldPads).toEqual([7, 3]);
+    control.pressPad(7, 110);
+    control.pressPad(3, 64);
+    expect(control.snapshot().heldPads).toEqual([
+      { padIndex: 7, velocity: 110 },
+      { padIndex: 3, velocity: 64 },
+    ]);
 
-    control.setPadHeld(7, false);
-    expect(control.snapshot().heldPads).toEqual([3]);
+    control.releasePad(7);
+    expect(control.snapshot().heldPads).toEqual([
+      { padIndex: 3, velocity: 64 },
+    ]);
   });
 
   test("keeps Track Selection, Selected Clip Cell, and Track Bank aligned", () => {

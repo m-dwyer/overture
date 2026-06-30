@@ -24,7 +24,9 @@ export const trackView = {
   ): PadLedView[] {
     return Array.from({ length: TRACK_PAD_COUNT }, (_, padIndex) => {
       const note = noteForTrackPad(padIndex);
-      const pressed = snapshot.heldPads?.includes(padIndex);
+      const pressed = snapshot.heldPads?.some(
+        (heldPad) => heldPad.padIndex === padIndex,
+      );
       const sounding = snapshot.activeNotes?.some(
         (active) =>
           active.trackIndex === snapshot.selectedTrackIndex &&
