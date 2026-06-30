@@ -7,6 +7,12 @@ export interface ScheduledNoteOff {
   readonly note: number;
 }
 
+/** A note currently sounding: emitted note-on whose note-off has not yet drained. */
+export interface ActiveNote {
+  readonly trackIndex: number;
+  readonly note: number;
+}
+
 export class NoteGateScheduler {
   private pendingNoteOffs: ScheduledNoteOff[] = [];
 
@@ -23,6 +29,14 @@ export class NoteGateScheduler {
     }
     this.pendingNoteOffs = pending;
     return due.map(toNoteOffCommand);
+  }
+
+  /** Notes still sounding, for surface feedback. Does not mutate pending gates. */
+  activeNotes(): readonly ActiveNote[] {
+    return this.pendingNoteOffs.map((noteOff) => ({
+      trackIndex: noteOff.trackIndex,
+      note: noteOff.note,
+    }));
   }
 
   drainTrack(trackIndex: number): HostCommand[] {

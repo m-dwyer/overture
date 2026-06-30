@@ -6,6 +6,7 @@ import type {
   ProjectPlaybackReadModel,
 } from "../../state/project";
 import {
+  type ActiveNote,
   createNoteGateScheduler,
   type NoteGateScheduler,
 } from "./internal/note-gate-scheduler";
@@ -29,7 +30,10 @@ export interface TrackPlaybackSnapshot {
 
 export interface PlaybackSnapshot {
   readonly tracks: readonly TrackPlaybackSnapshot[];
+  readonly activeNotes: readonly ActiveNote[];
 }
+
+export type { ActiveNote } from "./internal/note-gate-scheduler";
 
 export interface PlaybackTiming {
   readonly running: boolean;
@@ -206,9 +210,12 @@ export class Playback {
     }
   }
 
-  /** Per-track playing/queued clip focus for read-only projections. */
+  /** Per-track playing/queued clip focus and sounding notes for read-only projections. */
   snapshot(): PlaybackSnapshot {
-    return this.trackLaunches.snapshot();
+    return {
+      tracks: this.trackLaunches.snapshot().tracks,
+      activeNotes: this.noteGates.activeNotes(),
+    };
   }
 
   private silenceTrack(

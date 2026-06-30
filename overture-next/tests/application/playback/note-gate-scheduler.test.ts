@@ -37,6 +37,32 @@ describe("Note gate scheduler", () => {
     ]);
   });
 
+  test("reports sounding notes without draining them", () => {
+    const scheduler = createNoteGateScheduler();
+
+    scheduler.schedule({
+      dueTick: 12,
+      emittedTarget: { kind: "move", moveTrackTarget: 1 },
+      trackIndex: 1,
+      note: 60,
+    });
+    scheduler.schedule({
+      dueTick: 24,
+      emittedTarget: { kind: "schwung", schwungChainIndex: 0 },
+      trackIndex: 4,
+      note: 64,
+    });
+
+    expect(scheduler.activeNotes()).toEqual([
+      { trackIndex: 1, note: 60 },
+      { trackIndex: 4, note: 64 },
+    ]);
+
+    scheduler.drainDue(12);
+
+    expect(scheduler.activeNotes()).toEqual([{ trackIndex: 4, note: 64 }]);
+  });
+
   test("drains only one Track without disturbing other pending note-offs", () => {
     const scheduler = createNoteGateScheduler();
 

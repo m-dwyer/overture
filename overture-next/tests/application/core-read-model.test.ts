@@ -44,6 +44,15 @@ describe("Overture Next core read model", () => {
     });
   });
 
+  test("projects sounding notes from playback into the snapshot", () => {
+    const owners = createCoreOwners();
+    owners.playback.startAt(owners.project, { playhead: 0, tick: 0 });
+
+    const snapshot = buildCoreSnapshot(owners);
+
+    expect(snapshot.activeNotes).toContainEqual({ trackIndex: 0, note: 60 });
+  });
+
   test("uses default inactive steps for an empty selected Clip Cell", () => {
     const owners = createCoreOwners();
     owners.control.selectClipCell({ trackIndex: 0, sceneIndex: 7 });

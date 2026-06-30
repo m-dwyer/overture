@@ -4,10 +4,10 @@ import {
   type ControlSurfaceContextSnapshot,
 } from "../../../state/control-surface-context";
 import { selectTrackFromRow } from "../../../state/surface-addressing";
+import { noteForTrackPad } from "../../../shared/track-pad-layout";
 import type { DomainIntent } from "../../intents/types";
 import type { ControlInput } from "../types";
 
-const TRACK_PAD_NOTE_BASE = 60;
 const SOUND_PAGE_STEP_INDEX = 2;
 
 /**
@@ -46,7 +46,7 @@ export function interpretTrackViewControl(
   return {
     kind: "audition-note",
     held: input.held,
-    note: TRACK_PAD_NOTE_BASE + input.padIndex,
+    note: noteForTrackPad(input.padIndex),
     trackIndex: control.selectedTrackIndex,
     velocity: input.velocity,
   };

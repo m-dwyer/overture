@@ -29,6 +29,11 @@ export interface CoreSnapshotPlaybackTrack {
   queuedStop: boolean;
 }
 
+export interface CoreSnapshotActiveNote {
+  trackIndex: number;
+  note: number;
+}
+
 export interface CoreSnapshot {
   selectedTrackIndex: number;
   selectedTrackRoute: TrackRoute;
@@ -42,6 +47,7 @@ export interface CoreSnapshot {
   trackView: TrackViewControlContextSnapshot;
   clipCells: readonly CoreSnapshotClipCell[];
   playbackTracks?: readonly CoreSnapshotPlaybackTrack[];
+  activeNotes?: readonly CoreSnapshotActiveNote[];
   steps: readonly CoreSnapshotStep[];
 }
 

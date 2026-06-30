@@ -38,6 +38,7 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
     trackView: control.trackView,
     clipCells: owners.project.clipCellSnapshots(),
     playbackTracks: playback.tracks,
+    activeNotes: playback.activeNotes,
     steps: getSnapshotSteps(owners.project, control, transport),
   };
 }
