@@ -6,8 +6,8 @@ long-lived interaction contexts that decide what the Move surface means when no
 more specific context is capturing input.
 
 This note describes the intended control-context model for adding more screens,
-parameter pages, and later modal workflows without turning all interaction state
-into durable Project data.
+root-view pages, parameter-bearing pages, and later modal workflows without
+turning all interaction state into durable Project data.
 
 ## Context Types
 
@@ -19,9 +19,10 @@ renaming it.
 
 **Page Context**:
 A selected page within a root view, such as a Track View parameter page for a
-sound engine, envelope, or FX component. Page context is interaction state. It
-may choose how encoders, pads, the jog wheel, or buttons are interpreted while
-that page is selected.
+sound engine, envelope, or FX component, or a future Session View performance
+page. Page context is interaction state. It may choose how encoders, pads, the
+jog wheel, or buttons are interpreted while that page is selected. Not every
+root-view page is a parameter page.
 
 **Overlay Context**:
 A modal, picker, confirmation, or transient editor that captures above the root
@@ -36,7 +37,7 @@ control bypasses overlays; decide that per control when overlays exist.
 **Restorable Interaction Context**:
 Optional UI/session state that may be saved and restored separately from durable
 musical Project data. Examples include the selected root view, selected
-parameter page, or selected parameter on a page.
+root-view page, or selected parameter on a parameter-bearing page.
 
 ## Interpretation Order
 
@@ -72,25 +73,32 @@ Durable musical data remains owned by Project and related domain/state owners.
 Parameter values, route data, clips, scenes, and Motion should not move into
 `ControlSurfaceContext` just because a page displays or edits them.
 
-When Track View parameter pages are introduced, start with the minimum useful
-interaction state:
+Track View now owns the minimum useful page interaction state:
 
 ```ts
 trackView: {
-  selectedParameterPageId: ParameterPageId;
-  selectedParameterIdByPage: Record<ParameterPageId, ParameterId>;
+  selectedPageId: RootViewPageId;
+  selectedParameterIdByPage: Record<RootViewPageId, ParameterId>;
 }
 ```
 
-Add this state only when implementing the first real parameter-page workflow,
-and expose mutation through `ControlSurfaceContext` owner methods.
+This remembers the selected Track View page and the selected parameter for each
+Track View page. The page identity is intentionally root-view vocabulary, not
+parameter-page vocabulary, so future non-parameter pages can use the same
+concept. Expose mutation through `ControlSurfaceContext` owner methods.
+
+Do not make `ControlSurfaceContext` the registry of available pages. Page
+availability likely depends on view definitions, route/component metadata,
+Project data, or host/module capabilities. `ControlSurfaceContext` should
+remember the current interaction context; concrete page metadata should live
+with the feature that owns it.
 
 ## Persistence
 
 Persist restorable interaction context separately from durable Project data. A
-future persistence shape may serialize selected pages or parameters, but it
-should validate restored values against the current Project/module shape and
-fall back gracefully if a page or parameter no longer exists.
+future persistence shape may serialize selected root-view pages or parameters,
+but it should validate restored values against the current Project/module shape
+and fall back gracefully if a page or parameter no longer exists.
 
 Do not add a persistence schema as part of the control-context refactor. Add it
 when save/load or restore behavior creates concrete requirements.
@@ -99,7 +107,9 @@ when save/load or restore behavior creates concrete requirements.
 
 1. Refactor control interpretation to select a root control context without
    changing behavior.
-2. Add Track View page context when the first parameter page feature needs it.
-3. Add page-specific interpretation and view projection with that feature.
+2. Add minimal Track View page context as restorable interaction state.
+3. Add page-specific interpretation and view projection with a concrete page
+   feature, passing narrow read contracts instead of broad snapshots where
+   practical.
 4. Add overlay context capture only when a modal or picker exists.
 5. Add restorable interaction persistence separately from Project musical data.
