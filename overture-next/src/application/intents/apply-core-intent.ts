@@ -1,4 +1,5 @@
 import type { CoreOwners } from "../core-owners";
+import { assertNever } from "../../shared/assert-never";
 import {
   auditionNote,
   launchClipCell,
@@ -57,5 +58,7 @@ export function applyCoreIntent(
         },
         intent.coordinate,
       );
+    default:
+      return assertNever(intent);
   }
 }
