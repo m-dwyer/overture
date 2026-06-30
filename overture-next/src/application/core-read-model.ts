@@ -35,6 +35,7 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
     playing: transport.playing,
     selectedClipId: selectedCell.clipId,
     selectedClipCell: { ...selectedClipCell },
+    heldPads: control.heldPads,
     trackView: control.trackView,
     clipCells: owners.project.clipCellSnapshots(),
     playbackTracks: playback.tracks,

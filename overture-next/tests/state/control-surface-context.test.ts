@@ -10,6 +10,7 @@ describe("Overture Next Control Surface Context", () => {
       heldControls: [],
       selectedStep: 0,
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
+      heldPads: [],
       trackView: {
         selectedPageId: "default",
         selectedParameterIdByPage: {
@@ -17,6 +18,17 @@ describe("Overture Next Control Surface Context", () => {
         },
       },
     });
+  });
+
+  test("tracks held pads as transient surface state", () => {
+    const control = createInitialControlSurfaceContext();
+
+    control.setPadHeld(7, true);
+    control.setPadHeld(3, true);
+    expect(control.snapshot().heldPads).toEqual([7, 3]);
+
+    control.setPadHeld(7, false);
+    expect(control.snapshot().heldPads).toEqual([3]);
   });
 
   test("keeps Track Selection, Selected Clip Cell, and Track Bank aligned", () => {

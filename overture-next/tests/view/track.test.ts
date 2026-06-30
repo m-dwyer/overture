@@ -134,6 +134,32 @@ describe("Overture Next Track View module", () => {
     ]);
   });
 
+  test("lights held pads as pressed over the playable baseline", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 5,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
+      visibleTrackBank: 1,
+      activeView: "track",
+      heldControls: [],
+      selectedStep: 1,
+      playing: false,
+      selectedClipId: "clip-6",
+      selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      heldPads: [3],
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
+      clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
+      steps: [],
+    };
+
+    const pads = trackView.createPadLeds(snapshot, []);
+
+    expect(pads[3]).toEqual({ padIndex: 3, state: "pressed" });
+    expect(pads[0]).toEqual({ padIndex: 0, state: "playable" });
+  });
+
   test("derives a Schwung Sound page from selected Track View page and host reads", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 5,

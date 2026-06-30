@@ -24,12 +24,18 @@ export const trackView = {
   ): PadLedView[] {
     return Array.from({ length: TRACK_PAD_COUNT }, (_, padIndex) => {
       const note = noteForTrackPad(padIndex);
+      const pressed = snapshot.heldPads?.includes(padIndex);
       const sounding = snapshot.activeNotes?.some(
         (active) =>
           active.trackIndex === snapshot.selectedTrackIndex &&
           active.note === note,
       );
-      return { padIndex, state: sounding ? "playing" : "playable" };
+      const state: PadLedView["state"] = pressed
+        ? "pressed"
+        : sounding
+          ? "playing"
+          : "playable";
+      return { padIndex, state };
     });
   },
 };

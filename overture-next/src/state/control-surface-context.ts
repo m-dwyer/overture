@@ -26,6 +26,7 @@ export interface ControlSurfaceContextSnapshot {
   readonly heldControls: readonly HeldSurfaceControl[];
   readonly selectedStep: number;
   readonly selectedClipCell: Readonly<ClipCellCoordinate>;
+  readonly heldPads: readonly number[];
   readonly trackView: TrackViewControlContextSnapshot;
 }
 
@@ -40,6 +41,7 @@ export class ControlSurfaceContext {
   private readonly heldControlsValue: Set<HeldSurfaceControl>;
   private selectedStepValue: StepIndex;
   private selectedClipCellValue: ClipCellCoordinate;
+  private readonly heldPadsValue: Set<number>;
   private selectedTrackViewPageIdValue: RootViewPageId;
   private readonly selectedTrackViewParameterIdByPageValue: Record<
     RootViewPageId,
@@ -56,6 +58,7 @@ export class ControlSurfaceContext {
       trackIndex: 0,
       sceneIndex: 0,
     });
+    this.heldPadsValue = new Set();
     this.selectedTrackViewPageIdValue = DEFAULT_TRACK_VIEW_PAGE_ID;
     this.selectedTrackViewParameterIdByPageValue = {
       [DEFAULT_TRACK_VIEW_PAGE_ID]: DEFAULT_TRACK_VIEW_PARAMETER_ID,
@@ -70,6 +73,7 @@ export class ControlSurfaceContext {
       heldControls: [...this.heldControlsValue],
       selectedStep: this.selectedStepValue,
       selectedClipCell: { ...this.selectedClipCellValue },
+      heldPads: [...this.heldPadsValue],
       trackView: {
         selectedPageId: this.selectedTrackViewPageIdValue,
         selectedParameterIdByPage: {
@@ -106,6 +110,11 @@ export class ControlSurfaceContext {
 
   selectStep(stepIndexValue: number): void {
     this.selectedStepValue = stepIndex(stepIndexValue);
+  }
+
+  setPadHeld(padIndex: number, held: boolean): void {
+    if (held) this.heldPadsValue.add(padIndex);
+    else this.heldPadsValue.delete(padIndex);
   }
 
   selectTrackViewPage(pageIdValue: string): void {

@@ -57,6 +57,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(interpretControl(padPress(7, 101), control.snapshot())).toEqual({
       kind: "audition-note",
       held: true,
+      padIndex: 7,
       note: 67,
       trackIndex: 0,
       velocity: 101,
@@ -64,6 +65,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(interpretControl(padRelease(7), control.snapshot())).toEqual({
       kind: "audition-note",
       held: false,
+      padIndex: 7,
       note: 67,
       trackIndex: 0,
       velocity: 0,

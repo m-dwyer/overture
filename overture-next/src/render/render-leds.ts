@@ -10,6 +10,7 @@ const STEP_COLORS = {
 } as const;
 
 const PAD_COLORS = {
+  pressed: OVERTURE_LED_COLOR.selected,
   playing: OVERTURE_LED_COLOR.playing,
   queued: OVERTURE_LED_COLOR.hint,
   "queued-stop": OVERTURE_LED_COLOR.available,

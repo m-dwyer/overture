@@ -59,6 +59,7 @@ export interface StepLedView {
 export interface PadLedView {
   padIndex: number;
   state:
+    | "pressed"
     | "playing"
     | "queued"
     | "queued-stop"

@@ -19,6 +19,7 @@ describe("Overture Next Track control interpretation", () => {
     ).toEqual({
       kind: "audition-note",
       held: true,
+      padIndex: 7,
       note: 67,
       trackIndex: 5,
       velocity: 101,
@@ -37,6 +38,7 @@ describe("Overture Next Track control interpretation", () => {
     ).toEqual({
       kind: "audition-note",
       held: false,
+      padIndex: 7,
       note: 67,
       trackIndex: 5,
       velocity: 0,

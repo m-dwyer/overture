@@ -44,6 +44,7 @@ export interface CoreSnapshot {
   playing: boolean;
   selectedClipId: string | null;
   selectedClipCell: ControlSurfaceContextSnapshot["selectedClipCell"];
+  heldPads?: ControlSurfaceContextSnapshot["heldPads"];
   trackView: TrackViewControlContextSnapshot;
   clipCells: readonly CoreSnapshotClipCell[];
   playbackTracks?: readonly CoreSnapshotPlaybackTrack[];

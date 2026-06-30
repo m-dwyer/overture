@@ -46,6 +46,7 @@ export function interpretTrackViewControl(
   return {
     kind: "audition-note",
     held: input.held,
+    padIndex: input.padIndex,
     note: noteForTrackPad(input.padIndex),
     trackIndex: control.selectedTrackIndex,
     velocity: input.velocity,

@@ -19,6 +19,7 @@ export type DomainIntent =
   | {
       kind: "audition-note";
       held: boolean;
+      padIndex: number;
       note: number;
       trackIndex: number;
       velocity: number;
