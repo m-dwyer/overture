@@ -1,17 +1,19 @@
 import { TRACK_COUNT, type ClipId } from "../../../domain/project";
 
-export interface TrackPlaybackSnapshot {
+export interface TrackLaunchSnapshot {
   readonly trackIndex: number;
   readonly playingClipId: ClipId | null;
   readonly queuedClipId: ClipId | null;
   readonly queuedStop: boolean;
 }
 
-export interface TrackPlaybackRegistrySnapshot {
-  readonly tracks: readonly TrackPlaybackSnapshot[];
+export interface TrackLaunchSchedulerSnapshot {
+  readonly tracks: readonly TrackLaunchSnapshot[];
 }
 
-export type TrackToggleResult = { readonly kind: "launched" | "stopped" };
+export type TrackLaunchToggleResult = {
+  readonly kind: "launched" | "stopped";
+};
 
 interface TrackPlaybackRecord {
   trackIndex: number;
@@ -20,7 +22,7 @@ interface TrackPlaybackRecord {
   queuedStop: boolean;
 }
 
-export class TrackPlaybackRegistry {
+export class TrackLaunchScheduler {
   private readonly tracks: TrackPlaybackRecord[];
 
   constructor(trackCount = TRACK_COUNT) {
@@ -32,14 +34,14 @@ export class TrackPlaybackRegistry {
     }));
   }
 
-  launch(trackIndex: number, clipId: ClipId): void {
+  launchNow(trackIndex: number, clipId: ClipId): void {
     const track = this.requireTrack(trackIndex);
     track.playingClipId = clipId;
     track.queuedClipId = null;
     track.queuedStop = false;
   }
 
-  toggleNow(trackIndex: number, clipId: ClipId): TrackToggleResult {
+  toggleNow(trackIndex: number, clipId: ClipId): TrackLaunchToggleResult {
     const track = this.requireTrack(trackIndex);
     if (track.playingClipId === clipId) {
       this.clear(track);
@@ -72,7 +74,7 @@ export class TrackPlaybackRegistry {
     track.queuedStop = true;
   }
 
-  stop(trackIndex: number): void {
+  stopNow(trackIndex: number): void {
     this.clear(this.requireTrack(trackIndex));
   }
 
@@ -98,13 +100,13 @@ export class TrackPlaybackRegistry {
     track.queuedStop = false;
   }
 
-  tracksWithQueuedChanges(): readonly TrackPlaybackSnapshot[] {
+  tracksWithQueuedChanges(): readonly TrackLaunchSnapshot[] {
     return this.tracks
       .filter((track) => track.queuedStop || track.queuedClipId)
       .map(snapshotTrack);
   }
 
-  playingTracks(): readonly TrackPlaybackSnapshot[] {
+  playingTracks(): readonly TrackLaunchSnapshot[] {
     return this.tracks
       .filter((track) => track.playingClipId)
       .map(snapshotTrack);
@@ -114,7 +116,7 @@ export class TrackPlaybackRegistry {
     return this.requireTrack(trackIndex).playingClipId;
   }
 
-  snapshot(): TrackPlaybackRegistrySnapshot {
+  snapshot(): TrackLaunchSchedulerSnapshot {
     return {
       tracks: this.tracks.map(snapshotTrack),
     };
@@ -133,13 +135,13 @@ export class TrackPlaybackRegistry {
   }
 }
 
-export function createTrackPlaybackRegistry(
+export function createTrackLaunchScheduler(
   trackCount = TRACK_COUNT,
-): TrackPlaybackRegistry {
-  return new TrackPlaybackRegistry(trackCount);
+): TrackLaunchScheduler {
+  return new TrackLaunchScheduler(trackCount);
 }
 
-function snapshotTrack(track: TrackPlaybackRecord): TrackPlaybackSnapshot {
+function snapshotTrack(track: TrackPlaybackRecord): TrackLaunchSnapshot {
   return {
     trackIndex: track.trackIndex,
     playingClipId: track.playingClipId,
