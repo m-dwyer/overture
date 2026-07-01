@@ -14,6 +14,7 @@ describe("Overture Next root control context interpretation", () => {
         control.snapshot(cursor),
       ),
     ).toEqual({
+      scope: "session",
       kind: "launch-clip-cell",
       coordinate: { trackIndex: 4, sceneIndex: 2 },
     });
@@ -26,6 +27,7 @@ describe("Overture Next root control context interpretation", () => {
         control.snapshot(cursor),
       ),
     ).toEqual({
+      scope: "track",
       kind: "audition-note",
       held: true,
       padIndex: 7,
@@ -44,6 +46,7 @@ describe("Overture Next root control context interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "global",
       kind: "toggle-view",
     });
   });

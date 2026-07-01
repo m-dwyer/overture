@@ -130,19 +130,19 @@ describe("Overture Next view projection", () => {
       affordances: [
         {
           trigger: { kind: "track-button", row: 0 },
-          intent: { kind: "select-track", trackIndex: 4 },
+          intent: { scope: "session", kind: "select-track", trackIndex: 4 },
         },
         {
           trigger: { kind: "track-button", row: 1 },
-          intent: { kind: "select-track", trackIndex: 5 },
+          intent: { scope: "session", kind: "select-track", trackIndex: 5 },
         },
         {
           trigger: { kind: "track-button", row: 2 },
-          intent: { kind: "select-track", trackIndex: 6 },
+          intent: { scope: "session", kind: "select-track", trackIndex: 6 },
         },
         {
           trigger: { kind: "track-button", row: 3 },
-          intent: { kind: "select-track", trackIndex: 7 },
+          intent: { scope: "session", kind: "select-track", trackIndex: 7 },
         },
       ],
       steps: [
@@ -279,19 +279,19 @@ describe("Overture Next view projection", () => {
       affordances: [
         {
           trigger: { kind: "track-button", row: 0 },
-          intent: { kind: "select-track", trackIndex: 4 },
+          intent: { scope: "track", kind: "select-track", trackIndex: 4 },
         },
         {
           trigger: { kind: "track-button", row: 1 },
-          intent: { kind: "select-track", trackIndex: 5 },
+          intent: { scope: "track", kind: "select-track", trackIndex: 5 },
         },
         {
           trigger: { kind: "track-button", row: 2 },
-          intent: { kind: "select-track", trackIndex: 6 },
+          intent: { scope: "track", kind: "select-track", trackIndex: 6 },
         },
         {
           trigger: { kind: "track-button", row: 3 },
-          intent: { kind: "select-track", trackIndex: 7 },
+          intent: { scope: "track", kind: "select-track", trackIndex: 7 },
         },
       ],
       steps: [

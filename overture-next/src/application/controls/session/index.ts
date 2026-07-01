@@ -21,6 +21,7 @@ export function interpretSessionViewControl(
 ): DomainIntent | null {
   if (input.kind === "track-row") {
     return {
+      scope: "session",
       kind: "select-track",
       trackIndex: selectTrackFromRow(
         input.row,
@@ -31,6 +32,7 @@ export function interpretSessionViewControl(
   if (input.kind !== "pad") return null;
   if (!input.held) return null;
   return {
+    scope: "session",
     kind: "launch-clip-cell",
     coordinate: clipCellCoordinateForSessionPad(
       control.visibleTrackBank,
@@ -43,7 +45,7 @@ export function interpretSessionViewControl(
 export function affordancesSessionView(
   control: ControlSurfaceContextSnapshot,
 ): SurfaceAffordance[] {
-  return trackBankAffordances(control);
+  return trackBankAffordances(control, "session");
 }
 
 export const sessionRootControlContext: RootControlContext = {

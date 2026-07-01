@@ -1,8 +1,8 @@
 /**
  * Read-only transport clock position visible to application workflows.
  *
- * Transport owns mutation of these values; playback and operations may consume
- * them to schedule note work without taking transport mutation authority.
+ * Transport owns mutation of these values; playback workflows may consume them
+ * to schedule note work without taking transport mutation authority.
  */
 export interface TransportClock {
   readonly playhead: number;

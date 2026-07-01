@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { toggleTransportPlayback } from "../../../src/application/operations";
+import { createTransportIntentHandler } from "../../../src/application/intents/transport-intent-handler";
 import type { HostCommand } from "../../../src/application/types";
 import type { ProjectPlaybackReadModel } from "../../../src/state/project";
 
-describe("Overture Next transport playback operation", () => {
+describe("Overture Next transport intent handler", () => {
   test("starts transport before starting playback at the current clock", () => {
     const events: string[] = [];
     const project = {} as ProjectPlaybackReadModel;
@@ -16,7 +16,7 @@ describe("Overture Next transport playback operation", () => {
       velocity: 100,
     };
 
-    const result = toggleTransportPlayback({
+    const result = createTransportIntentHandler({
       project,
       transport: {
         isPlaying() {
@@ -46,7 +46,7 @@ describe("Overture Next transport playback operation", () => {
           return [];
         },
       },
-    });
+    }).handle({ scope: "transport", kind: "toggle-transport-playback" });
 
     expect(result).toEqual({ applied: true, hostCommands: [command] });
     expect(events).toEqual(["isPlaying", "start", "clock", "startAt"]);
@@ -63,7 +63,7 @@ describe("Overture Next transport playback operation", () => {
       note: 64,
     };
 
-    const result = toggleTransportPlayback({
+    const result = createTransportIntentHandler({
       project,
       transport: {
         isPlaying() {
@@ -93,7 +93,7 @@ describe("Overture Next transport playback operation", () => {
           return [command];
         },
       },
-    });
+    }).handle({ scope: "transport", kind: "toggle-transport-playback" });
 
     expect(result).toEqual({ applied: true, hostCommands: [command] });
     expect(events).toEqual(["isPlaying", "stop", "clock", "pauseAt"]);

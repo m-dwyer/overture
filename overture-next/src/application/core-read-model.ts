@@ -9,7 +9,7 @@ import type { PlaybackSnapshot } from "./playback";
 import type { TransportSnapshot } from "./transport";
 import type { CoreSnapshot } from "./types";
 
-export interface CoreReadModelOwners {
+export interface CoreReadModelSources {
   readonly project: ProjectCoreReadModel;
   readonly control: {
     snapshot(
@@ -24,17 +24,17 @@ export interface CoreReadModelOwners {
   };
 }
 
-export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
-  const control = owners.control.snapshot(owners.project.selectedClipCell());
-  const transport = owners.transport.snapshot();
-  const playback = owners.playback.snapshot();
+export function buildCoreSnapshot(sources: CoreReadModelSources): CoreSnapshot {
+  const control = sources.control.snapshot(sources.project.selectedClipCell());
+  const transport = sources.transport.snapshot();
+  const playback = sources.playback.snapshot();
   const selectedClipCell = control.selectedClipCell;
-  const selectedCell = owners.project.clipCellAt(selectedClipCell);
+  const selectedCell = sources.project.clipCellAt(selectedClipCell);
 
   return {
     selectedTrackIndex: control.selectedTrackIndex,
-    selectedTrackRoute: owners.project.trackRoute(control.selectedTrackIndex),
-    trackColours: owners.project.trackColours(),
+    selectedTrackRoute: sources.project.trackRoute(control.selectedTrackIndex),
+    trackColours: sources.project.trackColours(),
     visibleTrackBank: control.visibleTrackBank,
     activeView: control.activeView,
     heldControls: control.heldControls,
@@ -43,17 +43,17 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
     selectedClipCell: { ...selectedClipCell },
     heldPads: control.heldPads,
     trackView: control.trackView,
-    clipCells: owners.project.clipCellSnapshots(),
+    clipCells: sources.project.clipCellSnapshots(),
     playbackTracks: playback.tracks,
     activeNotes: playback.activeNotes,
     affordances: rootControlContextFor(control).affordances(control),
-    steps: getSnapshotSteps(owners.project, control, transport),
+    steps: getSnapshotSteps(sources.project, control, transport),
   };
 }
 
-export function selectedSequenceLength(owners: CoreReadModelOwners): number {
-  const control = owners.control.snapshot(owners.project.selectedClipCell());
-  const sequence = selectedSequence(owners.project, control);
+export function selectedSequenceLength(sources: CoreReadModelSources): number {
+  const control = sources.control.snapshot(sources.project.selectedClipCell());
+  const sequence = selectedSequence(sources.project, control);
   return sequence?.length ?? DEFAULT_STEP_COUNT;
 }
 

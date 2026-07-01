@@ -5,27 +5,49 @@ import type {
   RootViewPageId,
 } from "../../state/control-surface-context";
 
-export type DomainIntent =
+export type GlobalIntent =
   | {
+      scope: "global";
       kind: "set-surface-control-held";
       control: HeldSurfaceControl;
       held: boolean;
     }
-  | { kind: "toggle-transport-playback" }
-  | { kind: "toggle-view" }
-  | { kind: "select-track-view-page"; pageId: RootViewPageId }
-  | { kind: "select-track"; trackIndex: number }
-  | { kind: "toggle-step"; stepIndex: number }
+  | { scope: "global"; kind: "toggle-view" };
+
+export type TransportIntent = {
+  scope: "transport";
+  kind: "toggle-transport-playback";
+};
+
+export type SessionIntent =
+  | { scope: "session"; kind: "select-track"; trackIndex: number }
   | {
+      scope: "session";
+      kind: "select-clip-cell";
+      coordinate: ClipCellCoordinateInput;
+    }
+  | {
+      scope: "session";
+      kind: "launch-clip-cell";
+      coordinate: ClipCellCoordinateInput;
+    };
+
+export type TrackIntent =
+  | { scope: "track"; kind: "select-track"; trackIndex: number }
+  | { scope: "track"; kind: "select-track-view-page"; pageId: RootViewPageId }
+  | { scope: "track"; kind: "toggle-step"; stepIndex: number }
+  | {
+      scope: "track";
       kind: "audition-note";
       held: boolean;
       padIndex: number;
       note: number;
       trackIndex: number;
       velocity: number;
-    }
-  | { kind: "select-clip-cell"; coordinate: ClipCellCoordinateInput }
-  | { kind: "launch-clip-cell"; coordinate: ClipCellCoordinateInput };
+    };
+
+export type DomainIntent =
+  GlobalIntent | TransportIntent | SessionIntent | TrackIntent;
 
 export interface DomainIntentTransaction {
   applied: boolean;

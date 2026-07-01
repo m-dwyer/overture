@@ -20,6 +20,7 @@ describe("Overture Next Track control interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 5, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "audition-note",
       held: true,
       padIndex: 7,
@@ -38,6 +39,7 @@ describe("Overture Next Track control interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 5, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "audition-note",
       held: false,
       padIndex: 7,
@@ -57,6 +59,7 @@ describe("Overture Next Track control interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "select-track",
       trackIndex: 5,
     });
@@ -66,6 +69,7 @@ describe("Overture Next Track control interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "toggle-step",
       stepIndex: 1,
     });
@@ -81,6 +85,7 @@ describe("Overture Next Track control interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "select-track-view-page",
       pageId: TRACK_VIEW_SOUND_PAGE_ID,
     });
@@ -93,6 +98,7 @@ describe("Overture Next Track control interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "select-track-view-page",
       pageId: DEFAULT_TRACK_VIEW_PAGE_ID,
     });
@@ -115,19 +121,19 @@ describe("Overture Next Track control interpretation", () => {
     ).toEqual([
       {
         trigger: { kind: "track-button", row: 0 },
-        intent: { kind: "select-track", trackIndex: 4 },
+        intent: { scope: "track", kind: "select-track", trackIndex: 4 },
       },
       {
         trigger: { kind: "track-button", row: 1 },
-        intent: { kind: "select-track", trackIndex: 5 },
+        intent: { scope: "track", kind: "select-track", trackIndex: 5 },
       },
       {
         trigger: { kind: "track-button", row: 2 },
-        intent: { kind: "select-track", trackIndex: 6 },
+        intent: { scope: "track", kind: "select-track", trackIndex: 6 },
       },
       {
         trigger: { kind: "track-button", row: 3 },
-        intent: { kind: "select-track", trackIndex: 7 },
+        intent: { scope: "track", kind: "select-track", trackIndex: 7 },
       },
     ]);
   });

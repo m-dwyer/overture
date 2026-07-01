@@ -84,7 +84,8 @@ runWorkflow(applicationState, command);
 Use public contracts that match caller authority:
 
 - mutation-capable orchestration receives owner objects or public owner APIs
-- application operations receive narrow workflow contexts, not broad core state
+- scoped intent handlers and workflow modules receive narrow workflow contexts,
+  not broad core state
 - read-only modules receive snapshots or narrow read contracts
 - host/render/view code should not receive mutable domain state when a snapshot
   or view model is sufficient

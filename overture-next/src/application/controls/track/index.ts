@@ -26,6 +26,7 @@ export function interpretTrackViewControl(
 ): DomainIntent | null {
   if (input.kind === "track-row") {
     return {
+      scope: "track",
       kind: "select-track",
       trackIndex: selectTrackFromRow(
         input.row,
@@ -39,16 +40,18 @@ export function interpretTrackViewControl(
       input.step === SOUND_PAGE_STEP_INDEX
     )
       return {
+        scope: "track",
         kind: "select-track-view-page",
         pageId:
           control.trackView.selectedPageId === TRACK_VIEW_SOUND_PAGE_ID
             ? DEFAULT_TRACK_VIEW_PAGE_ID
             : TRACK_VIEW_SOUND_PAGE_ID,
       };
-    return { kind: "toggle-step", stepIndex: input.step };
+    return { scope: "track", kind: "toggle-step", stepIndex: input.step };
   }
   if (input.kind !== "pad") return null;
   return {
+    scope: "track",
     kind: "audition-note",
     held: input.held,
     padIndex: input.padIndex,
@@ -62,7 +65,7 @@ export function interpretTrackViewControl(
 export function affordancesTrackView(
   control: ControlSurfaceContextSnapshot,
 ): SurfaceAffordance[] {
-  return trackBankAffordances(control);
+  return trackBankAffordances(control, "track");
 }
 
 export const trackRootControlContext: RootControlContext = {

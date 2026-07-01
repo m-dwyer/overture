@@ -16,6 +16,7 @@ describe("Overture Next Session control interpretation", () => {
     );
 
     expect(intent).toEqual({
+      scope: "session",
       kind: "launch-clip-cell",
       coordinate: { trackIndex: 4, sceneIndex: 2 },
     });
@@ -43,6 +44,7 @@ describe("Overture Next Session control interpretation", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "session",
       kind: "select-track",
       trackIndex: 5,
     });
@@ -71,19 +73,19 @@ describe("Overture Next Session control interpretation", () => {
     ).toEqual([
       {
         trigger: { kind: "track-button", row: 0 },
-        intent: { kind: "select-track", trackIndex: 4 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 4 },
       },
       {
         trigger: { kind: "track-button", row: 1 },
-        intent: { kind: "select-track", trackIndex: 5 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 5 },
       },
       {
         trigger: { kind: "track-button", row: 2 },
-        intent: { kind: "select-track", trackIndex: 6 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 6 },
       },
       {
         trigger: { kind: "track-button", row: 3 },
-        intent: { kind: "select-track", trackIndex: 7 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 7 },
       },
     ]);
   });

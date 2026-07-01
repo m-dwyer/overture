@@ -1,17 +1,22 @@
 import { describe, expect, test } from "vitest";
-import { auditionNote } from "../../../src/application/operations";
+import { createTrackIntentHandler } from "../../../src/application/intents/track-intent-handler";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
 import { createDefaultProject } from "../../../src/state/project";
 
-describe("Overture Next audition note operation", () => {
+describe("Overture Next track intent handler", () => {
   test("holds the pad and emits a note-on while pressed", () => {
     const control = createInitialControlSurfaceContext();
     const project = createDefaultProject();
 
-    const result = auditionNote(
-      { control, project },
-      { held: true, padIndex: 5, note: 65, trackIndex: 0, velocity: 100 },
-    );
+    const result = createTrackIntentHandler({ control, project }).handle({
+      scope: "track",
+      kind: "audition-note",
+      held: true,
+      padIndex: 5,
+      note: 65,
+      trackIndex: 0,
+      velocity: 100,
+    });
 
     expect(control.snapshot(project.selectedClipCell()).heldPads).toEqual([
       { padIndex: 5, velocity: 100 },
@@ -30,15 +35,26 @@ describe("Overture Next audition note operation", () => {
   test("releases the pad and emits a note-off on release", () => {
     const control = createInitialControlSurfaceContext();
     const project = createDefaultProject();
+    const handler = createTrackIntentHandler({ control, project });
 
-    auditionNote(
-      { control, project },
-      { held: true, padIndex: 5, note: 65, trackIndex: 0, velocity: 100 },
-    );
-    const result = auditionNote(
-      { control, project },
-      { held: false, padIndex: 5, note: 65, trackIndex: 0, velocity: 0 },
-    );
+    handler.handle({
+      scope: "track",
+      kind: "audition-note",
+      held: true,
+      padIndex: 5,
+      note: 65,
+      trackIndex: 0,
+      velocity: 100,
+    });
+    const result = handler.handle({
+      scope: "track",
+      kind: "audition-note",
+      held: false,
+      padIndex: 5,
+      note: 65,
+      trackIndex: 0,
+      velocity: 0,
+    });
 
     expect(control.snapshot(project.selectedClipCell()).heldPads).toEqual([]);
     expect(result.hostCommands).toEqual([

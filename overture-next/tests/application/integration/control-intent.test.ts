@@ -6,7 +6,11 @@ import {
   TRACK_VIEW_SOUND_PAGE_ID,
 } from "../../../src/state/control-surface-context";
 import { interpretControl } from "../../../src/application/controls/interpret-control";
-import { applyCoreIntent } from "../../../src/application/intents/apply-core-intent";
+import { createDomainIntentHandler } from "../../../src/application/intents/domain-intent-handler";
+import { createGlobalIntentHandler } from "../../../src/application/intents/global-intent-handler";
+import { createSessionIntentHandler } from "../../../src/application/intents/session-intent-handler";
+import { createTrackIntentHandler } from "../../../src/application/intents/track-intent-handler";
+import { createTransportIntentHandler } from "../../../src/application/intents/transport-intent-handler";
 import type {
   DomainIntent,
   DomainIntentTransaction,
@@ -38,6 +42,7 @@ describe("Overture Next control-to-intent pipeline", () => {
         ),
       ),
     ).toEqual({
+      scope: "session",
       kind: "select-track",
       trackIndex: 1,
     });
@@ -50,6 +55,7 @@ describe("Overture Next control-to-intent pipeline", () => {
         ),
       ),
     ).toEqual({
+      scope: "session",
       kind: "select-track",
       trackIndex: 5,
     });
@@ -65,6 +71,7 @@ describe("Overture Next control-to-intent pipeline", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "audition-note",
       held: true,
       padIndex: 7,
@@ -78,6 +85,7 @@ describe("Overture Next control-to-intent pipeline", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "audition-note",
       held: false,
       padIndex: 7,
@@ -96,6 +104,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     );
 
     expect(intent).toEqual({
+      scope: "session",
       kind: "launch-clip-cell",
       coordinate: { trackIndex: 4, sceneIndex: 2 },
     });
@@ -120,6 +129,7 @@ describe("Overture Next control-to-intent pipeline", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "track",
       kind: "toggle-step",
       stepIndex: 1,
     });
@@ -129,6 +139,7 @@ describe("Overture Next control-to-intent pipeline", () => {
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
+      scope: "transport",
       kind: "toggle-transport-playback",
     });
   });
@@ -146,6 +157,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     );
 
     expect(intent).toEqual({
+      scope: "track",
       kind: "select-track-view-page",
       pageId: TRACK_VIEW_SOUND_PAGE_ID,
     });
@@ -163,6 +175,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     );
 
     expect(closeIntent).toEqual({
+      scope: "track",
       kind: "select-track-view-page",
       pageId: DEFAULT_TRACK_VIEW_PAGE_ID,
     });
@@ -185,6 +198,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentAndCollect(
         {
+          scope: "session",
           kind: "select-clip-cell",
           coordinate: { trackIndex: 3, sceneIndex: 7 },
         },
@@ -215,6 +229,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentAndCollect(
         {
+          scope: "session",
           kind: "select-clip-cell",
           coordinate: { trackIndex: 5, sceneIndex: 7 },
         },
@@ -246,6 +261,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentAndCollect(
         {
+          scope: "session",
           kind: "launch-clip-cell",
           coordinate: { trackIndex: 2, sceneIndex: 0 },
         },
@@ -293,7 +309,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -314,6 +330,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentAndCollect(
         {
+          scope: "session",
           kind: "select-clip-cell",
           coordinate: { trackIndex: 0, sceneIndex: 0 },
         },
@@ -323,7 +340,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     ).toBe(true);
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -353,7 +370,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -394,7 +411,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -443,7 +460,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -452,6 +469,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentAndCollect(
         {
+          scope: "session",
           kind: "select-track",
           trackIndex: 6,
         },
@@ -461,14 +479,14 @@ describe("Overture Next control-to-intent pipeline", () => {
     ).toBe(true);
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
     ).toBe(true);
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -501,7 +519,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -512,7 +530,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -532,6 +550,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentAndCollect(
         {
+          scope: "session",
           kind: "select-clip-cell",
           coordinate: { trackIndex: 0, sceneIndex: 0 },
         },
@@ -541,7 +560,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     ).toBe(true);
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -549,7 +568,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     hostCommands.length = 0;
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -575,7 +594,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -583,7 +602,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     hostCommands.length = 0;
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-transport-playback" },
+        { scope: "transport", kind: "toggle-transport-playback" },
         state,
         hostCommands,
       ),
@@ -630,6 +649,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentWithState(
         {
+          scope: "session",
           kind: "launch-clip-cell",
           coordinate: { trackIndex: 2, sceneIndex: 0 },
         },
@@ -642,6 +662,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(
       applyIntentWithState(
         {
+          scope: "session",
           kind: "launch-clip-cell",
           coordinate: { trackIndex: 2, sceneIndex: 0 },
         },
@@ -652,7 +673,10 @@ describe("Overture Next control-to-intent pipeline", () => {
       hostCommands: [],
     });
     expect(
-      applyIntentWithState({ kind: "toggle-transport-playback" }, state),
+      applyIntentWithState(
+        { scope: "transport", kind: "toggle-transport-playback" },
+        state,
+      ),
     ).toEqual({
       applied: true,
       hostCommands: [
@@ -667,7 +691,10 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
 
     expect(
-      applyIntentWithState({ kind: "toggle-transport-playback" }, state),
+      applyIntentWithState(
+        { scope: "transport", kind: "toggle-transport-playback" },
+        state,
+      ),
     ).toEqual({
       applied: true,
       hostCommands: [
@@ -689,7 +716,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(
       applyIntentAndCollect(
-        { kind: "select-track", trackIndex: 5 },
+        { scope: "session", kind: "select-track", trackIndex: 5 },
         state,
         hostCommands,
       ),
@@ -719,7 +746,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(
       applyIntentAndCollect(
-        { kind: "toggle-step", stepIndex: 1 },
+        { scope: "track", kind: "toggle-step", stepIndex: 1 },
         state,
         hostCommands,
       ),
@@ -739,7 +766,12 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(
       applyIntentAndCollect(
-        { kind: "set-surface-control-held", control: "shift", held: true },
+        {
+          scope: "global",
+          kind: "set-surface-control-held",
+          control: "shift",
+          held: true,
+        },
         state,
         hostCommands,
       ),
@@ -761,7 +793,7 @@ describe("Overture Next control-to-intent pipeline", () => {
 
     expect(() =>
       applyIntentAndCollect(
-        { kind: "select-track", trackIndex: 99 },
+        { scope: "session", kind: "select-track", trackIndex: 99 },
         state,
         hostCommands,
       ),
@@ -769,6 +801,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     expect(() =>
       applyIntentAndCollect(
         {
+          scope: "session",
           kind: "select-clip-cell",
           coordinate: { trackIndex: 0, sceneIndex: 99 },
         },
@@ -801,7 +834,23 @@ function applyIntentWithState(
   intent: DomainIntent,
   state: TestCoreState,
 ): DomainIntentTransaction {
-  return applyCoreIntent(intent, state);
+  return createDomainIntentHandler({
+    global: createGlobalIntentHandler(state.control),
+    session: createSessionIntentHandler({
+      project: state.project,
+      playback: state.playback,
+      transport: state.transport,
+    }),
+    track: createTrackIntentHandler({
+      control: state.control,
+      project: state.project,
+    }),
+    transport: createTransportIntentHandler({
+      project: state.project,
+      playback: state.playback,
+      transport: state.transport,
+    }),
+  }).handle(intent);
 }
 
 function applyIntentAndCollect(
@@ -826,14 +875,14 @@ function activateClipCellViaLaunchIntent(
   if (!alreadySelected)
     expect(
       applyIntentAndCollect(
-        { kind: "launch-clip-cell", coordinate },
+        { scope: "session", kind: "launch-clip-cell", coordinate },
         state,
         hostCommands,
       ),
     ).toBe(true);
   expect(
     applyIntentAndCollect(
-      { kind: "launch-clip-cell", coordinate },
+      { scope: "session", kind: "launch-clip-cell", coordinate },
       state,
       hostCommands,
     ),

@@ -18,11 +18,13 @@ function interpretExplicitGlobalControl(
 ): DomainIntent | null {
   if (input.kind === "shift")
     return {
+      scope: "global",
       kind: "set-surface-control-held",
       control: "shift",
       held: input.held,
     };
-  if (input.kind === "play") return { kind: "toggle-transport-playback" };
-  if (input.kind === "menu") return { kind: "toggle-view" };
+  if (input.kind === "play")
+    return { scope: "transport", kind: "toggle-transport-playback" };
+  if (input.kind === "menu") return { scope: "global", kind: "toggle-view" };
   return null;
 }

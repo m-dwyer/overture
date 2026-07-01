@@ -1,17 +1,20 @@
 import { describe, expect, test } from "vitest";
-import { createCoreOwners } from "../../src/application/core-owners";
 import {
   buildCoreSnapshot,
   selectedSequenceLength,
 } from "../../src/application/core-read-model";
+import { createPlayback } from "../../src/application/playback";
+import { createTransport } from "../../src/application/transport";
 import { DEFAULT_STEP_COUNT } from "../../src/domain/sequence";
+import { createInitialControlSurfaceContext } from "../../src/state/control-surface-context";
+import { createDefaultProject } from "../../src/state/project";
 
 describe("Overture Next core read model", () => {
-  test("projects selected clip, playback focus, and step state from core owners", () => {
-    const owners = createCoreOwners();
-    owners.transport.seekToStep(4);
+  test("projects selected clip, playback focus, and step state from core sources", () => {
+    const sources = createTestCoreSources();
+    sources.transport.seekToStep(4);
 
-    const snapshot = buildCoreSnapshot(owners);
+    const snapshot = buildCoreSnapshot(sources);
 
     expect(snapshot).toMatchObject({
       selectedTrackIndex: 0,
@@ -43,10 +46,10 @@ describe("Overture Next core read model", () => {
   });
 
   test("projects sounding notes from playback into the snapshot", () => {
-    const owners = createCoreOwners();
-    owners.playback.startAt(owners.project, { playhead: 0, tick: 0 });
+    const sources = createTestCoreSources();
+    sources.playback.startAt(sources.project, { playhead: 0, tick: 0 });
 
-    const snapshot = buildCoreSnapshot(owners);
+    const snapshot = buildCoreSnapshot(sources);
 
     expect(snapshot.activeNotes).toContainEqual({
       trackIndex: 0,
@@ -56,13 +59,13 @@ describe("Overture Next core read model", () => {
   });
 
   test("uses default inactive steps for an empty selected Clip Cell", () => {
-    const owners = createCoreOwners();
-    owners.project.selectClip({ trackIndex: 0, sceneIndex: 7 });
+    const sources = createTestCoreSources();
+    sources.project.selectClip({ trackIndex: 0, sceneIndex: 7 });
 
-    const snapshot = buildCoreSnapshot(owners);
+    const snapshot = buildCoreSnapshot(sources);
 
     expect(snapshot.selectedClipId).toBeNull();
-    expect(selectedSequenceLength(owners)).toBe(DEFAULT_STEP_COUNT);
+    expect(selectedSequenceLength(sources)).toBe(DEFAULT_STEP_COUNT);
     expect(snapshot.steps).toHaveLength(DEFAULT_STEP_COUNT);
     expect(snapshot.steps[0]).toMatchObject({
       active: false,
@@ -72,3 +75,12 @@ describe("Overture Next core read model", () => {
     });
   });
 });
+
+function createTestCoreSources() {
+  const project = createDefaultProject();
+  const control = createInitialControlSurfaceContext();
+  const transport = createTransport();
+  const playback = createPlayback();
+  playback.seedDefaultScene(project);
+  return { project, control, transport, playback };
+}

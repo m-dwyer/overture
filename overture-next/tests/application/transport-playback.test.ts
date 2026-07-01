@@ -1,12 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { createCoreOwners } from "../../src/application/core-owners";
+import { createPlayback } from "../../src/application/playback";
 import {
   advanceTransportPlaybackTick,
   stopTransportPlayback,
   type TransportPlaybackContext,
 } from "../../src/application/transport-playback";
+import { createTransport } from "../../src/application/transport";
 import { DEFAULT_STEP_COUNT } from "../../src/domain/sequence";
-import type { ProjectPlaybackReadModel } from "../../src/state/project";
+import {
+  createDefaultProject,
+  type ProjectPlaybackReadModel,
+} from "../../src/state/project";
 import type { HostCommand } from "../../src/application/types";
 
 describe("Overture Next transport/playback coordination", () => {
@@ -101,15 +105,15 @@ describe("Overture Next transport/playback coordination", () => {
   });
 
   test("coordinates transport advancement with playback step injection", () => {
-    const owners = createCoreOwners();
-    owners.transport.seekToStep(3);
-    owners.transport.start();
+    const context = createTestTransportPlaybackContext();
+    context.transport.seekToStep(3);
+    context.transport.start();
 
     const hostCommands: HostCommand[] = [];
     for (let tick = 0; tick < 12; tick++)
-      hostCommands.push(...advanceTransportPlaybackTick(owners));
+      hostCommands.push(...advanceTransportPlaybackTick(context));
 
-    expect(owners.transport.clock()).toEqual({ playhead: 4, tick: 12 });
+    expect(context.transport.clock()).toEqual({ playhead: 4, tick: 12 });
     expect(hostCommands).toHaveLength(8);
     expect(hostCommands[0]).toEqual({
       kind: "track-note-on",
@@ -128,12 +132,12 @@ describe("Overture Next transport/playback coordination", () => {
   });
 
   test("stops transport and returns playback note-off commands", () => {
-    const owners = createCoreOwners();
-    owners.transport.start();
+    const context = createTestTransportPlaybackContext();
+    context.transport.start();
 
-    const hostCommands = stopTransportPlayback(owners);
+    const hostCommands = stopTransportPlayback(context);
 
-    expect(owners.transport.snapshot().playing).toBe(false);
+    expect(context.transport.snapshot().playing).toBe(false);
     expect(hostCommands).toHaveLength(8);
     expect(hostCommands[0]).toEqual({
       kind: "track-note-off",
@@ -149,3 +153,11 @@ describe("Overture Next transport/playback coordination", () => {
     });
   });
 });
+
+function createTestTransportPlaybackContext() {
+  const project = createDefaultProject();
+  const transport = createTransport();
+  const playback = createPlayback();
+  playback.seedDefaultScene(project);
+  return { project, transport, playback };
+}

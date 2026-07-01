@@ -20,8 +20,8 @@ what is public, what is private, and which dependencies are allowed?
   `ControlSurfaceContext` and `OvertureProject`, plus surface-addressing state
   helpers.
 - `overture-next/src/application/` owns orchestration and application behavior:
-  core transactions, control interpretation, domain intent dispatch,
-  workflow operations, transport, playback, and host command contracts.
+  core transactions, control interpretation, scoped Domain Intent handling,
+  transport/playback workflows, transport, playback, and host command contracts.
 - `overture-next/src/host/` owns Schwung/Move translation. Raw `globalThis`,
   Schwung host function names, Move MIDI bytes, Move CC/note numbers, and
   track-to-Move-channel mapping belong here.
@@ -38,13 +38,14 @@ what is public, what is private, and which dependencies are allowed?
 Concrete adapters belong in `src/host/`. The Schwung adapter implements the
 `ControlSurfacePort` inbound boundary by converting raw Move MIDI input into
 typed control input. Application code interprets control input against Control
-Surface Context. The core facade owns application owner composition and the
-command outbox, while focused application modules apply Domain Intents,
-coordinate playback workflow, and derive the Core Read Model. Workflow
-operations use narrow owner contexts to coordinate Project, Control Surface
-Context, Transport, and Playback, and emit commands such as `track-note-on` and
-`track-note-off`; the host adapter converts those commands to Move or Schwung
-MIDI through outbound ports.
+Surface Context. The core factory creates one runtime instance; the runtime
+owns the durable Project owner, transient interaction owner, transient
+lifecycle owners, scoped Domain Intent handlers, and the command outbox. The
+top-level Domain Intent handler routes by intent scope; Session, Track, Global,
+and Transport handlers coordinate their workflow owners and emit commands such
+as `track-note-on` and `track-note-off`. Focused application modules coordinate
+playback workflow and derive the Core Read Model; the host adapter converts Host
+Commands to Move or Schwung MIDI through outbound ports.
 
 ## Public APIs and Internals
 
@@ -72,23 +73,23 @@ from implementation files or `internal/`.
 
 Keep this table current when a boundary changes materially.
 
-| Domain Area | Owner | Public Surface | Private Implementation | Enforcement |
-| --- | --- | --- | --- | --- |
-| Session grid geometry | `src/shared/session-grid.ts` | Coordinate helpers | None | dependency-cruiser neutrality rule |
-| Pure musical domain | `src/domain/` | `project/`, `sequence.ts`, `value-objects.ts` | Project-owned domain files under `project/` | dependency-cruiser domain purity rules |
-| Control Surface Context | `src/state/control-surface-context.ts` | Owner-object class and snapshot contract | None | ESLint state ownership rule |
-| Project state owner | `src/state/project.ts` | Project construction, lookup, and Project-owned mutation APIs | None | ESLint state ownership rule |
-| Surface addressing state helpers | `src/state/surface-addressing.ts` | Track Bank row helpers | None | dependency-cruiser state layer rules |
-| Control input interpretation | `src/application/controls/` | `interpret-control.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
-| Domain intent dispatch | `src/application/intents/` | `apply-core-intent.ts`, `types.ts` | Local private helpers | dependency-cruiser controls/intents rules |
-| Transport state owner | `src/application/transport.ts`, `src/application/transport-timing.ts` | Owner-object class and timing read contracts | None | ESLint state ownership rule |
-| Playback state and lifecycle | `src/application/playback/` | `playback/index.ts` | `playback/internal/` | dependency-cruiser public/internal rules |
-| Application core facade and read model | `src/application/core.ts`, `src/application/types.ts`, `src/application/core-owners.ts`, `src/application/core-read-model.ts` | Core factory, owner composition, `CoreSnapshot`, `OvertureCore`, read-model projection | Core facade command outbox in `core.ts`; projection helpers in `core-read-model.ts` | dependency-cruiser application layer rules |
-| Application transport/playback coordination | `src/application/transport-playback.ts` | Transport tick and playback stop coordination | Playback scheduling internals in `src/application/playback/internal/` | dependency-cruiser application layer rules |
-| Host translation | `src/host/` | Host adapter and host types | Adapter-local helpers | dependency-cruiser host boundary rules |
-| Runtime-host boundary contracts | `src/ports/` | `inbound.ts`, `outbound.ts`, `surface-host-read-model.ts`, `host-ports.ts` | None | dependency-cruiser ports/runtime rules |
-| View models | `src/view/` | `view/index.ts`, `view/<view>/index.ts` | `view/internal/`, `view/<view>/internal/` | dependency-cruiser view/public/internal rules |
-| Rendering | `src/render/` | Screen/LED renderers | Local private helpers | dependency-cruiser render rules |
+| Domain Area                                 | Owner                                                                                                                          | Public Surface                                                                            | Private Implementation                                                                                      | Enforcement                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Session grid geometry                       | `src/shared/session-grid.ts`                                                                                                   | Coordinate helpers                                                                        | None                                                                                                        | dependency-cruiser neutrality rule            |
+| Pure musical domain                         | `src/domain/`                                                                                                                  | `project/`, `sequence.ts`, `value-objects.ts`                                             | Project-owned domain files under `project/`                                                                 | dependency-cruiser domain purity rules        |
+| Control Surface Context                     | `src/state/control-surface-context.ts`                                                                                         | Owner-object class and snapshot contract                                                  | None                                                                                                        | ESLint state ownership rule                   |
+| Project state owner                         | `src/state/project.ts`                                                                                                         | Project construction, lookup, and Project-owned mutation APIs                             | None                                                                                                        | ESLint state ownership rule                   |
+| Surface addressing state helpers            | `src/state/surface-addressing.ts`                                                                                              | Track Bank row helpers                                                                    | None                                                                                                        | dependency-cruiser state layer rules          |
+| Control input interpretation                | `src/application/controls/`                                                                                                    | `interpret-control.ts`, `types.ts`                                                        | Local private helpers                                                                                       | dependency-cruiser controls/intents rules     |
+| Domain Intent handling                      | `src/application/intents/`                                                                                                     | Scoped intent types, `domain-intent-handler.ts`, and scoped handlers                      | Handler-local workflow helpers                                                                              | dependency-cruiser controls/intents rules     |
+| Transport state owner                       | `src/application/transport.ts`, `src/application/transport-timing.ts`                                                          | Owner-object class and timing read contracts                                              | None                                                                                                        | ESLint state ownership rule                   |
+| Playback state and lifecycle                | `src/application/playback/`                                                                                                    | `playback/index.ts`                                                                       | `playback/internal/`                                                                                        | dependency-cruiser public/internal rules      |
+| Application core facade and read model      | `src/application/core.ts`, `src/application/core-runtime.ts`, `src/application/types.ts`, `src/application/core-read-model.ts` | Core factory, runtime owner wiring, `CoreSnapshot`, `OvertureCore`, read-model projection | Runtime command outbox in `core-runtime.ts`; projection helpers in `core-read-model.ts`                     | dependency-cruiser application layer rules    |
+| Application transport/playback coordination | `src/application/transport-playback.ts`                                                                                        | Transport tick and playback stop coordination                                             | Playback scheduling internals in `src/application/playback/internal/` and transport intent workflow helpers | dependency-cruiser application layer rules    |
+| Host translation                            | `src/host/`                                                                                                                    | Host adapter and host types                                                               | Adapter-local helpers                                                                                       | dependency-cruiser host boundary rules        |
+| Runtime-host boundary contracts             | `src/ports/`                                                                                                                   | `inbound.ts`, `outbound.ts`, `surface-host-read-model.ts`, `host-ports.ts`                | None                                                                                                        | dependency-cruiser ports/runtime rules        |
+| View models                                 | `src/view/`                                                                                                                    | `view/index.ts`, `view/<view>/index.ts`                                                   | `view/internal/`, `view/<view>/internal/`                                                                   | dependency-cruiser view/public/internal rules |
+| Rendering                                   | `src/render/`                                                                                                                  | Screen/LED renderers                                                                      | Local private helpers                                                                                       | dependency-cruiser render rules               |
 
 ## Boundary Change Checklist
 
