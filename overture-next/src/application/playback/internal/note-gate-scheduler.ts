@@ -5,6 +5,14 @@ export interface ScheduledNoteOff {
   readonly emittedTarget: HostCommand["route"];
   readonly trackIndex: number;
   readonly note: number;
+  readonly velocity: number;
+}
+
+/** A note currently sounding: emitted note-on whose note-off has not yet drained. */
+export interface ActiveNote {
+  readonly trackIndex: number;
+  readonly note: number;
+  readonly velocity: number;
 }
 
 export class NoteGateScheduler {
@@ -23,6 +31,15 @@ export class NoteGateScheduler {
     }
     this.pendingNoteOffs = pending;
     return due.map(toNoteOffCommand);
+  }
+
+  /** Notes still sounding, for surface feedback. Does not mutate pending gates. */
+  activeNotes(): readonly ActiveNote[] {
+    return this.pendingNoteOffs.map((noteOff) => ({
+      trackIndex: noteOff.trackIndex,
+      note: noteOff.note,
+      velocity: noteOff.velocity,
+    }));
   }
 
   drainTrack(trackIndex: number): HostCommand[] {

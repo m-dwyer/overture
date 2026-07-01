@@ -4,10 +4,15 @@ import {
   type ControlSurfaceContextSnapshot,
 } from "../../../state/control-surface-context";
 import { selectTrackFromRow } from "../../../state/surface-addressing";
+import { noteForTrackPad } from "../../../shared/track-pad-layout";
 import type { DomainIntent } from "../../intents/types";
-import type { ControlInput } from "../types";
+import { trackBankAffordances } from "../track-bank-affordances";
+import type {
+  ControlInput,
+  RootControlContext,
+  SurfaceAffordance,
+} from "../types";
 
-const TRACK_PAD_NOTE_BASE = 60;
 const SOUND_PAGE_STEP_INDEX = 2;
 
 /**
@@ -46,8 +51,21 @@ export function interpretTrackViewControl(
   return {
     kind: "audition-note",
     held: input.held,
-    note: TRACK_PAD_NOTE_BASE + input.padIndex,
+    padIndex: input.padIndex,
+    note: noteForTrackPad(input.padIndex),
     trackIndex: control.selectedTrackIndex,
     velocity: input.velocity,
   };
 }
+
+/** Affordances Track View reveals: Track Bank 2 targets while Shift is held. */
+export function affordancesTrackView(
+  control: ControlSurfaceContextSnapshot,
+): SurfaceAffordance[] {
+  return trackBankAffordances(control);
+}
+
+export const trackRootControlContext: RootControlContext = {
+  interpret: interpretTrackViewControl,
+  affordances: affordancesTrackView,
+};

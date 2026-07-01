@@ -19,6 +19,11 @@ export interface TrackViewControlContextSnapshot {
   >;
 }
 
+export interface HeldPadSnapshot {
+  readonly padIndex: number;
+  readonly velocity: number;
+}
+
 export interface ControlSurfaceContextSnapshot {
   readonly selectedTrackIndex: number;
   readonly visibleTrackBank: number;
@@ -26,6 +31,7 @@ export interface ControlSurfaceContextSnapshot {
   readonly heldControls: readonly HeldSurfaceControl[];
   readonly selectedStep: number;
   readonly selectedClipCell: Readonly<ClipCellCoordinate>;
+  readonly heldPads: readonly HeldPadSnapshot[];
   readonly trackView: TrackViewControlContextSnapshot;
 }
 
@@ -40,6 +46,7 @@ export class ControlSurfaceContext {
   private readonly heldControlsValue: Set<HeldSurfaceControl>;
   private selectedStepValue: StepIndex;
   private selectedClipCellValue: ClipCellCoordinate;
+  private readonly heldPadsValue: Map<number, number>;
   private selectedTrackViewPageIdValue: RootViewPageId;
   private readonly selectedTrackViewParameterIdByPageValue: Record<
     RootViewPageId,
@@ -56,6 +63,7 @@ export class ControlSurfaceContext {
       trackIndex: 0,
       sceneIndex: 0,
     });
+    this.heldPadsValue = new Map();
     this.selectedTrackViewPageIdValue = DEFAULT_TRACK_VIEW_PAGE_ID;
     this.selectedTrackViewParameterIdByPageValue = {
       [DEFAULT_TRACK_VIEW_PAGE_ID]: DEFAULT_TRACK_VIEW_PARAMETER_ID,
@@ -70,6 +78,10 @@ export class ControlSurfaceContext {
       heldControls: [...this.heldControlsValue],
       selectedStep: this.selectedStepValue,
       selectedClipCell: { ...this.selectedClipCellValue },
+      heldPads: [...this.heldPadsValue].map(([padIndex, velocity]) => ({
+        padIndex,
+        velocity,
+      })),
       trackView: {
         selectedPageId: this.selectedTrackViewPageIdValue,
         selectedParameterIdByPage: {
@@ -106,6 +118,14 @@ export class ControlSurfaceContext {
 
   selectStep(stepIndexValue: number): void {
     this.selectedStepValue = stepIndex(stepIndexValue);
+  }
+
+  pressPad(padIndex: number, velocity: number): void {
+    this.heldPadsValue.set(padIndex, velocity);
+  }
+
+  releasePad(padIndex: number): void {
+    this.heldPadsValue.delete(padIndex);
   }
 
   selectTrackViewPage(pageIdValue: string): void {

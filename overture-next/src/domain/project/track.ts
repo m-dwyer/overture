@@ -8,6 +8,8 @@ export type TrackRoute =
 export interface Track {
   index: number;
   name: string;
+  /** Track Colour: route-neutral identity colour index, default per Track Index. */
+  colour: number;
   route: TrackRoute;
 }
 
@@ -15,6 +17,7 @@ export function createTracks(trackCount = TRACK_COUNT): Track[] {
   return Array.from({ length: trackCount }, (_, index) => ({
     index,
     name: "Track " + (index + 1),
+    colour: index,
     route: createDefaultTrackRoute(index),
   }));
 }

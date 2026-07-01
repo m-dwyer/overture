@@ -32,6 +32,12 @@ describe("Overture Next Project", () => {
     });
   });
 
+  test("exposes each Track's Colour identity, defaulted per Track", () => {
+    const project = createDefaultProject();
+
+    expect(project.trackColours()).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+  });
+
   test("returns copied clip, Clip Cell, and route read models instead of Project-owned state", () => {
     const project = createDefaultProject();
     const clip = project.clipFor({ trackIndex: 0, sceneIndex: 0 });

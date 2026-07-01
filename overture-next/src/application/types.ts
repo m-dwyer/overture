@@ -4,7 +4,7 @@ import type {
   ControlSurfaceContextSnapshot,
   TrackViewControlContextSnapshot,
 } from "../state/control-surface-context";
-import type { ControlInput } from "./controls/types";
+import type { ControlInput, SurfaceAffordance } from "./controls/types";
 import type { HostCommand } from "./host-commands";
 
 export interface CoreSnapshotStep {
@@ -29,9 +29,16 @@ export interface CoreSnapshotPlaybackTrack {
   queuedStop: boolean;
 }
 
+export interface CoreSnapshotActiveNote {
+  trackIndex: number;
+  note: number;
+  velocity: number;
+}
+
 export interface CoreSnapshot {
   selectedTrackIndex: number;
   selectedTrackRoute: TrackRoute;
+  trackColours?: readonly number[];
   visibleTrackBank: number;
   activeView: ActiveView;
   heldControls: ControlSurfaceContextSnapshot["heldControls"];
@@ -39,9 +46,12 @@ export interface CoreSnapshot {
   playing: boolean;
   selectedClipId: string | null;
   selectedClipCell: ControlSurfaceContextSnapshot["selectedClipCell"];
+  heldPads?: ControlSurfaceContextSnapshot["heldPads"];
   trackView: TrackViewControlContextSnapshot;
   clipCells: readonly CoreSnapshotClipCell[];
   playbackTracks?: readonly CoreSnapshotPlaybackTrack[];
+  activeNotes?: readonly CoreSnapshotActiveNote[];
+  affordances?: readonly SurfaceAffordance[];
   steps: readonly CoreSnapshotStep[];
 }
 

@@ -2,21 +2,13 @@ import type {
   ActiveView,
   ControlSurfaceContextSnapshot,
 } from "../../state/control-surface-context";
-import type { DomainIntent } from "../intents/types";
-import { interpretSessionViewControl } from "./session";
-import { interpretTrackViewControl } from "./track";
-import type { ControlInput } from "./types";
-
-interface RootControlContext {
-  interpret(
-    input: ControlInput,
-    control: ControlSurfaceContextSnapshot,
-  ): DomainIntent | null;
-}
+import { sessionRootControlContext } from "./session";
+import { trackRootControlContext } from "./track";
+import type { RootControlContext } from "./types";
 
 const rootControlContexts = {
-  session: { interpret: interpretSessionViewControl },
-  track: { interpret: interpretTrackViewControl },
+  session: sessionRootControlContext,
+  track: trackRootControlContext,
 } satisfies Record<ActiveView, RootControlContext>;
 
 export function rootControlContextFor(

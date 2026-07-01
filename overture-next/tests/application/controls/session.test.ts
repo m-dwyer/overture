@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
-import { interpretSessionViewControl } from "../../../src/application/controls/session";
+import {
+  affordancesSessionView,
+  interpretSessionViewControl,
+} from "../../../src/application/controls/session";
 
 describe("Overture Next Session control interpretation", () => {
   test("interprets pad presses as visible-bank Clip Cell launches", () => {
@@ -49,5 +52,31 @@ describe("Overture Next Session control interpretation", () => {
         control.snapshot(),
       ),
     ).toBeNull();
+  });
+
+  test("affords Track Bank 2 targets only while Shift is held", () => {
+    const control = createInitialControlSurfaceContext();
+
+    expect(affordancesSessionView(control.snapshot())).toEqual([]);
+
+    control.setSurfaceControlHeld("shift", true);
+    expect(affordancesSessionView(control.snapshot())).toEqual([
+      {
+        trigger: { kind: "track-button", row: 0 },
+        intent: { kind: "select-track", trackIndex: 4 },
+      },
+      {
+        trigger: { kind: "track-button", row: 1 },
+        intent: { kind: "select-track", trackIndex: 5 },
+      },
+      {
+        trigger: { kind: "track-button", row: 2 },
+        intent: { kind: "select-track", trackIndex: 6 },
+      },
+      {
+        trigger: { kind: "track-button", row: 3 },
+        intent: { kind: "select-track", trackIndex: 7 },
+      },
+    ]);
   });
 });

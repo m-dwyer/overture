@@ -1,4 +1,5 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
+import { rootControlContextFor } from "./controls/root-control-contexts";
 import type { ControlSurfaceContextSnapshot } from "../state/control-surface-context";
 import type { ProjectCoreReadModel } from "../state/project";
 import type { PlaybackSnapshot } from "./playback";
@@ -28,6 +29,7 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
   return {
     selectedTrackIndex: control.selectedTrackIndex,
     selectedTrackRoute: owners.project.trackRoute(control.selectedTrackIndex),
+    trackColours: owners.project.trackColours(),
     visibleTrackBank: control.visibleTrackBank,
     activeView: control.activeView,
     heldControls: control.heldControls,
@@ -35,9 +37,12 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
     playing: transport.playing,
     selectedClipId: selectedCell.clipId,
     selectedClipCell: { ...selectedClipCell },
+    heldPads: control.heldPads,
     trackView: control.trackView,
     clipCells: owners.project.clipCellSnapshots(),
     playbackTracks: playback.tracks,
+    activeNotes: playback.activeNotes,
+    affordances: rootControlContextFor(control).affordances(control),
     steps: getSnapshotSteps(owners.project, control, transport),
   };
 }

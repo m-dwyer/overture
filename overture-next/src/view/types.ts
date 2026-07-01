@@ -47,9 +47,9 @@ export type SurfaceRegion =
   | { kind: "session-scene-column"; sceneIndex: number }
   | { kind: "track-row"; row: number };
 
-export type SurfaceHint =
-  | { kind: "scene-launch-target"; surface: SurfaceRegion }
-  | { kind: "track-bank-target"; surface: SurfaceRegion };
+export interface SurfaceHint {
+  surface: SurfaceRegion;
+}
 
 export interface StepLedView {
   step: number;
@@ -58,13 +58,17 @@ export interface StepLedView {
 
 export interface PadLedView {
   padIndex: number;
+  /** Track Colour identity index; render maps it to an LED colour for coloured states. */
+  colour?: number;
   state:
+    | "pressed"
     | "playing"
     | "queued"
     | "queued-stop"
     | "selected"
     | "hinted"
     | "occupied"
+    | "playable"
     | "empty"
     | "off";
 }
@@ -73,6 +77,8 @@ export type ButtonLedView =
   | {
       kind: "track-row";
       row: number;
+      /** Track Colour identity index; render lights the available baseline in it. */
+      colour?: number;
       state: "selected" | "hinted" | "available";
     }
   | { kind: "play"; state: "playing" | "stopped" }

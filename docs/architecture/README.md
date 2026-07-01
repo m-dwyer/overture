@@ -14,7 +14,9 @@ architecture, boundaries, state ownership, or verification policy.
    restorable interaction context.
 5. `module-boundaries.md` maps layers and module entry points.
 6. `state-ownership.md` describes mutable state owners and read contracts.
-7. `ratchets.md` explains when and how to enforce adopted boundaries.
+7. `surface-feedback.md` describes the layered surface compositor that projects
+   owner snapshots to LED feedback, and the affordance/hint model.
+8. `ratchets.md` explains when and how to enforce adopted boundaries.
 
 ## CONTEXT to Ratchets Workflow
 

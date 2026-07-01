@@ -78,7 +78,44 @@ describe("Overture Next view projection", () => {
     });
     expect(view.leds.buttons).toContainEqual({ kind: "menu", state: "track" });
     expect(view.leds.pads).toHaveLength(32);
-    expect(view.leds.pads.every((pad) => pad.state === "off")).toBe(true);
+    expect(view.leds.pads.every((pad) => pad.state === "playable")).toBe(true);
+  });
+
+  test("colours each visible track-row button with its Track's colour", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 5,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
+      trackColours: [0, 1, 2, 3, 4, 5, 6, 7],
+      visibleTrackBank: 1,
+      activeView: "track",
+      heldControls: [],
+      selectedStep: 0,
+      playing: false,
+      selectedClipId: "clip-6",
+      selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
+      clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
+      steps: [],
+    };
+
+    const view = createOvertureSurfaceView(snapshot);
+
+    // Track Bank 2: row 0 -> Track 4, row 1 -> Track 5 (selected).
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 0,
+      colour: 4,
+      state: "available",
+    });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 1,
+      colour: 5,
+      state: "selected",
+    });
   });
 
   test("derives Track View track-row button hints while Shift is held", () => {
@@ -97,6 +134,24 @@ describe("Overture Next view projection", () => {
         selectedParameterIdByPage: {},
       },
       clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
+      affordances: [
+        {
+          trigger: { kind: "track-button", row: 0 },
+          intent: { kind: "select-track", trackIndex: 4 },
+        },
+        {
+          trigger: { kind: "track-button", row: 1 },
+          intent: { kind: "select-track", trackIndex: 5 },
+        },
+        {
+          trigger: { kind: "track-button", row: 2 },
+          intent: { kind: "select-track", trackIndex: 6 },
+        },
+        {
+          trigger: { kind: "track-button", row: 3 },
+          intent: { kind: "select-track", trackIndex: 7 },
+        },
+      ],
       steps: [
         {
           index: 0,
@@ -120,31 +175,20 @@ describe("Overture Next view projection", () => {
     const view = createOvertureSurfaceView(snapshot);
 
     expect(view.surfaceHints).toEqual([
-      { kind: "track-bank-target", surface: { kind: "track-row", row: 0 } },
-      { kind: "track-bank-target", surface: { kind: "track-row", row: 1 } },
-      { kind: "track-bank-target", surface: { kind: "track-row", row: 2 } },
-      { kind: "track-bank-target", surface: { kind: "track-row", row: 3 } },
+      { surface: { kind: "track-row", row: 0 } },
+      { surface: { kind: "track-row", row: 1 } },
+      { surface: { kind: "track-row", row: 2 } },
+      { surface: { kind: "track-row", row: 3 } },
     ]);
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 0,
-      state: "hinted",
-    });
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 1,
-      state: "selected",
-    });
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 2,
-      state: "hinted",
-    });
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 3,
-      state: "hinted",
-    });
+    // While Shift is held every side button is a bank target, so the hint wins
+    // even on the selected row.
+    for (const row of [0, 1, 2, 3]) {
+      expect(view.leds.buttons).toContainEqual({
+        kind: "track-row",
+        row,
+        state: "hinted",
+      });
+    }
   });
 
   test("derives a Session View screen and pad LEDs from selected Clip Cell state", () => {
@@ -225,7 +269,7 @@ describe("Overture Next view projection", () => {
     });
   });
 
-  test("derives Surface Hints for the selected Session View scene while Shift is held", () => {
+  test("hints Track Bank 2 buttons in Session View while Shift is held", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 3,
       selectedTrackRoute: { kind: "move", moveTrackTarget: 3 },
@@ -244,6 +288,24 @@ describe("Overture Next view projection", () => {
         { trackIndex: 0, sceneIndex: 0, clipId: "clip-1" },
         { trackIndex: 3, sceneIndex: 7, clipId: null },
       ],
+      affordances: [
+        {
+          trigger: { kind: "track-button", row: 0 },
+          intent: { kind: "select-track", trackIndex: 4 },
+        },
+        {
+          trigger: { kind: "track-button", row: 1 },
+          intent: { kind: "select-track", trackIndex: 5 },
+        },
+        {
+          trigger: { kind: "track-button", row: 2 },
+          intent: { kind: "select-track", trackIndex: 6 },
+        },
+        {
+          trigger: { kind: "track-button", row: 3 },
+          intent: { kind: "select-track", trackIndex: 7 },
+        },
+      ],
       steps: [
         {
           index: 0,
@@ -258,19 +320,24 @@ describe("Overture Next view projection", () => {
 
     const view = createOvertureSurfaceView(snapshot);
 
+    // Shift hints the track-row buttons for Track Bank 2, not the scene column.
     expect(view.surfaceHints).toEqual([
-      {
-        kind: "scene-launch-target",
-        surface: { kind: "session-scene-column", sceneIndex: 7 },
-      },
+      { surface: { kind: "track-row", row: 0 } },
+      { surface: { kind: "track-row", row: 1 } },
+      { surface: { kind: "track-row", row: 2 } },
+      { surface: { kind: "track-row", row: 3 } },
     ]);
-    expect(view.leds.pads.filter((pad) => pad.state === "hinted")).toEqual([
-      { padIndex: 7, state: "hinted" },
-      { padIndex: 15, state: "hinted" },
-      { padIndex: 23, state: "hinted" },
-      { padIndex: 31, state: "hinted" },
-    ]);
-    expect(view.leds.pads).toContainEqual({ padIndex: 24, state: "occupied" });
-    expect(view.leds.pads).toContainEqual({ padIndex: 8, state: "empty" });
+    expect(view.leds.pads.filter((pad) => pad.state === "hinted")).toEqual([]);
+    // The selected row (Track 3) is a bank target too, so it hints, not selects.
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 0,
+      state: "hinted",
+    });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 3,
+      state: "hinted",
+    });
   });
 });

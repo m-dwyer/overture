@@ -45,7 +45,10 @@ export function applyCoreIntent(
         intent.stepIndex,
       );
     case "audition-note":
-      return auditionNote({ project: owners.project }, intent);
+      return auditionNote(
+        { control: owners.control, project: owners.project },
+        intent,
+      );
     case "select-clip-cell":
       return selectClipCell(
         { control: owners.control, project: owners.project },

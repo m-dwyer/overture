@@ -27,6 +27,7 @@ describe("Overture Next root control context interpretation", () => {
     ).toEqual({
       kind: "audition-note",
       held: true,
+      padIndex: 7,
       note: 67,
       trackIndex: 4,
       velocity: 101,

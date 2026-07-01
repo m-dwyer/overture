@@ -16,6 +16,7 @@ describe("Overture Next core read model", () => {
 
     expect(snapshot).toMatchObject({
       selectedTrackIndex: 0,
+      trackColours: [0, 1, 2, 3, 4, 5, 6, 7],
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
       trackView: { selectedPageId: "default" },
       selectedClipId: "clip-1",
@@ -41,6 +42,19 @@ describe("Overture Next core read model", () => {
       velocity: 100,
       selected: true,
       playhead: true,
+    });
+  });
+
+  test("projects sounding notes from playback into the snapshot", () => {
+    const owners = createCoreOwners();
+    owners.playback.startAt(owners.project, { playhead: 0, tick: 0 });
+
+    const snapshot = buildCoreSnapshot(owners);
+
+    expect(snapshot.activeNotes).toContainEqual({
+      trackIndex: 0,
+      note: 60,
+      velocity: 100,
     });
   });
 

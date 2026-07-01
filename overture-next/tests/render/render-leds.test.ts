@@ -1,10 +1,55 @@
 import { describe, expect, test } from "vitest";
-import { OVERTURE_LED_COLOR } from "../../src/ports/led-colors";
+import {
+  OVERTURE_LED_COLOR,
+  TRACK_COLOR_BYTES,
+} from "../../src/ports/led-colors";
 import type { LedPort } from "../../src/ports/outbound";
 import { renderLeds } from "../../src/render/render-leds";
 import type { LedView } from "../../src/view";
 
 describe("Overture Next LED rendering", () => {
+  test("lights a playable pad in its Track Colour, or dim when uncoloured", () => {
+    const calls: string[] = [];
+    const leds = createLedRecorder(calls);
+    const view: LedView = {
+      steps: [],
+      pads: [
+        { padIndex: 0, state: "playable", colour: 5 },
+        { padIndex: 1, state: "playable" },
+      ],
+      buttons: [],
+    };
+
+    renderLeds(view, leds);
+
+    expect(calls).toEqual([
+      "pad:0:" + TRACK_COLOR_BYTES[5],
+      "pad:1:" + OVERTURE_LED_COLOR.dim,
+    ]);
+  });
+
+  test("lights track-row buttons in their Track Colour whether selected or not", () => {
+    const calls: string[] = [];
+    const leds = createLedRecorder(calls);
+    const view: LedView = {
+      steps: [],
+      pads: [],
+      buttons: [
+        { kind: "track-row", row: 0, colour: 5, state: "available" },
+        { kind: "track-row", row: 1, colour: 6, state: "selected" },
+        { kind: "track-row", row: 2, colour: 7, state: "hinted" },
+      ],
+    };
+
+    renderLeds(view, leds);
+
+    expect(calls).toEqual([
+      "track-row:0:" + TRACK_COLOR_BYTES[5],
+      "track-row:1:" + TRACK_COLOR_BYTES[6], // selected keeps its Track Colour
+      "track-row:2:" + OVERTURE_LED_COLOR.hint, // hinted still highlights
+    ]);
+  });
+
   test("maps Session View Clip Cell pad states to central pad LEDs", () => {
     const calls: string[] = [];
     const leds = createLedRecorder(calls);

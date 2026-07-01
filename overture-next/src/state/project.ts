@@ -95,6 +95,7 @@ export interface ProjectCoreReadModel {
   sequenceFor(coordinate: ClipCellCoordinateInput): SequenceSnapshot | null;
   clipCellSnapshots(): readonly ClipCellSnapshot[];
   trackRoute(trackIndexValue: number): TrackRoute;
+  trackColours(): readonly number[];
 }
 
 /**
@@ -144,6 +145,11 @@ export class OvertureProject {
   /** A copy of the Track Route, so callers cannot mutate Project-owned route state. */
   trackRoute(trackIndexValue: number): TrackRoute {
     return { ...getTrack(this.data.tracks, trackIndex(trackIndexValue)).route };
+  }
+
+  /** Track Colour identity index for every Track, ordered by Track Index. */
+  trackColours(): readonly number[] {
+    return this.data.tracks.map((track) => track.colour);
   }
 
   /**

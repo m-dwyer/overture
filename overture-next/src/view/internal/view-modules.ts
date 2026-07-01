@@ -9,7 +9,6 @@ interface ViewModule {
     snapshot: CoreSnapshot,
     hostReadModel?: SurfaceHostReadModel,
   ): ScreenView;
-  createSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[];
   createPadLeds(
     snapshot: CoreSnapshot,
     surfaceHints: readonly SurfaceHint[],
