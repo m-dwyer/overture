@@ -180,26 +180,15 @@ describe("Overture Next view projection", () => {
       { surface: { kind: "track-row", row: 2 } },
       { surface: { kind: "track-row", row: 3 } },
     ]);
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 0,
-      state: "hinted",
-    });
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 1,
-      state: "selected",
-    });
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 2,
-      state: "hinted",
-    });
-    expect(view.leds.buttons).toContainEqual({
-      kind: "track-row",
-      row: 3,
-      state: "hinted",
-    });
+    // While Shift is held every side button is a bank target, so the hint wins
+    // even on the selected row.
+    for (const row of [0, 1, 2, 3]) {
+      expect(view.leds.buttons).toContainEqual({
+        kind: "track-row",
+        row,
+        state: "hinted",
+      });
+    }
   });
 
   test("derives a Session View screen and pad LEDs from selected Clip Cell state", () => {
@@ -339,6 +328,7 @@ describe("Overture Next view projection", () => {
       { surface: { kind: "track-row", row: 3 } },
     ]);
     expect(view.leds.pads.filter((pad) => pad.state === "hinted")).toEqual([]);
+    // The selected row (Track 3) is a bank target too, so it hints, not selects.
     expect(view.leds.buttons).toContainEqual({
       kind: "track-row",
       row: 0,
@@ -347,7 +337,7 @@ describe("Overture Next view projection", () => {
     expect(view.leds.buttons).toContainEqual({
       kind: "track-row",
       row: 3,
-      state: "selected",
+      state: "hinted",
     });
   });
 });

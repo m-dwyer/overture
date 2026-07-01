@@ -78,8 +78,11 @@ function trackRowLedState(
   surfaceHints: readonly SurfaceHint[],
   row: number,
 ): "selected" | "hinted" | "available" {
+  // A held-modifier hint previews what a press does now, so it outranks the
+  // resting selected highlight.
+  if (hasTrackRowHint(surfaceHints, row)) return "hinted";
   if (row === snapshot.selectedTrackIndex % 4) return "selected";
-  return hasTrackRowHint(surfaceHints, row) ? "hinted" : "available";
+  return "available";
 }
 
 function hasTrackRowHint(hints: readonly SurfaceHint[], row: number): boolean {

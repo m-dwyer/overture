@@ -49,15 +49,16 @@ function padColor(pad: PadLedView): number {
 }
 
 /**
- * A track-row (side) button lights in its Track Colour at the available
- * baseline; selected and hinted keep their fixed highlight treatments for now.
+ * A track-row (side) button lights in its Track Colour whether selected or not,
+ * so a Track stays identifiable; only a hinted button takes a highlight
+ * treatment. (Distinguishing the selected Track by brightness awaits modulation.)
  */
 function trackRowColor(button: {
   state: "selected" | "hinted" | "available";
   colour?: number;
 }): number {
-  if (button.state === "available" && button.colour !== undefined)
-    return TRACK_COLOR_BYTES[button.colour] ?? TRACK_ROW_COLORS.available;
+  if (button.state !== "hinted" && button.colour !== undefined)
+    return TRACK_COLOR_BYTES[button.colour] ?? TRACK_ROW_COLORS[button.state];
   return TRACK_ROW_COLORS[button.state];
 }
 

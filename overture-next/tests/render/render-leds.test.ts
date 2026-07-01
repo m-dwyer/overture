@@ -28,7 +28,7 @@ describe("Overture Next LED rendering", () => {
     ]);
   });
 
-  test("lights an available track-row button in its Track Colour", () => {
+  test("lights track-row buttons in their Track Colour whether selected or not", () => {
     const calls: string[] = [];
     const leds = createLedRecorder(calls);
     const view: LedView = {
@@ -37,6 +37,7 @@ describe("Overture Next LED rendering", () => {
       buttons: [
         { kind: "track-row", row: 0, colour: 5, state: "available" },
         { kind: "track-row", row: 1, colour: 6, state: "selected" },
+        { kind: "track-row", row: 2, colour: 7, state: "hinted" },
       ],
     };
 
@@ -44,7 +45,8 @@ describe("Overture Next LED rendering", () => {
 
     expect(calls).toEqual([
       "track-row:0:" + TRACK_COLOR_BYTES[5],
-      "track-row:1:" + OVERTURE_LED_COLOR.selected,
+      "track-row:1:" + TRACK_COLOR_BYTES[6], // selected keeps its Track Colour
+      "track-row:2:" + OVERTURE_LED_COLOR.hint, // hinted still highlights
     ]);
   });
 
