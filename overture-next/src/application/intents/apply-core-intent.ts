@@ -7,7 +7,7 @@ import {
   selectTrackViewPage,
   selectTrack,
   setSurfaceControlHeld,
-  toggleSelectedStep,
+  toggleStep,
   toggleTransportPlayback,
   toggleView,
 } from "../operations";
@@ -35,29 +35,19 @@ export function applyCoreIntent(
     case "select-track-view-page":
       return selectTrackViewPage({ control: owners.control }, intent.pageId);
     case "select-track":
-      return selectTrack(
-        { control: owners.control, project: owners.project },
-        intent.trackIndex,
-      );
+      return selectTrack(owners.project, intent.trackIndex);
     case "toggle-step":
-      return toggleSelectedStep(
-        { control: owners.control, project: owners.project },
-        intent.stepIndex,
-      );
+      return toggleStep(owners.project, intent.stepIndex);
     case "audition-note":
       return auditionNote(
         { control: owners.control, project: owners.project },
         intent,
       );
     case "select-clip-cell":
-      return selectClipCell(
-        { control: owners.control, project: owners.project },
-        intent.coordinate,
-      );
+      return selectClipCell(owners.project, intent.coordinate);
     case "launch-clip-cell":
       return launchClipCell(
         {
-          control: owners.control,
           project: owners.project,
           playback: owners.playback,
           transport: owners.transport,

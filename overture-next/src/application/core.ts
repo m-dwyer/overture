@@ -23,7 +23,10 @@ export function createOvertureCore(): OvertureCore {
   }
 
   function dispatchControlInput(input: ControlInput): boolean {
-    const intent = interpretControl(input, owners.control.snapshot());
+    const intent = interpretControl(
+      input,
+      owners.control.snapshot(owners.project.selectedClipCell()),
+    );
     if (!intent) return false;
     const transaction = applyCoreIntent(intent, owners);
     if (transaction.applied) collectHostCommands(transaction.hostCommands);

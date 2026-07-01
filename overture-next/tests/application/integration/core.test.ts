@@ -23,7 +23,6 @@ describe("Overture Next core", () => {
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
       selectedClipId: "clip-1",
       playing: false,
-      selectedStep: 0,
     });
     expect(
       snapshot.playbackTracks?.map((track) => track.playingClipId),
@@ -104,7 +103,6 @@ describe("Overture Next core", () => {
     expect(core.dispatchControlInput({ kind: "menu" })).toBe(true);
     expect(core.dispatchControlInput({ kind: "step", step: 1 })).toBe(true);
     expect(core.snapshot().steps[1]).toMatchObject({
-      selected: true,
       active: true,
     });
   });
@@ -332,7 +330,6 @@ describe("Overture Next core", () => {
         active: true,
         note: 60,
         velocity: 100,
-        selected: true,
         playhead: true,
       },
       {
@@ -340,7 +337,6 @@ describe("Overture Next core", () => {
         active: false,
         note: 61,
         velocity: 100,
-        selected: false,
         playhead: false,
       },
       {
@@ -348,7 +344,6 @@ describe("Overture Next core", () => {
         active: false,
         note: 62,
         velocity: 100,
-        selected: false,
         playhead: false,
       },
       {
@@ -356,7 +351,6 @@ describe("Overture Next core", () => {
         active: false,
         note: 63,
         velocity: 100,
-        selected: false,
         playhead: false,
       },
       {
@@ -364,7 +358,6 @@ describe("Overture Next core", () => {
         active: true,
         note: 64,
         velocity: 100,
-        selected: false,
         playhead: false,
       },
     ]);
@@ -413,7 +406,7 @@ describe("Overture Next core", () => {
     expect(secondClip?.id).toBe("clip-2");
     if (!firstClip || !secondClip) throw new Error("Expected default clips");
 
-    project.toggleSequenceStepAt({ trackIndex: 0, sceneIndex: 0 }, 1);
+    project.activeClipEditor()?.toggleStep(1);
 
     expect(
       project.clipFor({ trackIndex: 0, sceneIndex: 0 })?.sequence.steps[1]

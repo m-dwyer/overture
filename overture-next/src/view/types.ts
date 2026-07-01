@@ -1,7 +1,6 @@
 export interface StepView {
   index: number;
   active: boolean;
-  selected: boolean;
   playhead: boolean;
 }
 
@@ -10,7 +9,6 @@ export interface TrackScreenView {
   title: string;
   selectedTrackIndex: number;
   playing: boolean;
-  selectedStep: number;
   trackPage: TrackScreenPageView;
   steps: StepView[];
 }

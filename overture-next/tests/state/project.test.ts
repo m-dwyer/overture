@@ -1,9 +1,53 @@
 import { describe, expect, test } from "vitest";
 import { CLIP_CELL_COUNT, SCENE_COUNT } from "../../src/domain/project";
+import { createInitialControlSurfaceContext } from "../../src/state/control-surface-context";
 import { createDefaultProject } from "../../src/state/project";
 import { visibleTrackRowsForBank } from "../../src/state/surface-addressing";
 
 describe("Overture Next Project", () => {
+  test("keeps Track Selection, Selected Clip Cell, and Track Bank aligned", () => {
+    const project = createDefaultProject();
+    const control = createInitialControlSurfaceContext();
+
+    project.selectClip({ trackIndex: 6, sceneIndex: 3 });
+
+    expect(project.selectedClipCell()).toEqual({
+      trackIndex: 6,
+      sceneIndex: 3,
+    });
+    expect(control.snapshot(project.selectedClipCell())).toMatchObject({
+      selectedTrackIndex: 6,
+      visibleTrackBank: 1,
+      selectedClipCell: { trackIndex: 6, sceneIndex: 3 },
+    });
+  });
+
+  test("selects a Track while preserving the selected Overture Scene", () => {
+    const project = createDefaultProject();
+    const control = createInitialControlSurfaceContext();
+
+    project.selectClip({ trackIndex: 0, sceneIndex: 7 });
+    project.selectTrackKeepingScene(5);
+
+    expect(project.selectedClipCell()).toEqual({
+      trackIndex: 5,
+      sceneIndex: 7,
+    });
+    expect(control.snapshot(project.selectedClipCell())).toMatchObject({
+      selectedTrackIndex: 5,
+      visibleTrackBank: 1,
+      selectedClipCell: { trackIndex: 5, sceneIndex: 7 },
+    });
+  });
+
+  test("rejects invalid selected Clip Cell values", () => {
+    const project = createDefaultProject();
+
+    expect(() => project.selectClip({ trackIndex: 8, sceneIndex: 0 })).toThrow(
+      "Invalid Track Index 8; expected integer from 0 to 7",
+    );
+  });
+
   test("creates structural scenes, tracks, and clip cells through the public Project API", () => {
     const project = createDefaultProject();
 

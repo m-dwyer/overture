@@ -1,18 +1,11 @@
-import type { ControlSurfaceContext } from "../../state/control-surface-context";
 import type { OvertureProject } from "../../state/project";
 import { operationApplied, type OperationResult } from "./types";
 
-export interface SelectTrackContext {
-  readonly control: ControlSurfaceContext;
-  readonly project: OvertureProject;
-}
-
+/** Moves the cursor to a Track, preserving the current Overture Scene. */
 export function selectTrack(
-  context: SelectTrackContext,
+  project: OvertureProject,
   trackIndex: number,
 ): OperationResult {
-  const sceneIndex = context.control.snapshot().selectedClipCell.sceneIndex;
-  context.project.clipCellAt({ trackIndex, sceneIndex });
-  context.control.selectTrackPreservingScene(trackIndex);
+  project.selectTrackKeepingScene(trackIndex);
   return operationApplied();
 }

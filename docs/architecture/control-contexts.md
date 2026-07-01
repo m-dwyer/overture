@@ -65,9 +65,11 @@ then, root view contexts are enough.
 
 ## Ownership
 
-`ControlSurfaceContext` owns transient interaction state: active root view,
-selection, visible Track Bank, held modifiers, selected Step, and future selected
-page/editor context. Read-only consumers should use snapshots.
+`ControlSurfaceContext` owns transient surface mode: active root view, held
+modifiers, and Track View page/parameter context. The Selected Clip Cell cursor
+is owned by Project; Track Selection and visible Track Bank are derived from it
+and surfaced through the `snapshot(selectedClipCell)` projection. Read-only
+consumers should use snapshots.
 
 Durable musical data remains owned by Project and related domain/state owners.
 Parameter values, route data, clips, scenes, and Motion should not move into

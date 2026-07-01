@@ -13,23 +13,10 @@ export interface SequenceStep {
 }
 
 /**
- * Route-neutral musical content for an Overture Clip.
- *
- * This type stays in the public domain vocabulary because playback,
- * projection, tests, and Project construction all need to agree on Step
- * semantics without taking route-specific or Project mutation authority.
- * Stored clip Sequences are owned by OvertureProject and should be changed
- * through Project APIs such as toggleSequenceStepAt.
- */
-export interface Sequence {
-  length: number;
-  steps: SequenceStep[];
-}
-
-/**
  * Read-only Sequence shape exposed to consumers that derive playback or view
  * state. It lets callers inspect route-neutral Step data without receiving a
- * mutation handle for Project-owned Sequence storage.
+ * mutation handle for Project-owned Sequence storage. Both a live {@link Sequence}
+ * entity and a plain snapshot satisfy this contract.
  */
 export interface SequenceReadModel {
   readonly length: number;
@@ -54,20 +41,6 @@ export function parseStepIndex(
   }
 }
 
-export function createDefaultSequence(
-  stepCount = DEFAULT_STEP_COUNT,
-  gateTicks = 12,
-): Sequence {
-  const steps = Array.from({ length: stepCount }, (_, index) => ({
-    index: stepIndex(index, stepCount),
-    active: index % 4 === 0,
-    note: 60 + (index % 8),
-    velocity: 100,
-    gateTicks,
-  }));
-  return { length: stepCount, steps };
-}
-
 export function getSequenceStep(
   sequence: SequenceReadModel,
   index: number,
@@ -77,34 +50,65 @@ export function getSequenceStep(
   return sequence.steps[parsedIndex] ?? null;
 }
 
-export interface SequenceStepToggle {
-  sequence: Sequence;
-  step: SequenceStep;
+/**
+ * Route-neutral musical content for an Overture Clip. A Sequence is an entity
+ * that owns its Steps and the Step-level edits performed on them.
+ *
+ * A Sequence has no independent lifecycle: it is only reachable as the content
+ * of a Clip held by {@link OvertureProject}. The Project is the aggregate root
+ * that grants access, enforces Clip Cell and occupancy invariants, and never
+ * leaks a live Sequence to callers. Consumers that derive playback or view state
+ * receive Sequence snapshots, not this instance.
+ */
+export class Sequence implements SequenceReadModel {
+  private readonly stepsValue: SequenceStep[];
+  private readonly lengthValue: number;
+
+  private constructor(steps: SequenceStep[], length: number) {
+    this.stepsValue = steps;
+    this.lengthValue = length;
+  }
+
+  static createDefault(
+    stepCount = DEFAULT_STEP_COUNT,
+    gateTicks = 12,
+  ): Sequence {
+    const steps = Array.from({ length: stepCount }, (_, index) => ({
+      index: stepIndex(index, stepCount),
+      active: index % 4 === 0,
+      note: 60 + (index % 8),
+      velocity: 100,
+      gateTicks,
+    }));
+    return new Sequence(steps, stepCount);
+  }
+
+  get length(): number {
+    return this.lengthValue;
+  }
+
+  get steps(): readonly Readonly<SequenceStep>[] {
+    return this.stepsValue;
+  }
+
+  /**
+   * Toggles one Step's active flag in place and returns the updated Step, or
+   * null when the Step Index is out of range. The Sequence owns its Steps; the
+   * holding OvertureProject exposes this only through its own Step-edit verb.
+   */
+  toggleStep(index: number): Readonly<SequenceStep> | null {
+    const parsedIndex = parseStepIndex(index, this.stepsValue.length);
+    if (parsedIndex === null) return null;
+    const step = this.stepsValue[parsedIndex];
+    if (!step) return null;
+    step.active = !step.active;
+    return step;
+  }
 }
 
-/**
- * Pure Sequence transform for toggling one Step.
- *
- * The returned Sequence is a replacement value; callers that mutate stored
- * Overture Clip data should do so through the owning OvertureProject boundary
- * instead of assigning into Project-owned storage directly.
- */
-export function sequenceWithToggledStep(
-  sequence: Sequence,
-  index: number,
-): SequenceStepToggle | null {
-  const parsedIndex = parseStepIndex(index, sequence.steps.length);
-  if (parsedIndex === null) return null;
-  const step = getSequenceStep(sequence, parsedIndex);
-  if (!step) return null;
-  const toggledStep = { ...step, active: !step.active };
-  return {
-    sequence: {
-      ...sequence,
-      steps: sequence.steps.map((candidate) =>
-        candidate.index === parsedIndex ? toggledStep : candidate,
-      ),
-    },
-    step: toggledStep,
-  };
+export function createDefaultSequence(
+  stepCount = DEFAULT_STEP_COUNT,
+  gateTicks = 12,
+): Sequence {
+  return Sequence.createDefault(stepCount, gateTicks);
 }

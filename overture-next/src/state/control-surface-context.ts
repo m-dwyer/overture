@@ -1,9 +1,4 @@
-import {
-  clipCellCoordinate,
-  type ClipCellCoordinate,
-  type ClipCellCoordinateInput,
-} from "../domain/project";
-import { stepIndex, type StepIndex } from "../domain/sequence";
+import type { ClipCellCoordinate } from "../domain/project";
 import { nonEmptyString, type Branded } from "../domain/value-objects";
 import { trackBankForTrack } from "./surface-addressing";
 
@@ -29,7 +24,6 @@ export interface ControlSurfaceContextSnapshot {
   readonly visibleTrackBank: number;
   readonly activeView: ActiveView;
   readonly heldControls: readonly HeldSurfaceControl[];
-  readonly selectedStep: number;
   readonly selectedClipCell: Readonly<ClipCellCoordinate>;
   readonly heldPads: readonly HeldPadSnapshot[];
   readonly trackView: TrackViewControlContextSnapshot;
@@ -40,12 +34,8 @@ export const TRACK_VIEW_SOUND_PAGE_ID = rootViewPageId("sound");
 const DEFAULT_TRACK_VIEW_PARAMETER_ID = parameterId("default");
 
 export class ControlSurfaceContext {
-  private selectedTrackIndexValue: number;
-  private visibleTrackBankValue: number;
   private activeViewValue: ActiveView;
   private readonly heldControlsValue: Set<HeldSurfaceControl>;
-  private selectedStepValue: StepIndex;
-  private selectedClipCellValue: ClipCellCoordinate;
   private readonly heldPadsValue: Map<number, number>;
   private selectedTrackViewPageIdValue: RootViewPageId;
   private readonly selectedTrackViewParameterIdByPageValue: Record<
@@ -54,15 +44,8 @@ export class ControlSurfaceContext {
   >;
 
   constructor() {
-    this.selectedTrackIndexValue = 0;
-    this.visibleTrackBankValue = 0;
     this.activeViewValue = "session";
     this.heldControlsValue = new Set();
-    this.selectedStepValue = stepIndex(0);
-    this.selectedClipCellValue = clipCellCoordinate({
-      trackIndex: 0,
-      sceneIndex: 0,
-    });
     this.heldPadsValue = new Map();
     this.selectedTrackViewPageIdValue = DEFAULT_TRACK_VIEW_PAGE_ID;
     this.selectedTrackViewParameterIdByPageValue = {
@@ -70,14 +53,20 @@ export class ControlSurfaceContext {
     };
   }
 
-  snapshot(): ControlSurfaceContextSnapshot {
+  /**
+   * Projects the Control Surface Context view for the given active cursor. The
+   * cursor (Selected Clip Cell) is owned by OvertureProject and passed in; the
+   * Track Selection and visible Track Bank are derived from it.
+   */
+  snapshot(
+    selectedClipCell: ClipCellCoordinate,
+  ): ControlSurfaceContextSnapshot {
     return {
-      selectedTrackIndex: this.selectedTrackIndexValue,
-      visibleTrackBank: this.visibleTrackBankValue,
+      selectedTrackIndex: selectedClipCell.trackIndex,
+      visibleTrackBank: trackBankForTrack(selectedClipCell.trackIndex),
       activeView: this.activeViewValue,
       heldControls: [...this.heldControlsValue],
-      selectedStep: this.selectedStepValue,
-      selectedClipCell: { ...this.selectedClipCellValue },
+      selectedClipCell: { ...selectedClipCell },
       heldPads: [...this.heldPadsValue].map(([padIndex, velocity]) => ({
         padIndex,
         velocity,
@@ -100,24 +89,6 @@ export class ControlSurfaceContext {
     this.activeViewValue =
       this.activeViewValue === "session" ? "track" : "session";
     return this.activeViewValue;
-  }
-
-  selectTrackPreservingScene(trackIndex: number): void {
-    this.selectClipCell({
-      trackIndex,
-      sceneIndex: this.selectedClipCellValue.sceneIndex,
-    });
-  }
-
-  selectClipCell(coordinateInput: ClipCellCoordinateInput): void {
-    const coordinate = clipCellCoordinate(coordinateInput);
-    this.selectedClipCellValue = { ...coordinate };
-    this.selectedTrackIndexValue = coordinate.trackIndex;
-    this.visibleTrackBankValue = trackBankForTrack(coordinate.trackIndex);
-  }
-
-  selectStep(stepIndexValue: number): void {
-    this.selectedStepValue = stepIndex(stepIndexValue);
   }
 
   pressPad(padIndex: number, velocity: number): void {

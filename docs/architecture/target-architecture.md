@@ -39,16 +39,19 @@ Durable Project data includes:
 - Sequences and Steps owned by Clips
 - later Motion, route-specific data, and retained inactive route data
 
-Project data must not own transient interaction or playback context such as the
-selected Track, Selected Clip Cell, selected Step, current view, held modifiers,
-playing state, playhead, or pending note-offs.
+Project owns durable musical state and the Selected Clip Cell cursor — the
+active-clip pointer into its grid, which persists with the Project. It must not
+own other transient interaction or playback context such as the current view,
+held modifiers, playing state, playhead, or pending note-offs. Track Selection
+and visible Track Bank are derived from the cursor rather than owned.
 
 ## Transient Owners
 
-Control Surface Context owns interaction context: current view/control mode, Track
-Selection, Selected Clip Cell, selected Step, visible Track Bank, and held
-modifiers. Control interpretation should read `ControlSurfaceContextSnapshot`,
-not mutation-capable Control Surface Context.
+Control Surface Context owns transient surface mode: current view/control mode,
+held modifiers, and Track View page/parameter context. The Selected Clip Cell
+cursor is owned by Project; Track Selection and visible Track Bank are derived
+from it. Control interpretation should read `ControlSurfaceContextSnapshot`, not
+mutation-capable Control Surface Context.
 
 Transport owns timing and play/stop state. Playback owns playing Clip IDs,
 pending note-offs, and scheduling lifecycle. Cross-state workflows belong in

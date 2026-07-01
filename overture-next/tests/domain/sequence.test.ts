@@ -2,27 +2,25 @@ import { describe, expect, test } from "vitest";
 import {
   createDefaultSequence,
   parseStepIndex,
-  sequenceWithToggledStep,
   stepIndex,
 } from "../../src/domain/sequence";
 
 describe("Sequence editing", () => {
-  test("toggles Steps through the public Sequence API", () => {
+  test("toggles a Step in place through the Sequence entity", () => {
     const sequence = createDefaultSequence();
 
     expect(sequence.steps[1].active).toBe(false);
 
-    const result = sequenceWithToggledStep(sequence, 1);
+    const step = sequence.toggleStep(1);
 
-    expect(result?.step).toMatchObject({ index: 1, active: true });
-    expect(result?.sequence.steps[1].active).toBe(true);
-    expect(sequence.steps[1].active).toBe(false);
+    expect(step).toMatchObject({ index: 1, active: true });
+    expect(sequence.steps[1].active).toBe(true);
   });
 
   test("returns null for out-of-range Step Indexes", () => {
     const sequence = createDefaultSequence();
 
-    expect(sequenceWithToggledStep(sequence, 99)).toBeNull();
+    expect(sequence.toggleStep(99)).toBeNull();
   });
 
   test("brands and parses Step Indexes", () => {

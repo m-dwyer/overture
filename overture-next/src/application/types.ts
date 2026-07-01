@@ -12,7 +12,6 @@ export interface CoreSnapshotStep {
   active: boolean;
   note: number | null;
   velocity: number | null;
-  selected: boolean;
   playhead: boolean;
 }
 
@@ -42,7 +41,6 @@ export interface CoreSnapshot {
   visibleTrackBank: number;
   activeView: ActiveView;
   heldControls: ControlSurfaceContextSnapshot["heldControls"];
-  selectedStep: number;
   playing: boolean;
   selectedClipId: string | null;
   selectedClipCell: ControlSurfaceContextSnapshot["selectedClipCell"];

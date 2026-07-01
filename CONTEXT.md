@@ -33,8 +33,8 @@ The Overture view where visible Track rows and Scene columns form Clip Cells for
 _Avoid_: Move Session Mode
 
 **Control Surface Context**:
-Transient Overture control-surface context such as the current control mode, Track Selection, Selected Clip Cell, selected Step, visible Track Bank, and held modifiers.
-_Avoid_: Generic state, Project state, Sequence data, render state
+Transient Overture control-surface context such as the current control mode, held modifiers, and Track View page/parameter context. It also surfaces the Selected Clip Cell cursor (owned by the Overture Project) and the Track Selection and visible Track Bank derived from it.
+_Avoid_: Generic state, render state, durable Project data such as clips, Sequences, or routes
 
 **Hardware Input**:
 A Move control event after raw MIDI parsing but before Overture context interpretation.
@@ -350,8 +350,8 @@ _Avoid_: Immediate launch when transport is running
 - An **Overture Clip** is identified by its **Clip ID**.
 - Moving or editing an **Overture Clip** preserves its **Clip ID**.
 - Copying, duplicating, or overwriting creates a new **Clip ID** for the new **Overture Clip**.
-- Overture runtime/control context has one **Selected Clip Cell**.
-- The **Selected Clip Cell** is a **Clip Cell Coordinate** into the **Overture Project**.
+- The **Overture Project** owns one **Selected Clip Cell** cursor.
+- The **Selected Clip Cell** is a **Clip Cell Coordinate** into the **Overture Project** grid.
 - An **Empty Overture Clip** still exists in a **Clip Cell**.
 - An **Empty Clip Cell** has no **Overture Clip**.
 - Selecting an **Empty Clip Cell** does not create an **Overture Clip**.
@@ -454,7 +454,7 @@ _Avoid_: Immediate launch when transport is running
 > **Domain expert:** "Use **Selected Clip Cell**. Focus is UI implementation language, while selected matches Move's musical workflow language."
 
 > **Dev:** "Can each track have its own selected clip?"
-> **Domain expert:** "No. Overture runtime/control context has one **Selected Clip Cell**, which points into the **Overture Project** and determines the current track and scene position for editing."
+> **Domain expert:** "No. The **Overture Project** owns one **Selected Clip Cell** cursor, which points into its grid and determines the current track and scene position for editing."
 
 > **Dev:** "Can a performer launch one clip without launching the whole scene?"
 > **Domain expert:** "Yes. A **Clip Launch** affects one **Track**; a **Scene Launch** affects all eight **Tracks**."

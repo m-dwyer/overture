@@ -7,6 +7,6 @@ export {
 export { launchClipCell } from "./launch-clip-cell";
 export { selectClipCell } from "./select-clip-cell";
 export { selectTrack } from "./select-track";
-export { toggleSelectedStep } from "./toggle-selected-step";
+export { toggleStep } from "./toggle-step";
 export { toggleTransportPlayback } from "./toggle-transport-playback";
 export type { OperationResult } from "./types";

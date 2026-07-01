@@ -61,7 +61,6 @@ function renderTrackScreen(
       step.active || step.playhead,
     );
   }
-  display.print(0, 56, "Step " + (view.selectedStep + 1), 1);
 }
 
 function renderTrackSoundScreen(

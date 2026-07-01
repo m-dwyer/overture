@@ -9,7 +9,6 @@ import { DEFAULT_STEP_COUNT } from "../../src/domain/sequence";
 describe("Overture Next core read model", () => {
   test("projects selected clip, playback focus, and step state from core owners", () => {
     const owners = createCoreOwners();
-    owners.control.selectStep(4);
     owners.transport.seekToStep(4);
 
     const snapshot = buildCoreSnapshot(owners);
@@ -20,7 +19,6 @@ describe("Overture Next core read model", () => {
       selectedClipCell: { trackIndex: 0, sceneIndex: 0 },
       trackView: { selectedPageId: "default" },
       selectedClipId: "clip-1",
-      selectedStep: 4,
       playing: false,
     });
     expect(
@@ -40,7 +38,6 @@ describe("Overture Next core read model", () => {
       active: true,
       note: 64,
       velocity: 100,
-      selected: true,
       playhead: true,
     });
   });
@@ -60,7 +57,7 @@ describe("Overture Next core read model", () => {
 
   test("uses default inactive steps for an empty selected Clip Cell", () => {
     const owners = createCoreOwners();
-    owners.control.selectClipCell({ trackIndex: 0, sceneIndex: 7 });
+    owners.project.selectClip({ trackIndex: 0, sceneIndex: 7 });
 
     const snapshot = buildCoreSnapshot(owners);
 
@@ -71,7 +68,6 @@ describe("Overture Next core read model", () => {
       active: false,
       note: null,
       velocity: null,
-      selected: true,
       playhead: true,
     });
   });
