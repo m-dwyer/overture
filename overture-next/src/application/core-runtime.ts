@@ -1,4 +1,7 @@
-import type { ControlSurfaceContext } from "../state/control-surface-context";
+import type {
+  ControlSurfaceContext,
+  ControlSurfaceContextSnapshot,
+} from "../state/control-surface-context";
 import type { OvertureProject } from "../state/project";
 import {
   buildCoreSnapshot,
@@ -38,7 +41,7 @@ export class OvertureCoreRuntime implements OvertureCore {
   dispatchControlInput(input: ControlInput): boolean {
     const intent = this.controlInputInterpreter.interpret(
       input,
-      this.control.snapshot(this.project.selectedClipCell()),
+      this.controlSnapshot(),
     );
     if (!intent) return false;
     const transaction = this.domainIntentRouter.route(intent);
@@ -47,22 +50,21 @@ export class OvertureCoreRuntime implements OvertureCore {
   }
 
   snapshot(): CoreSnapshot {
+    const control = this.controlSnapshot();
     return buildCoreSnapshot({
       project: this.project,
-      control: this.control,
-      transport: this.transport,
-      playback: this.playback,
-      controlInputInterpreter: this.controlInputInterpreter,
+      control,
+      transport: this.transport.snapshot(),
+      playback: this.playback.snapshot(),
+      affordances: this.controlInputInterpreter.affordances(control),
     });
   }
 
   selectedSequenceLength(): number {
+    const control = this.controlSnapshot();
     return readSelectedSequenceLength({
       project: this.project,
-      control: this.control,
-      transport: this.transport,
-      playback: this.playback,
-      controlInputInterpreter: this.controlInputInterpreter,
+      control,
     });
   }
 
@@ -79,5 +81,9 @@ export class OvertureCoreRuntime implements OvertureCore {
 
   private collectHostCommands(commands: readonly HostCommand[]): void {
     this.hostCommands.push(...commands);
+  }
+
+  private controlSnapshot(): ControlSurfaceContextSnapshot {
+    return this.control.snapshot(this.project.selectedClipCell());
   }
 }

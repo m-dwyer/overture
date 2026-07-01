@@ -52,4 +52,40 @@ describe("Overture Next root control context interpretation", () => {
       kind: "toggle-view",
     });
   });
+
+  test("projects global affordances alongside active view affordances", () => {
+    const control = createInitialControlSurfaceContext();
+    control.setSurfaceControlHeld("shift", true);
+
+    expect(
+      controlInputInterpreter.affordances(
+        control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
+      ),
+    ).toEqual([
+      {
+        trigger: { kind: "play" },
+        intent: { scope: "transport", kind: "toggle-transport-playback" },
+      },
+      {
+        trigger: { kind: "menu" },
+        intent: { scope: "global", kind: "toggle-view" },
+      },
+      {
+        trigger: { kind: "track-button", row: 0 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 4 },
+      },
+      {
+        trigger: { kind: "track-button", row: 1 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 5 },
+      },
+      {
+        trigger: { kind: "track-button", row: 2 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 6 },
+      },
+      {
+        trigger: { kind: "track-button", row: 3 },
+        intent: { scope: "session", kind: "select-track", trackIndex: 7 },
+      },
+    ]);
+  });
 });

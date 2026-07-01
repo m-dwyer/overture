@@ -1,37 +1,23 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
 import type { ControlSurfaceContextSnapshot } from "../state/control-surface-context";
-import type {
-  ClipCellCoordinate,
-  ProjectCoreReadModel,
-} from "../state/project";
-import type { ControlInputInterpreter } from "./controls/control-input-interpreter";
+import type { ProjectCoreReadModel } from "../state/project";
+import type { SurfaceAffordance } from "./controls/types";
 import type { PlaybackSnapshot } from "./playback";
 import type { TransportSnapshot } from "./transport";
 import type { CoreSnapshot } from "./types";
 
 export interface CoreReadModelSources {
   readonly project: ProjectCoreReadModel;
-  readonly control: {
-    snapshot(
-      selectedClipCell: ClipCellCoordinate,
-    ): ControlSurfaceContextSnapshot;
-  };
-  readonly transport: {
-    snapshot(): TransportSnapshot;
-  };
-  readonly playback: {
-    snapshot(): PlaybackSnapshot;
-  };
-  readonly controlInputInterpreter: Pick<
-    ControlInputInterpreter,
-    "affordances"
-  >;
+  readonly control: ControlSurfaceContextSnapshot;
+  readonly transport: TransportSnapshot;
+  readonly playback: PlaybackSnapshot;
+  readonly affordances: readonly SurfaceAffordance[];
 }
 
 export function buildCoreSnapshot(sources: CoreReadModelSources): CoreSnapshot {
-  const control = sources.control.snapshot(sources.project.selectedClipCell());
-  const transport = sources.transport.snapshot();
-  const playback = sources.playback.snapshot();
+  const control = sources.control;
+  const transport = sources.transport;
+  const playback = sources.playback;
   const selectedClipCell = control.selectedClipCell;
   const selectedCell = sources.project.clipCellAt(selectedClipCell);
 
@@ -50,14 +36,15 @@ export function buildCoreSnapshot(sources: CoreReadModelSources): CoreSnapshot {
     clipCells: sources.project.clipCellSnapshots(),
     playbackTracks: playback.tracks,
     activeNotes: playback.activeNotes,
-    affordances: sources.controlInputInterpreter.affordances(control),
+    affordances: sources.affordances,
     steps: getSnapshotSteps(sources.project, control, transport),
   };
 }
 
-export function selectedSequenceLength(sources: CoreReadModelSources): number {
-  const control = sources.control.snapshot(sources.project.selectedClipCell());
-  const sequence = selectedSequence(sources.project, control);
+export function selectedSequenceLength(
+  sources: Pick<CoreReadModelSources, "project" | "control">,
+): number {
+  const sequence = selectedSequence(sources.project, sources.control);
   return sequence?.length ?? DEFAULT_STEP_COUNT;
 }
 

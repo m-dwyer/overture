@@ -1,16 +1,15 @@
 import { describe, expect, test } from "vitest";
 import { clipCellCoordinate } from "../../../src/domain/project";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
-import {
-  affordancesSessionView,
-  interpretSessionViewControl,
-} from "../../../src/application/controls/session";
+import { SessionControlContext } from "../../../src/application/controls/session";
 
 describe("Overture Next Session control interpretation", () => {
+  const session = new SessionControlContext();
+
   test("interprets pad presses as visible-bank Clip Cell launches", () => {
     const control = createInitialControlSurfaceContext();
 
-    const intent = interpretSessionViewControl(
+    const intent = session.interpret(
       { kind: "pad", held: true, padIndex: 26, velocity: 100 },
       control.snapshot(clipCellCoordinate({ trackIndex: 4, sceneIndex: 0 })),
     );
@@ -27,7 +26,7 @@ describe("Overture Next Session control interpretation", () => {
     const control = createInitialControlSurfaceContext();
 
     expect(
-      interpretSessionViewControl(
+      session.interpret(
         { kind: "pad", held: false, padIndex: 26, velocity: 0 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -39,7 +38,7 @@ describe("Overture Next Session control interpretation", () => {
     control.setSurfaceControlHeld("shift", true);
 
     expect(
-      interpretSessionViewControl(
+      session.interpret(
         { kind: "track-row", row: 1 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -49,7 +48,7 @@ describe("Overture Next Session control interpretation", () => {
       trackIndex: 5,
     });
     expect(
-      interpretSessionViewControl(
+      session.interpret(
         { kind: "step", step: 1 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -60,14 +59,14 @@ describe("Overture Next Session control interpretation", () => {
     const control = createInitialControlSurfaceContext();
 
     expect(
-      affordancesSessionView(
+      session.affordances(
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual([]);
 
     control.setSurfaceControlHeld("shift", true);
     expect(
-      affordancesSessionView(
+      session.affordances(
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual([

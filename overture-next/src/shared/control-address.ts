@@ -5,4 +5,5 @@
  * region). Kind-tagged so more control types can be added as they gain
  * affordances.
  */
-export type ControlAddress = { kind: "track-button"; row: number };
+export type ControlAddress =
+  { kind: "track-button"; row: number } | { kind: "play" } | { kind: "menu" };

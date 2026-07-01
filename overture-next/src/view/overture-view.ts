@@ -39,8 +39,12 @@ function regionForTrigger(trigger: ControlAddress): SurfaceRegion {
   switch (trigger.kind) {
     case "track-button":
       return { kind: "track-row", row: trigger.row };
+    case "play":
+      return { kind: "play" };
+    case "menu":
+      return { kind: "menu" };
     default:
-      return assertNever(trigger.kind);
+      return assertNever(trigger);
   }
 }
 

@@ -3,53 +3,49 @@ import type {
   ControlSurfaceContextSnapshot,
 } from "../../state/control-surface-context";
 import type { DomainIntent } from "../intents/types";
-import { sessionRootControlContext } from "./session";
-import { trackRootControlContext } from "./track";
+import { GlobalControlContext } from "./global";
+import { SessionControlContext } from "./session";
+import { TrackControlContext } from "./track";
 import type {
   ControlInput,
-  RootControlContext,
+  ControlInputContext,
   SurfaceAffordance,
 } from "./types";
 
-const rootControlContexts = {
-  session: sessionRootControlContext,
-  track: trackRootControlContext,
-} satisfies Record<ActiveView, RootControlContext>;
-
 export class ControlInputInterpreter {
+  private readonly global = new GlobalControlContext();
+  private readonly session = new SessionControlContext();
+  private readonly track = new TrackControlContext();
+
   interpret(
     input: ControlInput,
     control: ControlSurfaceContextSnapshot,
   ): DomainIntent | null {
-    return (
-      this.interpretRootIndependentControl(input) ??
-      this.activeRootControlContext(control).interpret(input, control)
-    );
+    for (const context of this.contextsFor(control)) {
+      const intent = context.interpret(input, control);
+      if (intent) return intent;
+    }
+    return null;
   }
 
   affordances(control: ControlSurfaceContextSnapshot): SurfaceAffordance[] {
-    return this.activeRootControlContext(control).affordances(control);
+    return this.contextsFor(control).flatMap((context) =>
+      context.affordances(control),
+    );
   }
 
-  private activeRootControlContext(
+  private contextsFor(
     control: ControlSurfaceContextSnapshot,
-  ): RootControlContext {
-    return rootControlContexts[control.activeView];
+  ): readonly ControlInputContext[] {
+    return [this.global, this.activeViewContext(control.activeView)];
   }
 
-  private interpretRootIndependentControl(
-    input: ControlInput,
-  ): DomainIntent | null {
-    if (input.kind === "shift")
-      return {
-        scope: "global",
-        kind: "set-surface-control-held",
-        control: "shift",
-        held: input.held,
-      };
-    if (input.kind === "play")
-      return { scope: "transport", kind: "toggle-transport-playback" };
-    if (input.kind === "menu") return { scope: "global", kind: "toggle-view" };
-    return null;
+  private activeViewContext(activeView: ActiveView): ControlInputContext {
+    switch (activeView) {
+      case "session":
+        return this.session;
+      case "track":
+        return this.track;
+    }
   }
 }

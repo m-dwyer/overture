@@ -43,7 +43,9 @@ export type ScreenView = TrackScreenView | SessionScreenView;
 
 export type SurfaceRegion =
   | { kind: "session-scene-column"; sceneIndex: number }
-  | { kind: "track-row"; row: number };
+  | { kind: "track-row"; row: number }
+  | { kind: "play" }
+  | { kind: "menu" };
 
 export interface SurfaceHint {
   surface: SurfaceRegion;

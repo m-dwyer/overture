@@ -21,11 +21,11 @@ export interface SurfaceAffordance {
 }
 
 /**
- * A root view's control behaviour: how it interprets a completed Hardware Input,
- * and what it affords for the current context. Both faces are owned together so
- * they cannot drift.
+ * One control interpretation context: how it interprets a completed Hardware
+ * Input, and what it affords for the current context. Both faces are owned
+ * together so they cannot drift.
  */
-export interface RootControlContext {
+export interface ControlInputContext {
   interpret(
     input: ControlInput,
     control: ControlSurfaceContextSnapshot,

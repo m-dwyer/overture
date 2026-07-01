@@ -15,7 +15,7 @@ describe("Overture Next core read model", () => {
     const sources = createTestCoreSources();
     sources.transport.seekToStep(4);
 
-    const snapshot = buildCoreSnapshot(sources);
+    const snapshot = buildCoreSnapshot(coreReadModelSources(sources));
 
     expect(snapshot).toMatchObject({
       selectedTrackIndex: 0,
@@ -50,7 +50,7 @@ describe("Overture Next core read model", () => {
     const sources = createTestCoreSources();
     sources.playback.startAt(sources.project, { playhead: 0, tick: 0 });
 
-    const snapshot = buildCoreSnapshot(sources);
+    const snapshot = buildCoreSnapshot(coreReadModelSources(sources));
 
     expect(snapshot.activeNotes).toContainEqual({
       trackIndex: 0,
@@ -63,10 +63,11 @@ describe("Overture Next core read model", () => {
     const sources = createTestCoreSources();
     sources.project.selectClip({ trackIndex: 0, sceneIndex: 7 });
 
-    const snapshot = buildCoreSnapshot(sources);
+    const readModelSources = coreReadModelSources(sources);
+    const snapshot = buildCoreSnapshot(readModelSources);
 
     expect(snapshot.selectedClipId).toBeNull();
-    expect(selectedSequenceLength(sources)).toBe(DEFAULT_STEP_COUNT);
+    expect(selectedSequenceLength(readModelSources)).toBe(DEFAULT_STEP_COUNT);
     expect(snapshot.steps).toHaveLength(DEFAULT_STEP_COUNT);
     expect(snapshot.steps[0]).toMatchObject({
       active: false,
@@ -85,4 +86,21 @@ function createTestCoreSources() {
   const controlInputInterpreter = new ControlInputInterpreter();
   playback.seedDefaultScene(project);
   return { project, control, transport, playback, controlInputInterpreter };
+}
+
+function coreReadModelSources({
+  project,
+  control,
+  transport,
+  playback,
+  controlInputInterpreter,
+}: ReturnType<typeof createTestCoreSources>) {
+  const controlSnapshot = control.snapshot(project.selectedClipCell());
+  return {
+    project,
+    control: controlSnapshot,
+    transport: transport.snapshot(),
+    playback: playback.snapshot(),
+    affordances: controlInputInterpreter.affordances(controlSnapshot),
+  };
 }

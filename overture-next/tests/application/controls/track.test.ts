@@ -5,17 +5,16 @@ import {
   DEFAULT_TRACK_VIEW_PAGE_ID,
   TRACK_VIEW_SOUND_PAGE_ID,
 } from "../../../src/state/control-surface-context";
-import {
-  affordancesTrackView,
-  interpretTrackViewControl,
-} from "../../../src/application/controls/track";
+import { TrackControlContext } from "../../../src/application/controls/track";
 
 describe("Overture Next Track control interpretation", () => {
+  const track = new TrackControlContext();
+
   test("interprets pad presses as selected-track note audition", () => {
     const control = createInitialControlSurfaceContext();
 
     expect(
-      interpretTrackViewControl(
+      track.interpret(
         { kind: "pad", held: true, padIndex: 7, velocity: 101 },
         control.snapshot(clipCellCoordinate({ trackIndex: 5, sceneIndex: 0 })),
       ),
@@ -34,7 +33,7 @@ describe("Overture Next Track control interpretation", () => {
     const control = createInitialControlSurfaceContext();
 
     expect(
-      interpretTrackViewControl(
+      track.interpret(
         { kind: "pad", held: false, padIndex: 7, velocity: 0 },
         control.snapshot(clipCellCoordinate({ trackIndex: 5, sceneIndex: 0 })),
       ),
@@ -54,7 +53,7 @@ describe("Overture Next Track control interpretation", () => {
     control.setSurfaceControlHeld("shift", true);
 
     expect(
-      interpretTrackViewControl(
+      track.interpret(
         { kind: "track-row", row: 1 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -64,7 +63,7 @@ describe("Overture Next Track control interpretation", () => {
       trackIndex: 5,
     });
     expect(
-      interpretTrackViewControl(
+      track.interpret(
         { kind: "step", step: 1 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -80,7 +79,7 @@ describe("Overture Next Track control interpretation", () => {
     control.setSurfaceControlHeld("shift", true);
 
     expect(
-      interpretTrackViewControl(
+      track.interpret(
         { kind: "step", step: 2 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -93,7 +92,7 @@ describe("Overture Next Track control interpretation", () => {
     control.selectTrackViewPage("sound");
 
     expect(
-      interpretTrackViewControl(
+      track.interpret(
         { kind: "step", step: 2 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -108,14 +107,14 @@ describe("Overture Next Track control interpretation", () => {
     const control = createInitialControlSurfaceContext();
 
     expect(
-      affordancesTrackView(
+      track.affordances(
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual([]);
 
     control.setSurfaceControlHeld("shift", true);
     expect(
-      affordancesTrackView(
+      track.affordances(
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual([
