@@ -28,6 +28,26 @@ describe("Overture Next LED rendering", () => {
     ]);
   });
 
+  test("lights an available track-row button in its Track Colour", () => {
+    const calls: string[] = [];
+    const leds = createLedRecorder(calls);
+    const view: LedView = {
+      steps: [],
+      pads: [],
+      buttons: [
+        { kind: "track-row", row: 0, colour: 5, state: "available" },
+        { kind: "track-row", row: 1, colour: 6, state: "selected" },
+      ],
+    };
+
+    renderLeds(view, leds);
+
+    expect(calls).toEqual([
+      "track-row:0:" + TRACK_COLOR_BYTES[5],
+      "track-row:1:" + OVERTURE_LED_COLOR.selected,
+    ]);
+  });
+
   test("maps Session View Clip Cell pad states to central pad LEDs", () => {
     const calls: string[] = [];
     const leds = createLedRecorder(calls);

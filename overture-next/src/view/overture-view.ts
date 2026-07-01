@@ -1,5 +1,6 @@
 import type { CoreSnapshot } from "../application/types";
 import type { SurfaceHostReadModel } from "../ports/surface-host-read-model";
+import { selectTrackFromRow } from "../state/surface-addressing";
 import { viewModuleFor } from "./internal/view-modules";
 import type { LedView, OvertureSurfaceView, SurfaceHint } from "./types";
 
@@ -30,6 +31,10 @@ function createLedView(
       ...[0, 1, 2, 3].map((row) => ({
         kind: "track-row" as const,
         row,
+        colour:
+          snapshot.trackColours?.[
+            selectTrackFromRow(row, snapshot.visibleTrackBank)
+          ],
         state: trackRowLedState(snapshot, surfaceHints, row),
       })),
       { kind: "play", state: snapshot.playing ? "playing" : "stopped" },

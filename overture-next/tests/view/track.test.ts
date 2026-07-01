@@ -138,7 +138,7 @@ describe("Overture Next Track View module", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 5,
       selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
-      selectedTrackColour: 5,
+      trackColours: [0, 1, 2, 3, 4, 5, 6, 7],
       visibleTrackBank: 1,
       activeView: "track",
       heldControls: [],

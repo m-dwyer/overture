@@ -48,6 +48,19 @@ function padColor(pad: PadLedView): number {
   return PAD_COLORS[pad.state];
 }
 
+/**
+ * A track-row (side) button lights in its Track Colour at the available
+ * baseline; selected and hinted keep their fixed highlight treatments for now.
+ */
+function trackRowColor(button: {
+  state: "selected" | "hinted" | "available";
+  colour?: number;
+}): number {
+  if (button.state === "available" && button.colour !== undefined)
+    return TRACK_COLOR_BYTES[button.colour] ?? TRACK_ROW_COLORS.available;
+  return TRACK_ROW_COLORS[button.state];
+}
+
 export function renderLeds(view: LedView, leds: LedPort): void {
   for (const step of view.steps) {
     leds.setStepLed(step.step, STEP_COLORS[step.state]);
@@ -58,7 +71,7 @@ export function renderLeds(view: LedView, leds: LedPort): void {
   for (const button of view.buttons) {
     switch (button.kind) {
       case "track-row":
-        leds.setTrackRowLed(button.row, TRACK_ROW_COLORS[button.state]);
+        leds.setTrackRowLed(button.row, trackRowColor(button));
         break;
       case "play":
         leds.setPlayLed(PLAY_BUTTON_COLORS[button.state]);

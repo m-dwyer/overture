@@ -81,8 +81,9 @@ pad/note mapping has one home.
    `note → pad` projection lights sounding notes for their gate length. _(done)_
 2. **Identity baseline** — Track View pads light a `playable` baseline in the
    selected **Track Colour** (owned Project identity, route-neutral, defaulted per
-   Track Index; render maps the colour index to a Move LED byte) _(done)_.
-   Session View row/pad identity colouring remains pending.
+   Track Index; render maps the colour index to a Move LED byte), and the shared
+   track-row (side) buttons light each visible Track's colour at rest in both
+   views _(done)_. Session View pad-grid identity colouring remains pending.
 3. **Press feedback** — held-pad interaction state in `ControlSurfaceContext`
    (`pressPad`/`releasePad`/`heldPads`, carrying velocity), updated by the audition
    operation, lights pressed pads over the baseline _(done)_.

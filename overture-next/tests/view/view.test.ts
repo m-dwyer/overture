@@ -81,6 +81,43 @@ describe("Overture Next view projection", () => {
     expect(view.leds.pads.every((pad) => pad.state === "playable")).toBe(true);
   });
 
+  test("colours each visible track-row button with its Track's colour", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 5,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
+      trackColours: [0, 1, 2, 3, 4, 5, 6, 7],
+      visibleTrackBank: 1,
+      activeView: "track",
+      heldControls: [],
+      selectedStep: 0,
+      playing: false,
+      selectedClipId: "clip-6",
+      selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
+      clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
+      steps: [],
+    };
+
+    const view = createOvertureSurfaceView(snapshot);
+
+    // Track Bank 2: row 0 -> Track 4, row 1 -> Track 5 (selected).
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 0,
+      colour: 4,
+      state: "available",
+    });
+    expect(view.leds.buttons).toContainEqual({
+      kind: "track-row",
+      row: 1,
+      colour: 5,
+      state: "selected",
+    });
+  });
+
   test("derives Track View track-row button hints while Shift is held", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 5,

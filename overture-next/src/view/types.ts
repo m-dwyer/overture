@@ -77,6 +77,8 @@ export type ButtonLedView =
   | {
       kind: "track-row";
       row: number;
+      /** Track Colour identity index; render lights the available baseline in it. */
+      colour?: number;
       state: "selected" | "hinted" | "available";
     }
   | { kind: "play"; state: "playing" | "stopped" }

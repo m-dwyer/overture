@@ -37,7 +37,7 @@ export const trackView = {
       return {
         padIndex,
         state: "playable",
-        colour: snapshot.selectedTrackColour,
+        colour: snapshot.trackColours?.[snapshot.selectedTrackIndex],
       };
     });
   },
