@@ -38,6 +38,7 @@ export interface CoreSnapshotActiveNote {
 export interface CoreSnapshot {
   selectedTrackIndex: number;
   selectedTrackRoute: TrackRoute;
+  selectedTrackColour?: number;
   visibleTrackBank: number;
   activeView: ActiveView;
   heldControls: ControlSurfaceContextSnapshot["heldControls"];

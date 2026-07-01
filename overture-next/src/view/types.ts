@@ -58,6 +58,8 @@ export interface StepLedView {
 
 export interface PadLedView {
   padIndex: number;
+  /** Track Colour identity index; render maps it to an LED colour for coloured states. */
+  colour?: number;
   state:
     | "pressed"
     | "playing"

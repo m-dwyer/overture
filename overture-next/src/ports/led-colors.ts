@@ -9,6 +9,22 @@ export const OVERTURE_LED_COLOR = {
   selected: 120,
 } as const;
 
+/**
+ * Track Colour LED bytes indexed by Track Colour identity. Eight distinct Move
+ * palette hues, one per default Track. Render maps a Track Colour index to one
+ * of these; the domain never holds an LED byte.
+ */
+export const TRACK_COLOR_BYTES = [
+  127, // Red
+  28, // Burnt Orange
+  7, // Vivid Yellow
+  8, // Bright Green
+  14, // Cyan
+  21, // Hot Magenta
+  101, // Purple Blue
+  25, // Bright Pink
+] as const;
+
 export const OVERTURE_LED_COLOR_VALUES = [
   OVERTURE_LED_COLOR.off,
   OVERTURE_LED_COLOR.dim,
@@ -18,4 +34,5 @@ export const OVERTURE_LED_COLOR_VALUES = [
   OVERTURE_LED_COLOR.hint,
   OVERTURE_LED_COLOR.active,
   OVERTURE_LED_COLOR.selected,
+  ...TRACK_COLOR_BYTES,
 ] as const;

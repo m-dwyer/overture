@@ -32,12 +32,13 @@ export const trackView = {
           active.trackIndex === snapshot.selectedTrackIndex &&
           active.note === note,
       );
-      const state: PadLedView["state"] = pressed
-        ? "pressed"
-        : sounding
-          ? "playing"
-          : "playable";
-      return { padIndex, state };
+      if (pressed) return { padIndex, state: "pressed" };
+      if (sounding) return { padIndex, state: "playing" };
+      return {
+        padIndex,
+        state: "playable",
+        colour: snapshot.selectedTrackColour,
+      };
     });
   },
 };

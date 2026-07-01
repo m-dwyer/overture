@@ -79,12 +79,13 @@ pad/note mapping has one home.
 
 1. **Playback layer for Track View pads** — `Playback.activeNotes()` +
    `note → pad` projection lights sounding notes for their gate length. _(done)_
-2. **Identity baseline** — Track View pads now light a dim `playable` baseline
-   so the grid is alive at rest _(done)_; Track colour as owned Project state, so
-   every control reflects identity in every view, remains pending.
+2. **Identity baseline** — Track View pads light a `playable` baseline in the
+   selected **Track Colour** (owned Project identity, route-neutral, defaulted per
+   Track Index; render maps the colour index to a Move LED byte) _(done)_.
+   Session View row/pad identity colouring remains pending.
 3. **Press feedback** — held-pad interaction state in `ControlSurfaceContext`
-   (`setPadHeld`/`heldPads`), updated by the audition operation, lights pressed
-   pads over the baseline _(done)_.
+   (`pressPad`/`releasePad`/`heldPads`, carrying velocity), updated by the audition
+   operation, lights pressed pads over the baseline _(done)_.
 4. **Overlay/hints** — `SurfaceAffordance` + data-carrying `SurfaceHint`,
    replacing the hand-authored hint projectors; fixes the phantom
    `scene-launch-target` hint by construction.

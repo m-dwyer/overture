@@ -82,6 +82,11 @@ _Avoid_: Track Number, Track ID
 The one-based user-facing label for a Track.
 _Avoid_: Track Index
 
+**Track Colour**:
+A per-Track identity colour that visually distinguishes a Track across Overture
+views. Route-Neutral Track Data retained across Track Route changes.
+_Avoid_: LED colour, Pad colour
+
 **Scene Index**:
 The zero-based internal identity of an Overture Scene.
 _Avoid_: Scene Number, Scene ID
@@ -309,6 +314,7 @@ _Avoid_: Immediate launch when transport is running
 - An **Overture Scene** groups up to one **Overture Clip** per **Track** across all eight **Tracks**.
 - An **Overture Clip** belongs to exactly one **Track** and one **Overture Scene**.
 - A **Track** stays global across **Overture Scenes**.
+- Each **Track** has a **Track Colour** for visual identification, retained as **Route-Neutral Track Data** across **Track Route** changes.
 - A **Track** has exactly one current **Track Route** shared by all of its **Overture Clips**.
 - A **Track Route** is either a **Move Route** or a **Schwung Route**.
 - A **Move Route** has exactly one **Move Track Target**.

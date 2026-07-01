@@ -1,10 +1,33 @@
 import { describe, expect, test } from "vitest";
-import { OVERTURE_LED_COLOR } from "../../src/ports/led-colors";
+import {
+  OVERTURE_LED_COLOR,
+  TRACK_COLOR_BYTES,
+} from "../../src/ports/led-colors";
 import type { LedPort } from "../../src/ports/outbound";
 import { renderLeds } from "../../src/render/render-leds";
 import type { LedView } from "../../src/view";
 
 describe("Overture Next LED rendering", () => {
+  test("lights a playable pad in its Track Colour, or dim when uncoloured", () => {
+    const calls: string[] = [];
+    const leds = createLedRecorder(calls);
+    const view: LedView = {
+      steps: [],
+      pads: [
+        { padIndex: 0, state: "playable", colour: 5 },
+        { padIndex: 1, state: "playable" },
+      ],
+      buttons: [],
+    };
+
+    renderLeds(view, leds);
+
+    expect(calls).toEqual([
+      "pad:0:" + TRACK_COLOR_BYTES[5],
+      "pad:1:" + OVERTURE_LED_COLOR.dim,
+    ]);
+  });
+
   test("maps Session View Clip Cell pad states to central pad LEDs", () => {
     const calls: string[] = [];
     const leds = createLedRecorder(calls);

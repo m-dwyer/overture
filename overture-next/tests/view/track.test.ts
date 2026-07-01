@@ -134,6 +134,31 @@ describe("Overture Next Track View module", () => {
     ]);
   });
 
+  test("colours the playable pad baseline with the selected Track Colour", () => {
+    const snapshot: CoreSnapshot = {
+      selectedTrackIndex: 5,
+      selectedTrackRoute: { kind: "schwung", schwungChainIndex: 1 },
+      selectedTrackColour: 5,
+      visibleTrackBank: 1,
+      activeView: "track",
+      heldControls: [],
+      selectedStep: 1,
+      playing: false,
+      selectedClipId: "clip-6",
+      selectedClipCell: { trackIndex: 5, sceneIndex: 0 },
+      trackView: {
+        selectedPageId: DEFAULT_TRACK_VIEW_PAGE_ID,
+        selectedParameterIdByPage: {},
+      },
+      clipCells: [{ trackIndex: 5, sceneIndex: 0, clipId: "clip-6" }],
+      steps: [],
+    };
+
+    const pads = trackView.createPadLeds(snapshot, []);
+
+    expect(pads[0]).toEqual({ padIndex: 0, state: "playable", colour: 5 });
+  });
+
   test("lights held pads as pressed over the playable baseline", () => {
     const snapshot: CoreSnapshot = {
       selectedTrackIndex: 5,

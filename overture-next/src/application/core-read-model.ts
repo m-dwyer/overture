@@ -28,6 +28,7 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
   return {
     selectedTrackIndex: control.selectedTrackIndex,
     selectedTrackRoute: owners.project.trackRoute(control.selectedTrackIndex),
+    selectedTrackColour: owners.project.trackColour(control.selectedTrackIndex),
     visibleTrackBank: control.visibleTrackBank,
     activeView: control.activeView,
     heldControls: control.heldControls,
