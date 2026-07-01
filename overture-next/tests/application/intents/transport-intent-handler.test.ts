@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createTransportIntentHandler } from "../../../src/application/intents/transport-intent-handler";
+import { TransportIntentHandler } from "../../../src/application/intents/transport-intent-handler";
 import type { HostCommand } from "../../../src/application/types";
 import type { ProjectPlaybackReadModel } from "../../../src/state/project";
 
@@ -16,9 +16,21 @@ describe("Overture Next transport intent handler", () => {
       velocity: 100,
     };
 
-    const result = createTransportIntentHandler({
+    const result = new TransportIntentHandler(
       project,
-      transport: {
+      {
+        startAt(receivedProject, receivedClock) {
+          expect(receivedProject).toBe(project);
+          expect(receivedClock).toBe(clock);
+          events.push("startAt");
+          return [command];
+        },
+        pauseAt() {
+          events.push("unexpected-pauseAt");
+          return [];
+        },
+      },
+      {
         isPlaying() {
           events.push("isPlaying");
           return false;
@@ -34,19 +46,7 @@ describe("Overture Next transport intent handler", () => {
           return clock;
         },
       },
-      playback: {
-        startAt(receivedProject, receivedClock) {
-          expect(receivedProject).toBe(project);
-          expect(receivedClock).toBe(clock);
-          events.push("startAt");
-          return [command];
-        },
-        pauseAt() {
-          events.push("unexpected-pauseAt");
-          return [];
-        },
-      },
-    }).handle({ scope: "transport", kind: "toggle-transport-playback" });
+    ).handle({ scope: "transport", kind: "toggle-transport-playback" });
 
     expect(result).toEqual({ applied: true, hostCommands: [command] });
     expect(events).toEqual(["isPlaying", "start", "clock", "startAt"]);
@@ -63,9 +63,21 @@ describe("Overture Next transport intent handler", () => {
       note: 64,
     };
 
-    const result = createTransportIntentHandler({
+    const result = new TransportIntentHandler(
       project,
-      transport: {
+      {
+        startAt() {
+          events.push("unexpected-startAt");
+          return [];
+        },
+        pauseAt(receivedProject, receivedClock) {
+          expect(receivedProject).toBe(project);
+          expect(receivedClock).toBe(clock);
+          events.push("pauseAt");
+          return [command];
+        },
+      },
+      {
         isPlaying() {
           events.push("isPlaying");
           return true;
@@ -81,19 +93,7 @@ describe("Overture Next transport intent handler", () => {
           return clock;
         },
       },
-      playback: {
-        startAt() {
-          events.push("unexpected-startAt");
-          return [];
-        },
-        pauseAt(receivedProject, receivedClock) {
-          expect(receivedProject).toBe(project);
-          expect(receivedClock).toBe(clock);
-          events.push("pauseAt");
-          return [command];
-        },
-      },
-    }).handle({ scope: "transport", kind: "toggle-transport-playback" });
+    ).handle({ scope: "transport", kind: "toggle-transport-playback" });
 
     expect(result).toEqual({ applied: true, hostCommands: [command] });
     expect(events).toEqual(["isPlaying", "stop", "clock", "pauseAt"]);

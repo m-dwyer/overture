@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createTrackIntentHandler } from "../../../src/application/intents/track-intent-handler";
+import { TrackIntentHandler } from "../../../src/application/intents/track-intent-handler";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
 import { createDefaultProject } from "../../../src/state/project";
 
@@ -8,7 +8,7 @@ describe("Overture Next track intent handler", () => {
     const control = createInitialControlSurfaceContext();
     const project = createDefaultProject();
 
-    const result = createTrackIntentHandler({ control, project }).handle({
+    const result = new TrackIntentHandler(control, project).handle({
       scope: "track",
       kind: "audition-note",
       held: true,
@@ -35,7 +35,7 @@ describe("Overture Next track intent handler", () => {
   test("releases the pad and emits a note-off on release", () => {
     const control = createInitialControlSurfaceContext();
     const project = createDefaultProject();
-    const handler = createTrackIntentHandler({ control, project });
+    const handler = new TrackIntentHandler(control, project);
 
     handler.handle({
       scope: "track",

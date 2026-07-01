@@ -3,25 +3,19 @@ import { assertNever } from "../../shared/assert-never";
 import { intentApplied } from "./transaction";
 import type { DomainIntentTransaction, GlobalIntent } from "./types";
 
-export interface GlobalIntentHandler {
-  handle(intent: GlobalIntent): DomainIntentTransaction;
-}
+export class GlobalIntentHandler {
+  constructor(private readonly control: ControlSurfaceContext) {}
 
-export function createGlobalIntentHandler(
-  control: ControlSurfaceContext,
-): GlobalIntentHandler {
-  return {
-    handle(intent) {
-      switch (intent.kind) {
-        case "set-surface-control-held":
-          control.setSurfaceControlHeld(intent.control, intent.held);
-          return intentApplied();
-        case "toggle-view":
-          control.toggleActiveView();
-          return intentApplied();
-        default:
-          return assertNever(intent);
-      }
-    },
-  };
+  handle(intent: GlobalIntent): DomainIntentTransaction {
+    switch (intent.kind) {
+      case "set-surface-control-held":
+        this.control.setSurfaceControlHeld(intent.control, intent.held);
+        return intentApplied();
+      case "toggle-view":
+        this.control.toggleActiveView();
+        return intentApplied();
+      default:
+        return assertNever(intent);
+    }
+  }
 }

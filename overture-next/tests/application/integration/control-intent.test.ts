@@ -6,11 +6,7 @@ import {
   TRACK_VIEW_SOUND_PAGE_ID,
 } from "../../../src/state/control-surface-context";
 import { interpretControl } from "../../../src/application/controls/interpret-control";
-import { createDomainIntentHandler } from "../../../src/application/intents/domain-intent-handler";
-import { createGlobalIntentHandler } from "../../../src/application/intents/global-intent-handler";
-import { createSessionIntentHandler } from "../../../src/application/intents/session-intent-handler";
-import { createTrackIntentHandler } from "../../../src/application/intents/track-intent-handler";
-import { createTransportIntentHandler } from "../../../src/application/intents/transport-intent-handler";
+import { DomainIntentRouter } from "../../../src/application/intents/domain-intent-router";
 import type {
   DomainIntent,
   DomainIntentTransaction,
@@ -834,23 +830,12 @@ function applyIntentWithState(
   intent: DomainIntent,
   state: TestCoreState,
 ): DomainIntentTransaction {
-  return createDomainIntentHandler({
-    global: createGlobalIntentHandler(state.control),
-    session: createSessionIntentHandler({
-      project: state.project,
-      playback: state.playback,
-      transport: state.transport,
-    }),
-    track: createTrackIntentHandler({
-      control: state.control,
-      project: state.project,
-    }),
-    transport: createTransportIntentHandler({
-      project: state.project,
-      playback: state.playback,
-      transport: state.transport,
-    }),
-  }).handle(intent);
+  return new DomainIntentRouter({
+    control: state.control,
+    project: state.project,
+    playback: state.playback,
+    transport: state.transport,
+  }).route(intent);
 }
 
 function applyIntentAndCollect(

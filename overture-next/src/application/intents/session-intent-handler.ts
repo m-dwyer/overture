@@ -6,53 +6,43 @@ import type { Transport } from "../transport";
 import { intentApplied } from "./transaction";
 import type { DomainIntentTransaction, SessionIntent } from "./types";
 
-export interface SessionIntentHandler {
-  handle(intent: SessionIntent): DomainIntentTransaction;
-}
+export class SessionIntentHandler {
+  constructor(
+    private readonly project: OvertureProject,
+    private readonly playback: Playback,
+    private readonly transport: Transport,
+  ) {}
 
-export interface SessionIntentHandlerDependencies {
-  readonly project: OvertureProject;
-  readonly playback: Playback;
-  readonly transport: Transport;
-}
+  handle(intent: SessionIntent): DomainIntentTransaction {
+    switch (intent.kind) {
+      case "select-track":
+        this.project.selectTrackKeepingScene(intent.trackIndex);
+        return intentApplied();
+      case "select-clip-cell":
+        this.project.selectClip(intent.coordinate);
+        return intentApplied();
+      case "launch-clip-cell":
+        return this.launchClipCell(intent.coordinate);
+      default:
+        return assertNever(intent);
+    }
+  }
 
-export function createSessionIntentHandler({
-  project,
-  playback,
-  transport,
-}: SessionIntentHandlerDependencies): SessionIntentHandler {
-  return {
-    handle(intent) {
-      switch (intent.kind) {
-        case "select-track":
-          project.selectTrackKeepingScene(intent.trackIndex);
-          return intentApplied();
-        case "select-clip-cell":
-          project.selectClip(intent.coordinate);
-          return intentApplied();
-        case "launch-clip-cell":
-          return launchClipCell(intent.coordinate);
-        default:
-          return assertNever(intent);
-      }
-    },
-  };
-
-  function launchClipCell(
+  private launchClipCell(
     coordinate: ClipCellCoordinateInput,
   ): DomainIntentTransaction {
-    const selectedBefore = project.selectedClipCell();
+    const selectedBefore = this.project.selectedClipCell();
     const alreadySelected =
       selectedBefore.trackIndex === coordinate.trackIndex &&
       selectedBefore.sceneIndex === coordinate.sceneIndex;
 
-    project.selectClip(coordinate);
+    this.project.selectClip(coordinate);
     if (!alreadySelected) return intentApplied();
 
     return intentApplied(
-      playback.requestClipToggle(project, coordinate, {
-        running: transport.isPlaying(),
-        clock: transport.clock(),
+      this.playback.requestClipToggle(this.project, coordinate, {
+        running: this.transport.isPlaying(),
+        clock: this.transport.clock(),
       }),
     );
   }

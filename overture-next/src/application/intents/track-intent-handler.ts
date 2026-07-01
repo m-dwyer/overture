@@ -4,45 +4,36 @@ import { assertNever } from "../../shared/assert-never";
 import { intentApplied } from "./transaction";
 import type { DomainIntentTransaction, TrackIntent } from "./types";
 
-export interface TrackIntentHandler {
-  handle(intent: TrackIntent): DomainIntentTransaction;
-}
+export class TrackIntentHandler {
+  constructor(
+    private readonly control: ControlSurfaceContext,
+    private readonly project: OvertureProject,
+  ) {}
 
-export interface TrackIntentHandlerDependencies {
-  readonly control: ControlSurfaceContext;
-  readonly project: OvertureProject;
-}
+  handle(intent: TrackIntent): DomainIntentTransaction {
+    switch (intent.kind) {
+      case "select-track":
+        this.project.selectTrackKeepingScene(intent.trackIndex);
+        return intentApplied();
+      case "select-track-view-page":
+        this.control.selectTrackViewPage(intent.pageId);
+        return intentApplied();
+      case "toggle-step":
+        this.project.activeClipEditor()?.toggleStep(intent.stepIndex);
+        return intentApplied();
+      case "audition-note":
+        return this.auditionNote(intent);
+      default:
+        return assertNever(intent);
+    }
+  }
 
-export function createTrackIntentHandler({
-  control,
-  project,
-}: TrackIntentHandlerDependencies): TrackIntentHandler {
-  return {
-    handle(intent) {
-      switch (intent.kind) {
-        case "select-track":
-          project.selectTrackKeepingScene(intent.trackIndex);
-          return intentApplied();
-        case "select-track-view-page":
-          control.selectTrackViewPage(intent.pageId);
-          return intentApplied();
-        case "toggle-step":
-          project.activeClipEditor()?.toggleStep(intent.stepIndex);
-          return intentApplied();
-        case "audition-note":
-          return auditionNote(intent);
-        default:
-          return assertNever(intent);
-      }
-    },
-  };
-
-  function auditionNote(
+  private auditionNote(
     intent: Extract<TrackIntent, { kind: "audition-note" }>,
-  ) {
-    if (intent.held) control.pressPad(intent.padIndex, intent.velocity);
-    else control.releasePad(intent.padIndex);
-    const route = project.trackRoute(intent.trackIndex);
+  ): DomainIntentTransaction {
+    if (intent.held) this.control.pressPad(intent.padIndex, intent.velocity);
+    else this.control.releasePad(intent.padIndex);
+    const route = this.project.trackRoute(intent.trackIndex);
     const hostCommand = intent.held
       ? {
           kind: "track-note-on" as const,

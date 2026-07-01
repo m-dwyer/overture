@@ -4,16 +4,6 @@ import type { TransportClock } from "../transport-timing";
 import { intentApplied } from "./transaction";
 import type { DomainIntentTransaction, TransportIntent } from "./types";
 
-export interface TransportIntentHandler {
-  handle(intent: TransportIntent): DomainIntentTransaction;
-}
-
-export interface TransportIntentHandlerDependencies {
-  readonly project: ProjectPlaybackReadModel;
-  readonly playback: Pick<Playback, "startAt" | "pauseAt">;
-  readonly transport: TransportPlaybackControl;
-}
-
 interface TransportPlaybackControl {
   isPlaying(): boolean;
   start(): void;
@@ -21,24 +11,28 @@ interface TransportPlaybackControl {
   clock(): TransportClock;
 }
 
-export function createTransportIntentHandler({
-  project,
-  playback,
-  transport,
-}: TransportIntentHandlerDependencies): TransportIntentHandler {
-  return {
-    handle() {
-      return toggleTransportPlayback();
-    },
-  };
+export class TransportIntentHandler {
+  constructor(
+    private readonly project: ProjectPlaybackReadModel,
+    private readonly playback: Pick<Playback, "startAt" | "pauseAt">,
+    private readonly transport: TransportPlaybackControl,
+  ) {}
 
-  function toggleTransportPlayback(): DomainIntentTransaction {
-    if (transport.isPlaying()) {
-      transport.stop();
-      return intentApplied(playback.pauseAt(project, transport.clock()));
+  handle(_intent: TransportIntent): DomainIntentTransaction {
+    return this.toggleTransportPlayback();
+  }
+
+  private toggleTransportPlayback(): DomainIntentTransaction {
+    if (this.transport.isPlaying()) {
+      this.transport.stop();
+      return intentApplied(
+        this.playback.pauseAt(this.project, this.transport.clock()),
+      );
     }
 
-    transport.start();
-    return intentApplied(playback.startAt(project, transport.clock()));
+    this.transport.start();
+    return intentApplied(
+      this.playback.startAt(this.project, this.transport.clock()),
+    );
   }
 }
