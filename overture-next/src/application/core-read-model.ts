@@ -1,10 +1,10 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
-import { rootControlContextFor } from "./controls/root-control-contexts";
 import type { ControlSurfaceContextSnapshot } from "../state/control-surface-context";
 import type {
   ClipCellCoordinate,
   ProjectCoreReadModel,
 } from "../state/project";
+import type { ControlInputInterpreter } from "./controls/control-input-interpreter";
 import type { PlaybackSnapshot } from "./playback";
 import type { TransportSnapshot } from "./transport";
 import type { CoreSnapshot } from "./types";
@@ -22,6 +22,10 @@ export interface CoreReadModelSources {
   readonly playback: {
     snapshot(): PlaybackSnapshot;
   };
+  readonly controlInputInterpreter: Pick<
+    ControlInputInterpreter,
+    "affordances"
+  >;
 }
 
 export function buildCoreSnapshot(sources: CoreReadModelSources): CoreSnapshot {
@@ -46,7 +50,7 @@ export function buildCoreSnapshot(sources: CoreReadModelSources): CoreSnapshot {
     clipCells: sources.project.clipCellSnapshots(),
     playbackTracks: playback.tracks,
     activeNotes: playback.activeNotes,
-    affordances: rootControlContextFor(control).affordances(control),
+    affordances: sources.controlInputInterpreter.affordances(control),
     steps: getSnapshotSteps(sources.project, control, transport),
   };
 }

@@ -3,6 +3,7 @@ import {
   buildCoreSnapshot,
   selectedSequenceLength,
 } from "../../src/application/core-read-model";
+import { ControlInputInterpreter } from "../../src/application/controls/control-input-interpreter";
 import { createPlayback } from "../../src/application/playback";
 import { createTransport } from "../../src/application/transport";
 import { DEFAULT_STEP_COUNT } from "../../src/domain/sequence";
@@ -81,6 +82,7 @@ function createTestCoreSources() {
   const control = createInitialControlSurfaceContext();
   const transport = createTransport();
   const playback = createPlayback();
+  const controlInputInterpreter = new ControlInputInterpreter();
   playback.seedDefaultScene(project);
-  return { project, control, transport, playback };
+  return { project, control, transport, playback, controlInputInterpreter };
 }

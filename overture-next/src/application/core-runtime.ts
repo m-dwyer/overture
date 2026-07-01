@@ -4,70 +4,65 @@ import {
   buildCoreSnapshot,
   selectedSequenceLength as readSelectedSequenceLength,
 } from "./core-read-model";
-import { interpretControl } from "./controls/interpret-control";
+import type { ControlInputInterpreter } from "./controls/control-input-interpreter";
 import type { ControlInput } from "./controls/types";
 import type { DomainIntentRouter } from "./intents/domain-intent-router";
 import type { Playback } from "./playback";
 import type { Transport } from "./transport";
-import {
-  advanceTransportPlaybackTick,
-  stopTransportPlayback,
-} from "./transport-playback";
 import type { CoreSnapshot, HostCommand, OvertureCore } from "./types";
-
-export interface OvertureCoreRuntimeDependencies {
-  readonly project: OvertureProject;
-  readonly control: ControlSurfaceContext;
-  readonly transport: Transport;
-  readonly playback: Playback;
-  readonly domainIntentRouter: DomainIntentRouter;
-}
+import { DEFAULT_STEP_COUNT } from "../domain/sequence";
 
 export class OvertureCoreRuntime implements OvertureCore {
   private readonly hostCommands: HostCommand[] = [];
 
-  constructor(private readonly dependencies: OvertureCoreRuntimeDependencies) {}
+  constructor(
+    private readonly project: OvertureProject,
+    private readonly control: ControlSurfaceContext,
+    private readonly transport: Transport,
+    private readonly playback: Playback,
+    private readonly controlInputInterpreter: ControlInputInterpreter,
+    private readonly domainIntentRouter: DomainIntentRouter,
+  ) {}
 
   init(): void {}
 
   advancePlaybackTick(): void {
-    this.collectHostCommands(
-      advanceTransportPlaybackTick({
-        project: this.dependencies.project,
-        playback: this.dependencies.playback,
-        transport: this.dependencies.transport,
-      }),
+    const transportTick = this.transport.advance(DEFAULT_STEP_COUNT);
+    const playbackAdvance = this.playback.processTransportTick(
+      this.project,
+      transportTick,
     );
+    this.collectHostCommands(playbackAdvance.hostCommands);
   }
 
   dispatchControlInput(input: ControlInput): boolean {
-    const intent = interpretControl(
+    const intent = this.controlInputInterpreter.interpret(
       input,
-      this.dependencies.control.snapshot(
-        this.dependencies.project.selectedClipCell(),
-      ),
+      this.control.snapshot(this.project.selectedClipCell()),
     );
     if (!intent) return false;
-    const transaction = this.dependencies.domainIntentRouter.route(intent);
+    const transaction = this.domainIntentRouter.route(intent);
     if (transaction.applied) this.collectHostCommands(transaction.hostCommands);
     return transaction.applied;
   }
 
   snapshot(): CoreSnapshot {
     return buildCoreSnapshot({
-      project: this.dependencies.project,
-      control: this.dependencies.control,
-      transport: this.dependencies.transport,
-      playback: this.dependencies.playback,
+      project: this.project,
+      control: this.control,
+      transport: this.transport,
+      playback: this.playback,
+      controlInputInterpreter: this.controlInputInterpreter,
     });
   }
 
   selectedSequenceLength(): number {
     return readSelectedSequenceLength({
-      project: this.dependencies.project,
-      control: this.dependencies.control,
-      transport: this.dependencies.transport,
-      playback: this.dependencies.playback,
+      project: this.project,
+      control: this.control,
+      transport: this.transport,
+      playback: this.playback,
+      controlInputInterpreter: this.controlInputInterpreter,
     });
   }
 
@@ -76,12 +71,9 @@ export class OvertureCoreRuntime implements OvertureCore {
   }
 
   stopPlayback(): void {
+    this.transport.stop();
     this.collectHostCommands(
-      stopTransportPlayback({
-        project: this.dependencies.project,
-        playback: this.dependencies.playback,
-        transport: this.dependencies.transport,
-      }),
+      this.playback.stopAll(this.project, this.transport.clock()),
     );
   }
 

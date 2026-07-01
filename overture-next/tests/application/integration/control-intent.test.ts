@@ -5,7 +5,7 @@ import {
   DEFAULT_TRACK_VIEW_PAGE_ID,
   TRACK_VIEW_SOUND_PAGE_ID,
 } from "../../../src/state/control-surface-context";
-import { interpretControl } from "../../../src/application/controls/interpret-control";
+import { ControlInputInterpreter } from "../../../src/application/controls/control-input-interpreter";
 import { DomainIntentRouter } from "../../../src/application/intents/domain-intent-router";
 import type {
   DomainIntent,
@@ -25,13 +25,15 @@ interface TestCoreState {
 }
 
 describe("Overture Next control-to-intent pipeline", () => {
+  const controlInputInterpreter = new ControlInputInterpreter();
+
   test("interprets track rows against the current shift modifier", () => {
     const lowerBankControl = createInitialControlSurfaceContext();
     const upperBankControl = createInitialControlSurfaceContext();
     upperBankControl.setSurfaceControlHeld("shift", true);
 
     expect(
-      interpretControl(
+      controlInputInterpreter.interpret(
         { kind: "track-row", row: 1 },
         lowerBankControl.snapshot(
           clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 }),
@@ -44,7 +46,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     });
 
     expect(
-      interpretControl(
+      controlInputInterpreter.interpret(
         { kind: "track-row", row: 1 },
         upperBankControl.snapshot(
           clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 }),
@@ -62,7 +64,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     control.toggleActiveView();
 
     expect(
-      interpretControl(
+      controlInputInterpreter.interpret(
         padPress(7, 101),
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -76,7 +78,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       velocity: 101,
     });
     expect(
-      interpretControl(
+      controlInputInterpreter.interpret(
         padRelease(7),
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -94,7 +96,7 @@ describe("Overture Next control-to-intent pipeline", () => {
   test("interprets Session View pads as Clip Cell launch without leaking pad indexes", () => {
     const control = createInitialControlSurfaceContext();
 
-    const intent = interpretControl(
+    const intent = controlInputInterpreter.interpret(
       padPress(26),
       control.snapshot(clipCellCoordinate({ trackIndex: 4, sceneIndex: 0 })),
     );
@@ -111,7 +113,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     const control = createInitialControlSurfaceContext();
 
     expect(
-      interpretControl(
+      controlInputInterpreter.interpret(
         { kind: "step", step: 1 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -120,7 +122,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     control.toggleActiveView();
 
     expect(
-      interpretControl(
+      controlInputInterpreter.interpret(
         { kind: "step", step: 1 },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -130,7 +132,7 @@ describe("Overture Next control-to-intent pipeline", () => {
       stepIndex: 1,
     });
     expect(
-      interpretControl(
+      controlInputInterpreter.interpret(
         { kind: "play" },
         control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
@@ -147,7 +149,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     state.control.toggleActiveView();
     state.control.setSurfaceControlHeld("shift", true);
 
-    const intent = interpretControl(
+    const intent = controlInputInterpreter.interpret(
       { kind: "step", step: 2 },
       state.control.snapshot(state.project.selectedClipCell()),
     );
@@ -165,7 +167,7 @@ describe("Overture Next control-to-intent pipeline", () => {
     ).toBe(TRACK_VIEW_SOUND_PAGE_ID);
     expect(hostCommands).toEqual([]);
 
-    const closeIntent = interpretControl(
+    const closeIntent = controlInputInterpreter.interpret(
       { kind: "step", step: 2 },
       state.control.snapshot(state.project.selectedClipCell()),
     );
