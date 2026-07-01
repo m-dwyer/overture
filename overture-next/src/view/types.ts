@@ -47,9 +47,9 @@ export type SurfaceRegion =
   | { kind: "session-scene-column"; sceneIndex: number }
   | { kind: "track-row"; row: number };
 
-export type SurfaceHint =
-  | { kind: "scene-launch-target"; surface: SurfaceRegion }
-  | { kind: "track-bank-target"; surface: SurfaceRegion };
+export interface SurfaceHint {
+  surface: SurfaceRegion;
+}
 
 export interface StepLedView {
   step: number;

@@ -1,4 +1,5 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
+import { rootControlContextFor } from "./controls/root-control-contexts";
 import type { ControlSurfaceContextSnapshot } from "../state/control-surface-context";
 import type { ProjectCoreReadModel } from "../state/project";
 import type { PlaybackSnapshot } from "./playback";
@@ -41,6 +42,7 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
     clipCells: owners.project.clipCellSnapshots(),
     playbackTracks: playback.tracks,
     activeNotes: playback.activeNotes,
+    affordances: rootControlContextFor(control).affordances(control),
     steps: getSnapshotSteps(owners.project, control, transport),
   };
 }

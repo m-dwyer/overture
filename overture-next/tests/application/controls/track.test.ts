@@ -4,7 +4,10 @@ import {
   DEFAULT_TRACK_VIEW_PAGE_ID,
   TRACK_VIEW_SOUND_PAGE_ID,
 } from "../../../src/state/control-surface-context";
-import { interpretTrackViewControl } from "../../../src/application/controls/track";
+import {
+  affordancesTrackView,
+  interpretTrackViewControl,
+} from "../../../src/application/controls/track";
 
 describe("Overture Next Track control interpretation", () => {
   test("interprets pad presses as selected-track note audition", () => {
@@ -85,5 +88,31 @@ describe("Overture Next Track control interpretation", () => {
       kind: "select-track-view-page",
       pageId: DEFAULT_TRACK_VIEW_PAGE_ID,
     });
+  });
+
+  test("affords Track Bank 2 targets while Shift is held", () => {
+    const control = createInitialControlSurfaceContext();
+
+    expect(affordancesTrackView(control.snapshot())).toEqual([]);
+
+    control.setSurfaceControlHeld("shift", true);
+    expect(affordancesTrackView(control.snapshot())).toEqual([
+      {
+        trigger: { kind: "track-button", row: 0 },
+        intent: { kind: "select-track", trackIndex: 4 },
+      },
+      {
+        trigger: { kind: "track-button", row: 1 },
+        intent: { kind: "select-track", trackIndex: 5 },
+      },
+      {
+        trigger: { kind: "track-button", row: 2 },
+        intent: { kind: "select-track", trackIndex: 6 },
+      },
+      {
+        trigger: { kind: "track-button", row: 3 },
+        intent: { kind: "select-track", trackIndex: 7 },
+      },
+    ]);
   });
 });

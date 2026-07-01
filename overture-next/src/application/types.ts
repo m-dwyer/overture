@@ -4,7 +4,7 @@ import type {
   ControlSurfaceContextSnapshot,
   TrackViewControlContextSnapshot,
 } from "../state/control-surface-context";
-import type { ControlInput } from "./controls/types";
+import type { ControlInput, SurfaceAffordance } from "./controls/types";
 import type { HostCommand } from "./host-commands";
 
 export interface CoreSnapshotStep {
@@ -51,6 +51,7 @@ export interface CoreSnapshot {
   clipCells: readonly CoreSnapshotClipCell[];
   playbackTracks?: readonly CoreSnapshotPlaybackTrack[];
   activeNotes?: readonly CoreSnapshotActiveNote[];
+  affordances?: readonly SurfaceAffordance[];
   steps: readonly CoreSnapshotStep[];
 }
 

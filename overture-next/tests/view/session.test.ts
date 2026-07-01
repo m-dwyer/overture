@@ -16,22 +16,6 @@ describe("Overture Next Session View module", () => {
       playing: false,
     });
   });
-
-  test("derives scene-launch Surface Hints only while Shift is held", () => {
-    expect(
-      sessionView.createSurfaceHints(sessionSnapshot({ heldControls: [] })),
-    ).toEqual([]);
-    expect(
-      sessionView.createSurfaceHints(
-        sessionSnapshot({ heldControls: ["shift"] }),
-      ),
-    ).toEqual([
-      {
-        kind: "scene-launch-target",
-        surface: { kind: "session-scene-column", sceneIndex: 7 },
-      },
-    ]);
-  });
 });
 
 function sessionSnapshot({

@@ -2,7 +2,12 @@ import type { ControlSurfaceContextSnapshot } from "../../../state/control-surfa
 import { selectTrackFromRow } from "../../../state/surface-addressing";
 import { clipCellCoordinateForSessionPad } from "../../../shared/session-grid";
 import type { DomainIntent } from "../../intents/types";
-import type { ControlInput } from "../types";
+import { trackBankAffordances } from "../track-bank-affordances";
+import type {
+  ControlInput,
+  RootControlContext,
+  SurfaceAffordance,
+} from "../types";
 
 /**
  * Interprets control input in Session View context.
@@ -33,3 +38,15 @@ export function interpretSessionViewControl(
     ),
   };
 }
+
+/** Affordances Session View reveals: Track Bank 2 targets while Shift is held. */
+export function affordancesSessionView(
+  control: ControlSurfaceContextSnapshot,
+): SurfaceAffordance[] {
+  return trackBankAffordances(control);
+}
+
+export const sessionRootControlContext: RootControlContext = {
+  interpret: interpretSessionViewControl,
+  affordances: affordancesSessionView,
+};

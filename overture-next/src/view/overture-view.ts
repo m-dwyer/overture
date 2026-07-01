@@ -1,20 +1,47 @@
 import type { CoreSnapshot } from "../application/types";
 import type { SurfaceHostReadModel } from "../ports/surface-host-read-model";
+import type { ControlAddress } from "../shared/control-address";
 import { selectTrackFromRow } from "../state/surface-addressing";
+import { assertNever } from "../shared/assert-never";
 import { viewModuleFor } from "./internal/view-modules";
-import type { LedView, OvertureSurfaceView, SurfaceHint } from "./types";
+import type {
+  LedView,
+  OvertureSurfaceView,
+  SurfaceHint,
+  SurfaceRegion,
+} from "./types";
 
 export function createOvertureSurfaceView(
   snapshot: CoreSnapshot,
   hostReadModel: SurfaceHostReadModel = {},
 ): OvertureSurfaceView {
   const viewModule = viewModuleFor(snapshot);
-  const surfaceHints = viewModule.createSurfaceHints(snapshot);
+  const surfaceHints = surfaceHintsFor(snapshot);
   return {
     surfaceHints,
     screen: viewModule.createScreenView(snapshot, hostReadModel),
     leds: createLedView(snapshot, surfaceHints),
   };
+}
+
+/**
+ * Projects the current context's Surface Affordances into Surface Hints. A hint
+ * previews exactly one affordance; because every affordance carries a real
+ * Domain Intent, a hint for a non-existent intent cannot be produced here.
+ */
+function surfaceHintsFor(snapshot: CoreSnapshot): SurfaceHint[] {
+  return (snapshot.affordances ?? []).map((affordance) => ({
+    surface: regionForTrigger(affordance.trigger),
+  }));
+}
+
+function regionForTrigger(trigger: ControlAddress): SurfaceRegion {
+  switch (trigger.kind) {
+    case "track-button":
+      return { kind: "track-row", row: trigger.row };
+    default:
+      return assertNever(trigger.kind);
+  }
 }
 
 function createLedView(

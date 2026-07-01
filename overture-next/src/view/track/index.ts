@@ -6,7 +6,6 @@ import {
 } from "../../shared/track-pad-layout";
 import type { PadLedView, ScreenView, SurfaceHint } from "../types";
 import { createTrackScreenView } from "./internal/screen-view";
-import { createTrackSurfaceHints } from "./internal/surface-hints";
 
 export const trackView = {
   createScreenView(
@@ -14,9 +13,6 @@ export const trackView = {
     hostReadModel?: SurfaceHostReadModel,
   ): ScreenView {
     return createTrackScreenView(snapshot, hostReadModel);
-  },
-  createSurfaceHints(snapshot: CoreSnapshot): SurfaceHint[] {
-    return createTrackSurfaceHints(snapshot);
   },
   createPadLeds(
     snapshot: CoreSnapshot,

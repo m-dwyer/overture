@@ -87,9 +87,12 @@ pad/note mapping has one home.
 3. **Press feedback** — held-pad interaction state in `ControlSurfaceContext`
    (`pressPad`/`releasePad`/`heldPads`, carrying velocity), updated by the audition
    operation, lights pressed pads over the baseline _(done)_.
-4. **Overlay/hints** — `SurfaceAffordance` + data-carrying `SurfaceHint`,
-   replacing the hand-authored hint projectors; fixes the phantom
-   `scene-launch-target` hint by construction.
+4. **Overlay/hints** — each root control context owns `interpret` +
+   `affordances`; `SurfaceAffordance { trigger: ControlAddress; intent }` carries
+   a real Domain Intent, so `Surface Hint`s derive centrally from the snapshot's
+   affordances and the phantom `scene-launch-target` hint is gone by construction
+   _(done)_. Still to come on this layer: rendering the Sound-page (step) hint,
+   and data-carrying hints (e.g. bank hints showing the target Track's colour).
 5. **Held-pad context overlays** — chromatic/scale overlays project from pad
    affordances and the existing held-pad state once melodic vs drum Track types
    are modelled.
