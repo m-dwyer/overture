@@ -34,7 +34,6 @@ describe("Overture Next screen rendering", () => {
       title: "OVERTURE NEXT",
       selectedTrackIndex: 5,
       playing: false,
-      selectedStep: 0,
       trackPage: {
         kind: "sound",
         route: "schwung",

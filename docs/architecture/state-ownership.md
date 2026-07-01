@@ -6,12 +6,12 @@ mutating another owner's data.
 
 ## Current Owners
 
-| State Shape | Owner | Notes |
-| --- | --- | --- |
-| `ControlSurfaceContext` | `src/state/control-surface-context.ts` | Owner-object class with `snapshot()` read contract. |
-| `OvertureProject` | `src/state/project.ts` | Project data owner with public lookup and Project-owned mutation APIs. |
-| `TransportState` | `src/application/transport.ts` | Owner-object class with `snapshot()` and `clock()` read contracts. |
-| `PlaybackState` | `src/application/playback/` | Playback lifecycle and note-off scheduling owner. |
+| State Shape             | Owner                                  | Notes                                                                                                                                                                                                                  |
+| ----------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ControlSurfaceContext` | `src/state/control-surface-context.ts` | Owns transient surface mode (active view, held controls/pads, Track View page/parameter). `snapshot(selectedClipCell)` composes the active-clip cursor in; Track Selection and visible Track Bank are derived from it. |
+| `OvertureProject`       | `src/state/project.ts`                 | Durable owner of Tracks, Scenes, Clip Cells, Overture Clips, and the Selected Clip Cell cursor. Vends a scoped `ClipEditor` for the active clip; a `Sequence` entity owns its Steps.                                   |
+| `TransportState`        | `src/application/transport.ts`         | Owner-object class with `snapshot()` and `clock()` read contracts.                                                                                                                                                     |
+| `PlaybackState`         | `src/application/playback/`            | Playback lifecycle and note-off scheduling owner.                                                                                                                                                                      |
 
 ## Preferred Pattern for Newly Adopted Owners
 
@@ -22,14 +22,14 @@ state object as a parameter.
 Prefer:
 
 ```ts
-control.selectClipCell(coordinate);
-const snapshot = control.snapshot();
+project.selectClip(coordinate);
+const snapshot = control.snapshot(project.selectedClipCell());
 ```
 
 Avoid adding new APIs shaped like:
 
 ```ts
-selectClipCell(control, coordinate);
+selectClip(project, coordinate);
 ```
 
 Read-only consumers should receive snapshots or narrow read contracts. For
@@ -42,18 +42,25 @@ Cross-state workflows belong in orchestration code. Orchestration may hold
 owner objects and call their domain methods, but should not directly mutate
 another owner's state shape.
 
-Acceptable orchestration:
+Acceptable orchestration (a genuine cross-owner workflow — Project cursor plus
+Playback launch):
 
 ```ts
-state.control.selectStep(stepIndex);
-state.project.toggleSequenceStepAt(state.control.snapshot().selectedClipCell, stepIndex);
+state.project.selectClip(coordinate);
+state.playback.requestClipToggle(state.project, coordinate, timing);
 ```
 
-Avoid:
+Single-owner edits stay on the owner that holds the state, not threaded across
+owners:
 
 ```ts
-state.control.selectedStep = stepIndex;
-state.playback.pendingNoteOffs.push(noteOff);
+state.project.activeClipEditor()?.toggleStep(stepIndex);
+```
+
+Avoid reaching past an owner's API into its data:
+
+```ts
+state.project.data.selectedClipCell = coordinate;
 ```
 
 Workflow orchestration should avoid passing broad composition objects into

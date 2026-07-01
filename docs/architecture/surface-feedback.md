@@ -25,7 +25,7 @@ it. Layers, lowest precedence first:
 | Layer             | Driven by                           | Owner read contract                                                               |
 | ----------------- | ----------------------------------- | --------------------------------------------------------------------------------- |
 | Identity baseline | Project data + active view          | clip occupancy (`clipCellSnapshots`), Track colour (planned)                      |
-| Selection         | Control Surface Context             | `ControlSurfaceContextSnapshot`                                                   |
+| Selection         | Project cursor (Selected Clip Cell) | `ControlSurfaceContextSnapshot` (composes the cursor)                             |
 | Playback          | Playback + Transport                | playhead (`TransportSnapshot`), **active notes** (`PlaybackSnapshot.activeNotes`) |
 | Overlay / hints   | Control Surface Context held inputs | held modifiers, held pad (planned)                                                |
 

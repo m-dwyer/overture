@@ -1,11 +1,10 @@
 import type { Sequence, SequenceStep } from "../domain/sequence";
-import {
-  createDefaultSequence,
-  sequenceWithToggledStep,
-} from "../domain/sequence";
+import { createDefaultSequence } from "../domain/sequence";
+import { ClipEditor } from "./clip-editor";
 import {
   clipCellCoordinate,
   clipId,
+  type ClipCellCoordinate,
   type ClipCellCoordinateInput,
   type ClipId,
   createTracks,
@@ -71,7 +70,7 @@ interface ClipCell {
  */
 interface OvertureClip {
   id: ClipId;
-  sequence: Sequence;
+  readonly sequence: Sequence;
 }
 
 interface OvertureProjectData {
@@ -80,6 +79,7 @@ interface OvertureProjectData {
   clipCells: ClipCell[];
   clips: Record<ClipId, OvertureClip>;
   nextClipNumber: number;
+  selectedClipCell: ClipCellCoordinate;
 }
 
 /** Read-only Project contract for runtime playback resolution. */
@@ -96,13 +96,15 @@ export interface ProjectCoreReadModel {
   clipCellSnapshots(): readonly ClipCellSnapshot[];
   trackRoute(trackIndexValue: number): TrackRoute;
   trackColours(): readonly number[];
+  selectedClipCell(): ClipCellCoordinate;
 }
 
 /**
  * The OvertureProject state owner: durable owner of Tracks, Overture Scenes,
- * Clip Cells, and Overture Clips. It keeps occupancy and identity state private
- * and exposes read contracts; clip-lifecycle write verbs are added as features
- * require them. A Clip Cell is the single source of truth for clip location.
+ * Clip Cells, Overture Clips, and the Selected Clip Cell cursor (the active
+ * clip). It keeps occupancy and identity state private and exposes read
+ * contracts and scoped editors. A Clip Cell is the single source of truth for
+ * clip location; the cursor names which clip is active for editing.
  */
 export class OvertureProject {
   private readonly data: OvertureProjectData;
@@ -152,22 +154,38 @@ export class OvertureProject {
     return this.data.tracks.map((track) => track.colour);
   }
 
+  /** The current Selected Clip Cell — the cursor over the grid naming the active clip. */
+  selectedClipCell(): ClipCellCoordinate {
+    return { ...this.data.selectedClipCell };
+  }
+
   /**
-   * Toggles a Step in the Sequence owned by the clip at a valid Clip Cell.
-   * Returns null for an Empty Clip Cell, missing clip, or invalid Step index.
+   * Moves the cursor to a Clip Cell (the active clip). Validates the coordinate
+   * is on-grid; selecting an Empty Clip Cell is allowed.
    */
-  toggleSequenceStepAt(
-    coordinate: ClipCellCoordinateInput,
-    stepIndex: number,
-  ): SequenceStepSnapshot | null {
-    const cell = this.requireCell(coordinate);
+  selectClip(coordinate: ClipCellCoordinateInput): void {
+    this.data.selectedClipCell = clipCellCoordinate(coordinate);
+  }
+
+  /** Moves the cursor to a Track while preserving the current Overture Scene. */
+  selectTrackKeepingScene(trackIndexValue: number): void {
+    this.selectClip({
+      trackIndex: trackIndexValue,
+      sceneIndex: this.data.selectedClipCell.sceneIndex,
+    });
+  }
+
+  /**
+   * Vends a scoped {@link ClipEditor} for the active clip — the Overture Clip at
+   * the Selected Clip Cell — or null when that cell is empty. Never exposes the
+   * live Sequence; all Clip-content edits go through the returned editor.
+   */
+  activeClipEditor(): ClipEditor | null {
+    const cell = this.requireCell(this.data.selectedClipCell);
     if (!cell.clipId) return null;
     const clip = this.data.clips[cell.clipId];
     if (!clip) return null;
-    const result = sequenceWithToggledStep(clip.sequence, stepIndex);
-    if (!result) return null;
-    clip.sequence = result.sequence;
-    return snapshotStep(result.step);
+    return ClipEditor.for(clip.sequence);
   }
 
   private requireCell(coordinate: ClipCellCoordinateInput): ClipCell {
@@ -229,6 +247,7 @@ function createDefaultProjectData(): OvertureProjectData {
     clipCells: createClipCells(),
     clips: {},
     nextClipNumber: 1,
+    selectedClipCell: clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 }),
   };
 
   for (

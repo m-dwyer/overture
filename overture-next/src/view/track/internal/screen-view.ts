@@ -12,12 +12,10 @@ export function createTrackScreenView(
     title: "OVERTURE NEXT",
     selectedTrackIndex: snapshot.selectedTrackIndex,
     playing: snapshot.playing,
-    selectedStep: snapshot.selectedStep,
     trackPage: createTrackScreenPageView(snapshot, hostReadModel),
     steps: snapshot.steps.map((step) => ({
       index: step.index,
       active: step.active,
-      selected: step.selected,
       playhead: step.playhead,
     })),
   };

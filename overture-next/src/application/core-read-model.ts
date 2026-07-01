@@ -1,7 +1,10 @@
 import { DEFAULT_STEP_COUNT, getSequenceStep } from "../domain/sequence";
 import { rootControlContextFor } from "./controls/root-control-contexts";
 import type { ControlSurfaceContextSnapshot } from "../state/control-surface-context";
-import type { ProjectCoreReadModel } from "../state/project";
+import type {
+  ClipCellCoordinate,
+  ProjectCoreReadModel,
+} from "../state/project";
 import type { PlaybackSnapshot } from "./playback";
 import type { TransportSnapshot } from "./transport";
 import type { CoreSnapshot } from "./types";
@@ -9,7 +12,9 @@ import type { CoreSnapshot } from "./types";
 export interface CoreReadModelOwners {
   readonly project: ProjectCoreReadModel;
   readonly control: {
-    snapshot(): ControlSurfaceContextSnapshot;
+    snapshot(
+      selectedClipCell: ClipCellCoordinate,
+    ): ControlSurfaceContextSnapshot;
   };
   readonly transport: {
     snapshot(): TransportSnapshot;
@@ -20,7 +25,7 @@ export interface CoreReadModelOwners {
 }
 
 export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
-  const control = owners.control.snapshot();
+  const control = owners.control.snapshot(owners.project.selectedClipCell());
   const transport = owners.transport.snapshot();
   const playback = owners.playback.snapshot();
   const selectedClipCell = control.selectedClipCell;
@@ -33,7 +38,6 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
     visibleTrackBank: control.visibleTrackBank,
     activeView: control.activeView,
     heldControls: control.heldControls,
-    selectedStep: control.selectedStep,
     playing: transport.playing,
     selectedClipId: selectedCell.clipId,
     selectedClipCell: { ...selectedClipCell },
@@ -48,7 +52,7 @@ export function buildCoreSnapshot(owners: CoreReadModelOwners): CoreSnapshot {
 }
 
 export function selectedSequenceLength(owners: CoreReadModelOwners): number {
-  const control = owners.control.snapshot();
+  const control = owners.control.snapshot(owners.project.selectedClipCell());
   const sequence = selectedSequence(owners.project, control);
   return sequence?.length ?? DEFAULT_STEP_COUNT;
 }
@@ -75,7 +79,6 @@ function getSnapshotSteps(
         active: step?.active ?? false,
         note: step?.note ?? null,
         velocity: step?.velocity ?? null,
-        selected: index === control.selectedStep,
         playhead: index === transport.playhead,
       };
     },

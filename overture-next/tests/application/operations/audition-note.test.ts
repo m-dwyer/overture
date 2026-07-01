@@ -13,7 +13,7 @@ describe("Overture Next audition note operation", () => {
       { held: true, padIndex: 5, note: 65, trackIndex: 0, velocity: 100 },
     );
 
-    expect(control.snapshot().heldPads).toEqual([
+    expect(control.snapshot(project.selectedClipCell()).heldPads).toEqual([
       { padIndex: 5, velocity: 100 },
     ]);
     expect(result.hostCommands).toEqual([
@@ -40,7 +40,7 @@ describe("Overture Next audition note operation", () => {
       { held: false, padIndex: 5, note: 65, trackIndex: 0, velocity: 0 },
     );
 
-    expect(control.snapshot().heldPads).toEqual([]);
+    expect(control.snapshot(project.selectedClipCell()).heldPads).toEqual([]);
     expect(result.hostCommands).toEqual([
       {
         kind: "track-note-off",

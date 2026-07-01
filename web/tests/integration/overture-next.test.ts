@@ -41,7 +41,7 @@ describe("overture-next emulator integration", () => {
     h.pressCc(NAV.Menu);
     h.note(NOTE_ON, STEP_CC0 + 1, 127);
     h.step(1);
-    expect(h.state().steps[1]).toMatchObject({ active: true, selected: true });
+    expect(h.state().steps[1]).toMatchObject({ active: true });
     expect(h.rec.leds.get(STEP_CC0 + 1)).toBe(OVERTURE_LED_COLOR.active);
 
     expect(h.state().sessionView).toBe(false);

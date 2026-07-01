@@ -1,18 +1,12 @@
 import type { ClipCellCoordinateInput } from "../../domain/project";
-import type { ControlSurfaceContext } from "../../state/control-surface-context";
 import type { OvertureProject } from "../../state/project";
 import { operationApplied, type OperationResult } from "./types";
 
-export interface SelectClipCellContext {
-  readonly control: ControlSurfaceContext;
-  readonly project: OvertureProject;
-}
-
+/** Moves the cursor to a Clip Cell, making it the active clip. */
 export function selectClipCell(
-  context: SelectClipCellContext,
+  project: OvertureProject,
   coordinate: ClipCellCoordinateInput,
 ): OperationResult {
-  context.project.clipCellAt(coordinate);
-  context.control.selectClipCell(coordinate);
+  project.selectClip(coordinate);
   return operationApplied();
 }

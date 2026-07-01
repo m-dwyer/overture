@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { clipCellCoordinate } from "../../../src/domain/project";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
 import {
   affordancesSessionView,
@@ -8,11 +9,10 @@ import {
 describe("Overture Next Session control interpretation", () => {
   test("interprets pad presses as visible-bank Clip Cell launches", () => {
     const control = createInitialControlSurfaceContext();
-    control.selectTrackPreservingScene(4);
 
     const intent = interpretSessionViewControl(
       { kind: "pad", held: true, padIndex: 26, velocity: 100 },
-      control.snapshot(),
+      control.snapshot(clipCellCoordinate({ trackIndex: 4, sceneIndex: 0 })),
     );
 
     expect(intent).toEqual({
@@ -28,7 +28,7 @@ describe("Overture Next Session control interpretation", () => {
     expect(
       interpretSessionViewControl(
         { kind: "pad", held: false, padIndex: 26, velocity: 0 },
-        control.snapshot(),
+        control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toBeNull();
   });
@@ -40,7 +40,7 @@ describe("Overture Next Session control interpretation", () => {
     expect(
       interpretSessionViewControl(
         { kind: "track-row", row: 1 },
-        control.snapshot(),
+        control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toEqual({
       kind: "select-track",
@@ -49,7 +49,7 @@ describe("Overture Next Session control interpretation", () => {
     expect(
       interpretSessionViewControl(
         { kind: "step", step: 1 },
-        control.snapshot(),
+        control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
       ),
     ).toBeNull();
   });
@@ -57,10 +57,18 @@ describe("Overture Next Session control interpretation", () => {
   test("affords Track Bank 2 targets only while Shift is held", () => {
     const control = createInitialControlSurfaceContext();
 
-    expect(affordancesSessionView(control.snapshot())).toEqual([]);
+    expect(
+      affordancesSessionView(
+        control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
+      ),
+    ).toEqual([]);
 
     control.setSurfaceControlHeld("shift", true);
-    expect(affordancesSessionView(control.snapshot())).toEqual([
+    expect(
+      affordancesSessionView(
+        control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
+      ),
+    ).toEqual([
       {
         trigger: { kind: "track-button", row: 0 },
         intent: { kind: "select-track", trackIndex: 4 },

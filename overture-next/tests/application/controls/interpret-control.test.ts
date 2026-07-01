@@ -1,16 +1,17 @@
 import { describe, expect, test } from "vitest";
+import { clipCellCoordinate } from "../../../src/domain/project";
 import { createInitialControlSurfaceContext } from "../../../src/state/control-surface-context";
 import { interpretControl } from "../../../src/application/controls/interpret-control";
 
 describe("Overture Next root control context interpretation", () => {
   test("delegates non-global controls to the active root view context", () => {
     const control = createInitialControlSurfaceContext();
-    control.selectTrackPreservingScene(4);
+    const cursor = clipCellCoordinate({ trackIndex: 4, sceneIndex: 0 });
 
     expect(
       interpretControl(
         { kind: "pad", held: true, padIndex: 26, velocity: 100 },
-        control.snapshot(),
+        control.snapshot(cursor),
       ),
     ).toEqual({
       kind: "launch-clip-cell",
@@ -22,7 +23,7 @@ describe("Overture Next root control context interpretation", () => {
     expect(
       interpretControl(
         { kind: "pad", held: true, padIndex: 7, velocity: 101 },
-        control.snapshot(),
+        control.snapshot(cursor),
       ),
     ).toEqual({
       kind: "audition-note",
@@ -37,7 +38,12 @@ describe("Overture Next root control context interpretation", () => {
   test("interprets explicit globals before the active root view context", () => {
     const control = createInitialControlSurfaceContext();
 
-    expect(interpretControl({ kind: "menu" }, control.snapshot())).toEqual({
+    expect(
+      interpretControl(
+        { kind: "menu" },
+        control.snapshot(clipCellCoordinate({ trackIndex: 0, sceneIndex: 0 })),
+      ),
+    ).toEqual({
       kind: "toggle-view",
     });
   });
